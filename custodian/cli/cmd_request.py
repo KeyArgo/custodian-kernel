@@ -67,8 +67,16 @@ def run(args) -> None:
         print("error: amount must be positive", file=sys.stderr)
         raise SystemExit(1)
 
+    context: dict = {}
+    for raw in getattr(args, "context", []) or []:
+        if "=" not in raw:
+            print(f"error: --context expects FLAG=true|false, got '{raw}'", file=sys.stderr)
+            raise SystemExit(1)
+        key, _, value = raw.partition("=")
+        context[key.strip()] = value.strip().lower() in ("true", "1", "yes")
+
     request = SpendRequest(amount=args.amount, description=args.description)
-    decision = decide(request, state, policy, skill=args.skill)
+    decision = decide(request, state, policy, skill=args.skill, context=context)
 
     if decision.verdict == Verdict.AUTONOMOUS:
         print(f"Verdict: AUTONOMOUS")

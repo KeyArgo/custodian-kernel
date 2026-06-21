@@ -3,6 +3,7 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
+from custodian.ledger import Ledger
 from custodian.storage.sqlite import SqliteStorage
 from custodian.types import Band
 
@@ -39,8 +40,11 @@ def run(args) -> None:
         _print_default()
         return
 
+    ledger = Ledger(storage)
     print(f"Band: {_band_str(state.band)}")
     print(f"Per-action cap: ${state.per_action_cap:.2f}")
     print(f"Session cap: ${state.session_cap:.2f}")
     print(f"Spent this session: ${state.spent_this_session:.2f}")
-    print(f"Remaining: ${state.remaining_session_budget():.2f}")
+    print(f"Remaining: ${ledger.remaining_budget(state):.2f}")
+    print(f"  Autonomous spend:        ${ledger.total_spent(autonomous_only=True):.2f}")
+    print(f"  Human-approved override: ${ledger.total_spent(approved_only=True):.2f}")

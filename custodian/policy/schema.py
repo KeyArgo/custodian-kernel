@@ -15,7 +15,12 @@ from typing import Optional
 from custodian.exceptions import PolicyValidationError
 from custodian.types import Band
 
-VALID_APPROVAL_BACKENDS = {"twilio_verify", "slack", "email", "none"}
+# Only backends with a real, shipped implementation belong here. A policy
+# citing a backend name that isn't actually wired would otherwise pass
+# validation and only fail silently at escalation time -- that's a false
+# claim of capability, not a real feature. Add a name here only in the same
+# change that ships its ApprovalBackend implementation.
+VALID_APPROVAL_BACKENDS = {"twilio_verify", "none"}
 
 
 @dataclass

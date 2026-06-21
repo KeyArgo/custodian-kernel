@@ -22,48 +22,12 @@ class PolicyNotFoundError(PolicyError):
     """No policy file found at the given path."""
 
 
-class BandExceededError(CustodianError):
-    """A spend request exceeds the current authority band's limits.
-
-    This is not itself an error condition for the engine — it's the trigger
-    for escalation — but callers that expect autonomous execution and get
-    this instead need a precise signal, not a bare exception.
-    """
-
-    def __init__(self, amount: float, cap: float, reason: str):
-        self.amount = amount
-        self.cap = cap
-        self.reason = reason
-        super().__init__(reason)
-
-
-class EscalationError(CustodianError):
-    """Base class for errors in the human-approval escalation flow."""
-
-
-class NoPendingApprovalError(EscalationError):
-    """approve.py or deny.py was invoked but there is no pending escalation."""
-
-
-class ApprovalExpiredError(EscalationError):
-    """The pending approval's TTL elapsed before a human responded."""
-
-
-class ApprovalCodeRejectedError(EscalationError):
-    """The human-supplied code was rejected by the verification backend
-    (wrong code, already used, or expired at the backend's own TTL)."""
-
-
 class BackendError(CustodianError):
-    """Base class for approval-backend (Twilio, Slack, email, ...) errors."""
+    """Base class for approval-backend errors (e.g. TwilioVerifyBackend)."""
 
 
 class BackendConfigurationError(BackendError):
     """The backend is missing required configuration (e.g. secrets)."""
-
-
-class ExecutionError(CustodianError):
-    """The underlying real-world action (e.g. the Stripe call) failed."""
 
 
 class AuditWriteError(CustodianError):
