@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hermes Agent - ArgoBox Command Center</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #0a0e27 0%, #1a1a2e 100%);
+            color: #e0e0e0;
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        .hero {
+            max-width: 1100px;
+            margin: 0 auto 40px auto;
+            text-align: center;
+            padding: 50px 20px 40px 20px;
+        }
+
+        .credibility-strip {
+            color: #6b7280;
+            font-size: 0.78em;
+            letter-spacing: 0.12em;
+            margin-bottom: 28px;
+            font-weight: 600;
+        }
+
+        .hero-claim {
+            font-size: 2.6em;
+            font-weight: 700;
+            color: #f5f5f5;
+            line-height: 1.2;
+            margin-bottom: 16px;
+            letter-spacing: -0.01em;
+        }
+
+        .hero-sub {
+            color: #9ca3af;
+            font-size: 1.15em;
+            max-width: 640px;
+            margin: 0 auto 36px auto;
+            line-height: 1.5;
+        }
+
+        .spec-strip {
+            display: inline-flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            background: rgba(118, 185, 0, 0.06);
+            border: 1px solid rgba(118, 185, 0, 0.3);
+            border-radius: 10px;
+            padding: 12px 22px;
+            font-size: 0.85em;
+            letter-spacing: 0.04em;
+            color: #9fd35c;
+            margin-bottom: 50px;
+        }
+        .spec-item strong { color: #d9f99d; font-weight: 700; }
+        .spec-item.enforced { color: #76b900; font-weight: 700; }
+        .spec-sep { color: #3f4a2e; }
+
+        .process-diagram {
+            display: flex;
+            align-items: stretch;
+            justify-content: center;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+        .process-step {
+            flex: 1;
+            min-width: 200px;
+            max-width: 240px;
+            background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 12px;
+            padding: 18px 16px;
+            text-align: left;
+        }
+        .process-num {
+            color: #4b5e1f;
+            font-size: 0.85em;
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+        .process-title {
+            color: #9fd35c;
+            font-weight: 700;
+            font-size: 0.95em;
+            letter-spacing: 0.05em;
+            margin-bottom: 8px;
+        }
+        .process-desc {
+            color: #9ca3af;
+            font-size: 0.82em;
+            line-height: 1.4;
+        }
+        .process-arrow {
+            display: flex;
+            align-items: center;
+            color: #4b5e1f;
+            font-size: 1.4em;
+            padding: 0 2px;
+        }
+        @media (max-width: 900px) {
+            .process-arrow { display: none; }
+        }
+
+        .nav-links { text-align: center; margin-bottom: 24px; }
+        .nav-link {
+            display: inline-block;
+            margin: 0 10px;
+            color: #9fd35c;
+            text-decoration: none;
+            padding: 6px 14px;
+            border: 1px solid rgba(118, 185, 0, 0.3);
+            border-radius: 8px;
+            font-size: 0.9em;
+        }
+        .nav-link:hover { background: rgba(118, 185, 0, 0.1); }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 16px;
+            max-width: 1100px;
+            margin: 0 auto 24px auto;
+        }
+
+        .card {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 14px;
+            padding: 18px 20px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .card .label {
+            font-size: 0.8em;
+            color: #9aa5b1;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 6px;
+        }
+
+        .card .value {
+            font-size: 1.8em;
+            font-weight: 600;
+            color: #f0f0f0;
+        }
+
+        .card.band .value { color: #76b900; }
+
+        .bar-track {
+            margin-top: 10px;
+            height: 10px;
+            border-radius: 5px;
+            background: rgba(255,255,255,0.08);
+            overflow: hidden;
+        }
+        .bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #76b900, #9fd35c);
+            transition: width 0.4s ease;
+        }
+        .bar-fill.warn { background: linear-gradient(90deg, #d97706, #f59e0b); }
+        .bar-fill.danger { background: linear-gradient(90deg, #b91c1c, #ef4444); }
+
+        .conn-dot {
+            display: inline-block;
+            width: 9px; height: 9px;
+            border-radius: 50%;
+            margin-right: 6px;
+        }
+        .conn-dot.live { background: #22c55e; box-shadow: 0 0 8px #22c55e; }
+        .conn-dot.down { background: #ef4444; box-shadow: 0 0 8px #ef4444; }
+
+        .section-title {
+            max-width: 1100px;
+            margin: 0 auto 12px auto;
+            color: #9fd35c;
+            font-size: 1.1em;
+            letter-spacing: 0.03em;
+        }
+
+        .feed {
+            max-width: 1100px;
+            margin: 0 auto 24px auto;
+            background: rgba(255,255,255,0.04);
+            border-radius: 14px;
+            border: 1px solid rgba(255,255,255,0.08);
+            overflow: hidden;
+        }
+
+        .event {
+            display: flex;
+            align-items: baseline;
+            gap: 14px;
+            padding: 12px 18px;
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+            font-size: 0.92em;
+        }
+        .event:last-child { border-bottom: none; }
+
+        .event .ts { color: #6b7280; min-width: 150px; font-family: monospace; font-size: 0.85em; }
+        .event .badge {
+            min-width: 130px;
+            text-align: center;
+            padding: 3px 10px;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 0.82em;
+            text-transform: uppercase;
+        }
+        .badge.executed { background: rgba(34,197,94,0.15); color: #4ade80; border: 1px solid rgba(34,197,94,0.4); }
+        .badge.escalation_required { background: rgba(245,158,11,0.18); color: #fbbf24; border: 1px solid rgba(245,158,11,0.45); animation: pulse 1.6s infinite; }
+        .badge.denied { background: rgba(239,68,68,0.15); color: #f87171; border: 1px solid rgba(239,68,68,0.4); }
+        .badge.execution_failed { background: rgba(239,68,68,0.15); color: #f87171; border: 1px solid rgba(239,68,68,0.4); }
+
+        @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.55; } }
+
+        .event .desc { flex: 1; color: #d1d5db; }
+        .event .amount { font-family: monospace; color: #e5e7eb; min-width: 70px; text-align: right; }
+
+        .empty-state { padding: 30px; text-align: center; color: #6b7280; }
+
+        .pending-banner {
+            max-width: 1100px;
+            margin: 0 auto 24px auto;
+            background: rgba(245,158,11,0.1);
+            border: 1px solid rgba(245,158,11,0.4);
+            border-radius: 12px;
+            padding: 14px 20px;
+            color: #fbbf24;
+            display: none;
+        }
+        .pending-banner.show { display: block; }
+
+        .sub-note {
+            margin-top: 8px;
+            font-size: 0.75em;
+            color: #6b7280;
+        }
+        .sub-note.has-override { color: #fbbf24; }
+
+        .footer-note {
+            max-width: 1100px;
+            margin: 0 auto 24px auto;
+            text-align: center;
+            color: #6b7280;
+            font-size: 0.8em;
+        }
+
+        .policy-feed {
+            font-family: 'Cascadia Code', 'Fira Code', monospace;
+            max-height: 360px;
+            overflow-y: auto;
+        }
+        .policy-line {
+            padding: 6px 18px;
+            font-size: 0.82em;
+            border-bottom: 1px solid rgba(255,255,255,0.04);
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+        .policy-line.allowed { color: #4ade80; }
+        .policy-line.denied { color: #f87171; font-weight: 600; }
+        .policy-line.other { color: #9ca3af; }
+
+        .escalation-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(10, 5, 5, 0.92);
+            z-index: 999;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(4px);
+        }
+        .escalation-overlay.show {
+            display: flex;
+            animation: flashIn 0.4s ease;
+        }
+        @keyframes flashIn {
+            0% { background: rgba(239,68,68,0.9); }
+            100% { background: rgba(10, 5, 5, 0.92); }
+        }
+        .escalation-box {
+            text-align: center;
+            border: 2px solid #ef4444;
+            border-radius: 16px;
+            padding: 40px 60px;
+            background: rgba(20,5,5,0.6);
+            box-shadow: 0 0 60px rgba(239,68,68,0.5);
+        }
+        .escalation-title {
+            color: #ef4444;
+            font-size: 1.8em;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+            margin-bottom: 18px;
+            animation: pulse 1.2s infinite;
+        }
+        .escalation-desc { color: #fca5a5; font-size: 1.3em; margin-bottom: 8px; }
+        .escalation-amount { color: #fff; font-size: 2.4em; font-weight: 700; font-family: monospace; margin-bottom: 20px; }
+        .escalation-sub { color: #d1d5db; font-size: 0.95em; line-height: 1.5; }
+    </style>
+</head>
+<body>
+    <div class="nav-links">
+        <a href="/" class="nav-link">← Portal</a>
+    </div>
+
+    <div class="hero">
+        <div class="credibility-strip">BUILT WITH NVIDIA NEMOCLAW &nbsp;·&nbsp; NOUS RESEARCH HERMES AGENT &nbsp;·&nbsp; POWERED BY STRIPE</div>
+        <h1 class="hero-claim">The first AI agent you can hand a real wallet to.</h1>
+        <div class="hero-sub">Custodian is the trust layer underneath: kernel-enforced authority, not a promise in a prompt. The agent itself cannot exceed its limit or approve its own escalation — even if it tries. Below: a real agent proving it, live, on real infrastructure.</div>
+
+        <div class="spec-strip" id="spec-strip">
+            <span class="spec-item">AUTHORITY <strong id="spec-band">—</strong></span>
+            <span class="spec-sep">·</span>
+            <span class="spec-item">PER-ACTION <strong id="spec-cap">—</strong></span>
+            <span class="spec-sep">·</span>
+            <span class="spec-item">SESSION <strong id="spec-session">—</strong></span>
+            <span class="spec-sep">·</span>
+            <span class="spec-item enforced">ENFORCED AT KERNEL LEVEL</span>
+        </div>
+
+        <div class="process-diagram">
+            <div class="process-step">
+                <div class="process-num">01</div>
+                <div class="process-title">OBSERVE</div>
+                <div class="process-desc">Pulls real, ambiguous signals from real infrastructure — disk trends, system status, capacity — not a single up/down check a script could already do.</div>
+            </div>
+            <div class="process-arrow">→</div>
+            <div class="process-step">
+                <div class="process-num">02</div>
+                <div class="process-title">JUDGE</div>
+                <div class="process-desc">Weighs the signals together. Most of the time the right call is to do nothing and spend nothing — only acts when the situation genuinely warrants it.</div>
+            </div>
+            <div class="process-arrow">→</div>
+            <div class="process-step">
+                <div class="process-num">03</div>
+                <div class="process-title">ACT or ESCALATE</div>
+                <div class="process-desc">In-band: executes autonomously via real Stripe. Over-band: blocked at the kernel level, a one-time code goes to a human.</div>
+            </div>
+            <div class="process-arrow">→</div>
+            <div class="process-step">
+                <div class="process-num">04</div>
+                <div class="process-title">PROVE</div>
+                <div class="process-desc">Every decision lands in an append-only audit log, alongside the raw kernel policy trace below. Not asserted — shown live.</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="section-title" style="font-size:1.3em; margin-top:10px;">LIVE PROOF — real infrastructure, real budget, updating in real time</div>
+
+    <div class="grid" id="status-grid">
+        <div class="card band">
+            <div class="label">Authority Band</div>
+            <div class="value" id="band-value">—</div>
+        </div>
+        <div class="card">
+            <div class="label">Per-Action Cap</div>
+            <div class="value" id="cap-value">—</div>
+        </div>
+        <div class="card">
+            <div class="label">Autonomous Spend (this session)</div>
+            <div class="value" id="session-value">—</div>
+            <div class="bar-track"><div class="bar-fill" id="session-bar" style="width:0%"></div></div>
+            <div class="sub-note" id="override-note"></div>
+        </div>
+        <div class="card">
+            <div class="label">Sandbox Connection</div>
+            <div class="value"><span class="conn-dot down" id="conn-dot"></span><span id="conn-text">checking…</span></div>
+        </div>
+    </div>
+
+    <div class="pending-banner" id="pending-banner"></div>
+
+    <div class="section-title">Live Audit Feed — Ops Decisions &amp; Spend</div>
+    <div class="feed" id="feed">
+        <div class="empty-state">Waiting for events…</div>
+    </div>
+
+    <div class="section-title">Kernel-Level Policy Enforcement — Raw OCSF Log (NemoClaw / OpenShell)</div>
+    <div class="feed policy-feed" id="policy-feed">
+        <div class="empty-state">Waiting for sandbox activity…</div>
+    </div>
+
+    <div class="footer-note">Reading real-time state from the NemoClaw sandbox · refreshes every 3s</div>
+
+    <div class="escalation-overlay" id="escalation-overlay">
+        <div class="escalation-box">
+            <div class="escalation-title">⚠ ESCALATION — HUMAN APPROVAL REQUIRED</div>
+            <div class="escalation-desc" id="escalation-desc"></div>
+            <div class="escalation-amount" id="escalation-amount"></div>
+            <div class="escalation-sub">This exceeds the agent's autonomous authority band.<br>A one-time approval code has been dispatched to the human operator.</div>
+        </div>
+    </div>
+
+    <script>
+        const fmtUSD = (n) => '$' + Number(n).toFixed(2);
+        const fmtTime = (iso) => iso ? iso.replace('T', ' ').replace('Z', '') : '';
+
+        function renderEvent(ev) {
+            const badgeClass = ev.event || 'unknown';
+            const label = (ev.event || 'unknown').replace(/_/g, ' ');
+            return `<div class="event">
+                <div class="ts">${fmtTime(ev.iso)}</div>
+                <div class="badge ${badgeClass}">${label}</div>
+                <div class="desc">${ev.description || ''}</div>
+                <div class="amount">${ev.amount != null ? fmtUSD(ev.amount) : ''}</div>
+            </div>`;
+        }
+
+        function renderPolicyLine(line) {
+            let cls = 'other';
+            if (/\bALLOWED\b/.test(line)) cls = 'allowed';
+            else if (/\bDENIED\b/.test(line)) cls = 'denied';
+            // Strip the leading ISO timestamp+container prefix Docker adds, keep the OCSF payload.
+            const cleaned = line.replace(/^\S+\s+/, '');
+            return `<div class="policy-line ${cls}">${cleaned}</div>`;
+        }
+
+        async function poll() {
+            try {
+                const res = await fetch('/api/v1/hermes/summary');
+                const data = await res.json();
+
+                const auth = data.authority || {};
+                const connected = !!auth.connected;
+
+                document.getElementById('conn-dot').className = 'conn-dot ' + (connected ? 'live' : 'down');
+                document.getElementById('conn-text').textContent = connected ? 'Connected' : 'Unreachable';
+
+                document.getElementById('band-value').textContent = auth.band || '—';
+                document.getElementById('cap-value').textContent = auth.per_action_cap != null ? fmtUSD(auth.per_action_cap) : '—';
+
+                const autonomous = auth.autonomous_spent || 0;
+                const overrides = auth.approved_override_spent || 0;
+                const sessionCap = auth.session_cap || 1;
+                const pct = Math.min(100, (autonomous / sessionCap) * 100);
+                document.getElementById('session-value').textContent = `${fmtUSD(autonomous)} / ${fmtUSD(sessionCap)}`;
+                const bar = document.getElementById('session-bar');
+                bar.style.width = pct + '%';
+                bar.className = 'bar-fill' + (pct > 80 ? ' danger' : pct > 50 ? ' warn' : '');
+
+                const overrideNote = document.getElementById('override-note');
+                if (overrides > 0) {
+                    overrideNote.textContent = `+ ${fmtUSD(overrides)} via human-approved override (outside autonomous ceiling)`;
+                    overrideNote.classList.add('has-override');
+                } else {
+                    overrideNote.textContent = '';
+                    overrideNote.classList.remove('has-override');
+                }
+
+                document.getElementById('spec-band').textContent = auth.band || '—';
+                document.getElementById('spec-cap').textContent = auth.per_action_cap != null ? fmtUSD(auth.per_action_cap) : '—';
+                document.getElementById('spec-session').textContent = `${fmtUSD(autonomous)} / ${fmtUSD(sessionCap)}`;
+
+                const pending = data.pending_approvals || {};
+                const codes = Object.keys(pending);
+                const banner = document.getElementById('pending-banner');
+                const overlay = document.getElementById('escalation-overlay');
+                if (codes.length > 0) {
+                    const rec = pending[codes[0]];
+                    banner.textContent = `⚠ Escalation awaiting human approval — ${rec.description} (${fmtUSD(rec.amount)}). Code sent to operator.`;
+                    banner.classList.add('show');
+                    document.getElementById('escalation-desc').textContent = rec.description;
+                    document.getElementById('escalation-amount').textContent = fmtUSD(rec.amount);
+                    overlay.classList.add('show');
+                } else {
+                    banner.classList.remove('show');
+                    overlay.classList.remove('show');
+                }
+
+                const events = data.audit || [];
+                const feed = document.getElementById('feed');
+                feed.innerHTML = events.length
+                    ? events.map(renderEvent).join('')
+                    : '<div class="empty-state">No events yet — waiting for the agent to act.</div>';
+
+                const policyLines = data.policy_log || [];
+                const policyFeed = document.getElementById('policy-feed');
+                policyFeed.innerHTML = policyLines.length
+                    ? policyLines.map(renderPolicyLine).join('')
+                    : '<div class="empty-state">No kernel activity yet.</div>';
+            } catch (e) {
+                document.getElementById('conn-dot').className = 'conn-dot down';
+                document.getElementById('conn-text').textContent = 'Error';
+            }
+        }
+
+        poll();
+        setInterval(poll, 3000);
+    </script>
+</body>
+</html>
