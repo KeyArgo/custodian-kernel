@@ -1,0 +1,25 @@
+[project]
+name = "custodian"
+version = "0.1.0"
+description = "Kernel-enforced authority and spend platform for AI agents"
+requires-python = ">=3.11"
+dependencies = [
+    "pyyaml",
+    "requests",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "pytest-cov",
+]
+
+[project.scripts]
+custodian = "custodian.cli.main:main"
+
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["custodian*"]

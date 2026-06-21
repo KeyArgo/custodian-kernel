@@ -1,0 +1,14 @@
+__pycache__/
+*.pyc
+*.egg-info/
+.pytest_cache/
+dist/
+build/
+.git/
+.gitignore
+.gitattributes
+.github/
+skills/
+dashboard/
+*.md
+secrets/
