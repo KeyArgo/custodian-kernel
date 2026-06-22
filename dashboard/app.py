@@ -28,4 +28,9 @@ def dashboard():
 
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=8094, debug=False)
+    # threaded=True so one slow/concurrent request doesn't block every other
+    # visitor -- the Werkzeug dev server is single-threaded by default, which
+    # is fine for local testing but a real liability once this is reachable
+    # publicly during judging. gunicorn (wsgi:app) is the more robust option
+    # for sustained traffic; this is the cheap, immediate mitigation.
+    app.run(host='0.0.0.0', port=8094, debug=False, threaded=True)
