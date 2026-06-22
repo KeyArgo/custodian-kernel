@@ -107,6 +107,35 @@ class PendingApproval:
 
 
 @dataclass
+class KillSwitchState:
+    """The kill switch: when engaged, the engine refuses every request
+    regardless of band or amount, no exceptions. This is an operator-only
+    control -- engaging/disengaging it is not exposed to the agent itself,
+    only to a human via the CLI."""
+    killed: bool = False
+    reason: str = ""
+    by: str = ""
+    changed_at: float = field(default_factory=time.time)
+
+    @classmethod
+    def from_dict(cls, d: dict) -> "KillSwitchState":
+        return cls(
+            killed=bool(d.get("killed", False)),
+            reason=d.get("reason", ""),
+            by=d.get("by", ""),
+            changed_at=float(d.get("changed_at", time.time())),
+        )
+
+    def to_dict(self) -> dict:
+        return {
+            "killed": self.killed,
+            "reason": self.reason,
+            "by": self.by,
+            "changed_at": self.changed_at,
+        }
+
+
+@dataclass
 class AuditEntry:
     """Mirrors the fields already written by _core.append_log()."""
     event: str
