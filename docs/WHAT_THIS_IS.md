@@ -98,3 +98,31 @@ script, then released, then the real charge succeeded again.
 judgment is only useful if you can actually trust the consequences are bounded. Without
 Layer 1, you'd have an interesting demo and no real reason to ever let it touch your
 money.
+
+## The honest path from demo to a real business
+
+Today: single-tenant, Stripe test mode, one real proof-of-concept (the ops-officer).
+That's intentionally what's been built and verified in this window — going further
+wasn't the right use of the time available, not something we couldn't articulate.
+
+The path to an actual operating business is concrete, not hand-wavy, and doesn't
+require new invention:
+
+1. **Multi-tenant policy storage.** `custodian/storage/sqlite.py` already isolates
+   state per workspace (one `custodian.db` per `--state-dir`). Serving multiple real
+   customers means one workspace per customer behind a real account system — an
+   extension of the existing storage abstraction, not a redesign of it.
+2. **Live Stripe mode.** The integration is already real, test-mode is a config flag,
+   not a different code path — `custodian/backends/twilio_verify.py` and the Stripe
+   calls in `_core.py` use the same API shape in test and live mode.
+3. **A second, third, fourth real proof-of-concept**, chosen from
+   `docs/BUSINESSES_THIS_UNLOCKS.md` — each one is a customer-facing product; Custodian
+   is the thing every one of them licenses or runs on.
+4. **Pricing**, once a real proof-of-concept has a real first customer: the natural
+   shape is a platform fee for the enforcement layer (Custodian itself) plus usage-based
+   revenue on whichever proof-of-concept app is actually deployed — i.e., license the
+   trust primitive, sell the application built on top of it.
+
+None of this is built. All of it is a direct extension of what's already real, not a
+pivot away from it — which is the honest answer to "could this become a real
+business": yes, and the next concrete step is named, not vague.

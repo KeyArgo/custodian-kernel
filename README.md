@@ -15,6 +15,10 @@ just discouraged.
 walkthrough of what this actually does, why it needs AI in exactly one place and nowhere
 else, and a worked real example end to end.
 
+**Wondering what this is actually for beyond one demo?** See
+[`docs/BUSINESSES_THIS_UNLOCKS.md`](docs/BUSINESSES_THIS_UNLOCKS.md) — the same enforcement
+pattern applied to five concrete, named business shapes, not just the one shown here.
+
 ## Installation
 
 ```bash
