@@ -67,6 +67,13 @@ def run(args) -> None:
         print("error: amount must be positive", file=sys.stderr)
         raise SystemExit(1)
 
+    kill_state = storage.get_kill_switch()
+    if kill_state.killed:
+        print(f"DENIED: kill switch is engaged (by {kill_state.by or 'operator'}"
+              f"{f', reason: ' + kill_state.reason if kill_state.reason else ''}).")
+        print("Run 'custodian resume --by <name>' to release it.")
+        raise SystemExit(3)
+
     context: dict = {}
     for raw in getattr(args, "context", []) or []:
         if "=" not in raw:

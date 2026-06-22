@@ -3,7 +3,10 @@ from __future__ import annotations
 import argparse
 import sys
 
-from custodian.cli import cmd_init, cmd_validate, cmd_status, cmd_audit, cmd_request, cmd_approve, cmd_deny
+from custodian.cli import (
+    cmd_init, cmd_validate, cmd_status, cmd_audit, cmd_request, cmd_approve,
+    cmd_deny, cmd_kill, cmd_resume,
+)
 from custodian.config import CustodianConfig
 
 
@@ -57,6 +60,17 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--denied-by", required=True, help="Name/ID of the denying human")
     p.add_argument("--state-dir", default=str(env_defaults.state_dir), help="State directory")
     p.set_defaults(func=cmd_deny.run)
+
+    p = sub.add_parser("kill", help="Engage the kill switch -- deny every request until released")
+    p.add_argument("--by", required=True, help="Name/ID of the operator engaging it")
+    p.add_argument("--reason", default="", help="Why the kill switch is being engaged")
+    p.add_argument("--state-dir", default=str(env_defaults.state_dir), help="State directory")
+    p.set_defaults(func=cmd_kill.run)
+
+    p = sub.add_parser("resume", help="Release the kill switch")
+    p.add_argument("--by", required=True, help="Name/ID of the operator releasing it")
+    p.add_argument("--state-dir", default=str(env_defaults.state_dir), help="State directory")
+    p.set_defaults(func=cmd_resume.run)
 
     args = parser.parse_args(argv)
     try:

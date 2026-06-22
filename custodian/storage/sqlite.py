@@ -20,7 +20,7 @@ from typing import Optional
 
 from custodian.exceptions import StorageError
 from custodian.storage.base import StorageBackend
-from custodian.types import AuditEntry, AuthorityState, PendingApproval
+from custodian.types import AuditEntry, AuthorityState, KillSwitchState, PendingApproval
 
 _SCHEMA_SQL = """
 CREATE TABLE IF NOT EXISTS authority_state (
@@ -55,6 +55,14 @@ CREATE TABLE IF NOT EXISTS pending_approval (
     description TEXT    NOT NULL,
     reason      TEXT    NOT NULL DEFAULT '',
     created_at  REAL    NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS kill_switch (
+    id          INTEGER PRIMARY KEY CHECK (id = 1),
+    killed      INTEGER NOT NULL DEFAULT 0,
+    reason      TEXT    NOT NULL DEFAULT '',
+    by          TEXT    NOT NULL DEFAULT '',
+    changed_at  REAL    NOT NULL
 );
 """
 
@@ -185,3 +193,32 @@ class SqliteStorage(StorageBackend):
             conn.close()
         except sqlite3.Error as e:
             raise StorageError(f"failed to clear pending approval: {e}") from e
+
+    def get_kill_switch(self) -> KillSwitchState:
+        try:
+            conn = self._connect()
+            row = conn.execute("SELECT * FROM kill_switch WHERE id = 1").fetchone()
+            conn.close()
+            if row is None:
+                return KillSwitchState()
+            return KillSwitchState(
+                killed=bool(row["killed"]),
+                reason=row["reason"],
+                by=row["by"],
+                changed_at=row["changed_at"],
+            )
+        except sqlite3.Error as e:
+            raise StorageError(f"failed to get kill switch state: {e}") from e
+
+    def set_kill_switch(self, state: KillSwitchState) -> None:
+        try:
+            conn = self._connect()
+            conn.execute(
+                "INSERT OR REPLACE INTO kill_switch "
+                "(id, killed, reason, by, changed_at) VALUES (1, ?, ?, ?, ?)",
+                (int(state.killed), state.reason, state.by, state.changed_at),
+            )
+            conn.commit()
+            conn.close()
+        except sqlite3.Error as e:
+            raise StorageError(f"failed to set kill switch state: {e}") from e

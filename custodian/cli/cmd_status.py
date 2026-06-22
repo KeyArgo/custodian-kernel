@@ -32,9 +32,16 @@ def run(args) -> None:
     try:
         storage = SqliteStorage(db_path)
         state = storage.load_authority_state()
+        kill_state = storage.get_kill_switch()
     except Exception as e:
         print(f"error: failed to read state: {e}", file=sys.stderr)
         raise SystemExit(1)
+
+    if kill_state.killed:
+        print(f"*** KILL SWITCH ENGAGED *** (by {kill_state.by or 'unknown'})")
+        if kill_state.reason:
+            print(f"    Reason: {kill_state.reason}")
+        print()
 
     if state is None:
         _print_default()

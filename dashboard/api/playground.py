@@ -49,6 +49,7 @@ def try_decide():
         return jsonify({'error': 'amount must be a number'}), 400
     description = str(data.get('description', '') or 'untitled request')[:200]
     critical = bool(data.get('critical', False))
+    kill_switch = bool(data.get('kill_switch', False))
 
     if amount <= 0:
         return jsonify({'error': 'amount must be positive'}), 400
@@ -58,17 +59,25 @@ def try_decide():
     policy = load_policy(POLICY_PATH)
     request_obj = SpendRequest(amount=amount, description=description)
     context = {'critical': True} if critical else {}
-    decision = decide(request_obj, FRESH_STATE, policy, context=context)
+    decision = decide(request_obj, FRESH_STATE, policy, context=context, killed=kill_switch)
+
+    note = (
+        'This is the real decide() function from custodian/policy/evaluator.py, '
+        'called live against a fresh, isolated state. No real money moves and no '
+        'real SMS is sent from this endpoint, regardless of the verdict.'
+    )
+    if kill_switch:
+        note += (
+            ' The kill switch override is the same custodian.policy.evaluator.decide(killed=True) '
+            'check used by the real engine -- it runs first and overrides every other rule, '
+            'with no band or amount that can route around it.'
+        )
 
     return jsonify({
         'verdict': decision.verdict.value,
         'reason': decision.reason,
         'band': decision.band.value,
-        'note': (
-            'This is the real decide() function from custodian/policy/evaluator.py, '
-            'called live against a fresh, isolated state. No real money moves and no '
-            'real SMS is sent from this endpoint, regardless of the verdict.'
-        ),
+        'note': note,
     })
 
 

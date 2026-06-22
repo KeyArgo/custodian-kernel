@@ -23,8 +23,23 @@ def decide(
     *,
     skill: Optional[str] = None,
     context: Optional[dict] = None,
+    killed: bool = False,
 ) -> Decision:
     context = context or {}
+
+    if killed:
+        # Checked first, before any band/cap logic, and short-circuits
+        # everything else -- the kill switch overrides every other rule,
+        # with no band, amount, or context that can route around it. This
+        # is an operator-only override; nothing in this function can set
+        # `killed` itself, only a caller that already consulted a real
+        # kill-switch state can pass it in.
+        return Decision(
+            verdict=Verdict.DENIED,
+            request=request,
+            reason="kill switch is engaged -- all requests denied until an operator releases it",
+            band=policy.default_band,
+        )
     band = policy.band_for(skill, context, request.amount)
     band_cfg = policy.bands.get(band)
 
