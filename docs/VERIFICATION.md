@@ -114,7 +114,49 @@ The test in `test_backends.py` validates the secret-file loading logic
 without making real API calls, but the code itself is production-grade
 `requests` calls to Twilio's API.
 
-## 6. Confirm the CLI surface matches the documentation
+## 6. The kill switch actually stops the real, live script
+
+This is reproducible against the real sandbox, not a parallel test path.
+`spend.py` runs inside the NemoClaw sandbox; `custodian kill`/`custodian
+resume` run on the host, where the `custodian` package is actually
+installed (it's deliberately *not* installed inside the sandbox -- see
+`docs/ARCHITECTURE.md`'s kill switch section). Both sides point at the same
+`state/` directory, shared bidirectionally between host and sandbox. The
+sequence that was actually run, with real Stripe PaymentIntents on both
+sides of the kill:
+
+```bash
+# Inside the sandbox: a real autonomous spend succeeds
+python3 /sandbox/.hermes/skills/payments/stripe-spend/scripts/spend.py \
+  --amount 0.50 --description "before kill"
+# -> [stripe] PaymentIntent created: pi_3Tl1bqPfSF4TGXT90AWlrnle
+
+# On the host: engage the real kill switch, pointed at the shared state dir
+custodian kill --by Daniel --reason "demonstration" \
+  --state-dir <host-mounted-path>/stripe-spend/state
+
+# Inside the sandbox: the exact same request, now denied by the real script
+python3 /sandbox/.hermes/skills/payments/stripe-spend/scripts/spend.py \
+  --amount 0.50 --description "after kill"
+# -> [authority] DENIED -- kill switch is engaged ... exit code 3
+
+# On the host: release it
+custodian resume --by Daniel --state-dir <host-mounted-path>/stripe-spend/state
+
+# Inside the sandbox: real spend succeeds again
+python3 /sandbox/.hermes/skills/payments/stripe-spend/scripts/spend.py \
+  --amount 0.50 --description "after resume"
+# -> [stripe] PaymentIntent created: pi_3Tl1cRPfSF4TGXT91Bs7289S
+```
+
+The real `audit_log.jsonl` in that state directory shows the complete,
+unedited sequence: `executed` → `denied` → `executed`. Without sandbox
+access you can reproduce the same logic locally with `custodian kill`/
+`custodian request`/`custodian resume` against any workspace created by
+`custodian init` -- see `docs/GETTING_STARTED.md` step 9 for the exact
+commands and expected output.
+
+## 7. Confirm the CLI surface matches the documentation
 
 The CLI is defined in `custodian/cli/main.py`. Every documented command
 and flag corresponds to an `add_argument` call in that file:
@@ -126,6 +168,8 @@ and flag corresponds to an `add_argument` call in that file:
 - `custodian request --amount --description --skill --context --state-dir --policy`
 - `custodian approve <code> --approved-by --state-dir`
 - `custodian deny --denied-by --state-dir`
+- `custodian kill --by --reason --state-dir`
+- `custodian resume --by --state-dir`
 
 No undocumented commands or flags exist in the code. No documented
 commands or flags are absent from the code.

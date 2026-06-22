@@ -82,6 +82,21 @@ being caught.
 - Real Twilio Verify and Stripe (test-mode) integrations have been
   exercised end-to-end in the development sandbox.
 
+## The kill switch as a security control
+
+A separate, blunter mechanism from the cap/escalation system above: an
+operator-only override that makes every request `DENIED`, regardless of
+band or amount, with no exception. It exists for the case the cap system
+doesn't cover -- not "this amount needs approval," but "something about this
+agent or this situation seems wrong, stop everything until a human looks."
+
+The agent has no path to set or clear it. `custodian.policy.evaluator.decide()`
+accepts a `killed: bool` parameter, but nothing in the agent's own request
+path can supply `True` -- only `custodian kill --by <name>` (a CLI command
+requiring a human-attributed name) writes that state. The live, authoritative
+`spend.py` checks it via a read-only `sqlite3` query against the same database
+the CLI writes to; `spend.py` has no write access to that table.
+
 ## What does not exist
 
 - No third-party security audit has been performed.
@@ -97,3 +112,4 @@ being caught.
 | Agent modifies a backend to skip verification | Backend name must be in `VALID_APPROVAL_BACKENDS`; only `twilio_verify` and `none` are valid |
 | Agent calls `check_response()` with a fake answer | `check_response()` hits Twilio's servers, not local state |
 | Agent bypasses `check_response()` and writes approval audit entry directly | Requires a separate privileged process; the agent only has the request CLI |
+| Agent engages/clears its own kill switch | No code path from the agent's request CLI writes `kill_switch`; only `custodian kill`/`custodian resume` do, both requiring a human name |
