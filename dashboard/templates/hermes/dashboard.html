@@ -326,6 +326,7 @@
         .try-result.autonomous { background: rgba(46,230,166,0.08); border: 1px solid var(--green); color: var(--green); }
         .try-result.escalation_required { background: rgba(255,176,0,0.08); border: 1px solid var(--amber); color: var(--amber); }
         .try-result.rejected { background: rgba(255,59,59,0.1); border: 1px solid var(--red); color: var(--red); }
+        .try-result.denied { background: rgba(255,59,59,0.1); border: 1px solid var(--red); color: var(--red); }
         .try-result .verdict-line { font-weight: 700; text-transform: uppercase; margin-bottom: 6px; }
         .try-result .reason-line { color: #aaa; }
         .try-result .note-line { color: #5a5a5a; font-size: 0.85em; margin-top: 8px; }
@@ -517,9 +518,17 @@
                             <label>Amount ($)<input type="number" id="try-amount" value="1.00" step="0.01" min="0.01"></label>
                             <label>Description<input type="text" id="try-description" value="Test request" maxlength="100"></label>
                             <label class="try-checkbox"><input type="checkbox" id="try-critical"> Mark as critical</label>
+                            <label class="try-checkbox"><input type="checkbox" id="try-kill-switch"> Simulate kill switch engaged</label>
                             <button id="try-submit">Decide</button>
                         </div>
                         <div id="try-result" class="try-result"></div>
+                        <div class="footer-note" style="margin-top:8px; margin-bottom:0; text-align:left;">
+                            The real kill switch is an operator-only control (<code>custodian kill</code> /
+                            <code>custodian resume</code> via CLI) — not a public button on real production
+                            state, the same way a real company wouldn't expose a "disable our safety system"
+                            button to random visitors. Check the box above to see the exact same override
+                            logic run safely against the isolated demo state instead.
+                        </div>
                     </div>
 
                     <div class="try-it-box">
@@ -903,6 +912,7 @@
             const amount = parseFloat(document.getElementById('try-amount').value);
             const description = document.getElementById('try-description').value;
             const critical = document.getElementById('try-critical').checked;
+            const killSwitch = document.getElementById('try-kill-switch').checked;
             const resultBox = document.getElementById('try-result');
             resultBox.className = 'try-result show';
             resultBox.textContent = 'Deciding…';
@@ -910,7 +920,7 @@
                 const res = await fetch('/api/v1/playground/decide', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ amount, description, critical }),
+                    body: JSON.stringify({ amount, description, critical, kill_switch: killSwitch }),
                 });
                 const data = await res.json();
                 if (!res.ok) {
