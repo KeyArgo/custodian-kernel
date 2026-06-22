@@ -26,14 +26,17 @@ app = Flask(__name__, template_folder='templates')
 app.register_blueprint(hermes.bp, url_prefix='/api/v1/hermes')
 app.register_blueprint(playground.bp, url_prefix='/api/v1/playground')
 
-# Allows a separately-hosted static frontend (Cloudflare Pages) to call this
-# backend's read-only/sandboxed-demo API cross-origin, while the dashboard's
-# own HTML/JS (served from this same app, same origin) is unaffected by this
-# either way. Deliberately scoped to only the /api/ routes -- never the root
-# page route -- and to GET/POST, matching what those endpoints actually do.
+# Allows the separately-hosted static frontend (Cloudflare Pages) to call
+# this backend's read-only/sandboxed-demo API cross-origin. rein.argobox.com
+# is now a custom domain bound to the Pages project -- a browser visiting it
+# sends that hostname as the real Origin, not rein-custodian.pages.dev, so
+# both need to be allowed. This app itself is reached at rein-local.argobox.com
+# now, not rein.argobox.com -- see commit history for the cutover. Deliberately
+# scoped to only the /api/ routes -- never the root page route -- and to
+# GET/POST, matching what those endpoints actually do.
 ALLOWED_ORIGINS = {
-    'https://rein.argobox.com',
-    'https://rein-custodian.pages.dev',  # real Cloudflare Pages domain, confirmed at project creation
+    'https://rein.argobox.com',           # custom domain bound to the Pages project
+    'https://rein-custodian.pages.dev',   # the underlying Pages domain
 }
 
 

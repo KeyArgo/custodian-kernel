@@ -635,7 +635,7 @@
 
         async function poll() {
             try {
-                const res = await fetch('https://rein.argobox.com/api/v1/hermes/summary');
+                const res = await fetch('https://rein-local.argobox.com/api/v1/hermes/summary');
                 const data = await res.json();
 
                 const auth = data.authority || {};
@@ -917,7 +917,7 @@
             resultBox.className = 'try-result show';
             resultBox.textContent = 'Deciding…';
             try {
-                const res = await fetch('https://rein.argobox.com/api/v1/playground/decide', {
+                const res = await fetch('https://rein-local.argobox.com/api/v1/playground/decide', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ amount, description, critical, kill_switch: killSwitch }),
@@ -946,7 +946,7 @@
             resultBox.className = 'try-result show';
             resultBox.textContent = 'Checking…';
             try {
-                const res = await fetch('https://rein.argobox.com/api/v1/playground/try-approve', {
+                const res = await fetch('https://rein-local.argobox.com/api/v1/playground/try-approve', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ code }),

@@ -29,7 +29,7 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent
 SPEND_V2 = REPO_ROOT / "skills" / "payments" / "stripe-spend" / "scripts" / "spend_v2.py"
-DASHBOARD_URL = "https://rein.argobox.com/api/v1/hermes/summary"
+DASHBOARD_URL = "https://rein-local.argobox.com/api/v1/hermes/summary"
 PAYMENT_INTENT_ID = "pi_3TkZWEPfSF4TGXT90AWlrnle"
 
 PASS = "\033[92mPASS\033[0m"
