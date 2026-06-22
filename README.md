@@ -66,6 +66,11 @@ custodian audit
   restoring the fix. That test exists so the bug can never silently return.
 - Public commit history at `git.argobox.com/KeyArgo/hermes-hackathon-2026`.
 
+**Don't take any of this on faith — run `python3 verify_kit.py` yourself.** One command
+re-runs the test suite, actually reintroduces the security bug live to prove the regression
+test catches it (then restores the original file), and pulls fresh data straight from the
+real public dashboard. See `docs/VERIFICATION.md` for the full manual breakdown too.
+
 ## Limitations
 
 - Only one approval backend is shipped: `twilio_verify`. Backends named other
