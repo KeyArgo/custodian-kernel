@@ -612,14 +612,22 @@
     <script>
         const fmtUSD = (n) => '$' + Number(n).toFixed(2);
         const fmtTime = (iso) => iso ? iso.replace('T', ' ').replace('Z', '') : '';
+        // Any string that ends up inside an innerHTML template literal must go
+        // through this first -- some of these strings ultimately trace back to
+        // user input (the playground's 'code' field, descriptions on real audit
+        // entries written via CLI). escapeHtml() is the only thing standing
+        // between that and a reflected-XSS sink.
+        const escapeHtml = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({
+            '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+        }[c]));
 
         function renderEvent(ev) {
             const badgeClass = ev.event || 'unknown';
             const label = (ev.event || 'unknown').replace(/_/g, ' ');
             return `<div class="event">
-                <div class="ts">${fmtTime(ev.iso)}</div>
-                <div class="badge ${badgeClass}">${label}</div>
-                <div class="desc">${ev.description || ''}</div>
+                <div class="ts">${escapeHtml(fmtTime(ev.iso))}</div>
+                <div class="badge ${escapeHtml(badgeClass)}">${escapeHtml(label)}</div>
+                <div class="desc">${escapeHtml(ev.description || '')}</div>
                 <div class="amount">${ev.amount != null ? fmtUSD(ev.amount) : ''}</div>
             </div>`;
         }
@@ -630,7 +638,7 @@
             else if (/\bDENIED\b/.test(line)) cls = 'denied';
             // Strip the leading ISO timestamp+container prefix Docker adds, keep the OCSF payload.
             const cleaned = line.replace(/^\S+\s+/, '');
-            return `<div class="policy-line ${cls}">${cleaned}</div>`;
+            return `<div class="policy-line ${cls}">${escapeHtml(cleaned)}</div>`;
         }
 
         async function poll() {
@@ -930,9 +938,9 @@
                 }
                 resultBox.className = `try-result ${data.verdict} show`;
                 resultBox.innerHTML = `
-                    <div class="verdict-line">${data.verdict.replace(/_/g, ' ')} — band ${data.band}</div>
-                    <div class="reason-line">${data.reason}</div>
-                    <div class="note-line">${data.note}</div>
+                    <div class="verdict-line">${escapeHtml(data.verdict.replace(/_/g, ' '))} — band ${escapeHtml(data.band)}</div>
+                    <div class="reason-line">${escapeHtml(data.reason)}</div>
+                    <div class="note-line">${escapeHtml(data.note)}</div>
                 `;
             } catch (e) {
                 resultBox.className = 'try-result rejected show';
@@ -953,7 +961,7 @@
                 });
                 const data = await res.json();
                 resultBox.className = 'try-result rejected show';
-                resultBox.innerHTML = `<div class="verdict-line">${data.approved ? 'approved' : 'rejected'}</div><div class="reason-line">${data.message}</div>`;
+                resultBox.innerHTML = `<div class="verdict-line">${data.approved ? 'approved' : 'rejected'}</div><div class="reason-line">${escapeHtml(data.message)}</div>`;
             } catch (e) {
                 resultBox.className = 'try-result rejected show';
                 resultBox.textContent = 'Could not reach the approval endpoint.';
