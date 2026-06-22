@@ -11,6 +11,10 @@ human approval required via Twilio Verify). The agent never holds the keys to
 both sides of that decision, so self-approval is structurally impossible, not
 just discouraged.
 
+**New here? Read [`docs/WHAT_THIS_IS.md`](docs/WHAT_THIS_IS.md) first** — a plain-language
+walkthrough of what this actually does, why it needs AI in exactly one place and nowhere
+else, and a worked real example end to end.
+
 ## Installation
 
 ```bash
