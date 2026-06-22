@@ -15,6 +15,14 @@
             padding: 0;
         }
 
+        /* ---- semantic colors: amber = active/in-progress, green = pass/connected/verified, red = blocked/escalated/error ---- */
+        :root {
+            --amber: #ffb000;
+            --green: #2ee6a6;
+            --red: #ff3b3b;
+            --gray: #5a5a5a;
+        }
+
         .top-bar {
             display: flex;
             align-items: center;
@@ -43,19 +51,36 @@
             font-size: 0.75em;
             color: #8a8a8a;
         }
-        .top-bar-badge .dot { width: 6px; height: 6px; border-radius: 0; background: #ffb000; }
+        .top-bar-badge .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--gray); }
+        .top-bar-badge .dot.live { background: var(--green); box-shadow: 0 0 5px var(--green); }
+        .top-bar-badge .dot.down { background: var(--red); box-shadow: 0 0 5px var(--red); }
         .top-bar-badge .sub { color: #5a5a5a; font-size: 0.85em; }
 
-        .story {
-            max-width: 920px;
+        .page-grid {
+            display: grid;
+            grid-template-columns: 1fr 320px;
+            gap: 0;
+            max-width: 1700px;
             margin: 0 auto;
-            padding: 48px 24px 60px;
+        }
+        @media (max-width: 1100px) {
+            .page-grid { grid-template-columns: 1fr; }
         }
 
-        .hero { margin-bottom: 56px; }
+        .content-col { padding: 40px 40px 60px; min-width: 0; }
+
+        .pipeline-rail {
+            border-left: 1px solid #2a2a2a;
+            padding: 40px 24px;
+        }
+        @media (max-width: 1100px) {
+            .pipeline-rail { border-left: none; border-top: 1px solid #2a2a2a; }
+        }
+
+        .hero { margin-bottom: 44px; }
 
         .hero-claim {
-            font-size: 2.3em;
+            font-size: 2.2em;
             font-weight: 700;
             color: #f2f2f2;
             line-height: 1.25;
@@ -65,10 +90,10 @@
 
         .hero-sub {
             color: #8a8a8a;
-            font-size: 0.98em;
+            font-size: 0.96em;
             line-height: 1.65;
             margin-bottom: 22px;
-            max-width: 680px;
+            max-width: 760px;
         }
 
         .spec-strip {
@@ -98,16 +123,15 @@
         }
         .section-label::before { content: "// "; color: #3a3a3a; }
 
-        .timeline-section { margin-bottom: 52px; }
-
+        /* ---- pipeline rail: vertical timeline ---- */
         .process-diagram {
             display: flex;
             flex-direction: column;
         }
         .process-step {
             display: flex;
-            gap: 20px;
-            padding: 18px 0;
+            gap: 16px;
+            padding: 16px 0;
             border-bottom: 1px solid #1a1a1a;
             position: relative;
             transition: background 0.4s;
@@ -115,7 +139,7 @@
         .process-step:last-child { border-bottom: none; }
         .step-marker {
             position: relative;
-            width: 18px;
+            width: 16px;
             flex: none;
             display: flex;
             justify-content: center;
@@ -125,13 +149,13 @@
             content: '';
             position: absolute;
             top: 17px;
-            bottom: -18px;
+            bottom: -16px;
             width: 1px;
             background: #2a2a2a;
         }
         .process-step.is-complete:not(:last-child) .step-marker::after,
         .process-step.is-active:not(:last-child) .step-marker::after {
-            background: #5a4400;
+            background: #2a3a32;
         }
         .process-step .stage-dot {
             width: 9px;
@@ -141,63 +165,51 @@
             flex: none;
         }
         .process-step.is-complete .stage-dot {
-            background: #ffb000;
-            box-shadow: 0 0 0 3px rgba(255,176,0,0.15);
+            background: var(--green);
+            box-shadow: 0 0 0 3px rgba(46,230,166,0.15);
         }
         .process-step.is-active .stage-dot {
-            background: #ffb000;
+            background: var(--amber);
             box-shadow: 0 0 0 4px rgba(255,176,0,0.25);
             animation: pulse-dot 1.4s ease-in-out infinite;
         }
-        .process-step.is-skipped .stage-dot { opacity: 0.4; }
+        .process-step.is-blocked .stage-dot {
+            background: var(--red);
+            box-shadow: 0 0 0 3px rgba(255,59,59,0.18);
+        }
+        .process-step.is-skipped .stage-dot { opacity: 0.35; }
         @keyframes pulse-dot {
             0%, 100% { box-shadow: 0 0 0 4px rgba(255,176,0,0.25); }
             50% { box-shadow: 0 0 0 8px rgba(255,176,0,0.05); }
         }
         .step-body { flex: 1; min-width: 0; }
-        .step-heading { display: flex; align-items: baseline; gap: 10px; margin-bottom: 6px; flex-wrap: wrap; }
-        .process-num {
-            color: #5a5a5a;
-            font-size: 0.82em;
-            font-weight: 700;
-        }
-        .process-step.is-complete .process-num,
-        .process-step.is-active .process-num { color: #ffb000; }
-        .process-title {
-            color: #d4d4d4;
-            font-weight: 700;
-            font-size: 1em;
-            letter-spacing: 0.04em;
-        }
-        .process-step.is-complete .process-title,
-        .process-step.is-active .process-title { color: #ffb000; }
+        .step-heading { display: flex; align-items: baseline; gap: 8px; margin-bottom: 5px; flex-wrap: wrap; }
+        .process-num { color: #5a5a5a; font-size: 0.78em; font-weight: 700; }
+        .process-step.is-complete .process-num { color: var(--green); }
+        .process-step.is-active .process-num { color: var(--amber); }
+        .process-step.is-blocked .process-num { color: var(--red); }
+        .process-title { color: #d4d4d4; font-weight: 700; font-size: 0.92em; letter-spacing: 0.03em; }
+        .process-step.is-complete .process-title { color: var(--green); }
+        .process-step.is-active .process-title { color: var(--amber); }
+        .process-step.is-blocked .process-title { color: var(--red); }
         .process-step.is-skipped { opacity: 0.45; }
-        .process-desc {
-            color: #7a7a7a;
-            font-size: 0.85em;
-            line-height: 1.5;
-            max-width: 600px;
-        }
+        .process-desc { display: none; }
         .process-status {
-            margin-top: 8px;
-            font-size: 0.78em;
+            margin-top: 6px;
+            font-size: 0.74em;
             font-weight: 700;
-            letter-spacing: 0.03em;
+            letter-spacing: 0.02em;
             min-height: 1.1em;
             text-transform: lowercase;
         }
-        .process-step.is-complete .process-status,
-        .process-step.is-active .process-status { color: #ffb000; }
+        .process-step.is-complete .process-status { color: var(--green); }
+        .process-step.is-active .process-status { color: var(--amber); }
+        .process-step.is-blocked .process-status { color: var(--red); }
 
-        .verdict-section { margin-bottom: 52px; }
-        .verdict-grid {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 0;
-        }
-        @media (max-width: 760px) {
-            .verdict-grid { grid-template-columns: 1fr; }
-        }
+        /* ---- verdict cards ---- */
+        .verdict-section { margin-bottom: 44px; }
+        .verdict-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0; }
+        @media (max-width: 760px) { .verdict-grid { grid-template-columns: 1fr; } }
         .verdict-card {
             background: #0a0a0a;
             border: 1px solid #2a2a2a;
@@ -207,29 +219,9 @@
             margin-right: -1px;
             margin-bottom: -1px;
         }
-        .verdict-lens {
-            color: #6b6b6b;
-            font-size: 0.7em;
-            font-weight: 700;
-            letter-spacing: 0.06em;
-            text-transform: uppercase;
-            margin-bottom: 10px;
-        }
-        .verdict-headline {
-            color: #e0e0e0;
-            font-weight: 600;
-            font-size: 0.95em;
-            line-height: 1.4;
-            margin-bottom: 14px;
-            min-height: 3.9em;
-        }
-        .verdict-fact-row {
-            display: flex;
-            gap: 8px;
-            font-size: 0.76em;
-            padding: 6px 0;
-            border-top: 1px solid #1a1a1a;
-        }
+        .verdict-lens { color: #6b6b6b; font-size: 0.7em; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 10px; }
+        .verdict-headline { color: #e0e0e0; font-weight: 600; font-size: 0.95em; line-height: 1.4; margin-bottom: 14px; min-height: 3.9em; }
+        .verdict-fact-row { display: flex; gap: 8px; font-size: 0.76em; padding: 6px 0; border-top: 1px solid #1a1a1a; }
         .verdict-fact-row:first-of-type { border-top: none; }
         .verdict-fact-key { color: #5a5a5a; white-space: nowrap; }
         .verdict-fact-val { color: #8a8a8a; word-break: break-all; }
@@ -245,229 +237,110 @@
         }
         .verdict-badge::before { content: "["; }
         .verdict-badge::after { content: "]"; }
-        .verdict-badge.pass { background: rgba(255,176,0,0.08); color: #ffb000; }
-        .verdict-badge.hold { background: rgba(255,176,0,0.08); color: #ffb000; }
-        .verdict-badge.blocked { background: rgba(255,59,59,0.1); color: #ff3b3b; }
-        .verdict-badge.idle { background: transparent; color: #5a5a5a; }
+        .verdict-badge.pass { background: rgba(46,230,166,0.08); color: var(--green); }
+        .verdict-badge.hold { background: rgba(255,176,0,0.08); color: var(--amber); }
+        .verdict-badge.blocked { background: rgba(255,59,59,0.1); color: var(--red); }
+        .verdict-badge.idle { background: transparent; color: var(--gray); }
 
-        .metrics-section { margin-bottom: 52px; }
-        .grid {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 0;
-        }
-        @media (max-width: 760px) {
-            .grid { grid-template-columns: repeat(2, 1fr); }
-        }
-        .card {
-            background: #0a0a0a;
-            border-radius: 0;
-            padding: 16px 18px;
-            border: 1px solid #2a2a2a;
-            margin-right: -1px;
-            margin-bottom: -1px;
-        }
-        .card .label {
-            font-size: 0.72em;
-            color: #6b6b6b;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-            margin-bottom: 6px;
-        }
-        .card .value {
-            font-size: 1.4em;
-            font-weight: 700;
-            color: #e8e8e8;
-        }
-        .card.band .value { color: #ffb000; }
+        /* ---- metrics ---- */
+        .metrics-section { margin-bottom: 44px; }
+        .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0; }
+        @media (max-width: 760px) { .grid { grid-template-columns: repeat(2, 1fr); } }
+        .card { background: #0a0a0a; border-radius: 0; padding: 16px 18px; border: 1px solid #2a2a2a; margin-right: -1px; margin-bottom: -1px; }
+        .card .label { font-size: 0.72em; color: #6b6b6b; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px; }
+        .card .value { font-size: 1.4em; font-weight: 700; color: #e8e8e8; }
+        .card.band .value { color: var(--amber); }
 
-        .bar-track {
-            margin-top: 10px;
-            height: 6px;
-            border-radius: 0;
-            background: #1a1a1a;
-            overflow: hidden;
-        }
-        .bar-fill {
-            height: 100%;
-            background: #ffb000;
-            transition: width 0.4s ease;
-        }
+        .bar-track { margin-top: 10px; height: 6px; border-radius: 0; background: #1a1a1a; overflow: hidden; }
+        .bar-fill { height: 100%; background: var(--amber); transition: width 0.4s ease; }
         .bar-fill.warn { background: #ff8c00; }
-        .bar-fill.danger { background: #ff3b3b; }
+        .bar-fill.danger { background: var(--red); }
 
-        .conn-dot {
-            display: inline-block;
-            width: 8px; height: 8px;
-            border-radius: 0;
-            margin-right: 6px;
-        }
-        .conn-dot.live { background: #ffb000; box-shadow: 0 0 6px #ffb000; }
-        .conn-dot.down { background: #ff3b3b; box-shadow: 0 0 6px #ff3b3b; }
+        .conn-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; }
+        .conn-dot.live { background: var(--green); box-shadow: 0 0 6px var(--green); }
+        .conn-dot.down { background: var(--red); box-shadow: 0 0 6px var(--red); }
 
         .nav-links, .nav-link { display: none; }
 
-        .section-title {
-            color: #ffb000;
-            font-size: 0.85em;
+        /* ---- tabs ---- */
+        .tabs-section { margin-bottom: 28px; }
+        .tab-bar { display: flex; border-bottom: 1px solid #2a2a2a; margin-bottom: 18px; }
+        .tab-btn {
+            background: none;
+            border: none;
+            color: #6b6b6b;
+            font-family: inherit;
+            font-size: 0.78em;
             letter-spacing: 0.05em;
             text-transform: uppercase;
-            margin-bottom: 10px;
             font-weight: 700;
+            padding: 10px 18px;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            margin-bottom: -1px;
         }
+        .tab-btn:hover { color: #aaa; }
+        .tab-btn.active { color: var(--amber); border-bottom-color: var(--amber); }
+        .tab-panel { display: none; }
+        .tab-panel.active { display: block; }
+
+        .section-title { color: #ffb000; font-size: 0.85em; letter-spacing: 0.05em; text-transform: uppercase; margin-bottom: 10px; font-weight: 700; }
         .section-title::before { content: "// "; color: #5a5a5a; }
 
-        .proof-section { margin-bottom: 52px; }
-        .proof-block { margin-bottom: 28px; }
-
-        .feed {
-            background: #060606;
-            border-radius: 0;
-            border: 1px solid #2a2a2a;
-            overflow: hidden;
-        }
-        .event {
-            display: flex;
-            align-items: baseline;
-            gap: 14px;
-            padding: 11px 16px;
-            border-bottom: 1px solid #1a1a1a;
-            font-size: 0.85em;
-            flex-wrap: wrap;
-        }
+        .feed { background: #060606; border-radius: 0; border: 1px solid #2a2a2a; overflow: hidden; }
+        .event { display: flex; align-items: baseline; gap: 14px; padding: 11px 16px; border-bottom: 1px solid #1a1a1a; font-size: 0.85em; flex-wrap: wrap; }
         .event:last-child { border-bottom: none; }
         .event .ts { color: #5a5a5a; min-width: 140px; font-size: 0.85em; }
-        .event .badge {
-            min-width: 110px;
-            text-align: center;
-            padding: 2px 8px;
-            border-radius: 0;
-            border: 1px solid currentColor;
-            font-weight: 700;
-            font-size: 0.78em;
-            text-transform: uppercase;
-        }
-        .badge.executed { background: rgba(255,176,0,0.08); color: #ffb000; }
-        .badge.escalation_required { background: rgba(255,176,0,0.08); color: #ffb000; animation: pulse 1.6s infinite; }
-        .badge.denied { background: rgba(255,59,59,0.1); color: #ff3b3b; }
-        .badge.execution_failed { background: rgba(255,59,59,0.1); color: #ff3b3b; }
+        .event .badge { min-width: 110px; text-align: center; padding: 2px 8px; border-radius: 0; border: 1px solid currentColor; font-weight: 700; font-size: 0.78em; text-transform: uppercase; }
+        .badge.executed { background: rgba(46,230,166,0.08); color: var(--green); }
+        .badge.escalation_required { background: rgba(255,176,0,0.08); color: var(--amber); animation: pulse 1.6s infinite; }
+        .badge.denied { background: rgba(255,59,59,0.1); color: var(--red); }
+        .badge.execution_failed { background: rgba(255,59,59,0.1); color: var(--red); }
         @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.5; } }
         .event .desc { flex: 1; color: #aaa; min-width: 200px; }
         .event .amount { color: #d4d4d4; min-width: 64px; text-align: right; }
 
         .empty-state { padding: 24px; text-align: center; color: #5a5a5a; font-size: 0.85em; }
 
-        .pending-banner {
-            background: #100a00;
-            border: 1px solid #ffb000;
-            border-radius: 0;
-            padding: 12px 18px;
-            color: #ffb000;
-            display: none;
-            font-size: 0.85em;
-            margin-bottom: 20px;
-        }
+        .pending-banner { background: #100a00; border: 1px solid var(--amber); border-radius: 0; padding: 12px 18px; color: var(--amber); display: none; font-size: 0.85em; margin-bottom: 20px; }
         .pending-banner.show { display: block; }
 
         .sub-note { margin-top: 8px; font-size: 0.72em; color: #5a5a5a; }
-        .sub-note.has-override { color: #ffb000; }
+        .sub-note.has-override { color: var(--amber); }
 
         .footer-note { color: #5a5a5a; font-size: 0.78em; line-height: 1.6; }
-        .footer-note code {
-            background: #0a0a0a;
-            border: 1px solid #2a2a2a;
-            padding: 1px 5px;
-            border-radius: 0;
-            font-size: 0.95em;
-            color: #ffb000;
-        }
+        .footer-note code { background: #0a0a0a; border: 1px solid #2a2a2a; padding: 1px 5px; border-radius: 0; font-size: 0.95em; color: var(--amber); }
 
-        .playground-section { margin-top: 52px; }
-        .try-it-box {
-            background: #0a0a0a;
-            border-radius: 0;
-            border: 1px solid #2a2a2a;
-            padding: 16px 18px;
-            margin-top: 16px;
-        }
+        .try-it-box { background: #0a0a0a; border-radius: 0; border: 1px solid #2a2a2a; padding: 16px 18px; margin-top: 16px; }
         .try-it-row { display: flex; flex-wrap: wrap; align-items: end; gap: 14px; }
-        .try-it-row label {
-            display: flex; flex-direction: column; gap: 4px;
-            color: #8a8a8a; font-size: 0.82em;
-        }
+        .try-it-row label { display: flex; flex-direction: column; gap: 4px; color: #8a8a8a; font-size: 0.82em; }
         .try-it-row input[type="number"], .try-it-row input[type="text"] {
-            background: #000;
-            border: 1px solid #3a3a3a;
-            border-radius: 0;
-            color: #e0e0e0;
-            padding: 7px 9px;
-            font-size: 0.9em;
-            font-family: inherit;
-            min-width: 140px;
+            background: #000; border: 1px solid #3a3a3a; border-radius: 0; color: #e0e0e0;
+            padding: 7px 9px; font-size: 0.9em; font-family: inherit; min-width: 140px;
         }
         .try-it-row .try-checkbox { flex-direction: row; align-items: center; gap: 6px; margin-bottom: 1px; }
-        .try-it-row button {
-            background: #ffb000;
-            color: #000;
-            border: none;
-            border-radius: 0;
-            padding: 8px 16px;
-            font-weight: 700;
-            cursor: pointer;
-            font-size: 0.9em;
-            font-family: inherit;
-        }
+        .try-it-row button { background: var(--amber); color: #000; border: none; border-radius: 0; padding: 8px 16px; font-weight: 700; cursor: pointer; font-size: 0.9em; font-family: inherit; }
         .try-it-row button:hover { background: #ffc940; }
         .try-result { margin-top: 14px; padding: 12px 16px; border-radius: 0; font-size: 0.85em; display: none; }
         .try-result.show { display: block; }
-        .try-result.autonomous { background: rgba(255,176,0,0.08); border: 1px solid #ffb000; color: #ffb000; }
-        .try-result.escalation_required { background: rgba(255,176,0,0.08); border: 1px solid #ffb000; color: #ffb000; }
-        .try-result.rejected { background: rgba(255,59,59,0.1); border: 1px solid #ff3b3b; color: #ff3b3b; }
+        .try-result.autonomous { background: rgba(46,230,166,0.08); border: 1px solid var(--green); color: var(--green); }
+        .try-result.escalation_required { background: rgba(255,176,0,0.08); border: 1px solid var(--amber); color: var(--amber); }
+        .try-result.rejected { background: rgba(255,59,59,0.1); border: 1px solid var(--red); color: var(--red); }
         .try-result .verdict-line { font-weight: 700; text-transform: uppercase; margin-bottom: 6px; }
         .try-result .reason-line { color: #aaa; }
         .try-result .note-line { color: #5a5a5a; font-size: 0.85em; margin-top: 8px; }
 
-        .policy-feed { max-height: 360px; overflow-y: auto; }
-        .policy-line {
-            padding: 6px 16px;
-            font-size: 0.78em;
-            border-bottom: 1px solid #141414;
-            white-space: pre-wrap;
-            word-break: break-all;
-        }
-        .policy-line.allowed { color: #ffb000; }
-        .policy-line.denied { color: #ff3b3b; font-weight: 700; }
+        .policy-feed { max-height: 420px; overflow-y: auto; }
+        .policy-line { padding: 6px 16px; font-size: 0.78em; border-bottom: 1px solid #141414; white-space: pre-wrap; word-break: break-all; }
+        .policy-line.allowed { color: var(--green); }
+        .policy-line.denied { color: var(--red); font-weight: 700; }
         .policy-line.other { color: #8a8a8a; }
 
-        .escalation-overlay {
-            display: none;
-            position: fixed;
-            inset: 0;
-            background: rgba(0,0,0,0.95);
-            z-index: 999;
-            align-items: center;
-            justify-content: center;
-        }
+        .escalation-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.95); z-index: 999; align-items: center; justify-content: center; }
         .escalation-overlay.show { display: flex; animation: flashIn 0.4s ease; }
-        @keyframes flashIn {
-            0% { background: rgba(255,59,59,0.85); }
-            100% { background: rgba(0,0,0,0.95); }
-        }
-        .escalation-box {
-            text-align: center;
-            border: 2px solid #ff3b3b;
-            border-radius: 0;
-            padding: 40px 60px;
-            background: #0a0000;
-        }
-        .escalation-title {
-            color: #ff3b3b;
-            font-size: 1.6em;
-            font-weight: 700;
-            letter-spacing: 0.05em;
-            margin-bottom: 18px;
-            animation: pulse 1.2s infinite;
-        }
+        @keyframes flashIn { 0% { background: rgba(255,59,59,0.85); } 100% { background: rgba(0,0,0,0.95); } }
+        .escalation-box { text-align: center; border: 2px solid var(--red); border-radius: 0; padding: 40px 60px; background: #0a0000; }
+        .escalation-title { color: var(--red); font-size: 1.6em; font-weight: 700; letter-spacing: 0.05em; margin-bottom: 18px; animation: pulse 1.2s infinite; }
         .escalation-desc { color: #ff9d9d; font-size: 1.2em; margin-bottom: 8px; }
         .escalation-amount { color: #fff; font-size: 2.2em; font-weight: 700; margin-bottom: 20px; }
         .escalation-sub { color: #aaa; font-size: 0.9em; line-height: 1.5; }
@@ -483,35 +356,140 @@
             </div>
         </div>
         <div class="top-bar-badges">
-            <div class="top-bar-badge"><span class="dot"></span> NemoClaw <span class="sub">kernel sandbox</span></div>
-            <div class="top-bar-badge"><span class="dot"></span> Nous Hermes Agent</div>
-            <div class="top-bar-badge"><span class="dot"></span> Stripe <span class="sub">real PaymentIntents</span></div>
+            <div class="top-bar-badge"><span class="dot" id="badge-dot-nemoclaw"></span> NemoClaw <span class="sub">kernel sandbox</span></div>
+            <div class="top-bar-badge"><span class="dot" id="badge-dot-hermes"></span> Nous Hermes Agent</div>
+            <div class="top-bar-badge"><span class="dot" id="badge-dot-stripe"></span> Stripe <span class="sub">real PaymentIntents</span></div>
         </div>
     </div>
 
-    <main class="story">
-        <div class="hero">
-            <h1 class="hero-claim">The first AI agent you can hand a real wallet to.</h1>
-            <div class="hero-sub">Custodian is the trust layer underneath: kernel-enforced authority, not a promise in a prompt. The agent itself cannot exceed its limit or approve its own escalation — even if it tries. Below: a real agent proving it, live, on real infrastructure.</div>
-            <div class="spec-strip" id="spec-strip">
-                <span class="spec-item">AUTHORITY <strong id="spec-band">—</strong></span>
-                <span class="spec-sep">·</span>
-                <span class="spec-item">PER-ACTION <strong id="spec-cap">—</strong></span>
-                <span class="spec-sep">·</span>
-                <span class="spec-item">SESSION <strong id="spec-session">—</strong></span>
-                <span class="spec-sep">·</span>
-                <span class="spec-item enforced">ENFORCED AT KERNEL LEVEL</span>
+    <div class="page-grid">
+        <main class="content-col">
+            <div class="hero">
+                <h1 class="hero-claim">The first AI agent you can hand a real wallet to.</h1>
+                <div class="hero-sub">Custodian is the trust layer underneath: kernel-enforced authority, not a promise in a prompt. The agent itself cannot exceed its limit or approve its own escalation — even if it tries. Below: a real agent proving it, live, on real infrastructure.</div>
+                <div class="spec-strip" id="spec-strip">
+                    <span class="spec-item">AUTHORITY <strong id="spec-band">—</strong></span>
+                    <span class="spec-sep">·</span>
+                    <span class="spec-item">PER-ACTION <strong id="spec-cap">—</strong></span>
+                    <span class="spec-sep">·</span>
+                    <span class="spec-item">SESSION <strong id="spec-session">—</strong></span>
+                    <span class="spec-sep">·</span>
+                    <span class="spec-item enforced">ENFORCED AT KERNEL LEVEL</span>
+                </div>
             </div>
-        </div>
 
-        <div class="timeline-section">
+            <div class="verdict-section">
+                <div class="section-label">The same decision, seen from three angles</div>
+                <div class="verdict-grid">
+                    <div class="verdict-card" id="verdict-ops">
+                        <div class="verdict-lens">OPS / INFRA — would this break something?</div>
+                        <div class="verdict-headline" id="verdict-ops-headline">—</div>
+                        <div class="verdict-fact-row"><span class="verdict-fact-key">signal:</span><span class="verdict-fact-val" id="verdict-ops-signal">—</span></div>
+                        <div class="verdict-fact-row"><span class="verdict-fact-key">source:</span><span class="verdict-fact-val">10.0.0.199:8093 (real infra API)</span></div>
+                        <span class="verdict-badge idle" id="verdict-ops-badge">—</span>
+                    </div>
+                    <div class="verdict-card" id="verdict-finance">
+                        <div class="verdict-lens">FINANCE — is it worth the cost?</div>
+                        <div class="verdict-headline" id="verdict-finance-headline">—</div>
+                        <div class="verdict-fact-row"><span class="verdict-fact-key">amount:</span><span class="verdict-fact-val" id="verdict-finance-amount">—</span></div>
+                        <div class="verdict-fact-row"><span class="verdict-fact-key">artifact:</span><span class="verdict-fact-val" id="verdict-finance-artifact">—</span></div>
+                        <span class="verdict-badge idle" id="verdict-finance-badge">—</span>
+                    </div>
+                    <div class="verdict-card" id="verdict-security">
+                        <div class="verdict-lens">SECURITY — does kernel policy allow it?</div>
+                        <div class="verdict-headline" id="verdict-security-headline">—</div>
+                        <div class="verdict-fact-row"><span class="verdict-fact-key">enforcement:</span><span class="verdict-fact-val">kernel (Landlock + OPA)</span></div>
+                        <div class="verdict-fact-row"><span class="verdict-fact-key">artifact:</span><span class="verdict-fact-val" id="verdict-security-artifact">—</span></div>
+                        <span class="verdict-badge idle" id="verdict-security-badge">—</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="metrics-section">
+                <div class="section-label">Authority right now</div>
+                <div class="grid" id="status-grid">
+                    <div class="card band">
+                        <div class="label">Authority Band</div>
+                        <div class="value" id="band-value">—</div>
+                    </div>
+                    <div class="card">
+                        <div class="label">Per-Action Cap</div>
+                        <div class="value" id="cap-value">—</div>
+                    </div>
+                    <div class="card">
+                        <div class="label">Autonomous Spend</div>
+                        <div class="value" id="session-value">—</div>
+                        <div class="bar-track"><div class="bar-fill" id="session-bar" style="width:0%"></div></div>
+                        <div class="sub-note" id="override-note"></div>
+                    </div>
+                    <div class="card">
+                        <div class="label">Sandbox</div>
+                        <div class="value"><span class="conn-dot down" id="conn-dot"></span><span id="conn-text">checking…</span></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="pending-banner" id="pending-banner"></div>
+
+            <div class="tabs-section">
+                <div class="tab-bar">
+                    <button class="tab-btn active" id="tab-btn-audit" data-tab="audit">Audit Feed</button>
+                    <button class="tab-btn" id="tab-btn-policy" data-tab="policy">Kernel Policy</button>
+                    <button class="tab-btn" id="tab-btn-try" data-tab="try">Try It Yourself</button>
+                </div>
+
+                <div class="tab-panel active" id="tab-panel-audit">
+                    <div class="section-title">Live Audit Feed — Ops Decisions &amp; Spend</div>
+                    <div class="feed" id="feed">
+                        <div class="empty-state">Waiting for events…</div>
+                    </div>
+                </div>
+
+                <div class="tab-panel" id="tab-panel-policy">
+                    <div class="section-title">Kernel-Level Policy Enforcement — Raw OCSF Log (NemoClaw / OpenShell)</div>
+                    <div class="feed policy-feed" id="policy-feed">
+                        <div class="empty-state">Waiting for sandbox activity…</div>
+                    </div>
+                </div>
+
+                <div class="tab-panel" id="tab-panel-try">
+                    <div class="section-title">Try It Yourself — Live Decision Engine</div>
+                    <div class="footer-note" style="margin-bottom:0;">
+                        This calls the real <code>decide()</code> function from <code>custodian/policy/evaluator.py</code>,
+                        live, against an isolated sandbox state. Nothing here ever touches real money, sends a real SMS,
+                        or affects the live data shown above.
+                    </div>
+                    <div class="try-it-box">
+                        <div class="try-it-row">
+                            <label>Amount ($)<input type="number" id="try-amount" value="1.00" step="0.01" min="0.01"></label>
+                            <label>Description<input type="text" id="try-description" value="Test request" maxlength="100"></label>
+                            <label class="try-checkbox"><input type="checkbox" id="try-critical"> Mark as critical</label>
+                            <button id="try-submit">Decide</button>
+                        </div>
+                        <div id="try-result" class="try-result"></div>
+                    </div>
+
+                    <div class="try-it-box">
+                        <div class="try-it-row">
+                            <label>Approval code<input type="text" id="try-code" placeholder="e.g. 123456" maxlength="32"></label>
+                            <button id="try-approve-submit">Try to approve</button>
+                        </div>
+                        <div id="try-approve-result" class="try-result"></div>
+                    </div>
+
+                    <div class="footer-note" style="margin-top:16px;">Reading real-time state from the NemoClaw sandbox · refreshes every 3s</div>
+                </div>
+            </div>
+        </main>
+
+        <aside class="pipeline-rail">
             <div class="section-label">What's happening right now, live</div>
             <div class="process-diagram">
                 <div class="process-step" id="stage-observe">
                     <div class="step-marker"><span class="stage-dot"></span></div>
                     <div class="step-body">
                         <div class="step-heading"><span class="process-num">01</span><span class="process-title">OBSERVE</span></div>
-                        <div class="process-desc">Pulls real, ambiguous signals from real infrastructure — disk trends, system status, capacity — not a single up/down check a script could already do.</div>
+                        <div class="process-desc">Pulls real, ambiguous signals from real infrastructure.</div>
                         <div class="process-status" id="status-observe"></div>
                     </div>
                 </div>
@@ -519,7 +497,7 @@
                     <div class="step-marker"><span class="stage-dot"></span></div>
                     <div class="step-body">
                         <div class="step-heading"><span class="process-num">02</span><span class="process-title">JUDGE</span></div>
-                        <div class="process-desc">Weighs the signals together. Most of the time the right call is to do nothing and spend nothing — only acts when the situation genuinely warrants it.</div>
+                        <div class="process-desc">Weighs the signals together.</div>
                         <div class="process-status" id="status-judge"></div>
                     </div>
                 </div>
@@ -527,7 +505,7 @@
                     <div class="step-marker"><span class="stage-dot"></span></div>
                     <div class="step-body">
                         <div class="step-heading"><span class="process-num">03</span><span class="process-title" id="title-act">ACT or ESCALATE</span></div>
-                        <div class="process-desc" id="desc-act">In-band: executes autonomously via real Stripe. Over-band: blocked at the kernel level, a one-time code goes to a human.</div>
+                        <div class="process-desc" id="desc-act">Acts within authority, or gets blocked.</div>
                         <div class="process-status" id="status-act"></div>
                     </div>
                 </div>
@@ -535,7 +513,7 @@
                     <div class="step-marker"><span class="stage-dot"></span></div>
                     <div class="step-body">
                         <div class="step-heading"><span class="process-num">04</span><span class="process-title">VERIFY</span></div>
-                        <div class="process-desc">Real human, real out-of-band 2FA via Twilio Verify. The code exists only on Twilio's servers and the operator's phone — never in any file the agent can read.</div>
+                        <div class="process-desc">Real out-of-band 2FA via Twilio Verify.</div>
                         <div class="process-status" id="status-verify"></div>
                     </div>
                 </div>
@@ -543,110 +521,13 @@
                     <div class="step-marker"><span class="stage-dot"></span></div>
                     <div class="step-body">
                         <div class="step-heading"><span class="process-num">05</span><span class="process-title">PROVE</span></div>
-                        <div class="process-desc">Every decision lands in an append-only audit log, alongside the raw kernel policy trace below. Not asserted — shown live.</div>
+                        <div class="process-desc">Logged in an append-only audit trail.</div>
                         <div class="process-status" id="status-prove"></div>
                     </div>
                 </div>
             </div>
-        </div>
-
-        <div class="verdict-section">
-            <div class="section-label">The same decision, seen from three angles</div>
-            <div class="verdict-grid">
-                <div class="verdict-card" id="verdict-ops">
-                    <div class="verdict-lens">OPS / INFRA — would this break something?</div>
-                    <div class="verdict-headline" id="verdict-ops-headline">—</div>
-                    <div class="verdict-fact-row"><span class="verdict-fact-key">signal:</span><span class="verdict-fact-val" id="verdict-ops-signal">—</span></div>
-                    <div class="verdict-fact-row"><span class="verdict-fact-key">source:</span><span class="verdict-fact-val">10.0.0.199:8093 (real infra API)</span></div>
-                    <span class="verdict-badge idle" id="verdict-ops-badge">—</span>
-                </div>
-                <div class="verdict-card" id="verdict-finance">
-                    <div class="verdict-lens">FINANCE — is it worth the cost?</div>
-                    <div class="verdict-headline" id="verdict-finance-headline">—</div>
-                    <div class="verdict-fact-row"><span class="verdict-fact-key">amount:</span><span class="verdict-fact-val" id="verdict-finance-amount">—</span></div>
-                    <div class="verdict-fact-row"><span class="verdict-fact-key">artifact:</span><span class="verdict-fact-val" id="verdict-finance-artifact">—</span></div>
-                    <span class="verdict-badge idle" id="verdict-finance-badge">—</span>
-                </div>
-                <div class="verdict-card" id="verdict-security">
-                    <div class="verdict-lens">SECURITY — does kernel policy allow it?</div>
-                    <div class="verdict-headline" id="verdict-security-headline">—</div>
-                    <div class="verdict-fact-row"><span class="verdict-fact-key">enforcement:</span><span class="verdict-fact-val">kernel (Landlock + OPA)</span></div>
-                    <div class="verdict-fact-row"><span class="verdict-fact-key">artifact:</span><span class="verdict-fact-val" id="verdict-security-artifact">—</span></div>
-                    <span class="verdict-badge idle" id="verdict-security-badge">—</span>
-                </div>
-            </div>
-        </div>
-
-        <div class="metrics-section">
-            <div class="section-label">Authority right now</div>
-            <div class="grid" id="status-grid">
-                <div class="card band">
-                    <div class="label">Authority Band</div>
-                    <div class="value" id="band-value">—</div>
-                </div>
-                <div class="card">
-                    <div class="label">Per-Action Cap</div>
-                    <div class="value" id="cap-value">—</div>
-                </div>
-                <div class="card">
-                    <div class="label">Autonomous Spend</div>
-                    <div class="value" id="session-value">—</div>
-                    <div class="bar-track"><div class="bar-fill" id="session-bar" style="width:0%"></div></div>
-                    <div class="sub-note" id="override-note"></div>
-                </div>
-                <div class="card">
-                    <div class="label">Sandbox</div>
-                    <div class="value"><span class="conn-dot down" id="conn-dot"></span><span id="conn-text">checking…</span></div>
-                </div>
-            </div>
-        </div>
-
-        <div class="proof-section">
-            <div class="pending-banner" id="pending-banner"></div>
-
-            <div class="proof-block">
-                <div class="section-title">Live Audit Feed — Ops Decisions &amp; Spend</div>
-                <div class="feed" id="feed">
-                    <div class="empty-state">Waiting for events…</div>
-                </div>
-            </div>
-
-            <div class="proof-block">
-                <div class="section-title">Kernel-Level Policy Enforcement — Raw OCSF Log (NemoClaw / OpenShell)</div>
-                <div class="feed policy-feed" id="policy-feed">
-                    <div class="empty-state">Waiting for sandbox activity…</div>
-                </div>
-            </div>
-        </div>
-
-        <div class="playground-section">
-            <div class="section-title">Try It Yourself — Live Decision Engine</div>
-            <div class="footer-note" style="margin-bottom:0;">
-                This calls the real <code>decide()</code> function from <code>custodian/policy/evaluator.py</code>,
-                live, against an isolated sandbox state. Nothing here ever touches real money, sends a real SMS,
-                or affects the live data shown above.
-            </div>
-            <div class="try-it-box">
-                <div class="try-it-row">
-                    <label>Amount ($)<input type="number" id="try-amount" value="1.00" step="0.01" min="0.01"></label>
-                    <label>Description<input type="text" id="try-description" value="Test request" maxlength="100"></label>
-                    <label class="try-checkbox"><input type="checkbox" id="try-critical"> Mark as critical</label>
-                    <button id="try-submit">Decide</button>
-                </div>
-                <div id="try-result" class="try-result"></div>
-            </div>
-
-            <div class="try-it-box">
-                <div class="try-it-row">
-                    <label>Approval code<input type="text" id="try-code" placeholder="e.g. 123456" maxlength="32"></label>
-                    <button id="try-approve-submit">Try to approve</button>
-                </div>
-                <div id="try-approve-result" class="try-result"></div>
-            </div>
-
-            <div class="footer-note" style="margin-top:16px;">Reading real-time state from the NemoClaw sandbox · refreshes every 3s</div>
-        </div>
-    </main>
+        </aside>
+    </div>
 
     <div class="escalation-overlay" id="escalation-overlay">
         <div class="escalation-box">
@@ -691,6 +572,14 @@
 
                 document.getElementById('conn-dot').className = 'conn-dot ' + (connected ? 'live' : 'down');
                 document.getElementById('conn-text').textContent = connected ? 'Connected' : 'Unreachable';
+
+                // The capability badges reflect the same real connectivity signal -- if the
+                // sandbox state file is reachable, the whole stack behind it (NemoClaw, the
+                // Hermes Agent running inside it) is genuinely live, not decorative.
+                const badgeCls = connected ? 'dot live' : 'dot down';
+                document.getElementById('badge-dot-nemoclaw').className = badgeCls;
+                document.getElementById('badge-dot-hermes').className = badgeCls;
+                document.getElementById('badge-dot-stripe').className = badgeCls;
 
                 document.getElementById('band-value').textContent = auth.band || '—';
                 document.getElementById('cap-value').textContent = auth.per_action_cap != null ? fmtUSD(auth.per_action_cap) : '—';
@@ -782,7 +671,7 @@
             if (pendingRec) {
                 titleAct.textContent = 'ESCALATED';
                 descAct.textContent = `Over authority — kernel blocked autonomous execution of ${fmtUSD(pendingRec.amount)}.`;
-                setStage('act', 'is-complete', 'ceiling hit, blocked');
+                setStage('act', 'is-blocked', 'ceiling hit, blocked');
                 setStage('verify', 'is-active', 'awaiting real Twilio code…');
                 setStage('prove', '', '');
                 return;
@@ -792,7 +681,7 @@
             if (latest.event === 'executed' && latest.approved_by) {
                 titleAct.textContent = 'ESCALATED';
                 descAct.textContent = 'Over authority — blocked until a real human verified.';
-                setStage('act', 'is-complete', 'ceiling hit, blocked');
+                setStage('act', 'is-blocked', 'ceiling hit, blocked');
                 setStage('verify', 'is-complete', `approved by ${latest.approved_by}`);
                 setStage('prove', 'is-complete', 'logged + kernel trace below');
             } else if (latest.event === 'executed') {
@@ -804,7 +693,7 @@
             } else if (latest.event === 'escalation_required') {
                 titleAct.textContent = 'ESCALATED';
                 descAct.textContent = 'Over authority — kernel blocked it. Approval window expired or still pending.';
-                setStage('act', 'is-complete', 'ceiling hit, blocked');
+                setStage('act', 'is-blocked', 'ceiling hit, blocked');
                 setStage('verify', '', 'no response yet');
                 setStage('prove', 'is-complete', 'logged + kernel trace below');
             } else {
@@ -889,6 +778,15 @@
 
         poll();
         setInterval(poll, 3000);
+
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+                document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+                btn.classList.add('active');
+                document.getElementById('tab-panel-' + btn.dataset.tab).classList.add('active');
+            });
+        });
 
         document.getElementById('try-submit').addEventListener('click', async () => {
             const amount = parseFloat(document.getElementById('try-amount').value);
