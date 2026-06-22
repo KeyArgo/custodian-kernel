@@ -255,6 +255,75 @@
             color: #6b7280;
             font-size: 0.8em;
         }
+        .footer-note code {
+            background: rgba(255,255,255,0.08);
+            padding: 1px 5px;
+            border-radius: 4px;
+            font-size: 0.95em;
+        }
+
+        .try-it-box {
+            max-width: 1100px;
+            margin: 0 auto 24px auto;
+            background: rgba(255,255,255,0.04);
+            border-radius: 14px;
+            border: 1px solid rgba(255,255,255,0.08);
+            padding: 18px 20px;
+        }
+        .try-it-row {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: end;
+            gap: 16px;
+        }
+        .try-it-row label {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            color: #9ca3af;
+            font-size: 0.85em;
+        }
+        .try-it-row input[type="number"],
+        .try-it-row input[type="text"] {
+            background: rgba(0,0,0,0.3);
+            border: 1px solid rgba(255,255,255,0.15);
+            border-radius: 8px;
+            color: #e5e7eb;
+            padding: 8px 10px;
+            font-size: 0.95em;
+            min-width: 140px;
+        }
+        .try-it-row .try-checkbox {
+            flex-direction: row;
+            align-items: center;
+            gap: 6px;
+            margin-bottom: 1px;
+        }
+        .try-it-row button {
+            background: #4ade80;
+            color: #052e16;
+            border: none;
+            border-radius: 8px;
+            padding: 9px 18px;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 0.95em;
+        }
+        .try-it-row button:hover { background: #6ee7a0; }
+        .try-result {
+            margin-top: 14px;
+            padding: 12px 16px;
+            border-radius: 10px;
+            font-size: 0.9em;
+            display: none;
+        }
+        .try-result.show { display: block; }
+        .try-result.autonomous { background: rgba(34,197,94,0.12); border: 1px solid rgba(34,197,94,0.4); color: #4ade80; }
+        .try-result.escalation_required { background: rgba(245,158,11,0.12); border: 1px solid rgba(245,158,11,0.4); color: #fbbf24; }
+        .try-result.rejected { background: rgba(239,68,68,0.12); border: 1px solid rgba(239,68,68,0.4); color: #f87171; }
+        .try-result .verdict-line { font-weight: 700; text-transform: uppercase; margin-bottom: 6px; }
+        .try-result .reason-line { color: #d1d5db; }
+        .try-result .note-line { color: #6b7280; font-size: 0.85em; margin-top: 8px; }
 
         .policy-feed {
             font-family: 'Cascadia Code', 'Fira Code', monospace;
@@ -393,6 +462,30 @@
         <div class="empty-state">Waiting for sandbox activity…</div>
     </div>
 
+    <div class="section-title">Try It Yourself — Live Decision Engine</div>
+    <div class="footer-note" style="margin-top:-8px; margin-bottom:16px;">
+        This calls the real <code>decide()</code> function from <code>custodian/policy/evaluator.py</code>,
+        live, against an isolated sandbox state. Nothing here ever touches real money, sends a real SMS,
+        or affects the live data shown above.
+    </div>
+    <div class="try-it-box">
+        <div class="try-it-row">
+            <label>Amount ($)<input type="number" id="try-amount" value="1.00" step="0.01" min="0.01"></label>
+            <label>Description<input type="text" id="try-description" value="Test request" maxlength="100"></label>
+            <label class="try-checkbox"><input type="checkbox" id="try-critical"> Mark as critical</label>
+            <button id="try-submit">Decide</button>
+        </div>
+        <div id="try-result" class="try-result"></div>
+    </div>
+
+    <div class="try-it-box" style="margin-top:16px;">
+        <div class="try-it-row">
+            <label>Approval code<input type="text" id="try-code" placeholder="e.g. 123456" maxlength="32"></label>
+            <button id="try-approve-submit">Try to approve</button>
+        </div>
+        <div id="try-approve-result" class="try-result"></div>
+    </div>
+
     <div class="footer-note">Reading real-time state from the NemoClaw sandbox · refreshes every 3s</div>
 
     <div class="escalation-overlay" id="escalation-overlay">
@@ -499,6 +592,57 @@
 
         poll();
         setInterval(poll, 3000);
+
+        document.getElementById('try-submit').addEventListener('click', async () => {
+            const amount = parseFloat(document.getElementById('try-amount').value);
+            const description = document.getElementById('try-description').value;
+            const critical = document.getElementById('try-critical').checked;
+            const resultBox = document.getElementById('try-result');
+            resultBox.className = 'try-result show';
+            resultBox.textContent = 'Deciding…';
+            try {
+                const res = await fetch('/api/v1/playground/decide', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ amount, description, critical }),
+                });
+                const data = await res.json();
+                if (!res.ok) {
+                    resultBox.className = 'try-result rejected show';
+                    resultBox.textContent = data.error || 'Request failed.';
+                    return;
+                }
+                resultBox.className = `try-result ${data.verdict} show`;
+                resultBox.innerHTML = `
+                    <div class="verdict-line">${data.verdict.replace(/_/g, ' ')} — band ${data.band}</div>
+                    <div class="reason-line">${data.reason}</div>
+                    <div class="note-line">${data.note}</div>
+                `;
+            } catch (e) {
+                resultBox.className = 'try-result rejected show';
+                resultBox.textContent = 'Could not reach the decision engine.';
+            }
+        });
+
+        document.getElementById('try-approve-submit').addEventListener('click', async () => {
+            const code = document.getElementById('try-code').value;
+            const resultBox = document.getElementById('try-approve-result');
+            resultBox.className = 'try-result show';
+            resultBox.textContent = 'Checking…';
+            try {
+                const res = await fetch('/api/v1/playground/try-approve', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ code }),
+                });
+                const data = await res.json();
+                resultBox.className = 'try-result rejected show';
+                resultBox.innerHTML = `<div class="verdict-line">${data.approved ? 'approved' : 'rejected'}</div><div class="reason-line">${data.message}</div>`;
+            } catch (e) {
+                resultBox.className = 'try-result rejected show';
+                resultBox.textContent = 'Could not reach the approval endpoint.';
+            }
+        });
     </script>
 </body>
 </html>
