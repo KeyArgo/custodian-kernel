@@ -344,6 +344,58 @@
         .escalation-desc { color: #ff9d9d; font-size: 1.2em; margin-bottom: 8px; }
         .escalation-amount { color: #fff; font-size: 2.2em; font-weight: 700; margin-bottom: 20px; }
         .escalation-sub { color: #aaa; font-size: 0.9em; line-height: 1.5; }
+
+        /* ---- guided tour: additive only, never touches real pipeline/audit state ---- */
+        .tour-btn {
+            margin-top: 16px;
+            background: none;
+            border: 1px solid var(--amber);
+            color: var(--amber);
+            border-radius: 0;
+            padding: 8px 16px;
+            font-family: inherit;
+            font-size: 0.8em;
+            font-weight: 700;
+            letter-spacing: 0.03em;
+            cursor: pointer;
+        }
+        .tour-btn:hover { background: rgba(255,176,0,0.1); }
+        .tour-highlight {
+            position: relative;
+            z-index: 500;
+            outline: 2px solid var(--amber);
+            outline-offset: 4px;
+            box-shadow: 0 0 0 9999px rgba(0,0,0,0.65);
+            border-radius: 2px;
+            transition: outline-color 0.2s;
+        }
+        .tour-bar {
+            position: fixed;
+            left: 0; right: 0; bottom: 0;
+            z-index: 1000;
+            background: #0a0a0a;
+            border-top: 1px solid var(--amber);
+            padding: 16px 24px;
+            display: none;
+            align-items: center;
+            gap: 18px;
+        }
+        .tour-bar.show { display: flex; }
+        .tour-bar .tour-step-label { color: var(--amber); font-size: 0.7em; font-weight: 700; letter-spacing: 0.05em; white-space: nowrap; }
+        .tour-bar .tour-caption { flex: 1; color: #d4d4d4; font-size: 0.88em; line-height: 1.4; }
+        .tour-bar .tour-actions { display: flex; gap: 8px; flex: none; }
+        .tour-bar button {
+            background: none;
+            border: 1px solid #3a3a3a;
+            color: #aaa;
+            border-radius: 0;
+            padding: 7px 14px;
+            font-family: inherit;
+            font-size: 0.8em;
+            cursor: pointer;
+        }
+        .tour-bar button.tour-next { border-color: var(--amber); color: var(--amber); font-weight: 700; }
+        .tour-bar button:hover { background: rgba(255,255,255,0.06); }
     </style>
 </head>
 <body>
@@ -376,6 +428,7 @@
                     <span class="spec-sep">·</span>
                     <span class="spec-item enforced">ENFORCED AT KERNEL LEVEL</span>
                 </div>
+                <button class="tour-btn" id="tour-start-btn">▶ How this works (30s)</button>
             </div>
 
             <div class="verdict-section">
@@ -535,6 +588,15 @@
             <div class="escalation-desc" id="escalation-desc"></div>
             <div class="escalation-amount" id="escalation-amount"></div>
             <div class="escalation-sub">This exceeds the agent's autonomous authority band.<br>A one-time approval code has been dispatched to the human operator.</div>
+        </div>
+    </div>
+
+    <div class="tour-bar" id="tour-bar">
+        <span class="tour-step-label" id="tour-step-label">STEP 1/6</span>
+        <span class="tour-caption" id="tour-caption"></span>
+        <div class="tour-actions">
+            <button id="tour-skip-btn">Skip</button>
+            <button class="tour-next" id="tour-next-btn">Next →</button>
         </div>
     </div>
 
@@ -786,6 +848,55 @@
                 btn.classList.add('active');
                 document.getElementById('tab-panel-' + btn.dataset.tab).classList.add('active');
             });
+        });
+
+        // Guided tour -- purely cosmetic scroll + highlight + caption. Never reads or writes
+        // any real state; the only thing it can trigger is switching to the already-safe
+        // playground tab on the last step.
+        const TOUR_STEPS = [
+            { selector: '.top-bar-badges', caption: 'Three real systems, wired together: a kernel-level sandbox (NemoClaw), a real agent running inside it (Nous Hermes), and real Stripe PaymentIntents -- not slides.' },
+            { selector: '.pipeline-rail', caption: 'This is the agent\'s real decision pipeline, live. Watch it update in real time as the agent observes signals, judges whether spend is warranted, and either acts or gets blocked.' },
+            { selector: '.verdict-grid', caption: 'The same single decision, checked from three angles a real business would actually care about: would this break something, is it worth the money, does the kernel even allow it.' },
+            { selector: '#status-grid', caption: 'A real, hard spending ceiling. The agent cannot exceed this -- not because it promises not to, but because the kernel physically blocks it.' },
+            { selector: '.tab-bar', caption: 'Audit trail and raw kernel policy log live here -- every claim on this page traces back to a real Stripe ID or a real kernel log line you can check yourself.' },
+            { selector: '#tab-panel-try', caption: 'Try it yourself, safely: this calls the real decision engine against an isolated test state. Nothing here ever touches real money or the live data shown above -- go ahead and click Decide.', tab: 'try' },
+        ];
+        let tourIndex = 0;
+        let tourPrevHighlight = null;
+
+        function showTourStep(i) {
+            if (tourPrevHighlight) tourPrevHighlight.classList.remove('tour-highlight');
+            const step = TOUR_STEPS[i];
+            if (step.tab) {
+                document.querySelector(`.tab-btn[data-tab="${step.tab}"]`).click();
+            }
+            const target = document.querySelector(step.selector);
+            if (target) {
+                target.classList.add('tour-highlight');
+                target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                tourPrevHighlight = target;
+            }
+            document.getElementById('tour-step-label').textContent = `STEP ${i + 1}/${TOUR_STEPS.length}`;
+            document.getElementById('tour-caption').textContent = step.caption;
+            document.getElementById('tour-next-btn').textContent = (i === TOUR_STEPS.length - 1) ? 'Done' : 'Next →';
+        }
+
+        function endTour() {
+            if (tourPrevHighlight) tourPrevHighlight.classList.remove('tour-highlight');
+            tourPrevHighlight = null;
+            document.getElementById('tour-bar').classList.remove('show');
+        }
+
+        document.getElementById('tour-start-btn').addEventListener('click', () => {
+            tourIndex = 0;
+            document.getElementById('tour-bar').classList.add('show');
+            showTourStep(tourIndex);
+        });
+        document.getElementById('tour-skip-btn').addEventListener('click', endTour);
+        document.getElementById('tour-next-btn').addEventListener('click', () => {
+            tourIndex++;
+            if (tourIndex >= TOUR_STEPS.length) { endTour(); return; }
+            showTourStep(tourIndex);
         });
 
         document.getElementById('try-submit').addEventListener('click', async () => {
