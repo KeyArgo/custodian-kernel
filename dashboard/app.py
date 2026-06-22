@@ -33,7 +33,7 @@ app.register_blueprint(playground.bp, url_prefix='/api/v1/playground')
 # page route -- and to GET/POST, matching what those endpoints actually do.
 ALLOWED_ORIGINS = {
     'https://rein.argobox.com',
-    'https://rein.pages.dev',  # Cloudflare Pages default domain
+    'https://rein-custodian.pages.dev',  # real Cloudflare Pages domain, confirmed at project creation
 }
 
 
