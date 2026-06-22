@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hermes Agent - ArgoBox Command Center</title>
+    <title>Custodian — Autonomous Spend Authority</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
 
@@ -480,124 +480,228 @@
         .escalation-desc { color: #fca5a5; font-size: 1.3em; margin-bottom: 8px; }
         .escalation-amount { color: #fff; font-size: 2.4em; font-weight: 700; font-family: monospace; margin-bottom: 20px; }
         .escalation-sub { color: #d1d5db; font-size: 0.95em; line-height: 1.5; }
-    </style>
+
+        /* ---- app shell: top bar + 3-column layout ---- */
+        body { padding: 0; }
+        .top-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 18px 28px;
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+            background: rgba(255,255,255,0.02);
+        }
+        .top-bar-brand { display: flex; align-items: center; gap: 10px; }
+        .top-bar-logo {
+            width: 30px; height: 30px;
+            border-radius: 7px;
+            background: linear-gradient(135deg, #76b900, #4b5e1f);
+            display: flex; align-items: center; justify-content: center;
+            font-weight: 800; color: #0a0e27; font-size: 0.95em;
+        }
+        .top-bar-name { font-weight: 700; color: #f5f5f5; font-size: 1.05em; letter-spacing: -0.01em; }
+        .top-bar-tag { color: #6b7280; font-size: 0.72em; letter-spacing: 0.08em; text-transform: uppercase; }
+        .top-bar-badges { display: flex; gap: 10px; flex-wrap: wrap; }
+        .top-bar-badge {
+            display: flex; align-items: center; gap: 6px;
+            border: 1px solid rgba(255,255,255,0.12);
+            border-radius: 8px;
+            padding: 6px 12px;
+            font-size: 0.78em;
+            color: #9ca3af;
+        }
+        .top-bar-badge .dot { width: 7px; height: 7px; border-radius: 50%; background: #9fd35c; }
+        .top-bar-badge .sub { color: #6b7280; font-size: 0.85em; }
+
+        .shell-grid {
+            display: grid;
+            grid-template-columns: 260px 1fr 380px;
+            gap: 0;
+            min-height: calc(100vh - 70px);
+            max-width: 1700px;
+            margin: 0 auto;
+        }
+        @media (max-width: 1300px) {
+            .shell-grid { grid-template-columns: 1fr; }
+        }
+
+        .left-rail {
+            border-right: 1px solid rgba(255,255,255,0.08);
+            padding: 22px 16px;
+        }
+        .left-rail-heading {
+            color: #6b7280;
+            font-size: 0.7em;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            font-weight: 700;
+            margin: 0 8px 12px;
+        }
+        .left-rail .process-diagram { flex-direction: column; gap: 8px; }
+        .left-rail .process-step { min-width: unset; max-width: unset; padding: 12px 14px; }
+        .left-rail .process-desc { display: none; }
+        .left-rail .process-arrow { display: none; }
+        .left-rail-metrics { margin-top: 22px; padding: 0 8px; }
+        .left-rail-metric { padding: 10px 0; border-top: 1px solid rgba(255,255,255,0.06); }
+        .left-rail-metric:first-child { border-top: none; }
+        .left-rail-metric .label { color: #6b7280; font-size: 0.72em; letter-spacing: 0.05em; text-transform: uppercase; margin-bottom: 3px; }
+        .left-rail-metric .value { color: #e5e7eb; font-weight: 700; font-size: 1em; }
+
+        .center-col { padding: 36px 36px 10px; }
+        .center-col .hero { max-width: unset; margin: 0 0 28px; text-align: left; padding: 0; }
+        .center-col .hero-sub { max-width: unset; margin: 0 0 24px; }
+        .center-col .spec-strip { margin-bottom: 0; }
+
+        .right-terminal {
+            border-left: 1px solid rgba(255,255,255,0.08);
+            background: rgba(0,0,0,0.18);
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+        }
+        .terminal-header {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 12px 16px;
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+            font-family: 'SF Mono', Monaco, monospace;
+            font-size: 0.78em;
+            color: #9ca3af;
+        }
+        .terminal-header .dots { display: flex; gap: 5px; }
+        .terminal-header .dots span { width: 9px; height: 9px; border-radius: 50%; }
+        .terminal-header .dots span:nth-child(1) { background: #ef4444; }
+        .terminal-header .dots span:nth-child(2) { background: #f5c850; }
+        .terminal-header .dots span:nth-child(3) { background: #9fd35c; }
+        .terminal-section-label {
+            padding: 10px 16px 6px;
+            color: #6b7280;
+            font-size: 0.68em;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            font-weight: 700;
+        }
+        .right-terminal .feed { margin: 0 12px 10px; max-height: 220px; }
+        .right-terminal .feed.policy-feed { max-height: 180px; }
+        .right-terminal .event, .right-terminal .policy-line { font-size: 0.74em; }
+        .below-shell { max-width: 1700px; margin: 0 auto; padding: 10px 36px 40px; }
 </head>
 <body>
-    <div class="nav-links">
-        <a href="/" class="nav-link">← Portal</a>
-    </div>
-
-    <div class="hero">
-        <div class="credibility-strip">BUILT WITH NVIDIA NEMOCLAW &nbsp;·&nbsp; NOUS RESEARCH HERMES AGENT &nbsp;·&nbsp; POWERED BY STRIPE</div>
-        <h1 class="hero-claim">The first AI agent you can hand a real wallet to.</h1>
-        <div class="hero-sub">Custodian is the trust layer underneath: kernel-enforced authority, not a promise in a prompt. The agent itself cannot exceed its limit or approve its own escalation — even if it tries. Below: a real agent proving it, live, on real infrastructure.</div>
-
-        <div class="spec-strip" id="spec-strip">
-            <span class="spec-item">AUTHORITY <strong id="spec-band">—</strong></span>
-            <span class="spec-sep">·</span>
-            <span class="spec-item">PER-ACTION <strong id="spec-cap">—</strong></span>
-            <span class="spec-sep">·</span>
-            <span class="spec-item">SESSION <strong id="spec-session">—</strong></span>
-            <span class="spec-sep">·</span>
-            <span class="spec-item enforced">ENFORCED AT KERNEL LEVEL</span>
-        </div>
-
-        <div class="process-diagram">
-            <div class="process-step" id="stage-observe"><span class="stage-dot"></span>
-                <div class="process-num">01</div>
-                <div class="process-title">OBSERVE</div>
-                <div class="process-desc">Pulls real, ambiguous signals from real infrastructure — disk trends, system status, capacity — not a single up/down check a script could already do.</div>
-                <div class="process-status" id="status-observe"></div>
-            </div>
-            <div class="process-arrow">→</div>
-            <div class="process-step" id="stage-judge"><span class="stage-dot"></span>
-                <div class="process-num">02</div>
-                <div class="process-title">JUDGE</div>
-                <div class="process-desc">Weighs the signals together. Most of the time the right call is to do nothing and spend nothing — only acts when the situation genuinely warrants it.</div>
-                <div class="process-status" id="status-judge"></div>
-            </div>
-            <div class="process-arrow">→</div>
-            <div class="process-step" id="stage-act"><span class="stage-dot"></span>
-                <div class="process-num">03</div>
-                <div class="process-title" id="title-act">ACT or ESCALATE</div>
-                <div class="process-desc" id="desc-act">In-band: executes autonomously via real Stripe. Over-band: blocked at the kernel level, a one-time code goes to a human.</div>
-                <div class="process-status" id="status-act"></div>
-            </div>
-            <div class="process-arrow">→</div>
-            <div class="process-step" id="stage-verify"><span class="stage-dot"></span>
-                <div class="process-num">04</div>
-                <div class="process-title">VERIFY</div>
-                <div class="process-desc">Real human, real out-of-band 2FA via Twilio Verify. The code exists only on Twilio's servers and the operator's phone — never in any file the agent can read.</div>
-                <div class="process-status" id="status-verify"></div>
-            </div>
-            <div class="process-arrow">→</div>
-            <div class="process-step" id="stage-prove"><span class="stage-dot"></span>
-                <div class="process-num">05</div>
-                <div class="process-title">PROVE</div>
-                <div class="process-desc">Every decision lands in an append-only audit log, alongside the raw kernel policy trace below. Not asserted — shown live.</div>
-                <div class="process-status" id="status-prove"></div>
+    <div class="top-bar">
+        <div class="top-bar-brand">
+            <div class="top-bar-logo">C</div>
+            <div>
+                <div class="top-bar-name">Custodian</div>
+                <div class="top-bar-tag">Autonomous Spend Authority</div>
             </div>
         </div>
-
-        <div class="verdict-grid">
-            <div class="verdict-card" id="verdict-ops">
-                <div class="verdict-lens">OPS / INFRA — would this break something?</div>
-                <div class="verdict-headline" id="verdict-ops-headline">—</div>
-                <div class="verdict-fact-row"><span class="verdict-fact-key">signal:</span><span class="verdict-fact-val" id="verdict-ops-signal">—</span></div>
-                <div class="verdict-fact-row"><span class="verdict-fact-key">source:</span><span class="verdict-fact-val">10.0.0.199:8093 (real infra API)</span></div>
-                <span class="verdict-badge idle" id="verdict-ops-badge">—</span>
-            </div>
-            <div class="verdict-card" id="verdict-finance">
-                <div class="verdict-lens">FINANCE — is it worth the cost?</div>
-                <div class="verdict-headline" id="verdict-finance-headline">—</div>
-                <div class="verdict-fact-row"><span class="verdict-fact-key">amount:</span><span class="verdict-fact-val" id="verdict-finance-amount">—</span></div>
-                <div class="verdict-fact-row"><span class="verdict-fact-key">artifact:</span><span class="verdict-fact-val" id="verdict-finance-artifact">—</span></div>
-                <span class="verdict-badge idle" id="verdict-finance-badge">—</span>
-            </div>
-            <div class="verdict-card" id="verdict-security">
-                <div class="verdict-lens">SECURITY — does kernel policy allow it?</div>
-                <div class="verdict-headline" id="verdict-security-headline">—</div>
-                <div class="verdict-fact-row"><span class="verdict-fact-key">enforcement:</span><span class="verdict-fact-val">kernel (Landlock + OPA)</span></div>
-                <div class="verdict-fact-row"><span class="verdict-fact-key">artifact:</span><span class="verdict-fact-val" id="verdict-security-artifact">—</span></div>
-                <span class="verdict-badge idle" id="verdict-security-badge">—</span>
-            </div>
+        <div class="top-bar-badges">
+            <div class="top-bar-badge"><span class="dot"></span> NemoClaw <span class="sub">kernel sandbox</span></div>
+            <div class="top-bar-badge"><span class="dot"></span> Nous Hermes Agent</div>
+            <div class="top-bar-badge"><span class="dot"></span> Stripe <span class="sub">real PaymentIntents</span></div>
         </div>
     </div>
 
-    <div class="section-title" style="font-size:1.3em; margin-top:10px;">LIVE PROOF — real infrastructure, real budget, updating in real time</div>
+    <div class="shell-grid">
+        <aside class="left-rail">
+            <div class="left-rail-heading">Pipeline</div>
+            <div class="process-diagram">
+                <div class="process-step" id="stage-observe"><span class="stage-dot"></span>
+                    <div class="process-num">01</div>
+                    <div class="process-title">OBSERVE</div>
+                    <div class="process-status" id="status-observe"></div>
+                </div>
+                <div class="process-step" id="stage-judge"><span class="stage-dot"></span>
+                    <div class="process-num">02</div>
+                    <div class="process-title">JUDGE</div>
+                    <div class="process-status" id="status-judge"></div>
+                </div>
+                <div class="process-step" id="stage-act"><span class="stage-dot"></span>
+                    <div class="process-num">03</div>
+                    <div class="process-title" id="title-act">ACT or ESCALATE</div>
+                    <div class="process-status" id="status-act"></div>
+                </div>
+                <div class="process-step" id="stage-verify"><span class="stage-dot"></span>
+                    <div class="process-num">04</div>
+                    <div class="process-title">VERIFY</div>
+                    <div class="process-status" id="status-verify"></div>
+                </div>
+                <div class="process-step" id="stage-prove"><span class="stage-dot"></span>
+                    <div class="process-num">05</div>
+                    <div class="process-title">PROVE</div>
+                    <div class="process-status" id="status-prove"></div>
+                </div>
+            </div>
+            <div class="left-rail-metrics">
+                <div class="left-rail-metric"><div class="label">Authority Band</div><div class="value" id="band-value">—</div></div>
+                <div class="left-rail-metric"><div class="label">Per-Action Cap</div><div class="value" id="cap-value">—</div></div>
+                <div class="left-rail-metric">
+                    <div class="label">Autonomous Spend (session)</div>
+                    <div class="value" id="session-value">—</div>
+                    <div class="bar-track"><div class="bar-fill" id="session-bar" style="width:0%"></div></div>
+                    <div class="sub-note" id="override-note"></div>
+                </div>
+                <div class="left-rail-metric"><div class="label">Sandbox</div><div class="value"><span class="conn-dot down" id="conn-dot"></span><span id="conn-text">checking…</span></div></div>
+            </div>
+        </aside>
 
-    <div class="grid" id="status-grid">
-        <div class="card band">
-            <div class="label">Authority Band</div>
-            <div class="value" id="band-value">—</div>
-        </div>
-        <div class="card">
-            <div class="label">Per-Action Cap</div>
-            <div class="value" id="cap-value">—</div>
-        </div>
-        <div class="card">
-            <div class="label">Autonomous Spend (this session)</div>
-            <div class="value" id="session-value">—</div>
-            <div class="bar-track"><div class="bar-fill" id="session-bar" style="width:0%"></div></div>
-            <div class="sub-note" id="override-note"></div>
-        </div>
-        <div class="card">
-            <div class="label">Sandbox Connection</div>
-            <div class="value"><span class="conn-dot down" id="conn-dot"></span><span id="conn-text">checking…</span></div>
-        </div>
+        <main class="center-col">
+            <div class="hero">
+                <h1 class="hero-claim">The first AI agent you can hand a real wallet to.</h1>
+                <div class="hero-sub">Custodian is the trust layer underneath: kernel-enforced authority, not a promise in a prompt. The agent itself cannot exceed its limit or approve its own escalation — even if it tries. Below: a real agent proving it, live, on real infrastructure.</div>
+                <div class="spec-strip" id="spec-strip">
+                    <span class="spec-item">AUTHORITY <strong id="spec-band">—</strong></span>
+                    <span class="spec-sep">·</span>
+                    <span class="spec-item">PER-ACTION <strong id="spec-cap">—</strong></span>
+                    <span class="spec-sep">·</span>
+                    <span class="spec-item">SESSION <strong id="spec-session">—</strong></span>
+                    <span class="spec-sep">·</span>
+                    <span class="spec-item enforced">ENFORCED AT KERNEL LEVEL</span>
+                </div>
+            </div>
+
+            <div class="verdict-grid">
+                <div class="verdict-card" id="verdict-ops">
+                    <div class="verdict-lens">OPS / INFRA — would this break something?</div>
+                    <div class="verdict-headline" id="verdict-ops-headline">—</div>
+                    <div class="verdict-fact-row"><span class="verdict-fact-key">signal:</span><span class="verdict-fact-val" id="verdict-ops-signal">—</span></div>
+                    <div class="verdict-fact-row"><span class="verdict-fact-key">source:</span><span class="verdict-fact-val">10.0.0.199:8093 (real infra API)</span></div>
+                    <span class="verdict-badge idle" id="verdict-ops-badge">—</span>
+                </div>
+                <div class="verdict-card" id="verdict-finance">
+                    <div class="verdict-lens">FINANCE — is it worth the cost?</div>
+                    <div class="verdict-headline" id="verdict-finance-headline">—</div>
+                    <div class="verdict-fact-row"><span class="verdict-fact-key">amount:</span><span class="verdict-fact-val" id="verdict-finance-amount">—</span></div>
+                    <div class="verdict-fact-row"><span class="verdict-fact-key">artifact:</span><span class="verdict-fact-val" id="verdict-finance-artifact">—</span></div>
+                    <span class="verdict-badge idle" id="verdict-finance-badge">—</span>
+                </div>
+                <div class="verdict-card" id="verdict-security">
+                    <div class="verdict-lens">SECURITY — does kernel policy allow it?</div>
+                    <div class="verdict-headline" id="verdict-security-headline">—</div>
+                    <div class="verdict-fact-row"><span class="verdict-fact-key">enforcement:</span><span class="verdict-fact-val">kernel (Landlock + OPA)</span></div>
+                    <div class="verdict-fact-row"><span class="verdict-fact-key">artifact:</span><span class="verdict-fact-val" id="verdict-security-artifact">—</span></div>
+                    <span class="verdict-badge idle" id="verdict-security-badge">—</span>
+                </div>
+            </div>
+        </main>
+
+        <aside class="right-terminal">
+            <div class="terminal-header">
+                <div class="dots"><span></span><span></span><span></span></div>
+                <div>custodian-live$</div>
+            </div>
+            <div class="terminal-section-label">Live Audit Feed — Ops Decisions &amp; Spend</div>
+            <div class="feed" id="feed">
+                <div class="empty-state">Waiting for events…</div>
+            </div>
+            <div class="terminal-section-label">Kernel Policy — Raw OCSF (NemoClaw / OpenShell)</div>
+            <div class="feed policy-feed" id="policy-feed">
+                <div class="empty-state">Waiting for sandbox activity…</div>
+            </div>
+        </aside>
     </div>
 
+    <div class="below-shell">
     <div class="pending-banner" id="pending-banner"></div>
-
-    <div class="section-title">Live Audit Feed — Ops Decisions &amp; Spend</div>
-    <div class="feed" id="feed">
-        <div class="empty-state">Waiting for events…</div>
-    </div>
-
-    <div class="section-title">Kernel-Level Policy Enforcement — Raw OCSF Log (NemoClaw / OpenShell)</div>
-    <div class="feed policy-feed" id="policy-feed">
-        <div class="empty-state">Waiting for sandbox activity…</div>
-    </div>
 
     <div class="section-title">Try It Yourself — Live Decision Engine</div>
     <div class="footer-note" style="margin-top:-8px; margin-bottom:16px;">
@@ -624,6 +728,7 @@
     </div>
 
     <div class="footer-note">Reading real-time state from the NemoClaw sandbox · refreshes every 3s</div>
+    </div>
 
     <div class="escalation-overlay" id="escalation-overlay">
         <div class="escalation-box">
