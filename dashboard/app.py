@@ -13,12 +13,14 @@ stack.
 """
 from flask import Flask, render_template
 
+import api.debug as debug
 import api.hermes as hermes
 import api.playground as playground
 
 app = Flask(__name__, template_folder='templates')
 app.register_blueprint(hermes.bp, url_prefix='/api/v1/hermes')
 app.register_blueprint(playground.bp, url_prefix='/api/v1/playground')
+app.register_blueprint(debug.bp, url_prefix='/api/v1/debug')
 
 
 @app.route('/')
