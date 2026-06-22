@@ -88,7 +88,7 @@ def try_approve():
         'message': (
             f"Code '{code}' rejected. Not because it's wrong — there is no real "
             "approval pending here at all. In the real flow, the only thing that "
-            "can confirm a code is Twilio's own server (verify.twilio.com), checked "
+            "can confirm a code is the verification provider's own server, checked "
             "by approve.py. There is nothing on this machine for you, or the agent, "
             "to guess against."
         ),

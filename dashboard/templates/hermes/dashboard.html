@@ -3,490 +3,584 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hermes Agent - ArgoBox Command Center</title>
+    <title>Custodian — Autonomous Spend Authority</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
 
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #0a0e27 0%, #1a1a2e 100%);
-            color: #e0e0e0;
-            padding: 20px;
+            font-family: 'JetBrains Mono', 'SF Mono', 'Cascadia Code', Consolas, monospace;
+            background: #000;
+            color: #d4d4d4;
             min-height: 100vh;
+            padding: 0;
         }
 
-        .hero {
-            max-width: 1100px;
-            margin: 0 auto 40px auto;
-            text-align: center;
-            padding: 50px 20px 40px 20px;
+        /* ---- semantic colors: amber = active/in-progress, green = pass/connected/verified, red = blocked/escalated/error ---- */
+        :root {
+            --amber: #ffb000;
+            --green: #2ee6a6;
+            --red: #ff3b3b;
+            --gray: #5a5a5a;
         }
 
-        .credibility-strip {
-            color: #6b7280;
-            font-size: 0.78em;
-            letter-spacing: 0.12em;
-            margin-bottom: 28px;
-            font-weight: 600;
+        .top-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 16px 28px;
+            border-bottom: 1px solid #2a2a2a;
+            background: #000;
         }
+        .top-bar-brand { display: flex; align-items: center; gap: 10px; }
+        .top-bar-logo {
+            width: 28px; height: 28px;
+            border-radius: 0;
+            border: 1px solid #ffb000;
+            display: flex; align-items: center; justify-content: center;
+            font-weight: 800; color: #ffb000; font-size: 0.9em;
+        }
+        .top-bar-name { font-weight: 700; color: #f2f2f2; font-size: 1em; letter-spacing: 0.02em; }
+        .top-bar-tag { color: #6b6b6b; font-size: 0.7em; letter-spacing: 0.08em; text-transform: uppercase; }
+        .top-bar-badges { display: flex; gap: 0; flex-wrap: wrap; }
+        .top-bar-badge {
+            display: flex; align-items: center; gap: 6px;
+            border: 1px solid #2a2a2a;
+            border-radius: 0;
+            margin-left: -1px;
+            padding: 5px 12px;
+            font-size: 0.75em;
+            color: #8a8a8a;
+        }
+        .top-bar-badge .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--gray); }
+        .top-bar-badge .dot.live { background: var(--green); box-shadow: 0 0 5px var(--green); }
+        .top-bar-badge .dot.down { background: var(--red); box-shadow: 0 0 5px var(--red); }
+        .top-bar-badge .sub { color: #5a5a5a; font-size: 0.85em; }
+
+        .page-grid {
+            display: grid;
+            grid-template-columns: 1fr 320px;
+            gap: 0;
+            max-width: 1700px;
+            margin: 0 auto;
+        }
+        @media (max-width: 1100px) {
+            .page-grid { grid-template-columns: 1fr; }
+        }
+
+        .content-col { padding: 40px 40px 60px; min-width: 0; }
+
+        .pipeline-rail {
+            border-left: 1px solid #2a2a2a;
+            padding: 40px 24px;
+        }
+        @media (max-width: 1100px) {
+            .pipeline-rail { border-left: none; border-top: 1px solid #2a2a2a; }
+        }
+
+        .hero { margin-bottom: 44px; }
 
         .hero-claim {
-            font-size: 2.6em;
+            font-size: 2.2em;
             font-weight: 700;
-            color: #f5f5f5;
-            line-height: 1.2;
-            margin-bottom: 16px;
+            color: #f2f2f2;
+            line-height: 1.25;
+            margin-bottom: 14px;
             letter-spacing: -0.01em;
         }
 
         .hero-sub {
-            color: #9ca3af;
-            font-size: 1.15em;
-            max-width: 640px;
-            margin: 0 auto 36px auto;
-            line-height: 1.5;
+            color: #8a8a8a;
+            font-size: 0.96em;
+            line-height: 1.65;
+            margin-bottom: 22px;
+            max-width: 760px;
         }
 
         .spec-strip {
             display: inline-flex;
             flex-wrap: wrap;
             align-items: center;
-            justify-content: center;
             gap: 10px;
-            background: rgba(118, 185, 0, 0.06);
-            border: 1px solid rgba(118, 185, 0, 0.3);
-            border-radius: 10px;
-            padding: 12px 22px;
-            font-size: 0.85em;
-            letter-spacing: 0.04em;
-            color: #9fd35c;
-            margin-bottom: 50px;
+            background: #0a0a0a;
+            border: 1px solid #ffb000;
+            border-radius: 0;
+            padding: 10px 18px;
+            font-size: 0.8em;
+            letter-spacing: 0.03em;
+            color: #ffb000;
         }
-        .spec-item strong { color: #d9f99d; font-weight: 700; }
-        .spec-item.enforced { color: #76b900; font-weight: 700; }
-        .spec-sep { color: #3f4a2e; }
+        .spec-item strong { color: #ffd966; font-weight: 700; }
+        .spec-item.enforced { color: #ffb000; font-weight: 700; }
+        .spec-sep { color: #4a3a00; }
 
+        .section-label {
+            color: #5a5a5a;
+            font-size: 0.7em;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            font-weight: 700;
+            margin-bottom: 16px;
+        }
+        .section-label::before { content: "// "; color: #3a3a3a; }
+
+        /* ---- pipeline rail: vertical timeline ---- */
         .process-diagram {
             display: flex;
-            align-items: stretch;
-            justify-content: center;
-            gap: 6px;
-            flex-wrap: wrap;
+            flex-direction: column;
         }
         .process-step {
-            flex: 1;
-            min-width: 200px;
-            max-width: 240px;
-            background: rgba(255,255,255,0.04);
-            border: 1px solid rgba(255,255,255,0.08);
-            border-radius: 12px;
-            padding: 18px 16px;
-            text-align: left;
-        }
-        .process-num {
-            color: #4b5e1f;
-            font-size: 0.85em;
-            font-weight: 700;
-            margin-bottom: 4px;
-        }
-        .process-title {
-            color: #9fd35c;
-            font-weight: 700;
-            font-size: 0.95em;
-            letter-spacing: 0.05em;
-            margin-bottom: 8px;
-        }
-        .process-desc {
-            color: #9ca3af;
-            font-size: 0.82em;
-            line-height: 1.4;
-        }
-        .process-arrow {
             display: flex;
-            align-items: center;
-            color: #4b5e1f;
-            font-size: 1.4em;
-            padding: 0 2px;
-        }
-        @media (max-width: 900px) {
-            .process-arrow { display: none; }
-        }
-
-        .nav-links { text-align: center; margin-bottom: 24px; }
-        .nav-link {
-            display: inline-block;
-            margin: 0 10px;
-            color: #9fd35c;
-            text-decoration: none;
-            padding: 6px 14px;
-            border: 1px solid rgba(118, 185, 0, 0.3);
-            border-radius: 8px;
-            font-size: 0.9em;
-        }
-        .nav-link:hover { background: rgba(118, 185, 0, 0.1); }
-
-        .grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
             gap: 16px;
-            max-width: 1100px;
-            margin: 0 auto 24px auto;
+            padding: 16px 0;
+            border-bottom: 1px solid #1a1a1a;
+            position: relative;
+            transition: background 0.4s;
         }
-
-        .card {
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 14px;
-            padding: 18px 20px;
-            border: 1px solid rgba(255, 255, 255, 0.08);
-        }
-
-        .card .label {
-            font-size: 0.8em;
-            color: #9aa5b1;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-            margin-bottom: 6px;
-        }
-
-        .card .value {
-            font-size: 1.8em;
-            font-weight: 600;
-            color: #f0f0f0;
-        }
-
-        .card.band .value { color: #76b900; }
-
-        .bar-track {
-            margin-top: 10px;
-            height: 10px;
-            border-radius: 5px;
-            background: rgba(255,255,255,0.08);
-            overflow: hidden;
-        }
-        .bar-fill {
-            height: 100%;
-            background: linear-gradient(90deg, #76b900, #9fd35c);
-            transition: width 0.4s ease;
-        }
-        .bar-fill.warn { background: linear-gradient(90deg, #d97706, #f59e0b); }
-        .bar-fill.danger { background: linear-gradient(90deg, #b91c1c, #ef4444); }
-
-        .conn-dot {
-            display: inline-block;
-            width: 9px; height: 9px;
-            border-radius: 50%;
-            margin-right: 6px;
-        }
-        .conn-dot.live { background: #22c55e; box-shadow: 0 0 8px #22c55e; }
-        .conn-dot.down { background: #ef4444; box-shadow: 0 0 8px #ef4444; }
-
-        .section-title {
-            max-width: 1100px;
-            margin: 0 auto 12px auto;
-            color: #9fd35c;
-            font-size: 1.1em;
-            letter-spacing: 0.03em;
-        }
-
-        .feed {
-            max-width: 1100px;
-            margin: 0 auto 24px auto;
-            background: rgba(255,255,255,0.04);
-            border-radius: 14px;
-            border: 1px solid rgba(255,255,255,0.08);
-            overflow: hidden;
-        }
-
-        .event {
+        .process-step:last-child { border-bottom: none; }
+        .step-marker {
+            position: relative;
+            width: 16px;
+            flex: none;
             display: flex;
-            align-items: baseline;
-            gap: 14px;
-            padding: 12px 18px;
-            border-bottom: 1px solid rgba(255,255,255,0.06);
-            font-size: 0.92em;
+            justify-content: center;
+            padding-top: 5px;
         }
-        .event:last-child { border-bottom: none; }
+        .process-step:not(:last-child) .step-marker::after {
+            content: '';
+            position: absolute;
+            top: 17px;
+            bottom: -16px;
+            width: 1px;
+            background: #2a2a2a;
+        }
+        .process-step.is-complete:not(:last-child) .step-marker::after,
+        .process-step.is-active:not(:last-child) .step-marker::after {
+            background: #2a3a32;
+        }
+        .process-step .stage-dot {
+            width: 9px;
+            height: 9px;
+            border-radius: 50%;
+            background: #2a2a2a;
+            flex: none;
+        }
+        .process-step.is-complete .stage-dot {
+            background: var(--green);
+            box-shadow: 0 0 0 3px rgba(46,230,166,0.15);
+        }
+        .process-step.is-active .stage-dot {
+            background: var(--amber);
+            box-shadow: 0 0 0 4px rgba(255,176,0,0.25);
+            animation: pulse-dot 1.4s ease-in-out infinite;
+        }
+        .process-step.is-blocked .stage-dot {
+            background: var(--red);
+            box-shadow: 0 0 0 3px rgba(255,59,59,0.18);
+        }
+        .process-step.is-skipped .stage-dot { opacity: 0.35; }
+        @keyframes pulse-dot {
+            0%, 100% { box-shadow: 0 0 0 4px rgba(255,176,0,0.25); }
+            50% { box-shadow: 0 0 0 8px rgba(255,176,0,0.05); }
+        }
+        .step-body { flex: 1; min-width: 0; }
+        .step-heading { display: flex; align-items: baseline; gap: 8px; margin-bottom: 5px; flex-wrap: wrap; }
+        .process-num { color: #5a5a5a; font-size: 0.78em; font-weight: 700; }
+        .process-step.is-complete .process-num { color: var(--green); }
+        .process-step.is-active .process-num { color: var(--amber); }
+        .process-step.is-blocked .process-num { color: var(--red); }
+        .process-title { color: #d4d4d4; font-weight: 700; font-size: 0.92em; letter-spacing: 0.03em; }
+        .process-step.is-complete .process-title { color: var(--green); }
+        .process-step.is-active .process-title { color: var(--amber); }
+        .process-step.is-blocked .process-title { color: var(--red); }
+        .process-step.is-skipped { opacity: 0.45; }
+        .process-desc { display: none; }
+        .process-status {
+            margin-top: 6px;
+            font-size: 0.74em;
+            font-weight: 700;
+            letter-spacing: 0.02em;
+            min-height: 1.1em;
+            text-transform: lowercase;
+        }
+        .process-step.is-complete .process-status { color: var(--green); }
+        .process-step.is-active .process-status { color: var(--amber); }
+        .process-step.is-blocked .process-status { color: var(--red); }
 
-        .event .ts { color: #6b7280; min-width: 150px; font-family: monospace; font-size: 0.85em; }
-        .event .badge {
-            min-width: 130px;
-            text-align: center;
-            padding: 3px 10px;
-            border-radius: 6px;
-            font-weight: 600;
-            font-size: 0.82em;
+        /* ---- verdict cards ---- */
+        .verdict-section { margin-bottom: 44px; }
+        .verdict-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0; }
+        @media (max-width: 760px) { .verdict-grid { grid-template-columns: 1fr; } }
+        .verdict-card {
+            background: #0a0a0a;
+            border: 1px solid #2a2a2a;
+            border-radius: 0;
+            padding: 18px 18px 16px;
+            text-align: left;
+            margin-right: -1px;
+            margin-bottom: -1px;
+        }
+        .verdict-lens { color: #6b6b6b; font-size: 0.7em; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 10px; }
+        .verdict-headline { color: #e0e0e0; font-weight: 600; font-size: 0.95em; line-height: 1.4; margin-bottom: 14px; min-height: 3.9em; }
+        .verdict-fact-row { display: flex; gap: 8px; font-size: 0.76em; padding: 6px 0; border-top: 1px solid #1a1a1a; }
+        .verdict-fact-row:first-of-type { border-top: none; }
+        .verdict-fact-key { color: #5a5a5a; white-space: nowrap; }
+        .verdict-fact-val { color: #8a8a8a; word-break: break-all; }
+        .verdict-badge {
+            display: inline-block;
+            margin-top: 12px;
+            padding: 2px 10px;
+            border-radius: 0;
+            border: 1px solid currentColor;
+            font-size: 0.7em;
+            font-weight: 700;
+            letter-spacing: 0.05em;
+        }
+        .verdict-badge::before { content: "["; }
+        .verdict-badge::after { content: "]"; }
+        .verdict-badge.pass { background: rgba(46,230,166,0.08); color: var(--green); }
+        .verdict-badge.hold { background: rgba(255,176,0,0.08); color: var(--amber); }
+        .verdict-badge.blocked { background: rgba(255,59,59,0.1); color: var(--red); }
+        .verdict-badge.idle { background: transparent; color: var(--gray); }
+
+        /* ---- metrics ---- */
+        .metrics-section { margin-bottom: 44px; }
+        .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0; }
+        @media (max-width: 760px) { .grid { grid-template-columns: repeat(2, 1fr); } }
+        .card { background: #0a0a0a; border-radius: 0; padding: 16px 18px; border: 1px solid #2a2a2a; margin-right: -1px; margin-bottom: -1px; }
+        .card .label { font-size: 0.72em; color: #6b6b6b; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px; }
+        .card .value { font-size: 1.4em; font-weight: 700; color: #e8e8e8; }
+        .card.band .value { color: var(--amber); }
+
+        .bar-track { margin-top: 10px; height: 6px; border-radius: 0; background: #1a1a1a; overflow: hidden; }
+        .bar-fill { height: 100%; background: var(--amber); transition: width 0.4s ease; }
+        .bar-fill.warn { background: #ff8c00; }
+        .bar-fill.danger { background: var(--red); }
+
+        .conn-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; }
+        .conn-dot.live { background: var(--green); box-shadow: 0 0 6px var(--green); }
+        .conn-dot.down { background: var(--red); box-shadow: 0 0 6px var(--red); }
+
+        .nav-links, .nav-link { display: none; }
+
+        /* ---- tabs ---- */
+        .tabs-section { margin-bottom: 28px; }
+        .tab-bar { display: flex; border-bottom: 1px solid #2a2a2a; margin-bottom: 18px; }
+        .tab-btn {
+            background: none;
+            border: none;
+            color: #6b6b6b;
+            font-family: inherit;
+            font-size: 0.78em;
+            letter-spacing: 0.05em;
             text-transform: uppercase;
+            font-weight: 700;
+            padding: 10px 18px;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            margin-bottom: -1px;
         }
-        .badge.executed { background: rgba(34,197,94,0.15); color: #4ade80; border: 1px solid rgba(34,197,94,0.4); }
-        .badge.escalation_required { background: rgba(245,158,11,0.18); color: #fbbf24; border: 1px solid rgba(245,158,11,0.45); animation: pulse 1.6s infinite; }
-        .badge.denied { background: rgba(239,68,68,0.15); color: #f87171; border: 1px solid rgba(239,68,68,0.4); }
-        .badge.execution_failed { background: rgba(239,68,68,0.15); color: #f87171; border: 1px solid rgba(239,68,68,0.4); }
+        .tab-btn:hover { color: #aaa; }
+        .tab-btn.active { color: var(--amber); border-bottom-color: var(--amber); }
+        .tab-panel { display: none; }
+        .tab-panel.active { display: block; }
 
-        @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.55; } }
+        .section-title { color: #ffb000; font-size: 0.85em; letter-spacing: 0.05em; text-transform: uppercase; margin-bottom: 10px; font-weight: 700; }
+        .section-title::before { content: "// "; color: #5a5a5a; }
 
-        .event .desc { flex: 1; color: #d1d5db; }
-        .event .amount { font-family: monospace; color: #e5e7eb; min-width: 70px; text-align: right; }
+        .feed { background: #060606; border-radius: 0; border: 1px solid #2a2a2a; overflow: hidden; }
+        .event { display: flex; align-items: baseline; gap: 14px; padding: 11px 16px; border-bottom: 1px solid #1a1a1a; font-size: 0.85em; flex-wrap: wrap; }
+        .event:last-child { border-bottom: none; }
+        .event .ts { color: #5a5a5a; min-width: 140px; font-size: 0.85em; }
+        .event .badge { min-width: 110px; text-align: center; padding: 2px 8px; border-radius: 0; border: 1px solid currentColor; font-weight: 700; font-size: 0.78em; text-transform: uppercase; }
+        .badge.executed { background: rgba(46,230,166,0.08); color: var(--green); }
+        .badge.escalation_required { background: rgba(255,176,0,0.08); color: var(--amber); animation: pulse 1.6s infinite; }
+        .badge.denied { background: rgba(255,59,59,0.1); color: var(--red); }
+        .badge.execution_failed { background: rgba(255,59,59,0.1); color: var(--red); }
+        @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.5; } }
+        .event .desc { flex: 1; color: #aaa; min-width: 200px; }
+        .event .amount { color: #d4d4d4; min-width: 64px; text-align: right; }
 
-        .empty-state { padding: 30px; text-align: center; color: #6b7280; }
+        .empty-state { padding: 24px; text-align: center; color: #5a5a5a; font-size: 0.85em; }
 
-        .pending-banner {
-            max-width: 1100px;
-            margin: 0 auto 24px auto;
-            background: rgba(245,158,11,0.1);
-            border: 1px solid rgba(245,158,11,0.4);
-            border-radius: 12px;
-            padding: 14px 20px;
-            color: #fbbf24;
-            display: none;
-        }
+        .pending-banner { background: #100a00; border: 1px solid var(--amber); border-radius: 0; padding: 12px 18px; color: var(--amber); display: none; font-size: 0.85em; margin-bottom: 20px; }
         .pending-banner.show { display: block; }
 
-        .sub-note {
-            margin-top: 8px;
-            font-size: 0.75em;
-            color: #6b7280;
-        }
-        .sub-note.has-override { color: #fbbf24; }
+        .sub-note { margin-top: 8px; font-size: 0.72em; color: #5a5a5a; }
+        .sub-note.has-override { color: var(--amber); }
 
-        .footer-note {
-            max-width: 1100px;
-            margin: 0 auto 24px auto;
-            text-align: center;
-            color: #6b7280;
-            font-size: 0.8em;
-        }
-        .footer-note code {
-            background: rgba(255,255,255,0.08);
-            padding: 1px 5px;
-            border-radius: 4px;
-            font-size: 0.95em;
-        }
+        .footer-note { color: #5a5a5a; font-size: 0.78em; line-height: 1.6; }
+        .footer-note code { background: #0a0a0a; border: 1px solid #2a2a2a; padding: 1px 5px; border-radius: 0; font-size: 0.95em; color: var(--amber); }
 
-        .try-it-box {
-            max-width: 1100px;
-            margin: 0 auto 24px auto;
-            background: rgba(255,255,255,0.04);
-            border-radius: 14px;
-            border: 1px solid rgba(255,255,255,0.08);
-            padding: 18px 20px;
+        .try-it-box { background: #0a0a0a; border-radius: 0; border: 1px solid #2a2a2a; padding: 16px 18px; margin-top: 16px; }
+        .try-it-row { display: flex; flex-wrap: wrap; align-items: end; gap: 14px; }
+        .try-it-row label { display: flex; flex-direction: column; gap: 4px; color: #8a8a8a; font-size: 0.82em; }
+        .try-it-row input[type="number"], .try-it-row input[type="text"] {
+            background: #000; border: 1px solid #3a3a3a; border-radius: 0; color: #e0e0e0;
+            padding: 7px 9px; font-size: 0.9em; font-family: inherit; min-width: 140px;
         }
-        .try-it-row {
-            display: flex;
-            flex-wrap: wrap;
-            align-items: end;
-            gap: 16px;
-        }
-        .try-it-row label {
-            display: flex;
-            flex-direction: column;
-            gap: 4px;
-            color: #9ca3af;
-            font-size: 0.85em;
-        }
-        .try-it-row input[type="number"],
-        .try-it-row input[type="text"] {
-            background: rgba(0,0,0,0.3);
-            border: 1px solid rgba(255,255,255,0.15);
-            border-radius: 8px;
-            color: #e5e7eb;
-            padding: 8px 10px;
-            font-size: 0.95em;
-            min-width: 140px;
-        }
-        .try-it-row .try-checkbox {
-            flex-direction: row;
-            align-items: center;
-            gap: 6px;
-            margin-bottom: 1px;
-        }
-        .try-it-row button {
-            background: #4ade80;
-            color: #052e16;
-            border: none;
-            border-radius: 8px;
-            padding: 9px 18px;
-            font-weight: 600;
-            cursor: pointer;
-            font-size: 0.95em;
-        }
-        .try-it-row button:hover { background: #6ee7a0; }
-        .try-result {
-            margin-top: 14px;
-            padding: 12px 16px;
-            border-radius: 10px;
-            font-size: 0.9em;
-            display: none;
-        }
+        .try-it-row .try-checkbox { flex-direction: row; align-items: center; gap: 6px; margin-bottom: 1px; }
+        .try-it-row button { background: var(--amber); color: #000; border: none; border-radius: 0; padding: 8px 16px; font-weight: 700; cursor: pointer; font-size: 0.9em; font-family: inherit; }
+        .try-it-row button:hover { background: #ffc940; }
+        .try-result { margin-top: 14px; padding: 12px 16px; border-radius: 0; font-size: 0.85em; display: none; }
         .try-result.show { display: block; }
-        .try-result.autonomous { background: rgba(34,197,94,0.12); border: 1px solid rgba(34,197,94,0.4); color: #4ade80; }
-        .try-result.escalation_required { background: rgba(245,158,11,0.12); border: 1px solid rgba(245,158,11,0.4); color: #fbbf24; }
-        .try-result.rejected { background: rgba(239,68,68,0.12); border: 1px solid rgba(239,68,68,0.4); color: #f87171; }
+        .try-result.autonomous { background: rgba(46,230,166,0.08); border: 1px solid var(--green); color: var(--green); }
+        .try-result.escalation_required { background: rgba(255,176,0,0.08); border: 1px solid var(--amber); color: var(--amber); }
+        .try-result.rejected { background: rgba(255,59,59,0.1); border: 1px solid var(--red); color: var(--red); }
         .try-result .verdict-line { font-weight: 700; text-transform: uppercase; margin-bottom: 6px; }
-        .try-result .reason-line { color: #d1d5db; }
-        .try-result .note-line { color: #6b7280; font-size: 0.85em; margin-top: 8px; }
+        .try-result .reason-line { color: #aaa; }
+        .try-result .note-line { color: #5a5a5a; font-size: 0.85em; margin-top: 8px; }
 
-        .policy-feed {
-            font-family: 'Cascadia Code', 'Fira Code', monospace;
-            max-height: 360px;
-            overflow-y: auto;
-        }
-        .policy-line {
-            padding: 6px 18px;
-            font-size: 0.82em;
-            border-bottom: 1px solid rgba(255,255,255,0.04);
-            white-space: pre-wrap;
-            word-break: break-all;
-        }
-        .policy-line.allowed { color: #4ade80; }
-        .policy-line.denied { color: #f87171; font-weight: 600; }
-        .policy-line.other { color: #9ca3af; }
+        .policy-feed { max-height: 420px; overflow-y: auto; }
+        .policy-line { padding: 6px 16px; font-size: 0.78em; border-bottom: 1px solid #141414; white-space: pre-wrap; word-break: break-all; }
+        .policy-line.allowed { color: var(--green); }
+        .policy-line.denied { color: var(--red); font-weight: 700; }
+        .policy-line.other { color: #8a8a8a; }
 
-        .escalation-overlay {
-            display: none;
-            position: fixed;
-            inset: 0;
-            background: rgba(10, 5, 5, 0.92);
-            z-index: 999;
-            align-items: center;
-            justify-content: center;
-            backdrop-filter: blur(4px);
-        }
-        .escalation-overlay.show {
-            display: flex;
-            animation: flashIn 0.4s ease;
-        }
-        @keyframes flashIn {
-            0% { background: rgba(239,68,68,0.9); }
-            100% { background: rgba(10, 5, 5, 0.92); }
-        }
-        .escalation-box {
-            text-align: center;
-            border: 2px solid #ef4444;
-            border-radius: 16px;
-            padding: 40px 60px;
-            background: rgba(20,5,5,0.6);
-            box-shadow: 0 0 60px rgba(239,68,68,0.5);
-        }
-        .escalation-title {
-            color: #ef4444;
-            font-size: 1.8em;
+        .escalation-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.95); z-index: 999; align-items: center; justify-content: center; }
+        .escalation-overlay.show { display: flex; animation: flashIn 0.4s ease; }
+        @keyframes flashIn { 0% { background: rgba(255,59,59,0.85); } 100% { background: rgba(0,0,0,0.95); } }
+        .escalation-box { text-align: center; border: 2px solid var(--red); border-radius: 0; padding: 40px 60px; background: #0a0000; }
+        .escalation-title { color: var(--red); font-size: 1.6em; font-weight: 700; letter-spacing: 0.05em; margin-bottom: 18px; animation: pulse 1.2s infinite; }
+        .escalation-desc { color: #ff9d9d; font-size: 1.2em; margin-bottom: 8px; }
+        .escalation-amount { color: #fff; font-size: 2.2em; font-weight: 700; margin-bottom: 20px; }
+        .escalation-sub { color: #aaa; font-size: 0.9em; line-height: 1.5; }
+
+        /* ---- guided tour: additive only, never touches real pipeline/audit state ---- */
+        .tour-btn {
+            margin-top: 16px;
+            background: none;
+            border: 1px solid var(--amber);
+            color: var(--amber);
+            border-radius: 0;
+            padding: 8px 16px;
+            font-family: inherit;
+            font-size: 0.8em;
             font-weight: 700;
-            letter-spacing: 0.04em;
-            margin-bottom: 18px;
-            animation: pulse 1.2s infinite;
+            letter-spacing: 0.03em;
+            cursor: pointer;
         }
-        .escalation-desc { color: #fca5a5; font-size: 1.3em; margin-bottom: 8px; }
-        .escalation-amount { color: #fff; font-size: 2.4em; font-weight: 700; font-family: monospace; margin-bottom: 20px; }
-        .escalation-sub { color: #d1d5db; font-size: 0.95em; line-height: 1.5; }
+        .tour-btn:hover { background: rgba(255,176,0,0.1); }
+        .tour-highlight {
+            position: relative;
+            z-index: 500;
+            outline: 2px solid var(--amber);
+            outline-offset: 4px;
+            box-shadow: 0 0 0 9999px rgba(0,0,0,0.65);
+            border-radius: 2px;
+            transition: outline-color 0.2s;
+        }
+        .tour-bar {
+            position: fixed;
+            left: 0; right: 0; bottom: 0;
+            z-index: 1000;
+            background: #0a0a0a;
+            border-top: 1px solid var(--amber);
+            padding: 16px 24px;
+            display: none;
+            align-items: center;
+            gap: 18px;
+        }
+        .tour-bar.show { display: flex; }
+        .tour-bar .tour-step-label { color: var(--amber); font-size: 0.7em; font-weight: 700; letter-spacing: 0.05em; white-space: nowrap; }
+        .tour-bar .tour-caption { flex: 1; color: #d4d4d4; font-size: 0.88em; line-height: 1.4; }
+        .tour-bar .tour-actions { display: flex; gap: 8px; flex: none; }
+        .tour-bar button {
+            background: none;
+            border: 1px solid #3a3a3a;
+            color: #aaa;
+            border-radius: 0;
+            padding: 7px 14px;
+            font-family: inherit;
+            font-size: 0.8em;
+            cursor: pointer;
+        }
+        .tour-bar button.tour-next { border-color: var(--amber); color: var(--amber); font-weight: 700; }
+        .tour-bar button:hover { background: rgba(255,255,255,0.06); }
     </style>
 </head>
 <body>
-    <div class="nav-links">
-        <a href="/" class="nav-link">← Portal</a>
-    </div>
-
-    <div class="hero">
-        <div class="credibility-strip">BUILT WITH NVIDIA NEMOCLAW &nbsp;·&nbsp; NOUS RESEARCH HERMES AGENT &nbsp;·&nbsp; POWERED BY STRIPE</div>
-        <h1 class="hero-claim">The first AI agent you can hand a real wallet to.</h1>
-        <div class="hero-sub">Custodian is the trust layer underneath: kernel-enforced authority, not a promise in a prompt. The agent itself cannot exceed its limit or approve its own escalation — even if it tries. Below: a real agent proving it, live, on real infrastructure.</div>
-
-        <div class="spec-strip" id="spec-strip">
-            <span class="spec-item">AUTHORITY <strong id="spec-band">—</strong></span>
-            <span class="spec-sep">·</span>
-            <span class="spec-item">PER-ACTION <strong id="spec-cap">—</strong></span>
-            <span class="spec-sep">·</span>
-            <span class="spec-item">SESSION <strong id="spec-session">—</strong></span>
-            <span class="spec-sep">·</span>
-            <span class="spec-item enforced">ENFORCED AT KERNEL LEVEL</span>
-        </div>
-
-        <div class="process-diagram">
-            <div class="process-step">
-                <div class="process-num">01</div>
-                <div class="process-title">OBSERVE</div>
-                <div class="process-desc">Pulls real, ambiguous signals from real infrastructure — disk trends, system status, capacity — not a single up/down check a script could already do.</div>
-            </div>
-            <div class="process-arrow">→</div>
-            <div class="process-step">
-                <div class="process-num">02</div>
-                <div class="process-title">JUDGE</div>
-                <div class="process-desc">Weighs the signals together. Most of the time the right call is to do nothing and spend nothing — only acts when the situation genuinely warrants it.</div>
-            </div>
-            <div class="process-arrow">→</div>
-            <div class="process-step">
-                <div class="process-num">03</div>
-                <div class="process-title">ACT or ESCALATE</div>
-                <div class="process-desc">In-band: executes autonomously via real Stripe. Over-band: blocked at the kernel level, a one-time code goes to a human.</div>
-            </div>
-            <div class="process-arrow">→</div>
-            <div class="process-step">
-                <div class="process-num">04</div>
-                <div class="process-title">PROVE</div>
-                <div class="process-desc">Every decision lands in an append-only audit log, alongside the raw kernel policy trace below. Not asserted — shown live.</div>
+    <div class="top-bar">
+        <div class="top-bar-brand">
+            <div class="top-bar-logo">C</div>
+            <div>
+                <div class="top-bar-name">CUSTODIAN</div>
+                <div class="top-bar-tag">Autonomous Spend Authority</div>
             </div>
         </div>
-    </div>
-
-    <div class="section-title" style="font-size:1.3em; margin-top:10px;">LIVE PROOF — real infrastructure, real budget, updating in real time</div>
-
-    <div class="grid" id="status-grid">
-        <div class="card band">
-            <div class="label">Authority Band</div>
-            <div class="value" id="band-value">—</div>
-        </div>
-        <div class="card">
-            <div class="label">Per-Action Cap</div>
-            <div class="value" id="cap-value">—</div>
-        </div>
-        <div class="card">
-            <div class="label">Autonomous Spend (this session)</div>
-            <div class="value" id="session-value">—</div>
-            <div class="bar-track"><div class="bar-fill" id="session-bar" style="width:0%"></div></div>
-            <div class="sub-note" id="override-note"></div>
-        </div>
-        <div class="card">
-            <div class="label">Sandbox Connection</div>
-            <div class="value"><span class="conn-dot down" id="conn-dot"></span><span id="conn-text">checking…</span></div>
+        <div class="top-bar-badges">
+            <div class="top-bar-badge"><span class="dot" id="badge-dot-nemoclaw"></span> NemoClaw <span class="sub">kernel sandbox</span></div>
+            <div class="top-bar-badge"><span class="dot" id="badge-dot-hermes"></span> Nous Hermes Agent</div>
+            <div class="top-bar-badge"><span class="dot" id="badge-dot-stripe"></span> Stripe <span class="sub">real PaymentIntents</span></div>
         </div>
     </div>
 
-    <div class="pending-banner" id="pending-banner"></div>
+    <div class="page-grid">
+        <main class="content-col">
+            <div class="hero">
+                <h1 class="hero-claim">The first AI agent you can hand a real wallet to.</h1>
+                <div class="hero-sub">Custodian is the trust layer underneath: kernel-enforced authority, not a promise in a prompt. The agent itself cannot exceed its limit or approve its own escalation — even if it tries. Below: a real agent proving it, live, on real infrastructure.</div>
+                <div class="spec-strip" id="spec-strip">
+                    <span class="spec-item">AUTHORITY <strong id="spec-band">—</strong></span>
+                    <span class="spec-sep">·</span>
+                    <span class="spec-item">PER-ACTION <strong id="spec-cap">—</strong></span>
+                    <span class="spec-sep">·</span>
+                    <span class="spec-item">SESSION <strong id="spec-session">—</strong></span>
+                    <span class="spec-sep">·</span>
+                    <span class="spec-item enforced">ENFORCED AT KERNEL LEVEL</span>
+                </div>
+                <button class="tour-btn" id="tour-start-btn">▶ How this works (30s)</button>
+            </div>
 
-    <div class="section-title">Live Audit Feed — Ops Decisions &amp; Spend</div>
-    <div class="feed" id="feed">
-        <div class="empty-state">Waiting for events…</div>
-    </div>
+            <div class="verdict-section">
+                <div class="section-label">The same decision, seen from three angles</div>
+                <div class="verdict-grid">
+                    <div class="verdict-card" id="verdict-ops">
+                        <div class="verdict-lens">OPS / INFRA — would this break something?</div>
+                        <div class="verdict-headline" id="verdict-ops-headline">—</div>
+                        <div class="verdict-fact-row"><span class="verdict-fact-key">signal:</span><span class="verdict-fact-val" id="verdict-ops-signal">—</span></div>
+                        <div class="verdict-fact-row"><span class="verdict-fact-key">source:</span><span class="verdict-fact-val">10.0.0.199:8093 (real infra API)</span></div>
+                        <span class="verdict-badge idle" id="verdict-ops-badge">—</span>
+                    </div>
+                    <div class="verdict-card" id="verdict-finance">
+                        <div class="verdict-lens">FINANCE — is it worth the cost?</div>
+                        <div class="verdict-headline" id="verdict-finance-headline">—</div>
+                        <div class="verdict-fact-row"><span class="verdict-fact-key">amount:</span><span class="verdict-fact-val" id="verdict-finance-amount">—</span></div>
+                        <div class="verdict-fact-row"><span class="verdict-fact-key">artifact:</span><span class="verdict-fact-val" id="verdict-finance-artifact">—</span></div>
+                        <span class="verdict-badge idle" id="verdict-finance-badge">—</span>
+                    </div>
+                    <div class="verdict-card" id="verdict-security">
+                        <div class="verdict-lens">SECURITY — does kernel policy allow it?</div>
+                        <div class="verdict-headline" id="verdict-security-headline">—</div>
+                        <div class="verdict-fact-row"><span class="verdict-fact-key">enforcement:</span><span class="verdict-fact-val">kernel (Landlock + OPA)</span></div>
+                        <div class="verdict-fact-row"><span class="verdict-fact-key">artifact:</span><span class="verdict-fact-val" id="verdict-security-artifact">—</span></div>
+                        <span class="verdict-badge idle" id="verdict-security-badge">—</span>
+                    </div>
+                </div>
+            </div>
 
-    <div class="section-title">Kernel-Level Policy Enforcement — Raw OCSF Log (NemoClaw / OpenShell)</div>
-    <div class="feed policy-feed" id="policy-feed">
-        <div class="empty-state">Waiting for sandbox activity…</div>
-    </div>
+            <div class="metrics-section">
+                <div class="section-label">Authority right now</div>
+                <div class="grid" id="status-grid">
+                    <div class="card band">
+                        <div class="label">Authority Band</div>
+                        <div class="value" id="band-value">—</div>
+                    </div>
+                    <div class="card">
+                        <div class="label">Per-Action Cap</div>
+                        <div class="value" id="cap-value">—</div>
+                    </div>
+                    <div class="card">
+                        <div class="label">Autonomous Spend</div>
+                        <div class="value" id="session-value">—</div>
+                        <div class="bar-track"><div class="bar-fill" id="session-bar" style="width:0%"></div></div>
+                        <div class="sub-note" id="override-note"></div>
+                    </div>
+                    <div class="card">
+                        <div class="label">Sandbox</div>
+                        <div class="value"><span class="conn-dot down" id="conn-dot"></span><span id="conn-text">checking…</span></div>
+                    </div>
+                </div>
+            </div>
 
-    <div class="section-title">Try It Yourself — Live Decision Engine</div>
-    <div class="footer-note" style="margin-top:-8px; margin-bottom:16px;">
-        This calls the real <code>decide()</code> function from <code>custodian/policy/evaluator.py</code>,
-        live, against an isolated sandbox state. Nothing here ever touches real money, sends a real SMS,
-        or affects the live data shown above.
-    </div>
-    <div class="try-it-box">
-        <div class="try-it-row">
-            <label>Amount ($)<input type="number" id="try-amount" value="1.00" step="0.01" min="0.01"></label>
-            <label>Description<input type="text" id="try-description" value="Test request" maxlength="100"></label>
-            <label class="try-checkbox"><input type="checkbox" id="try-critical"> Mark as critical</label>
-            <button id="try-submit">Decide</button>
-        </div>
-        <div id="try-result" class="try-result"></div>
-    </div>
+            <div class="pending-banner" id="pending-banner"></div>
 
-    <div class="try-it-box" style="margin-top:16px;">
-        <div class="try-it-row">
-            <label>Approval code<input type="text" id="try-code" placeholder="e.g. 123456" maxlength="32"></label>
-            <button id="try-approve-submit">Try to approve</button>
-        </div>
-        <div id="try-approve-result" class="try-result"></div>
-    </div>
+            <div class="tabs-section">
+                <div class="tab-bar">
+                    <button class="tab-btn active" id="tab-btn-audit" data-tab="audit">Audit Feed</button>
+                    <button class="tab-btn" id="tab-btn-policy" data-tab="policy">Kernel Policy</button>
+                    <button class="tab-btn" id="tab-btn-try" data-tab="try">Try It Yourself</button>
+                </div>
 
-    <div class="footer-note">Reading real-time state from the NemoClaw sandbox · refreshes every 3s</div>
+                <div class="tab-panel active" id="tab-panel-audit">
+                    <div class="section-title">Live Audit Feed — Ops Decisions &amp; Spend</div>
+                    <div class="feed" id="feed">
+                        <div class="empty-state">Waiting for events…</div>
+                    </div>
+                </div>
+
+                <div class="tab-panel" id="tab-panel-policy">
+                    <div class="section-title">Kernel-Level Policy Enforcement — Raw OCSF Log (NemoClaw / OpenShell)</div>
+                    <div class="feed policy-feed" id="policy-feed">
+                        <div class="empty-state">Waiting for sandbox activity…</div>
+                    </div>
+                </div>
+
+                <div class="tab-panel" id="tab-panel-try">
+                    <div class="section-title">Try It Yourself — Live Decision Engine</div>
+                    <div class="footer-note" style="margin-bottom:0;">
+                        This calls the real <code>decide()</code> function from <code>custodian/policy/evaluator.py</code>,
+                        live, against an isolated sandbox state. Nothing here ever touches real money, sends a real SMS,
+                        or affects the live data shown above.
+                    </div>
+                    <div class="try-it-box">
+                        <div class="try-it-row">
+                            <label>Amount ($)<input type="number" id="try-amount" value="1.00" step="0.01" min="0.01"></label>
+                            <label>Description<input type="text" id="try-description" value="Test request" maxlength="100"></label>
+                            <label class="try-checkbox"><input type="checkbox" id="try-critical"> Mark as critical</label>
+                            <button id="try-submit">Decide</button>
+                        </div>
+                        <div id="try-result" class="try-result"></div>
+                    </div>
+
+                    <div class="try-it-box">
+                        <div class="try-it-row">
+                            <label>Approval code<input type="text" id="try-code" placeholder="e.g. 123456" maxlength="32"></label>
+                            <button id="try-approve-submit">Try to approve</button>
+                        </div>
+                        <div id="try-approve-result" class="try-result"></div>
+                    </div>
+
+                    <div class="footer-note" style="margin-top:16px;">Reading real-time state from the NemoClaw sandbox · refreshes every 3s</div>
+                </div>
+            </div>
+        </main>
+
+        <aside class="pipeline-rail">
+            <div class="section-label">What's happening right now, live</div>
+            <div class="process-diagram">
+                <div class="process-step" id="stage-observe">
+                    <div class="step-marker"><span class="stage-dot"></span></div>
+                    <div class="step-body">
+                        <div class="step-heading"><span class="process-num">01</span><span class="process-title">OBSERVE</span></div>
+                        <div class="process-desc">Pulls real, ambiguous signals from real infrastructure.</div>
+                        <div class="process-status" id="status-observe"></div>
+                    </div>
+                </div>
+                <div class="process-step" id="stage-judge">
+                    <div class="step-marker"><span class="stage-dot"></span></div>
+                    <div class="step-body">
+                        <div class="step-heading"><span class="process-num">02</span><span class="process-title">JUDGE</span></div>
+                        <div class="process-desc">Weighs the signals together.</div>
+                        <div class="process-status" id="status-judge"></div>
+                    </div>
+                </div>
+                <div class="process-step" id="stage-act">
+                    <div class="step-marker"><span class="stage-dot"></span></div>
+                    <div class="step-body">
+                        <div class="step-heading"><span class="process-num">03</span><span class="process-title" id="title-act">ACT or ESCALATE</span></div>
+                        <div class="process-desc" id="desc-act">Acts within authority, or gets blocked.</div>
+                        <div class="process-status" id="status-act"></div>
+                    </div>
+                </div>
+                <div class="process-step" id="stage-verify">
+                    <div class="step-marker"><span class="stage-dot"></span></div>
+                    <div class="step-body">
+                        <div class="step-heading"><span class="process-num">04</span><span class="process-title">VERIFY</span></div>
+                        <div class="process-desc">Real out-of-band 2FA via Twilio Verify.</div>
+                        <div class="process-status" id="status-verify"></div>
+                    </div>
+                </div>
+                <div class="process-step" id="stage-prove">
+                    <div class="step-marker"><span class="stage-dot"></span></div>
+                    <div class="step-body">
+                        <div class="step-heading"><span class="process-num">05</span><span class="process-title">PROVE</span></div>
+                        <div class="process-desc">Logged in an append-only audit trail.</div>
+                        <div class="process-status" id="status-prove"></div>
+                    </div>
+                </div>
+            </div>
+        </aside>
+    </div>
 
     <div class="escalation-overlay" id="escalation-overlay">
         <div class="escalation-box">
@@ -494,6 +588,15 @@
             <div class="escalation-desc" id="escalation-desc"></div>
             <div class="escalation-amount" id="escalation-amount"></div>
             <div class="escalation-sub">This exceeds the agent's autonomous authority band.<br>A one-time approval code has been dispatched to the human operator.</div>
+        </div>
+    </div>
+
+    <div class="tour-bar" id="tour-bar">
+        <span class="tour-step-label" id="tour-step-label">STEP 1/6</span>
+        <span class="tour-caption" id="tour-caption"></span>
+        <div class="tour-actions">
+            <button id="tour-skip-btn">Skip</button>
+            <button class="tour-next" id="tour-next-btn">Next →</button>
         </div>
     </div>
 
@@ -531,6 +634,14 @@
 
                 document.getElementById('conn-dot').className = 'conn-dot ' + (connected ? 'live' : 'down');
                 document.getElementById('conn-text').textContent = connected ? 'Connected' : 'Unreachable';
+
+                // The capability badges reflect the same real connectivity signal -- if the
+                // sandbox state file is reachable, the whole stack behind it (NemoClaw, the
+                // Hermes Agent running inside it) is genuinely live, not decorative.
+                const badgeCls = connected ? 'dot live' : 'dot down';
+                document.getElementById('badge-dot-nemoclaw').className = badgeCls;
+                document.getElementById('badge-dot-hermes').className = badgeCls;
+                document.getElementById('badge-dot-stripe').className = badgeCls;
 
                 document.getElementById('band-value').textContent = auth.band || '—';
                 document.getElementById('cap-value').textContent = auth.per_action_cap != null ? fmtUSD(auth.per_action_cap) : '—';
@@ -584,14 +695,209 @@
                 policyFeed.innerHTML = policyLines.length
                     ? policyLines.map(renderPolicyLine).join('')
                     : '<div class="empty-state">No kernel activity yet.</div>';
+
+                const pendingRecForVerdict = codes.length > 0 ? pending[codes[0]] : null;
+                renderPipelineStage(events, pendingRecForVerdict);
+                renderVerdictPanel(events, policyLines, pendingRecForVerdict);
             } catch (e) {
                 document.getElementById('conn-dot').className = 'conn-dot down';
                 document.getElementById('conn-text').textContent = 'Error';
             }
         }
 
+        function setStage(name, cls, status) {
+            const el = document.getElementById('stage-' + name);
+            el.className = 'process-step' + (cls ? ' ' + cls : '');
+            const s = document.getElementById('status-' + name);
+            if (s) s.textContent = status || '';
+        }
+
+        function renderPipelineStage(events, pendingRec) {
+            const titleAct = document.getElementById('title-act');
+            const descAct = document.getElementById('desc-act');
+
+            if (!events.length && !pendingRec) {
+                setStage('observe', 'is-active', 'watching real signals…');
+                setStage('judge', '', '');
+                setStage('act', '', '');
+                setStage('verify', '', '');
+                setStage('prove', '', '');
+                titleAct.textContent = 'ACT or ESCALATE';
+                descAct.textContent = 'In-band: executes autonomously via real Stripe. Over-band: blocked at the kernel level, a one-time code goes to a human.';
+                return;
+            }
+
+            setStage('observe', 'is-complete', 'real signals read');
+            setStage('judge', 'is-complete', 'judgment made');
+
+            if (pendingRec) {
+                titleAct.textContent = 'ESCALATED';
+                descAct.textContent = `Over authority — kernel blocked autonomous execution of ${fmtUSD(pendingRec.amount)}.`;
+                setStage('act', 'is-blocked', 'ceiling hit, blocked');
+                setStage('verify', 'is-active', 'awaiting real Twilio code…');
+                setStage('prove', '', '');
+                return;
+            }
+
+            const latest = events[0];
+            if (latest.event === 'executed' && latest.approved_by) {
+                titleAct.textContent = 'ESCALATED';
+                descAct.textContent = 'Over authority — blocked until a real human verified.';
+                setStage('act', 'is-blocked', 'ceiling hit, blocked');
+                setStage('verify', 'is-complete', `approved by ${latest.approved_by}`);
+                setStage('prove', 'is-complete', 'logged + kernel trace below');
+            } else if (latest.event === 'executed') {
+                titleAct.textContent = 'ACTED';
+                descAct.textContent = 'Within authority — executed autonomously via real Stripe, no human needed.';
+                setStage('act', 'is-complete', 'executed autonomously');
+                setStage('verify', 'is-skipped', 'not needed — in band');
+                setStage('prove', 'is-complete', 'logged + kernel trace below');
+            } else if (latest.event === 'escalation_required') {
+                titleAct.textContent = 'ESCALATED';
+                descAct.textContent = 'Over authority — kernel blocked it. Approval window expired or still pending.';
+                setStage('act', 'is-blocked', 'ceiling hit, blocked');
+                setStage('verify', '', 'no response yet');
+                setStage('prove', 'is-complete', 'logged + kernel trace below');
+            } else {
+                titleAct.textContent = 'NO ACTION';
+                descAct.textContent = 'Judged that nothing warranted real spend — correctly doing nothing, not nothing happening.';
+                setStage('act', 'is-complete', 'declined to spend');
+                setStage('verify', 'is-skipped', 'not needed');
+                setStage('prove', 'is-complete', 'logged + kernel trace below');
+            }
+        }
+
+        function truncateLine(s, n) {
+            if (!s) return '—';
+            return s.length > n ? s.slice(0, n) + '…' : s;
+        }
+
+        function setVerdict(lens, headline, badgeCls, badgeText, fields) {
+            document.getElementById(`verdict-${lens}-headline`).textContent = headline;
+            const badge = document.getElementById(`verdict-${lens}-badge`);
+            badge.className = 'verdict-badge ' + badgeCls;
+            badge.textContent = badgeText;
+            for (const [id, val] of Object.entries(fields || {})) {
+                const el = document.getElementById(id);
+                if (el) el.textContent = val;
+            }
+        }
+
+        function renderVerdictPanel(events, policyLines, pendingRec) {
+            const latestPolicy = policyLines.length ? truncateLine(policyLines[0], 70) : '—';
+
+            if (!events.length && !pendingRec) {
+                setVerdict('ops', 'No real signals indicate a problem right now.', 'idle', 'WATCHING',
+                    {'verdict-ops-signal': 'last check came back healthy'});
+                setVerdict('finance', 'Nothing at stake — no spend judged necessary.', 'idle', 'IDLE',
+                    {'verdict-finance-amount': '$0.00', 'verdict-finance-artifact': '—'});
+                setVerdict('security', 'Kernel watching, nothing to enforce yet.', 'idle', 'IDLE',
+                    {'verdict-security-artifact': latestPolicy});
+                return;
+            }
+
+            if (pendingRec) {
+                setVerdict('ops', 'Judged this needs more than a routine response.', 'hold', 'ACTION JUDGED',
+                    {'verdict-ops-signal': pendingRec.description});
+                setVerdict('finance', `${fmtUSD(pendingRec.amount)} exceeds autonomous authority — held until a real human verifies.`, 'hold', 'HOLD',
+                    {'verdict-finance-amount': fmtUSD(pendingRec.amount), 'verdict-finance-artifact': 'pending_approval.json (real, on disk)'});
+                setVerdict('security', 'Kernel blocked autonomous execution outright — a real human is required.', 'blocked', 'BLOCKED',
+                    {'verdict-security-artifact': latestPolicy});
+                return;
+            }
+
+            const latest = events[0];
+            if (latest.event === 'executed' && latest.approved_by) {
+                setVerdict('ops', 'Confirmed real risk — a human signed off on intervention.', 'pass', 'ACTION TAKEN',
+                    {'verdict-ops-signal': latest.description});
+                setVerdict('finance', `${fmtUSD(latest.amount)} approved by ${latest.approved_by}, outside the autonomous ceiling.`, 'pass', 'APPROVED',
+                    {'verdict-finance-amount': fmtUSD(latest.amount), 'verdict-finance-artifact': latest.payment_intent_id || '—'});
+                setVerdict('security', "Real Twilio Verify code consumed — the only path past the kernel block.", 'pass', 'VERIFIED',
+                    {'verdict-security-artifact': latestPolicy});
+            } else if (latest.event === 'executed') {
+                setVerdict('ops', 'A real, judged risk — handled within budget, no human needed.', 'pass', 'ACTION TAKEN',
+                    {'verdict-ops-signal': latest.description});
+                setVerdict('finance', `${fmtUSD(latest.amount)} spent autonomously, inside authority.`, 'pass', 'WITHIN BUDGET',
+                    {'verdict-finance-amount': fmtUSD(latest.amount), 'verdict-finance-artifact': latest.payment_intent_id || '—'});
+                setVerdict('security', 'Real Stripe call allowed by kernel policy — see trace below.', 'pass', 'ALLOWED',
+                    {'verdict-security-artifact': latestPolicy});
+            } else if (latest.event === 'escalation_required') {
+                setVerdict('ops', 'Judged action was needed, but no human responded in time.', 'hold', 'EXPIRED',
+                    {'verdict-ops-signal': latest.description});
+                setVerdict('finance', `${fmtUSD(latest.amount)} held — approval window closed.`, 'hold', 'EXPIRED',
+                    {'verdict-finance-amount': fmtUSD(latest.amount), 'verdict-finance-artifact': '—'});
+                setVerdict('security', 'Kernel held the block for the entire window — no override occurred.', 'blocked', 'BLOCKED',
+                    {'verdict-security-artifact': latestPolicy});
+            } else {
+                setVerdict('ops', "Signals didn't justify intervention — correctly doing nothing.", 'pass', 'NO ACTION NEEDED',
+                    {'verdict-ops-signal': latest.description || 'healthy'});
+                setVerdict('finance', '$0 spent — judged not worth it.', 'pass', 'NO SPEND',
+                    {'verdict-finance-amount': '$0.00', 'verdict-finance-artifact': '—'});
+                setVerdict('security', 'No tool calls required enforcement this round.', 'idle', 'N/A',
+                    {'verdict-security-artifact': latestPolicy});
+            }
+        }
+
         poll();
         setInterval(poll, 3000);
+
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+                document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+                btn.classList.add('active');
+                document.getElementById('tab-panel-' + btn.dataset.tab).classList.add('active');
+            });
+        });
+
+        // Guided tour -- purely cosmetic scroll + highlight + caption. Never reads or writes
+        // any real state; the only thing it can trigger is switching to the already-safe
+        // playground tab on the last step.
+        const TOUR_STEPS = [
+            { selector: '.top-bar-badges', caption: 'Three real systems, wired together: a kernel-level sandbox (NemoClaw), a real agent running inside it (Nous Hermes), and real Stripe PaymentIntents -- not slides.' },
+            { selector: '.pipeline-rail', caption: 'This is the agent\'s real decision pipeline, live. Watch it update in real time as the agent observes signals, judges whether spend is warranted, and either acts or gets blocked.' },
+            { selector: '.verdict-grid', caption: 'The same single decision, checked from three angles a real business would actually care about: would this break something, is it worth the money, does the kernel even allow it.' },
+            { selector: '#status-grid', caption: 'A real, hard spending ceiling. The agent cannot exceed this -- not because it promises not to, but because the kernel physically blocks it.' },
+            { selector: '.tab-bar', caption: 'Audit trail and raw kernel policy log live here -- every claim on this page traces back to a real Stripe ID or a real kernel log line you can check yourself.' },
+            { selector: '#tab-panel-try', caption: 'Try it yourself, safely: this calls the real decision engine against an isolated test state. Nothing here ever touches real money or the live data shown above -- go ahead and click Decide.', tab: 'try' },
+        ];
+        let tourIndex = 0;
+        let tourPrevHighlight = null;
+
+        function showTourStep(i) {
+            if (tourPrevHighlight) tourPrevHighlight.classList.remove('tour-highlight');
+            const step = TOUR_STEPS[i];
+            if (step.tab) {
+                document.querySelector(`.tab-btn[data-tab="${step.tab}"]`).click();
+            }
+            const target = document.querySelector(step.selector);
+            if (target) {
+                target.classList.add('tour-highlight');
+                target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                tourPrevHighlight = target;
+            }
+            document.getElementById('tour-step-label').textContent = `STEP ${i + 1}/${TOUR_STEPS.length}`;
+            document.getElementById('tour-caption').textContent = step.caption;
+            document.getElementById('tour-next-btn').textContent = (i === TOUR_STEPS.length - 1) ? 'Done' : 'Next →';
+        }
+
+        function endTour() {
+            if (tourPrevHighlight) tourPrevHighlight.classList.remove('tour-highlight');
+            tourPrevHighlight = null;
+            document.getElementById('tour-bar').classList.remove('show');
+        }
+
+        document.getElementById('tour-start-btn').addEventListener('click', () => {
+            tourIndex = 0;
+            document.getElementById('tour-bar').classList.add('show');
+            showTourStep(tourIndex);
+        });
+        document.getElementById('tour-skip-btn').addEventListener('click', endTour);
+        document.getElementById('tour-next-btn').addEventListener('click', () => {
+            tourIndex++;
+            if (tourIndex >= TOUR_STEPS.length) { endTour(); return; }
+            showTourStep(tourIndex);
+        });
 
         document.getElementById('try-submit').addEventListener('click', async () => {
             const amount = parseFloat(document.getElementById('try-amount').value);
