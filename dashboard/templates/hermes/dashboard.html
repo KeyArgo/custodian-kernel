@@ -82,6 +82,41 @@
             border-radius: 12px;
             padding: 18px 16px;
             text-align: left;
+            position: relative;
+            transition: background 0.4s, border-color 0.4s;
+        }
+        .process-step .stage-dot {
+            position: absolute;
+            top: 14px;
+            right: 14px;
+            width: 9px;
+            height: 9px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.15);
+        }
+        .process-step.is-complete {
+            background: rgba(159,211,92,0.07);
+            border-color: rgba(159,211,92,0.35);
+        }
+        .process-step.is-complete .stage-dot {
+            background: #9fd35c;
+            box-shadow: 0 0 0 3px rgba(159,211,92,0.15);
+        }
+        .process-step.is-active {
+            background: rgba(245,200,80,0.08);
+            border-color: rgba(245,200,80,0.5);
+        }
+        .process-step.is-active .stage-dot {
+            background: #f5c850;
+            box-shadow: 0 0 0 4px rgba(245,200,80,0.2);
+            animation: pulse-dot 1.4s ease-in-out infinite;
+        }
+        .process-step.is-skipped {
+            opacity: 0.4;
+        }
+        @keyframes pulse-dot {
+            0%, 100% { box-shadow: 0 0 0 4px rgba(245,200,80,0.2); }
+            50% { box-shadow: 0 0 0 8px rgba(245,200,80,0.05); }
         }
         .process-num {
             color: #4b5e1f;
@@ -89,6 +124,8 @@
             font-weight: 700;
             margin-bottom: 4px;
         }
+        .process-step.is-complete .process-num { color: #9fd35c; }
+        .process-step.is-active .process-num { color: #f5c850; }
         .process-title {
             color: #9fd35c;
             font-weight: 700;
@@ -101,6 +138,15 @@
             font-size: 0.82em;
             line-height: 1.4;
         }
+        .process-status {
+            margin-top: 8px;
+            font-size: 0.78em;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+            min-height: 1.1em;
+        }
+        .process-step.is-complete .process-status { color: #9fd35c; }
+        .process-step.is-active .process-status { color: #f5c850; }
         .process-arrow {
             display: flex;
             align-items: center;
@@ -401,28 +447,39 @@
         </div>
 
         <div class="process-diagram">
-            <div class="process-step">
+            <div class="process-step" id="stage-observe"><span class="stage-dot"></span>
                 <div class="process-num">01</div>
                 <div class="process-title">OBSERVE</div>
                 <div class="process-desc">Pulls real, ambiguous signals from real infrastructure — disk trends, system status, capacity — not a single up/down check a script could already do.</div>
+                <div class="process-status" id="status-observe"></div>
             </div>
             <div class="process-arrow">→</div>
-            <div class="process-step">
+            <div class="process-step" id="stage-judge"><span class="stage-dot"></span>
                 <div class="process-num">02</div>
                 <div class="process-title">JUDGE</div>
                 <div class="process-desc">Weighs the signals together. Most of the time the right call is to do nothing and spend nothing — only acts when the situation genuinely warrants it.</div>
+                <div class="process-status" id="status-judge"></div>
             </div>
             <div class="process-arrow">→</div>
-            <div class="process-step">
+            <div class="process-step" id="stage-act"><span class="stage-dot"></span>
                 <div class="process-num">03</div>
-                <div class="process-title">ACT or ESCALATE</div>
-                <div class="process-desc">In-band: executes autonomously via real Stripe. Over-band: blocked at the kernel level, a one-time code goes to a human.</div>
+                <div class="process-title" id="title-act">ACT or ESCALATE</div>
+                <div class="process-desc" id="desc-act">In-band: executes autonomously via real Stripe. Over-band: blocked at the kernel level, a one-time code goes to a human.</div>
+                <div class="process-status" id="status-act"></div>
             </div>
             <div class="process-arrow">→</div>
-            <div class="process-step">
+            <div class="process-step" id="stage-verify"><span class="stage-dot"></span>
                 <div class="process-num">04</div>
+                <div class="process-title">VERIFY</div>
+                <div class="process-desc">Real human, real out-of-band 2FA via Twilio Verify. The code exists only on Twilio's servers and the operator's phone — never in any file the agent can read.</div>
+                <div class="process-status" id="status-verify"></div>
+            </div>
+            <div class="process-arrow">→</div>
+            <div class="process-step" id="stage-prove"><span class="stage-dot"></span>
+                <div class="process-num">05</div>
                 <div class="process-title">PROVE</div>
                 <div class="process-desc">Every decision lands in an append-only audit log, alongside the raw kernel policy trace below. Not asserted — shown live.</div>
+                <div class="process-status" id="status-prove"></div>
             </div>
         </div>
     </div>
@@ -584,9 +641,73 @@
                 policyFeed.innerHTML = policyLines.length
                     ? policyLines.map(renderPolicyLine).join('')
                     : '<div class="empty-state">No kernel activity yet.</div>';
+
+                renderPipelineStage(events, codes.length > 0 ? pending[codes[0]] : null);
             } catch (e) {
                 document.getElementById('conn-dot').className = 'conn-dot down';
                 document.getElementById('conn-text').textContent = 'Error';
+            }
+        }
+
+        function setStage(name, cls, status) {
+            const el = document.getElementById('stage-' + name);
+            el.className = 'process-step' + (cls ? ' ' + cls : '');
+            const s = document.getElementById('status-' + name);
+            if (s) s.textContent = status || '';
+        }
+
+        function renderPipelineStage(events, pendingRec) {
+            const titleAct = document.getElementById('title-act');
+            const descAct = document.getElementById('desc-act');
+
+            if (!events.length && !pendingRec) {
+                setStage('observe', 'is-active', 'watching real signals…');
+                setStage('judge', '', '');
+                setStage('act', '', '');
+                setStage('verify', '', '');
+                setStage('prove', '', '');
+                titleAct.textContent = 'ACT or ESCALATE';
+                descAct.textContent = 'In-band: executes autonomously via real Stripe. Over-band: blocked at the kernel level, a one-time code goes to a human.';
+                return;
+            }
+
+            setStage('observe', 'is-complete', 'real signals read');
+            setStage('judge', 'is-complete', 'judgment made');
+
+            if (pendingRec) {
+                titleAct.textContent = 'ESCALATED';
+                descAct.textContent = `Over authority — kernel blocked autonomous execution of ${fmtUSD(pendingRec.amount)}.`;
+                setStage('act', 'is-complete', 'ceiling hit, blocked');
+                setStage('verify', 'is-active', 'awaiting real Twilio code…');
+                setStage('prove', '', '');
+                return;
+            }
+
+            const latest = events[0];
+            if (latest.event === 'executed' && latest.approved_by) {
+                titleAct.textContent = 'ESCALATED';
+                descAct.textContent = 'Over authority — blocked until a real human verified.';
+                setStage('act', 'is-complete', 'ceiling hit, blocked');
+                setStage('verify', 'is-complete', `approved by ${latest.approved_by}`);
+                setStage('prove', 'is-complete', 'logged + kernel trace below');
+            } else if (latest.event === 'executed') {
+                titleAct.textContent = 'ACTED';
+                descAct.textContent = 'Within authority — executed autonomously via real Stripe, no human needed.';
+                setStage('act', 'is-complete', 'executed autonomously');
+                setStage('verify', 'is-skipped', 'not needed — in band');
+                setStage('prove', 'is-complete', 'logged + kernel trace below');
+            } else if (latest.event === 'escalation_required') {
+                titleAct.textContent = 'ESCALATED';
+                descAct.textContent = 'Over authority — kernel blocked it. Approval window expired or still pending.';
+                setStage('act', 'is-complete', 'ceiling hit, blocked');
+                setStage('verify', '', 'no response yet');
+                setStage('prove', 'is-complete', 'logged + kernel trace below');
+            } else {
+                titleAct.textContent = 'NO ACTION';
+                descAct.textContent = 'Judged that nothing warranted real spend — correctly doing nothing, not nothing happening.';
+                setStage('act', 'is-complete', 'declined to spend');
+                setStage('verify', 'is-skipped', 'not needed');
+                setStage('prove', 'is-complete', 'logged + kernel trace below');
             }
         }
 
