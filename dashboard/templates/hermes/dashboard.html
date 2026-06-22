@@ -15,453 +15,6 @@
             padding: 0;
         }
 
-        .hero { padding: 0; }
-
-        .credibility-strip { display: none; }
-
-        .hero-claim {
-            font-size: 2.1em;
-            font-weight: 700;
-            color: #f2f2f2;
-            line-height: 1.25;
-            margin-bottom: 14px;
-            letter-spacing: -0.01em;
-        }
-
-        .hero-sub {
-            color: #8a8a8a;
-            font-size: 0.95em;
-            line-height: 1.6;
-            margin-bottom: 26px;
-            max-width: 720px;
-        }
-
-        .spec-strip {
-            display: inline-flex;
-            flex-wrap: wrap;
-            align-items: center;
-            gap: 10px;
-            background: #0a0a0a;
-            border: 1px solid #ffb000;
-            border-radius: 0;
-            padding: 10px 18px;
-            font-size: 0.8em;
-            letter-spacing: 0.03em;
-            color: #ffb000;
-        }
-        .spec-item strong { color: #ffd966; font-weight: 700; }
-        .spec-item.enforced { color: #ffb000; font-weight: 700; }
-        .spec-sep { color: #4a3a00; }
-
-        .process-diagram {
-            display: flex;
-            align-items: stretch;
-            justify-content: center;
-            gap: 0;
-            flex-wrap: wrap;
-        }
-        .process-step {
-            flex: 1;
-            min-width: 200px;
-            max-width: 240px;
-            background: #0a0a0a;
-            border: 1px solid #2a2a2a;
-            border-radius: 0;
-            padding: 16px 14px;
-            text-align: left;
-            position: relative;
-            transition: background 0.4s, border-color 0.4s;
-        }
-        .process-step .stage-dot {
-            position: absolute;
-            top: 12px;
-            right: 12px;
-            width: 8px;
-            height: 8px;
-            border-radius: 0;
-            background: #2a2a2a;
-        }
-        .process-step.is-complete {
-            background: #0d0d0a;
-            border-color: #ffb000;
-        }
-        .process-step.is-complete .stage-dot {
-            background: #ffb000;
-            box-shadow: 0 0 0 3px rgba(255,176,0,0.15);
-        }
-        .process-step.is-active {
-            background: #100a00;
-            border-color: #ffb000;
-        }
-        .process-step.is-active .stage-dot {
-            background: #ffb000;
-            box-shadow: 0 0 0 4px rgba(255,176,0,0.25);
-            animation: pulse-dot 1.4s ease-in-out infinite;
-        }
-        .process-step.is-skipped {
-            opacity: 0.35;
-        }
-        @keyframes pulse-dot {
-            0%, 100% { box-shadow: 0 0 0 4px rgba(255,176,0,0.25); }
-            50% { box-shadow: 0 0 0 8px rgba(255,176,0,0.05); }
-        }
-        .process-num {
-            color: #5a5a5a;
-            font-size: 0.82em;
-            font-weight: 700;
-            margin-bottom: 4px;
-        }
-        .process-step.is-complete .process-num { color: #ffb000; }
-        .process-step.is-active .process-num { color: #ffb000; }
-        .process-title {
-            color: #d4d4d4;
-            font-weight: 700;
-            font-size: 0.92em;
-            letter-spacing: 0.06em;
-            margin-bottom: 6px;
-        }
-        .process-step.is-complete .process-title,
-        .process-step.is-active .process-title { color: #ffb000; }
-        .process-desc {
-            color: #7a7a7a;
-            font-size: 0.8em;
-            line-height: 1.4;
-        }
-        .process-status {
-            margin-top: 8px;
-            font-size: 0.76em;
-            font-weight: 700;
-            letter-spacing: 0.03em;
-            min-height: 1.1em;
-            text-transform: lowercase;
-        }
-        .process-step.is-complete .process-status { color: #ffb000; }
-        .process-step.is-active .process-status { color: #ffb000; }
-        .process-arrow {
-            display: flex;
-            align-items: center;
-            color: #3a3a3a;
-            font-size: 1.2em;
-            padding: 0 4px;
-        }
-        @media (max-width: 900px) {
-            .process-arrow { display: none; }
-        }
-        .verdict-grid {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 0;
-            margin-top: 18px;
-        }
-        @media (max-width: 900px) {
-            .verdict-grid { grid-template-columns: 1fr; }
-        }
-        .verdict-card {
-            background: #0a0a0a;
-            border: 1px solid #2a2a2a;
-            border-radius: 0;
-            padding: 16px 16px 14px;
-            text-align: left;
-            margin-right: -1px;
-        }
-        .verdict-lens {
-            color: #6b6b6b;
-            font-size: 0.7em;
-            font-weight: 700;
-            letter-spacing: 0.06em;
-            text-transform: uppercase;
-            margin-bottom: 8px;
-        }
-        .verdict-headline {
-            color: #e0e0e0;
-            font-weight: 600;
-            font-size: 0.98em;
-            line-height: 1.35;
-            margin-bottom: 12px;
-            min-height: 2.7em;
-        }
-        .verdict-fact-row {
-            display: flex;
-            gap: 8px;
-            font-size: 0.76em;
-            padding: 5px 0;
-            border-top: 1px solid #1a1a1a;
-        }
-        .verdict-fact-row:first-of-type { border-top: none; }
-        .verdict-fact-key { color: #5a5a5a; white-space: nowrap; }
-        .verdict-fact-val { color: #8a8a8a; word-break: break-all; }
-        .verdict-badge {
-            display: inline-block;
-            margin-top: 10px;
-            padding: 2px 10px;
-            border-radius: 0;
-            border: 1px solid currentColor;
-            font-size: 0.7em;
-            font-weight: 700;
-            letter-spacing: 0.05em;
-        }
-        .verdict-badge::before { content: "["; }
-        .verdict-badge::after { content: "]"; }
-        .verdict-badge.pass { background: rgba(255,176,0,0.08); color: #ffb000; }
-        .verdict-badge.hold { background: rgba(255,176,0,0.08); color: #ffb000; }
-        .verdict-badge.blocked { background: rgba(255,59,59,0.1); color: #ff3b3b; }
-        .verdict-badge.idle { background: transparent; color: #5a5a5a; }
-
-        .nav-links { display: none; }
-        .nav-link { display: none; }
-
-        .grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-            gap: 0;
-        }
-
-        .card {
-            background: #0a0a0a;
-            border-radius: 0;
-            padding: 16px 18px;
-            border: 1px solid #2a2a2a;
-            margin-right: -1px;
-            margin-bottom: -1px;
-        }
-
-        .card .label {
-            font-size: 0.76em;
-            color: #6b6b6b;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-            margin-bottom: 6px;
-        }
-
-        .card .value {
-            font-size: 1.6em;
-            font-weight: 700;
-            color: #e8e8e8;
-        }
-
-        .card.band .value { color: #ffb000; }
-
-        .bar-track {
-            margin-top: 10px;
-            height: 6px;
-            border-radius: 0;
-            background: #1a1a1a;
-            overflow: hidden;
-        }
-        .bar-fill {
-            height: 100%;
-            background: #ffb000;
-            transition: width 0.4s ease;
-        }
-        .bar-fill.warn { background: #ff8c00; }
-        .bar-fill.danger { background: #ff3b3b; }
-
-        .conn-dot {
-            display: inline-block;
-            width: 8px; height: 8px;
-            border-radius: 0;
-            margin-right: 6px;
-        }
-        .conn-dot.live { background: #ffb000; box-shadow: 0 0 6px #ffb000; }
-        .conn-dot.down { background: #ff3b3b; box-shadow: 0 0 6px #ff3b3b; }
-
-        .section-title {
-            color: #ffb000;
-            font-size: 0.85em;
-            letter-spacing: 0.05em;
-            text-transform: uppercase;
-            margin-bottom: 10px;
-            font-weight: 700;
-        }
-        .section-title::before { content: "// "; color: #5a5a5a; }
-
-        .feed {
-            background: #060606;
-            border-radius: 0;
-            border: 1px solid #2a2a2a;
-            overflow: hidden;
-        }
-
-        .event {
-            display: flex;
-            align-items: baseline;
-            gap: 12px;
-            padding: 10px 14px;
-            border-bottom: 1px solid #1a1a1a;
-            font-size: 0.85em;
-        }
-        .event:last-child { border-bottom: none; }
-
-        .event .ts { color: #5a5a5a; min-width: 140px; font-size: 0.85em; }
-        .event .badge {
-            min-width: 110px;
-            text-align: center;
-            padding: 2px 8px;
-            border-radius: 0;
-            border: 1px solid currentColor;
-            font-weight: 700;
-            font-size: 0.78em;
-            text-transform: uppercase;
-        }
-        .badge.executed { background: rgba(255,176,0,0.08); color: #ffb000; }
-        .badge.escalation_required { background: rgba(255,176,0,0.08); color: #ffb000; animation: pulse 1.6s infinite; }
-        .badge.denied { background: rgba(255,59,59,0.1); color: #ff3b3b; }
-        .badge.execution_failed { background: rgba(255,59,59,0.1); color: #ff3b3b; }
-
-        @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.5; } }
-
-        .event .desc { flex: 1; color: #aaa; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        .event .amount { color: #d4d4d4; min-width: 64px; text-align: right; }
-
-        .empty-state { padding: 24px; text-align: center; color: #5a5a5a; font-size: 0.85em; }
-
-        .pending-banner {
-            background: #100a00;
-            border: 1px solid #ffb000;
-            border-radius: 0;
-            padding: 12px 18px;
-            color: #ffb000;
-            display: none;
-            font-size: 0.85em;
-        }
-        .pending-banner.show { display: block; }
-
-        .sub-note {
-            margin-top: 8px;
-            font-size: 0.72em;
-            color: #5a5a5a;
-        }
-        .sub-note.has-override { color: #ffb000; }
-
-        .footer-note {
-            text-align: left;
-            color: #5a5a5a;
-            font-size: 0.78em;
-        }
-        .footer-note code {
-            background: #0a0a0a;
-            border: 1px solid #2a2a2a;
-            padding: 1px 5px;
-            border-radius: 0;
-            font-size: 0.95em;
-            color: #ffb000;
-        }
-
-        .try-it-box {
-            background: #0a0a0a;
-            border-radius: 0;
-            border: 1px solid #2a2a2a;
-            padding: 16px 18px;
-        }
-        .try-it-row {
-            display: flex;
-            flex-wrap: wrap;
-            align-items: end;
-            gap: 14px;
-        }
-        .try-it-row label {
-            display: flex;
-            flex-direction: column;
-            gap: 4px;
-            color: #8a8a8a;
-            font-size: 0.82em;
-        }
-        .try-it-row input[type="number"],
-        .try-it-row input[type="text"] {
-            background: #000;
-            border: 1px solid #3a3a3a;
-            border-radius: 0;
-            color: #e0e0e0;
-            padding: 7px 9px;
-            font-size: 0.9em;
-            font-family: inherit;
-            min-width: 140px;
-        }
-        .try-it-row .try-checkbox {
-            flex-direction: row;
-            align-items: center;
-            gap: 6px;
-            margin-bottom: 1px;
-        }
-        .try-it-row button {
-            background: #ffb000;
-            color: #000;
-            border: none;
-            border-radius: 0;
-            padding: 8px 16px;
-            font-weight: 700;
-            cursor: pointer;
-            font-size: 0.9em;
-            font-family: inherit;
-        }
-        .try-it-row button:hover { background: #ffc940; }
-        .try-result {
-            margin-top: 14px;
-            padding: 12px 16px;
-            border-radius: 0;
-            font-size: 0.85em;
-            display: none;
-        }
-        .try-result.show { display: block; }
-        .try-result.autonomous { background: rgba(255,176,0,0.08); border: 1px solid #ffb000; color: #ffb000; }
-        .try-result.escalation_required { background: rgba(255,176,0,0.08); border: 1px solid #ffb000; color: #ffb000; }
-        .try-result.rejected { background: rgba(255,59,59,0.1); border: 1px solid #ff3b3b; color: #ff3b3b; }
-        .try-result .verdict-line { font-weight: 700; text-transform: uppercase; margin-bottom: 6px; }
-        .try-result .reason-line { color: #aaa; }
-        .try-result .note-line { color: #5a5a5a; font-size: 0.85em; margin-top: 8px; }
-
-        .policy-feed {
-            max-height: 360px;
-            overflow-y: auto;
-        }
-        .policy-line {
-            padding: 5px 14px;
-            font-size: 0.78em;
-            border-bottom: 1px solid #141414;
-            white-space: pre-wrap;
-            word-break: break-all;
-        }
-        .policy-line.allowed { color: #ffb000; }
-        .policy-line.denied { color: #ff3b3b; font-weight: 700; }
-        .policy-line.other { color: #8a8a8a; }
-
-        .escalation-overlay {
-            display: none;
-            position: fixed;
-            inset: 0;
-            background: rgba(0,0,0,0.95);
-            z-index: 999;
-            align-items: center;
-            justify-content: center;
-        }
-        .escalation-overlay.show {
-            display: flex;
-            animation: flashIn 0.4s ease;
-        }
-        @keyframes flashIn {
-            0% { background: rgba(255,59,59,0.85); }
-            100% { background: rgba(0,0,0,0.95); }
-        }
-        .escalation-box {
-            text-align: center;
-            border: 2px solid #ff3b3b;
-            border-radius: 0;
-            padding: 40px 60px;
-            background: #0a0000;
-        }
-        .escalation-title {
-            color: #ff3b3b;
-            font-size: 1.6em;
-            font-weight: 700;
-            letter-spacing: 0.05em;
-            margin-bottom: 18px;
-            animation: pulse 1.2s infinite;
-        }
-        .escalation-desc { color: #ff9d9d; font-size: 1.2em; margin-bottom: 8px; }
-        .escalation-amount { color: #fff; font-size: 2.2em; font-weight: 700; margin-bottom: 20px; }
-        .escalation-sub { color: #aaa; font-size: 0.9em; line-height: 1.5; }
-
-        /* ---- app shell: top bar + 3-column layout ---- */
         .top-bar {
             display: flex;
             align-items: center;
@@ -493,79 +46,431 @@
         .top-bar-badge .dot { width: 6px; height: 6px; border-radius: 0; background: #ffb000; }
         .top-bar-badge .sub { color: #5a5a5a; font-size: 0.85em; }
 
-        .shell-grid {
-            display: grid;
-            grid-template-columns: 260px 1fr 380px;
-            gap: 0;
-            min-height: calc(100vh - 65px);
-            max-width: 1700px;
+        .story {
+            max-width: 920px;
             margin: 0 auto;
-        }
-        @media (max-width: 1300px) {
-            .shell-grid { grid-template-columns: 1fr; }
+            padding: 48px 24px 60px;
         }
 
-        .left-rail {
-            border-right: 1px solid #2a2a2a;
-            padding: 20px 14px;
+        .hero { margin-bottom: 56px; }
+
+        .hero-claim {
+            font-size: 2.3em;
+            font-weight: 700;
+            color: #f2f2f2;
+            line-height: 1.25;
+            margin-bottom: 14px;
+            letter-spacing: -0.01em;
         }
-        .left-rail-heading {
+
+        .hero-sub {
+            color: #8a8a8a;
+            font-size: 0.98em;
+            line-height: 1.65;
+            margin-bottom: 22px;
+            max-width: 680px;
+        }
+
+        .spec-strip {
+            display: inline-flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 10px;
+            background: #0a0a0a;
+            border: 1px solid #ffb000;
+            border-radius: 0;
+            padding: 10px 18px;
+            font-size: 0.8em;
+            letter-spacing: 0.03em;
+            color: #ffb000;
+        }
+        .spec-item strong { color: #ffd966; font-weight: 700; }
+        .spec-item.enforced { color: #ffb000; font-weight: 700; }
+        .spec-sep { color: #4a3a00; }
+
+        .section-label {
             color: #5a5a5a;
-            font-size: 0.68em;
+            font-size: 0.7em;
             letter-spacing: 0.1em;
             text-transform: uppercase;
             font-weight: 700;
-            margin: 0 6px 12px;
+            margin-bottom: 16px;
         }
-        .left-rail .process-diagram { flex-direction: column; gap: 0; }
-        .left-rail .process-step { min-width: unset; max-width: unset; padding: 12px 12px; margin-bottom: -1px; }
-        .left-rail .process-desc { display: none; }
-        .left-rail .process-arrow { display: none; }
-        .left-rail-metrics { margin-top: 22px; padding: 0 6px; }
-        .left-rail-metric { padding: 10px 0; border-top: 1px solid #1a1a1a; }
-        .left-rail-metric:first-child { border-top: none; }
-        .left-rail-metric .label { color: #5a5a5a; font-size: 0.7em; letter-spacing: 0.05em; text-transform: uppercase; margin-bottom: 3px; }
-        .left-rail-metric .value { color: #e0e0e0; font-weight: 700; font-size: 0.98em; }
+        .section-label::before { content: "// "; color: #3a3a3a; }
 
-        .center-col { padding: 32px 32px 10px; }
-        .center-col .hero { max-width: unset; margin: 0 0 26px; text-align: left; padding: 0; }
-        .center-col .hero-sub { max-width: unset; margin: 0 0 22px; }
-        .center-col .spec-strip { margin-bottom: 0; }
+        .timeline-section { margin-bottom: 52px; }
 
-        .right-terminal {
-            border-left: 1px solid #2a2a2a;
-            background: #030303;
-            padding: 0;
+        .process-diagram {
             display: flex;
             flex-direction: column;
         }
-        .terminal-header {
-            display: flex; align-items: center; justify-content: space-between;
-            padding: 11px 14px;
-            border-bottom: 1px solid #2a2a2a;
-            font-size: 0.76em;
-            color: #8a8a8a;
+        .process-step {
+            display: flex;
+            gap: 20px;
+            padding: 18px 0;
+            border-bottom: 1px solid #1a1a1a;
+            position: relative;
+            transition: background 0.4s;
         }
-        .terminal-header .dots { display: flex; gap: 5px; }
-        .terminal-header .dots span { width: 8px; height: 8px; border-radius: 0; background: #2a2a2a; }
-        .terminal-header .dots span:nth-child(1) { border: 1px solid #ff3b3b; }
-        .terminal-header .dots span:nth-child(2) { border: 1px solid #ffb000; }
-        .terminal-header .dots span:nth-child(3) { border: 1px solid #5a5a5a; }
-        .terminal-section-label {
-            padding: 10px 14px 6px;
+        .process-step:last-child { border-bottom: none; }
+        .step-marker {
+            position: relative;
+            width: 18px;
+            flex: none;
+            display: flex;
+            justify-content: center;
+            padding-top: 5px;
+        }
+        .process-step:not(:last-child) .step-marker::after {
+            content: '';
+            position: absolute;
+            top: 17px;
+            bottom: -18px;
+            width: 1px;
+            background: #2a2a2a;
+        }
+        .process-step.is-complete:not(:last-child) .step-marker::after,
+        .process-step.is-active:not(:last-child) .step-marker::after {
+            background: #5a4400;
+        }
+        .process-step .stage-dot {
+            width: 9px;
+            height: 9px;
+            border-radius: 50%;
+            background: #2a2a2a;
+            flex: none;
+        }
+        .process-step.is-complete .stage-dot {
+            background: #ffb000;
+            box-shadow: 0 0 0 3px rgba(255,176,0,0.15);
+        }
+        .process-step.is-active .stage-dot {
+            background: #ffb000;
+            box-shadow: 0 0 0 4px rgba(255,176,0,0.25);
+            animation: pulse-dot 1.4s ease-in-out infinite;
+        }
+        .process-step.is-skipped .stage-dot { opacity: 0.4; }
+        @keyframes pulse-dot {
+            0%, 100% { box-shadow: 0 0 0 4px rgba(255,176,0,0.25); }
+            50% { box-shadow: 0 0 0 8px rgba(255,176,0,0.05); }
+        }
+        .step-body { flex: 1; min-width: 0; }
+        .step-heading { display: flex; align-items: baseline; gap: 10px; margin-bottom: 6px; flex-wrap: wrap; }
+        .process-num {
             color: #5a5a5a;
-            font-size: 0.66em;
-            letter-spacing: 0.08em;
-            text-transform: uppercase;
+            font-size: 0.82em;
             font-weight: 700;
         }
-        .terminal-section-label::before { content: "// "; color: #3a3a3a; }
-        .right-terminal .feed { margin: 0 12px 10px; max-height: 220px; border-radius: 0; }
-        .right-terminal .feed.policy-feed { max-height: 180px; }
-        .right-terminal .event, .right-terminal .policy-line { font-size: 0.72em; }
-        .below-shell { max-width: 1700px; margin: 0 auto; padding: 26px 32px 40px; }
-        .below-shell .section-title { margin-top: 18px; }
-        .below-shell .section-title:first-of-type { margin-top: 0; }
+        .process-step.is-complete .process-num,
+        .process-step.is-active .process-num { color: #ffb000; }
+        .process-title {
+            color: #d4d4d4;
+            font-weight: 700;
+            font-size: 1em;
+            letter-spacing: 0.04em;
+        }
+        .process-step.is-complete .process-title,
+        .process-step.is-active .process-title { color: #ffb000; }
+        .process-step.is-skipped { opacity: 0.45; }
+        .process-desc {
+            color: #7a7a7a;
+            font-size: 0.85em;
+            line-height: 1.5;
+            max-width: 600px;
+        }
+        .process-status {
+            margin-top: 8px;
+            font-size: 0.78em;
+            font-weight: 700;
+            letter-spacing: 0.03em;
+            min-height: 1.1em;
+            text-transform: lowercase;
+        }
+        .process-step.is-complete .process-status,
+        .process-step.is-active .process-status { color: #ffb000; }
+
+        .verdict-section { margin-bottom: 52px; }
+        .verdict-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 0;
+        }
+        @media (max-width: 760px) {
+            .verdict-grid { grid-template-columns: 1fr; }
+        }
+        .verdict-card {
+            background: #0a0a0a;
+            border: 1px solid #2a2a2a;
+            border-radius: 0;
+            padding: 18px 18px 16px;
+            text-align: left;
+            margin-right: -1px;
+            margin-bottom: -1px;
+        }
+        .verdict-lens {
+            color: #6b6b6b;
+            font-size: 0.7em;
+            font-weight: 700;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            margin-bottom: 10px;
+        }
+        .verdict-headline {
+            color: #e0e0e0;
+            font-weight: 600;
+            font-size: 0.95em;
+            line-height: 1.4;
+            margin-bottom: 14px;
+            min-height: 3.9em;
+        }
+        .verdict-fact-row {
+            display: flex;
+            gap: 8px;
+            font-size: 0.76em;
+            padding: 6px 0;
+            border-top: 1px solid #1a1a1a;
+        }
+        .verdict-fact-row:first-of-type { border-top: none; }
+        .verdict-fact-key { color: #5a5a5a; white-space: nowrap; }
+        .verdict-fact-val { color: #8a8a8a; word-break: break-all; }
+        .verdict-badge {
+            display: inline-block;
+            margin-top: 12px;
+            padding: 2px 10px;
+            border-radius: 0;
+            border: 1px solid currentColor;
+            font-size: 0.7em;
+            font-weight: 700;
+            letter-spacing: 0.05em;
+        }
+        .verdict-badge::before { content: "["; }
+        .verdict-badge::after { content: "]"; }
+        .verdict-badge.pass { background: rgba(255,176,0,0.08); color: #ffb000; }
+        .verdict-badge.hold { background: rgba(255,176,0,0.08); color: #ffb000; }
+        .verdict-badge.blocked { background: rgba(255,59,59,0.1); color: #ff3b3b; }
+        .verdict-badge.idle { background: transparent; color: #5a5a5a; }
+
+        .metrics-section { margin-bottom: 52px; }
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 0;
+        }
+        @media (max-width: 760px) {
+            .grid { grid-template-columns: repeat(2, 1fr); }
+        }
+        .card {
+            background: #0a0a0a;
+            border-radius: 0;
+            padding: 16px 18px;
+            border: 1px solid #2a2a2a;
+            margin-right: -1px;
+            margin-bottom: -1px;
+        }
+        .card .label {
+            font-size: 0.72em;
+            color: #6b6b6b;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 6px;
+        }
+        .card .value {
+            font-size: 1.4em;
+            font-weight: 700;
+            color: #e8e8e8;
+        }
+        .card.band .value { color: #ffb000; }
+
+        .bar-track {
+            margin-top: 10px;
+            height: 6px;
+            border-radius: 0;
+            background: #1a1a1a;
+            overflow: hidden;
+        }
+        .bar-fill {
+            height: 100%;
+            background: #ffb000;
+            transition: width 0.4s ease;
+        }
+        .bar-fill.warn { background: #ff8c00; }
+        .bar-fill.danger { background: #ff3b3b; }
+
+        .conn-dot {
+            display: inline-block;
+            width: 8px; height: 8px;
+            border-radius: 0;
+            margin-right: 6px;
+        }
+        .conn-dot.live { background: #ffb000; box-shadow: 0 0 6px #ffb000; }
+        .conn-dot.down { background: #ff3b3b; box-shadow: 0 0 6px #ff3b3b; }
+
+        .nav-links, .nav-link { display: none; }
+
+        .section-title {
+            color: #ffb000;
+            font-size: 0.85em;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+            margin-bottom: 10px;
+            font-weight: 700;
+        }
+        .section-title::before { content: "// "; color: #5a5a5a; }
+
+        .proof-section { margin-bottom: 52px; }
+        .proof-block { margin-bottom: 28px; }
+
+        .feed {
+            background: #060606;
+            border-radius: 0;
+            border: 1px solid #2a2a2a;
+            overflow: hidden;
+        }
+        .event {
+            display: flex;
+            align-items: baseline;
+            gap: 14px;
+            padding: 11px 16px;
+            border-bottom: 1px solid #1a1a1a;
+            font-size: 0.85em;
+            flex-wrap: wrap;
+        }
+        .event:last-child { border-bottom: none; }
+        .event .ts { color: #5a5a5a; min-width: 140px; font-size: 0.85em; }
+        .event .badge {
+            min-width: 110px;
+            text-align: center;
+            padding: 2px 8px;
+            border-radius: 0;
+            border: 1px solid currentColor;
+            font-weight: 700;
+            font-size: 0.78em;
+            text-transform: uppercase;
+        }
+        .badge.executed { background: rgba(255,176,0,0.08); color: #ffb000; }
+        .badge.escalation_required { background: rgba(255,176,0,0.08); color: #ffb000; animation: pulse 1.6s infinite; }
+        .badge.denied { background: rgba(255,59,59,0.1); color: #ff3b3b; }
+        .badge.execution_failed { background: rgba(255,59,59,0.1); color: #ff3b3b; }
+        @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.5; } }
+        .event .desc { flex: 1; color: #aaa; min-width: 200px; }
+        .event .amount { color: #d4d4d4; min-width: 64px; text-align: right; }
+
+        .empty-state { padding: 24px; text-align: center; color: #5a5a5a; font-size: 0.85em; }
+
+        .pending-banner {
+            background: #100a00;
+            border: 1px solid #ffb000;
+            border-radius: 0;
+            padding: 12px 18px;
+            color: #ffb000;
+            display: none;
+            font-size: 0.85em;
+            margin-bottom: 20px;
+        }
+        .pending-banner.show { display: block; }
+
+        .sub-note { margin-top: 8px; font-size: 0.72em; color: #5a5a5a; }
+        .sub-note.has-override { color: #ffb000; }
+
+        .footer-note { color: #5a5a5a; font-size: 0.78em; line-height: 1.6; }
+        .footer-note code {
+            background: #0a0a0a;
+            border: 1px solid #2a2a2a;
+            padding: 1px 5px;
+            border-radius: 0;
+            font-size: 0.95em;
+            color: #ffb000;
+        }
+
+        .playground-section { margin-top: 52px; }
+        .try-it-box {
+            background: #0a0a0a;
+            border-radius: 0;
+            border: 1px solid #2a2a2a;
+            padding: 16px 18px;
+            margin-top: 16px;
+        }
+        .try-it-row { display: flex; flex-wrap: wrap; align-items: end; gap: 14px; }
+        .try-it-row label {
+            display: flex; flex-direction: column; gap: 4px;
+            color: #8a8a8a; font-size: 0.82em;
+        }
+        .try-it-row input[type="number"], .try-it-row input[type="text"] {
+            background: #000;
+            border: 1px solid #3a3a3a;
+            border-radius: 0;
+            color: #e0e0e0;
+            padding: 7px 9px;
+            font-size: 0.9em;
+            font-family: inherit;
+            min-width: 140px;
+        }
+        .try-it-row .try-checkbox { flex-direction: row; align-items: center; gap: 6px; margin-bottom: 1px; }
+        .try-it-row button {
+            background: #ffb000;
+            color: #000;
+            border: none;
+            border-radius: 0;
+            padding: 8px 16px;
+            font-weight: 700;
+            cursor: pointer;
+            font-size: 0.9em;
+            font-family: inherit;
+        }
+        .try-it-row button:hover { background: #ffc940; }
+        .try-result { margin-top: 14px; padding: 12px 16px; border-radius: 0; font-size: 0.85em; display: none; }
+        .try-result.show { display: block; }
+        .try-result.autonomous { background: rgba(255,176,0,0.08); border: 1px solid #ffb000; color: #ffb000; }
+        .try-result.escalation_required { background: rgba(255,176,0,0.08); border: 1px solid #ffb000; color: #ffb000; }
+        .try-result.rejected { background: rgba(255,59,59,0.1); border: 1px solid #ff3b3b; color: #ff3b3b; }
+        .try-result .verdict-line { font-weight: 700; text-transform: uppercase; margin-bottom: 6px; }
+        .try-result .reason-line { color: #aaa; }
+        .try-result .note-line { color: #5a5a5a; font-size: 0.85em; margin-top: 8px; }
+
+        .policy-feed { max-height: 360px; overflow-y: auto; }
+        .policy-line {
+            padding: 6px 16px;
+            font-size: 0.78em;
+            border-bottom: 1px solid #141414;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+        .policy-line.allowed { color: #ffb000; }
+        .policy-line.denied { color: #ff3b3b; font-weight: 700; }
+        .policy-line.other { color: #8a8a8a; }
+
+        .escalation-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.95);
+            z-index: 999;
+            align-items: center;
+            justify-content: center;
+        }
+        .escalation-overlay.show { display: flex; animation: flashIn 0.4s ease; }
+        @keyframes flashIn {
+            0% { background: rgba(255,59,59,0.85); }
+            100% { background: rgba(0,0,0,0.95); }
+        }
+        .escalation-box {
+            text-align: center;
+            border: 2px solid #ff3b3b;
+            border-radius: 0;
+            padding: 40px 60px;
+            background: #0a0000;
+        }
+        .escalation-title {
+            color: #ff3b3b;
+            font-size: 1.6em;
+            font-weight: 700;
+            letter-spacing: 0.05em;
+            margin-bottom: 18px;
+            animation: pulse 1.2s infinite;
+        }
+        .escalation-desc { color: #ff9d9d; font-size: 1.2em; margin-bottom: 8px; }
+        .escalation-amount { color: #fff; font-size: 2.2em; font-weight: 700; margin-bottom: 20px; }
+        .escalation-sub { color: #aaa; font-size: 0.9em; line-height: 1.5; }
     </style>
 </head>
 <body>
@@ -584,65 +489,69 @@
         </div>
     </div>
 
-    <div class="shell-grid">
-        <aside class="left-rail">
-            <div class="left-rail-heading">// Pipeline</div>
+    <main class="story">
+        <div class="hero">
+            <h1 class="hero-claim">The first AI agent you can hand a real wallet to.</h1>
+            <div class="hero-sub">Custodian is the trust layer underneath: kernel-enforced authority, not a promise in a prompt. The agent itself cannot exceed its limit or approve its own escalation — even if it tries. Below: a real agent proving it, live, on real infrastructure.</div>
+            <div class="spec-strip" id="spec-strip">
+                <span class="spec-item">AUTHORITY <strong id="spec-band">—</strong></span>
+                <span class="spec-sep">·</span>
+                <span class="spec-item">PER-ACTION <strong id="spec-cap">—</strong></span>
+                <span class="spec-sep">·</span>
+                <span class="spec-item">SESSION <strong id="spec-session">—</strong></span>
+                <span class="spec-sep">·</span>
+                <span class="spec-item enforced">ENFORCED AT KERNEL LEVEL</span>
+            </div>
+        </div>
+
+        <div class="timeline-section">
+            <div class="section-label">What's happening right now, live</div>
             <div class="process-diagram">
-                <div class="process-step" id="stage-observe"><span class="stage-dot"></span>
-                    <div class="process-num">01</div>
-                    <div class="process-title">OBSERVE</div>
-                    <div class="process-status" id="status-observe"></div>
+                <div class="process-step" id="stage-observe">
+                    <div class="step-marker"><span class="stage-dot"></span></div>
+                    <div class="step-body">
+                        <div class="step-heading"><span class="process-num">01</span><span class="process-title">OBSERVE</span></div>
+                        <div class="process-desc">Pulls real, ambiguous signals from real infrastructure — disk trends, system status, capacity — not a single up/down check a script could already do.</div>
+                        <div class="process-status" id="status-observe"></div>
+                    </div>
                 </div>
-                <div class="process-step" id="stage-judge"><span class="stage-dot"></span>
-                    <div class="process-num">02</div>
-                    <div class="process-title">JUDGE</div>
-                    <div class="process-status" id="status-judge"></div>
+                <div class="process-step" id="stage-judge">
+                    <div class="step-marker"><span class="stage-dot"></span></div>
+                    <div class="step-body">
+                        <div class="step-heading"><span class="process-num">02</span><span class="process-title">JUDGE</span></div>
+                        <div class="process-desc">Weighs the signals together. Most of the time the right call is to do nothing and spend nothing — only acts when the situation genuinely warrants it.</div>
+                        <div class="process-status" id="status-judge"></div>
+                    </div>
                 </div>
-                <div class="process-step" id="stage-act"><span class="stage-dot"></span>
-                    <div class="process-num">03</div>
-                    <div class="process-title" id="title-act">ACT or ESCALATE</div>
-                    <div class="process-desc" id="desc-act"></div>
-                    <div class="process-status" id="status-act"></div>
+                <div class="process-step" id="stage-act">
+                    <div class="step-marker"><span class="stage-dot"></span></div>
+                    <div class="step-body">
+                        <div class="step-heading"><span class="process-num">03</span><span class="process-title" id="title-act">ACT or ESCALATE</span></div>
+                        <div class="process-desc" id="desc-act">In-band: executes autonomously via real Stripe. Over-band: blocked at the kernel level, a one-time code goes to a human.</div>
+                        <div class="process-status" id="status-act"></div>
+                    </div>
                 </div>
-                <div class="process-step" id="stage-verify"><span class="stage-dot"></span>
-                    <div class="process-num">04</div>
-                    <div class="process-title">VERIFY</div>
-                    <div class="process-status" id="status-verify"></div>
+                <div class="process-step" id="stage-verify">
+                    <div class="step-marker"><span class="stage-dot"></span></div>
+                    <div class="step-body">
+                        <div class="step-heading"><span class="process-num">04</span><span class="process-title">VERIFY</span></div>
+                        <div class="process-desc">Real human, real out-of-band 2FA via Twilio Verify. The code exists only on Twilio's servers and the operator's phone — never in any file the agent can read.</div>
+                        <div class="process-status" id="status-verify"></div>
+                    </div>
                 </div>
-                <div class="process-step" id="stage-prove"><span class="stage-dot"></span>
-                    <div class="process-num">05</div>
-                    <div class="process-title">PROVE</div>
-                    <div class="process-status" id="status-prove"></div>
+                <div class="process-step" id="stage-prove">
+                    <div class="step-marker"><span class="stage-dot"></span></div>
+                    <div class="step-body">
+                        <div class="step-heading"><span class="process-num">05</span><span class="process-title">PROVE</span></div>
+                        <div class="process-desc">Every decision lands in an append-only audit log, alongside the raw kernel policy trace below. Not asserted — shown live.</div>
+                        <div class="process-status" id="status-prove"></div>
+                    </div>
                 </div>
             </div>
-            <div class="left-rail-metrics">
-                <div class="left-rail-metric"><div class="label">Authority Band</div><div class="value" id="band-value">—</div></div>
-                <div class="left-rail-metric"><div class="label">Per-Action Cap</div><div class="value" id="cap-value">—</div></div>
-                <div class="left-rail-metric">
-                    <div class="label">Autonomous Spend (session)</div>
-                    <div class="value" id="session-value">—</div>
-                    <div class="bar-track"><div class="bar-fill" id="session-bar" style="width:0%"></div></div>
-                    <div class="sub-note" id="override-note"></div>
-                </div>
-                <div class="left-rail-metric"><div class="label">Sandbox</div><div class="value"><span class="conn-dot down" id="conn-dot"></span><span id="conn-text">checking…</span></div></div>
-            </div>
-        </aside>
+        </div>
 
-        <main class="center-col">
-            <div class="hero">
-                <h1 class="hero-claim">The first AI agent you can hand a real wallet to.</h1>
-                <div class="hero-sub">Custodian is the trust layer underneath: kernel-enforced authority, not a promise in a prompt. The agent itself cannot exceed its limit or approve its own escalation — even if it tries. Below: a real agent proving it, live, on real infrastructure.</div>
-                <div class="spec-strip" id="spec-strip">
-                    <span class="spec-item">AUTHORITY <strong id="spec-band">—</strong></span>
-                    <span class="spec-sep">·</span>
-                    <span class="spec-item">PER-ACTION <strong id="spec-cap">—</strong></span>
-                    <span class="spec-sep">·</span>
-                    <span class="spec-item">SESSION <strong id="spec-session">—</strong></span>
-                    <span class="spec-sep">·</span>
-                    <span class="spec-item enforced">ENFORCED AT KERNEL LEVEL</span>
-                </div>
-            </div>
-
+        <div class="verdict-section">
+            <div class="section-label">The same decision, seen from three angles</div>
             <div class="verdict-grid">
                 <div class="verdict-card" id="verdict-ops">
                     <div class="verdict-lens">OPS / INFRA — would this break something?</div>
@@ -666,53 +575,78 @@
                     <span class="verdict-badge idle" id="verdict-security-badge">—</span>
                 </div>
             </div>
-        </main>
-
-        <aside class="right-terminal">
-            <div class="terminal-header">
-                <div class="dots"><span></span><span></span><span></span></div>
-                <div>custodian-live$</div>
-            </div>
-            <div class="terminal-section-label">Live Audit Feed — Ops Decisions &amp; Spend</div>
-            <div class="feed" id="feed">
-                <div class="empty-state">Waiting for events…</div>
-            </div>
-            <div class="terminal-section-label">Kernel Policy — Raw OCSF (NemoClaw / OpenShell)</div>
-            <div class="feed policy-feed" id="policy-feed">
-                <div class="empty-state">Waiting for sandbox activity…</div>
-            </div>
-        </aside>
-    </div>
-
-    <div class="below-shell">
-    <div class="pending-banner" id="pending-banner"></div>
-
-    <div class="section-title">Try It Yourself — Live Decision Engine</div>
-    <div class="footer-note" style="margin-bottom:16px;">
-        This calls the real <code>decide()</code> function from <code>custodian/policy/evaluator.py</code>,
-        live, against an isolated sandbox state. Nothing here ever touches real money, sends a real SMS,
-        or affects the live data shown above.
-    </div>
-    <div class="try-it-box">
-        <div class="try-it-row">
-            <label>Amount ($)<input type="number" id="try-amount" value="1.00" step="0.01" min="0.01"></label>
-            <label>Description<input type="text" id="try-description" value="Test request" maxlength="100"></label>
-            <label class="try-checkbox"><input type="checkbox" id="try-critical"> Mark as critical</label>
-            <button id="try-submit">Decide</button>
         </div>
-        <div id="try-result" class="try-result"></div>
-    </div>
 
-    <div class="try-it-box" style="margin-top:16px;">
-        <div class="try-it-row">
-            <label>Approval code<input type="text" id="try-code" placeholder="e.g. 123456" maxlength="32"></label>
-            <button id="try-approve-submit">Try to approve</button>
+        <div class="metrics-section">
+            <div class="section-label">Authority right now</div>
+            <div class="grid" id="status-grid">
+                <div class="card band">
+                    <div class="label">Authority Band</div>
+                    <div class="value" id="band-value">—</div>
+                </div>
+                <div class="card">
+                    <div class="label">Per-Action Cap</div>
+                    <div class="value" id="cap-value">—</div>
+                </div>
+                <div class="card">
+                    <div class="label">Autonomous Spend</div>
+                    <div class="value" id="session-value">—</div>
+                    <div class="bar-track"><div class="bar-fill" id="session-bar" style="width:0%"></div></div>
+                    <div class="sub-note" id="override-note"></div>
+                </div>
+                <div class="card">
+                    <div class="label">Sandbox</div>
+                    <div class="value"><span class="conn-dot down" id="conn-dot"></span><span id="conn-text">checking…</span></div>
+                </div>
+            </div>
         </div>
-        <div id="try-approve-result" class="try-result"></div>
-    </div>
 
-    <div class="footer-note" style="margin-top:16px;">Reading real-time state from the NemoClaw sandbox · refreshes every 3s</div>
-    </div>
+        <div class="proof-section">
+            <div class="pending-banner" id="pending-banner"></div>
+
+            <div class="proof-block">
+                <div class="section-title">Live Audit Feed — Ops Decisions &amp; Spend</div>
+                <div class="feed" id="feed">
+                    <div class="empty-state">Waiting for events…</div>
+                </div>
+            </div>
+
+            <div class="proof-block">
+                <div class="section-title">Kernel-Level Policy Enforcement — Raw OCSF Log (NemoClaw / OpenShell)</div>
+                <div class="feed policy-feed" id="policy-feed">
+                    <div class="empty-state">Waiting for sandbox activity…</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="playground-section">
+            <div class="section-title">Try It Yourself — Live Decision Engine</div>
+            <div class="footer-note" style="margin-bottom:0;">
+                This calls the real <code>decide()</code> function from <code>custodian/policy/evaluator.py</code>,
+                live, against an isolated sandbox state. Nothing here ever touches real money, sends a real SMS,
+                or affects the live data shown above.
+            </div>
+            <div class="try-it-box">
+                <div class="try-it-row">
+                    <label>Amount ($)<input type="number" id="try-amount" value="1.00" step="0.01" min="0.01"></label>
+                    <label>Description<input type="text" id="try-description" value="Test request" maxlength="100"></label>
+                    <label class="try-checkbox"><input type="checkbox" id="try-critical"> Mark as critical</label>
+                    <button id="try-submit">Decide</button>
+                </div>
+                <div id="try-result" class="try-result"></div>
+            </div>
+
+            <div class="try-it-box">
+                <div class="try-it-row">
+                    <label>Approval code<input type="text" id="try-code" placeholder="e.g. 123456" maxlength="32"></label>
+                    <button id="try-approve-submit">Try to approve</button>
+                </div>
+                <div id="try-approve-result" class="try-result"></div>
+            </div>
+
+            <div class="footer-note" style="margin-top:16px;">Reading real-time state from the NemoClaw sandbox · refreshes every 3s</div>
+        </div>
+    </main>
 
     <div class="escalation-overlay" id="escalation-overlay">
         <div class="escalation-box">
