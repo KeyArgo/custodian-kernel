@@ -6,9 +6,10 @@ Run this with: python3 verify_kit.py
 Every step here either runs real code against real data, or fetches live
 data from the real public dashboard (https://hermes-demo.argobox.com) --
 nothing in this script is staged or pre-recorded. The one thing it
-deliberately does NOT automate is checking the real Stripe PaymentIntent,
-because that would require embedding a real API key in a public repo --
-instead it prints the exact command to run with your own key.
+deliberately does NOT automate is checking the real Stripe PaymentIntent --
+Stripe objects are scoped to the account that created them, so your own key
+can't retrieve it regardless, and embedding a real key in a public repo to
+fake around that would be its own real mistake. See docs/VERIFICATION.md.
 
 This script is read-only with one exception: step 2 temporarily modifies
 skills/payments/stripe-spend/scripts/spend_v2.py to reintroduce the exact
@@ -19,7 +20,7 @@ is verified at the end of that step before continuing.
 from __future__ import annotations
 
 import json
-import shutil
+import re
 import subprocess
 import sys
 import time
@@ -45,11 +46,22 @@ def run(cmd: list[str], **kwargs) -> subprocess.CompletedProcess:
 
 
 def step1_test_suite() -> bool:
-    header("STEP 1/4 — Run the full test suite (117 tests)")
+    header("STEP 1/4 — Run the full test suite")
     result = run([sys.executable, "-m", "pytest", "tests/", "-v", "--tb=short"])
     print(result.stdout[-2000:])
-    ok = "117 passed" in result.stdout
-    print(f"\n[{PASS if ok else FAIL}] Expected '117 passed, 1 skipped' in output above.")
+    # Parse the real summary line rather than hardcoding a pass count --
+    # a hardcoded number goes stale the moment the suite grows, which is
+    # exactly the kind of thing this kit exists to catch, not commit.
+    # pytest's exit code is the actual source of truth for pass/fail.
+    match = re.search(r"(\d+) passed(?:, (\d+) skipped)?", result.stdout)
+    ok = result.returncode == 0
+    if match:
+        passed = match.group(1)
+        skipped = match.group(2) or "0"
+        print(f"\n[{PASS if ok else FAIL}] {passed} passed, {skipped} skipped.")
+    else:
+        print(f"\n[{FAIL}] Could not parse a pytest summary line at all.")
+        ok = False
     return ok
 
 
@@ -128,18 +140,21 @@ def step3_live_dashboard() -> bool:
 
 
 def step4_stripe_instructions() -> None:
-    header("STEP 4/4 — Verify the real Stripe PaymentIntent yourself (needs your own key)")
-    print(f"[{INFO}] This script deliberately does NOT do this automatically — that would require "
-          f"a real Stripe secret key committed to this public repo, which is exactly the kind of "
-          f"mistake we're not going to make. Run this yourself with any Stripe test-mode key:\n")
-    print(f"  curl https://api.stripe.com/v1/payment_intents/{PAYMENT_INTENT_ID} \\\n"
-          f"    -u sk_test_YOUR_KEY:")
-    print(f"\nExpect: a real object with amount=4500 (= $45.00), independent of anything in this repo.")
+    header("STEP 4/4 — The one thing this kit honestly can't self-serve")
+    print(f"[{INFO}] Stripe objects are scoped to the account that created them -- your own Stripe "
+          f"test-mode key, no matter whose it is, gets 'no such payment_intent' for this ID, not the "
+          f"real object. That's a real Stripe platform boundary, not something we can route around, "
+          f"and we won't commit a real secret key to a public repo to fake around it either.\n")
+    print(f"What actually verifies PaymentIntent {PAYMENT_INTENT_ID} is real:")
+    print(f"  1. Watching it happen live -- run a real spend and watch it appear in the project's own")
+    print(f"     Stripe test dashboard in the same moment.")
+    print(f"  2. Requesting restricted, view-only access to that real dashboard directly.")
+    print(f"\nSee docs/VERIFICATION.md for the full explanation.")
 
 
 def main() -> int:
     results = {
-        "Test suite (117 tests)": step1_test_suite(),
+        "Test suite": step1_test_suite(),
         "Self-approval regression actually catches the bug": step2_regression_proof(),
         "Live public dashboard data is real": step3_live_dashboard(),
     }
