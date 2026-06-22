@@ -157,6 +157,62 @@
         @media (max-width: 900px) {
             .process-arrow { display: none; }
         }
+        .verdict-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 14px;
+            margin-top: 18px;
+        }
+        @media (max-width: 900px) {
+            .verdict-grid { grid-template-columns: 1fr; }
+        }
+        .verdict-card {
+            background: rgba(255,255,255,0.03);
+            border: 1px solid rgba(255,255,255,0.09);
+            border-radius: 12px;
+            padding: 18px 18px 14px;
+            text-align: left;
+        }
+        .verdict-lens {
+            color: #6b7280;
+            font-size: 0.72em;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            margin-bottom: 6px;
+        }
+        .verdict-headline {
+            color: #e5e7eb;
+            font-weight: 700;
+            font-size: 1.05em;
+            line-height: 1.3;
+            margin-bottom: 12px;
+            min-height: 2.6em;
+        }
+        .verdict-fact-row {
+            display: flex;
+            gap: 8px;
+            font-family: 'SF Mono', Monaco, monospace;
+            font-size: 0.78em;
+            padding: 5px 0;
+            border-top: 1px solid rgba(255,255,255,0.06);
+        }
+        .verdict-fact-row:first-of-type { border-top: none; }
+        .verdict-fact-key { color: #6b7280; white-space: nowrap; }
+        .verdict-fact-val { color: #9ca3af; word-break: break-all; }
+        .verdict-badge {
+            display: inline-block;
+            margin-top: 10px;
+            padding: 3px 10px;
+            border-radius: 5px;
+            font-size: 0.72em;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+        }
+        .verdict-badge.pass { background: rgba(159,211,92,0.15); color: #9fd35c; }
+        .verdict-badge.hold { background: rgba(245,200,80,0.15); color: #f5c850; }
+        .verdict-badge.blocked { background: rgba(239,68,68,0.15); color: #ef4444; }
+        .verdict-badge.idle { background: rgba(255,255,255,0.08); color: #6b7280; }
 
         .nav-links { text-align: center; margin-bottom: 24px; }
         .nav-link {
@@ -482,6 +538,30 @@
                 <div class="process-status" id="status-prove"></div>
             </div>
         </div>
+
+        <div class="verdict-grid">
+            <div class="verdict-card" id="verdict-ops">
+                <div class="verdict-lens">OPS / INFRA — would this break something?</div>
+                <div class="verdict-headline" id="verdict-ops-headline">—</div>
+                <div class="verdict-fact-row"><span class="verdict-fact-key">signal:</span><span class="verdict-fact-val" id="verdict-ops-signal">—</span></div>
+                <div class="verdict-fact-row"><span class="verdict-fact-key">source:</span><span class="verdict-fact-val">10.0.0.199:8093 (real infra API)</span></div>
+                <span class="verdict-badge idle" id="verdict-ops-badge">—</span>
+            </div>
+            <div class="verdict-card" id="verdict-finance">
+                <div class="verdict-lens">FINANCE — is it worth the cost?</div>
+                <div class="verdict-headline" id="verdict-finance-headline">—</div>
+                <div class="verdict-fact-row"><span class="verdict-fact-key">amount:</span><span class="verdict-fact-val" id="verdict-finance-amount">—</span></div>
+                <div class="verdict-fact-row"><span class="verdict-fact-key">artifact:</span><span class="verdict-fact-val" id="verdict-finance-artifact">—</span></div>
+                <span class="verdict-badge idle" id="verdict-finance-badge">—</span>
+            </div>
+            <div class="verdict-card" id="verdict-security">
+                <div class="verdict-lens">SECURITY — does kernel policy allow it?</div>
+                <div class="verdict-headline" id="verdict-security-headline">—</div>
+                <div class="verdict-fact-row"><span class="verdict-fact-key">enforcement:</span><span class="verdict-fact-val">kernel (Landlock + OPA)</span></div>
+                <div class="verdict-fact-row"><span class="verdict-fact-key">artifact:</span><span class="verdict-fact-val" id="verdict-security-artifact">—</span></div>
+                <span class="verdict-badge idle" id="verdict-security-badge">—</span>
+            </div>
+        </div>
     </div>
 
     <div class="section-title" style="font-size:1.3em; margin-top:10px;">LIVE PROOF — real infrastructure, real budget, updating in real time</div>
@@ -642,7 +722,9 @@
                     ? policyLines.map(renderPolicyLine).join('')
                     : '<div class="empty-state">No kernel activity yet.</div>';
 
-                renderPipelineStage(events, codes.length > 0 ? pending[codes[0]] : null);
+                const pendingRecForVerdict = codes.length > 0 ? pending[codes[0]] : null;
+                renderPipelineStage(events, pendingRecForVerdict);
+                renderVerdictPanel(events, policyLines, pendingRecForVerdict);
             } catch (e) {
                 document.getElementById('conn-dot').className = 'conn-dot down';
                 document.getElementById('conn-text').textContent = 'Error';
@@ -708,6 +790,77 @@
                 setStage('act', 'is-complete', 'declined to spend');
                 setStage('verify', 'is-skipped', 'not needed');
                 setStage('prove', 'is-complete', 'logged + kernel trace below');
+            }
+        }
+
+        function truncateLine(s, n) {
+            if (!s) return '—';
+            return s.length > n ? s.slice(0, n) + '…' : s;
+        }
+
+        function setVerdict(lens, headline, badgeCls, badgeText, fields) {
+            document.getElementById(`verdict-${lens}-headline`).textContent = headline;
+            const badge = document.getElementById(`verdict-${lens}-badge`);
+            badge.className = 'verdict-badge ' + badgeCls;
+            badge.textContent = badgeText;
+            for (const [id, val] of Object.entries(fields || {})) {
+                const el = document.getElementById(id);
+                if (el) el.textContent = val;
+            }
+        }
+
+        function renderVerdictPanel(events, policyLines, pendingRec) {
+            const latestPolicy = policyLines.length ? truncateLine(policyLines[0], 70) : '—';
+
+            if (!events.length && !pendingRec) {
+                setVerdict('ops', 'No real signals indicate a problem right now.', 'idle', 'WATCHING',
+                    {'verdict-ops-signal': 'last check came back healthy'});
+                setVerdict('finance', 'Nothing at stake — no spend judged necessary.', 'idle', 'IDLE',
+                    {'verdict-finance-amount': '$0.00', 'verdict-finance-artifact': '—'});
+                setVerdict('security', 'Kernel watching, nothing to enforce yet.', 'idle', 'IDLE',
+                    {'verdict-security-artifact': latestPolicy});
+                return;
+            }
+
+            if (pendingRec) {
+                setVerdict('ops', 'Judged this needs more than a routine response.', 'hold', 'ACTION JUDGED',
+                    {'verdict-ops-signal': pendingRec.description});
+                setVerdict('finance', `${fmtUSD(pendingRec.amount)} exceeds autonomous authority — held until a real human verifies.`, 'hold', 'HOLD',
+                    {'verdict-finance-amount': fmtUSD(pendingRec.amount), 'verdict-finance-artifact': 'pending_approval.json (real, on disk)'});
+                setVerdict('security', 'Kernel blocked autonomous execution outright — a real human is required.', 'blocked', 'BLOCKED',
+                    {'verdict-security-artifact': latestPolicy});
+                return;
+            }
+
+            const latest = events[0];
+            if (latest.event === 'executed' && latest.approved_by) {
+                setVerdict('ops', 'Confirmed real risk — a human signed off on intervention.', 'pass', 'ACTION TAKEN',
+                    {'verdict-ops-signal': latest.description});
+                setVerdict('finance', `${fmtUSD(latest.amount)} approved by ${latest.approved_by}, outside the autonomous ceiling.`, 'pass', 'APPROVED',
+                    {'verdict-finance-amount': fmtUSD(latest.amount), 'verdict-finance-artifact': latest.payment_intent_id || '—'});
+                setVerdict('security', "Real Twilio Verify code consumed — the only path past the kernel block.", 'pass', 'VERIFIED',
+                    {'verdict-security-artifact': latestPolicy});
+            } else if (latest.event === 'executed') {
+                setVerdict('ops', 'A real, judged risk — handled within budget, no human needed.', 'pass', 'ACTION TAKEN',
+                    {'verdict-ops-signal': latest.description});
+                setVerdict('finance', `${fmtUSD(latest.amount)} spent autonomously, inside authority.`, 'pass', 'WITHIN BUDGET',
+                    {'verdict-finance-amount': fmtUSD(latest.amount), 'verdict-finance-artifact': latest.payment_intent_id || '—'});
+                setVerdict('security', 'Real Stripe call allowed by kernel policy — see trace below.', 'pass', 'ALLOWED',
+                    {'verdict-security-artifact': latestPolicy});
+            } else if (latest.event === 'escalation_required') {
+                setVerdict('ops', 'Judged action was needed, but no human responded in time.', 'hold', 'EXPIRED',
+                    {'verdict-ops-signal': latest.description});
+                setVerdict('finance', `${fmtUSD(latest.amount)} held — approval window closed.`, 'hold', 'EXPIRED',
+                    {'verdict-finance-amount': fmtUSD(latest.amount), 'verdict-finance-artifact': '—'});
+                setVerdict('security', 'Kernel held the block for the entire window — no override occurred.', 'blocked', 'BLOCKED',
+                    {'verdict-security-artifact': latestPolicy});
+            } else {
+                setVerdict('ops', "Signals didn't justify intervention — correctly doing nothing.", 'pass', 'NO ACTION NEEDED',
+                    {'verdict-ops-signal': latest.description || 'healthy'});
+                setVerdict('finance', '$0 spent — judged not worth it.', 'pass', 'NO SPEND',
+                    {'verdict-finance-amount': '$0.00', 'verdict-finance-artifact': '—'});
+                setVerdict('security', 'No tool calls required enforcement this round.', 'idle', 'N/A',
+                    {'verdict-security-artifact': latestPolicy});
             }
         }
 
