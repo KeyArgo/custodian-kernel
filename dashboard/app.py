@@ -26,6 +26,27 @@ app = Flask(__name__, template_folder='templates')
 app.register_blueprint(hermes.bp, url_prefix='/api/v1/hermes')
 app.register_blueprint(playground.bp, url_prefix='/api/v1/playground')
 
+# Allows a separately-hosted static frontend (Cloudflare Pages) to call this
+# backend's read-only/sandboxed-demo API cross-origin, while the dashboard's
+# own HTML/JS (served from this same app, same origin) is unaffected by this
+# either way. Deliberately scoped to only the /api/ routes -- never the root
+# page route -- and to GET/POST, matching what those endpoints actually do.
+ALLOWED_ORIGINS = {
+    'https://rein.argobox.com',
+    'https://rein.pages.dev',  # Cloudflare Pages default domain
+}
+
+
+@app.after_request
+def add_cors_headers(response):
+    from flask import request
+    origin = request.headers.get('Origin')
+    if origin in ALLOWED_ORIGINS:
+        response.headers['Access-Control-Allow-Origin'] = origin
+        response.headers['Access-Control-Allow-Methods'] = 'GET, POST'
+        response.headers['Access-Control-Allow-Headers'] = 'Content-Type'
+    return response
+
 
 @app.route('/')
 @app.route('/hermes')
