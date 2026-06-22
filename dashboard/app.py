@@ -3,9 +3,15 @@
 Live proof for the Custodian engine + ops-officer demo. Reads the NemoClaw
 sandbox's stripe-spend skill state directly off disk (this app runs on the
 same host as the sandbox, so no SSH or extra network hop), and reads raw
-kernel-level OCSF policy decisions straight from the sandbox container's own
-docker logs — the actual proof of kernel enforcement, not application-level
-reasoning describing itself.
+kernel-level OCSF policy decisions from a plain text file maintained by a
+separate process (scripts/dump_ocsf_log.py).
+
+Deliberately has NO Docker socket access of its own. This process is public-
+facing on a shared production host running many other real services -- it
+must never have the ability to enumerate or touch containers beyond what it
+explicitly needs, which is nothing. See scripts/dump_ocsf_log.py for the
+one, narrowly-scoped process that does need that access, and why splitting
+the two matters.
 
 Deliberately has zero dependency on any other ArgoBox/command-center code —
 this is a hackathon submission artifact, not a feature of that production
