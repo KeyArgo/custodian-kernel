@@ -62,18 +62,28 @@ def stripe_key():
 def create_payment_intent(amount_dollars, description):
     key = stripe_key()
     cents = int(round(amount_dollars * 100))
+    data = {
+        "amount": cents,
+        "currency": "usd",
+        "description": description,
+        "automatic_payment_methods[enabled]": "true",
+        "automatic_payment_methods[allow_redirects]": "never",
+    }
+    if key.startswith("sk_test_") or key.startswith("rk_test_"):
+        # pm_card_visa is Stripe's own public, well-known test-mode fixture --
+        # confirming with it is what makes test-mode spends real, captured charges
+        # instead of just authorized-but-empty intents. It is REJECTED by Stripe
+        # outside test mode, so this branch is structurally inert on a live key --
+        # not just policy-disabled, but rejected by Stripe itself if it ever ran.
+        data["payment_method"] = "pm_card_visa"
+        data["confirm"] = "true"
     last_err = None
     for attempt in (1, 2):
         try:
             r = requests.post(
                 "https://api.stripe.com/v1/payment_intents",
                 auth=(key, ""),
-                data={
-                    "amount": cents,
-                    "currency": "usd",
-                    "description": description,
-                    "automatic_payment_methods[enabled]": "true",
-                },
+                data=data,
                 timeout=10,
             )
             r.raise_for_status()
@@ -121,4 +131,43 @@ def execute_spend(amount, description, approved_by, recipe=None, to=None, messag
         print(f"[recipe:{recipe}] FAILED: {recipe_error}" if recipe_error
               else f"[recipe:{recipe}] delivered: {recipe_result}")
     print("[audit] logged: executed")
+    return True
+
+
+def create_refund(payment_intent_id, amount_dollars, reason):
+    key = stripe_key()
+    cents = int(round(amount_dollars * 100))
+    r = requests.post(
+        'https://api.stripe.com/v1/refunds',
+        auth=(key, ''),
+        data={'payment_intent': payment_intent_id, 'amount': cents, 'reason': 'requested_by_customer'},
+        timeout=10,
+    )
+    r.raise_for_status()
+    return r.json()
+
+
+def execute_refund(payment_intent_id, amount, description, approved_by):
+    """Move money back to the customer. Mirrors execute_spend's shape exactly --
+    same audit log, same caller-must-have-verified-authorization contract. The only
+    caller of this for any amount is approve.py, after a real Twilio Verify check --
+    refunds have no autonomous path at all, unlike spend, which has graduated bands."""
+    state = load_state()
+    try:
+        refund = create_refund(payment_intent_id, amount, description)
+    except Exception as e:
+        append_log({
+            'event': 'refund_failed', 'amount': amount, 'description': description,
+            'payment_intent_id': payment_intent_id, 'approved_by': approved_by, 'error': str(e),
+        })
+        print(f'[stripe] REFUND FAILED: {e}')
+        return False
+
+    append_log({
+        'event': 'refund_executed', 'amount': amount, 'description': description,
+        'band': state['band'], 'approved_by': approved_by,
+        'payment_intent_id': payment_intent_id, 'refund_id': refund['id'], 'stripe_status': refund['status'],
+    })
+    print(f"[stripe] Refund created: {refund['id']} (${amount:.2f}, test mode, against {payment_intent_id})")
+    print('[audit] logged: refund_executed')
     return True

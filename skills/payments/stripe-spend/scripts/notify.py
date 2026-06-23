@@ -32,11 +32,11 @@ def _load_secrets():
     return vals
 
 
-def write_pending(amount, description, reason):
+def write_pending(amount, description, reason, kind="spend", payment_intent_id=None):
     PENDING_FILE.parent.mkdir(parents=True, exist_ok=True)
     PENDING_FILE.write_text(json.dumps({
         "amount": amount, "description": description, "reason": reason,
-        "created_at": time.time(),
+        "created_at": time.time(), "kind": kind, "payment_intent_id": payment_intent_id,
     }, indent=2))
 
 
