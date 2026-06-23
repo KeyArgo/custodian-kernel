@@ -431,6 +431,12 @@
             border-radius: 8px; padding: 8px 14px; cursor: pointer; font-family: inherit; font-size: 0.85em;
         }
         .nemotron-send-btn:disabled { opacity: 0.5; cursor: default; }
+        .nemotron-jump-link {
+            background: rgba(118,185,0,0.18); border: 1px solid var(--nvidia-green); color: var(--nvidia-green);
+            border-radius: 6px; padding: 1px 8px; font-family: inherit; font-size: 0.95em; font-weight: 700;
+            cursor: pointer; margin: 0 2px;
+        }
+        .nemotron-jump-link:hover { background: rgba(118,185,0,0.32); }
         @media (max-width: 600px) {
             .nemotron-chat-panel { right: 12px; left: 12px; width: auto; bottom: 12px; }
         }
@@ -899,6 +905,36 @@
                 setStage('act', 'is-blocked', 'ceiling hit, blocked');
                 setStage('verify', '', 'no response yet');
                 setStage('prove', 'is-complete', 'logged + kernel trace below');
+            } else if (latest.event === 'refund_executed') {
+                titleAct.textContent = 'REFUNDED';
+                descAct.textContent = 'Refund requires human approval, always — no exceptions, no autonomous path at all.';
+                setStage('act', 'is-blocked', 'refund — no autonomous path');
+                setStage('verify', 'is-complete', `approved by ${latest.approved_by}`);
+                setStage('prove', 'is-complete', 'logged + kernel trace below');
+            } else if (latest.event === 'refund_escalation_required') {
+                titleAct.textContent = 'ESCALATED';
+                descAct.textContent = 'Refund requested — every refund escalates to a human, regardless of amount.';
+                setStage('act', 'is-blocked', 'refund — blocked pending human');
+                setStage('verify', '', 'awaiting real Twilio code…');
+                setStage('prove', '', '');
+            } else if (latest.event === 'refund_denied') {
+                titleAct.textContent = 'REFUND DENIED';
+                descAct.textContent = 'Refund request was denied — kill switch engaged or operator declined.';
+                setStage('act', 'is-blocked', 'refund denied');
+                setStage('verify', 'is-complete', 'denial logged');
+                setStage('prove', 'is-complete', 'logged + kernel trace below');
+            } else if (latest.event === 'refund_failed') {
+                titleAct.textContent = 'REFUND FAILED';
+                descAct.textContent = 'Human approved the refund, but the real Stripe call itself returned an error.';
+                setStage('act', 'is-blocked', 'approved, but Stripe rejected it');
+                setStage('verify', 'is-complete', `approved by ${latest.approved_by}`);
+                setStage('prove', 'is-complete', 'logged + kernel trace below');
+            } else if (latest.event === 'denied') {
+                titleAct.textContent = 'DENIED';
+                descAct.textContent = 'Request was denied — kill switch engaged, or an operator explicitly declined it.';
+                setStage('act', 'is-blocked', latest.denied_by ? `denied by ${latest.denied_by}` : 'denied');
+                setStage('verify', 'is-complete', 'denial logged');
+                setStage('prove', 'is-complete', 'logged + kernel trace below');
             } else {
                 titleAct.textContent = 'NO ACTION';
                 descAct.textContent = 'Judged that nothing warranted real spend — correctly doing nothing, not nothing happening.';
@@ -968,6 +1004,41 @@
                 setVerdict('finance', `${fmtUSD(latest.amount)} held — approval window closed.`, 'hold', 'EXPIRED',
                     {'verdict-finance-amount': fmtUSD(latest.amount), 'verdict-finance-artifact': '—'});
                 setVerdict('security', 'Kernel held the block for the entire window — no override occurred.', 'blocked', 'BLOCKED',
+                    {'verdict-security-artifact': latestPolicy});
+            } else if (latest.event === 'refund_executed') {
+                setVerdict('ops', 'Reversed a real charge — every refund needs a human, no exceptions.', 'pass', 'REFUNDED',
+                    {'verdict-ops-signal': latest.description});
+                setVerdict('finance', `${fmtUSD(latest.amount)} refunded, approved by ${latest.approved_by}.`, 'pass', 'REFUNDED',
+                    {'verdict-finance-amount': fmtUSD(latest.amount), 'verdict-finance-artifact': latest.refund_id || '—'});
+                setVerdict('security', 'Real Twilio Verify code consumed for the refund — same kernel gate as spend.', 'pass', 'VERIFIED',
+                    {'verdict-security-artifact': latestPolicy});
+            } else if (latest.event === 'refund_escalation_required') {
+                setVerdict('ops', 'Refund requested — this always escalates, regardless of amount.', 'hold', 'ESCALATED',
+                    {'verdict-ops-signal': latest.description});
+                setVerdict('finance', `${fmtUSD(latest.amount)} refund held — awaiting human approval.`, 'hold', 'HOLD',
+                    {'verdict-finance-amount': fmtUSD(latest.amount), 'verdict-finance-artifact': 'pending_approval.json (real, on disk)'});
+                setVerdict('security', 'Kernel blocked autonomous refund outright — a real human is required.', 'blocked', 'BLOCKED',
+                    {'verdict-security-artifact': latestPolicy});
+            } else if (latest.event === 'refund_denied') {
+                setVerdict('ops', 'Refund request was denied.', 'blocked', 'DENIED',
+                    {'verdict-ops-signal': latest.description});
+                setVerdict('finance', '$0 — refund denied, nothing reversed.', 'blocked', 'DENIED',
+                    {'verdict-finance-amount': '$0.00', 'verdict-finance-artifact': '—'});
+                setVerdict('security', 'Kernel/kill-switch blocked the refund — no override occurred.', 'blocked', 'BLOCKED',
+                    {'verdict-security-artifact': latestPolicy});
+            } else if (latest.event === 'refund_failed') {
+                setVerdict('ops', 'A human approved the refund, but Stripe itself rejected the real call.', 'blocked', 'FAILED',
+                    {'verdict-ops-signal': latest.description});
+                setVerdict('finance', `${fmtUSD(latest.amount)} refund attempted, Stripe returned an error.`, 'blocked', 'FAILED',
+                    {'verdict-finance-amount': fmtUSD(latest.amount), 'verdict-finance-artifact': '—'});
+                setVerdict('security', 'Kernel allowed the real call — the failure was Stripe-side, not a policy block.', 'idle', 'ALLOWED',
+                    {'verdict-security-artifact': latestPolicy});
+            } else if (latest.event === 'denied') {
+                setVerdict('ops', 'Request was denied — kill switch engaged, or declined by an operator.', 'blocked', 'DENIED',
+                    {'verdict-ops-signal': latest.description});
+                setVerdict('finance', '$0 — denied, no spend occurred.', 'blocked', 'DENIED',
+                    {'verdict-finance-amount': '$0.00', 'verdict-finance-artifact': '—'});
+                setVerdict('security', latest.denied_by ? `Kernel/kill-switch enforced the denial (by ${latest.denied_by}).` : 'Kernel/kill-switch enforced the denial.', 'blocked', 'BLOCKED',
                     {'verdict-security-artifact': latestPolicy});
             } else {
                 setVerdict('ops', "Signals didn't justify intervention — correctly doing nothing.", 'pass', 'NO ACTION NEEDED',
@@ -1112,7 +1183,59 @@
             return div;
         }
 
-        nemotronLauncherBtn.addEventListener('click', () => {
+        // Lets a bot answer include a clickable jump to the page section it's
+        // talking about. Built with real DOM nodes/createTextNode only -- never
+        // innerHTML -- so this stays safe regardless of what the model outputs;
+        // an unrecognized [[jump:...]] key just falls back to plain text.
+        const NEMOTRON_JUMP_TARGETS = {
+            pipeline: { selector: '.pipeline-rail' },
+            verdict: { selector: '.verdict-grid' },
+            authority: { selector: '#status-grid' },
+            audit: { selector: '.tab-bar', tab: 'audit' },
+            policy: { selector: '.tab-bar', tab: 'policy' },
+            playground: { selector: '#tab-panel-try', tab: 'try' },
+        };
+
+        function nemotronRenderAnswer(text) {
+            const div = document.createElement('div');
+            div.className = 'nemotron-msg bot';
+            const re = /\[\[jump:([a-z]+)\|([^\]]+)\]\]/g;
+            let lastIndex = 0, match;
+            while ((match = re.exec(text)) !== null) {
+                div.appendChild(document.createTextNode(text.slice(lastIndex, match.index)));
+                const [full, key, label] = match;
+                if (NEMOTRON_JUMP_TARGETS[key]) {
+                    const btn = document.createElement('button');
+                    btn.className = 'nemotron-jump-link';
+                    btn.textContent = label;
+                    btn.dataset.jumpKey = key;
+                    div.appendChild(btn);
+                } else {
+                    div.appendChild(document.createTextNode(label));
+                }
+                lastIndex = match.index + full.length;
+            }
+            div.appendChild(document.createTextNode(text.slice(lastIndex)));
+            nemotronBody.appendChild(div);
+            nemotronBody.scrollTop = nemotronBody.scrollHeight;
+            return div;
+        }
+
+        nemotronBody.addEventListener('click', (e) => {
+            const btn = e.target.closest('.nemotron-jump-link');
+            if (!btn) return;
+            const target = NEMOTRON_JUMP_TARGETS[btn.dataset.jumpKey];
+            if (!target) return;
+            if (target.tab) document.querySelector(`.tab-btn[data-tab="${target.tab}"]`).click();
+            const el = document.querySelector(target.selector);
+            if (el) {
+                el.classList.add('tour-highlight');
+                el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                setTimeout(() => el.classList.remove('tour-highlight'), 2500);
+            }
+        });
+
+        function nemotronOpen(focusInput) {
             nemotronPanel.classList.add('open');
             if (!nemotronOpenedOnce) {
                 nemotronOpenedOnce = true;
@@ -1123,9 +1246,14 @@
                     'bot'
                 );
             }
-            nemotronInput.focus();
-        });
+            if (focusInput) nemotronInput.focus();
+        }
+        nemotronLauncherBtn.addEventListener('click', () => nemotronOpen(true));
         nemotronCloseBtn.addEventListener('click', () => nemotronPanel.classList.remove('open'));
+        // Auto-open a few seconds after load so the bot introduces itself without
+        // requiring a visitor to spot and click a small button first. Don't steal
+        // focus on auto-open -- only do that for an explicit click.
+        setTimeout(() => nemotronOpen(false), 4000);
 
         async function nemotronSend() {
             const question = nemotronInput.value.trim();
@@ -1145,7 +1273,7 @@
                 if (data.error) {
                     nemotronAddMessage(`(couldn't get an answer: ${data.error})`, 'bot');
                 } else {
-                    nemotronAddMessage(data.answer, 'bot');
+                    nemotronRenderAnswer(data.answer);
                 }
             } catch (e) {
                 thinkingMsg.remove();

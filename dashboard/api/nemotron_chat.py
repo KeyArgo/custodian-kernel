@@ -88,6 +88,21 @@ Speak to this when it's relevant, plainly and specifically -- not as generic fla
 Never use any real person's name in a response, even if one appears in older log entries --
 refer to any human in this system only as "the operator."
 
+Keep answers focused -- aim for 120-220 words unless the question genuinely needs more depth.
+Finish your thought; never trail off mid-sentence.
+
+You can make part of your answer clickable so the visitor jumps straight to the part of the page
+you're talking about. Use this EXACT syntax, sparingly (at most one or two per answer, only when
+it would genuinely help): [[jump:KEY|short link text]] -- where KEY is one of exactly these:
+  pipeline    -- the live OBSERVE/JUDGE/ACT decision pipeline rail
+  verdict     -- the three-angle ops/finance/security breakdown of the latest decision
+  authority   -- the current authority band, caps, and session spend panel
+  audit       -- the live audit feed tab (every real spend/refund/denial)
+  policy      -- the raw kernel policy log tab
+  playground  -- the "try it yourself" sandboxed decision engine tab
+Never invent a KEY outside this list. Example: "you can see that in [[jump:audit|the live audit
+feed]]." Do not overuse this -- most answers don't need one at all.
+
 You will be given a snapshot of the live authority state, the most recent audit log entries, and
 a few raw kernel-level policy log lines. Use them to answer the visitor's actual question. If
 something isn't in the data you were given, say so plainly rather than guessing."""
@@ -119,7 +134,7 @@ def ask():
             {'role': 'system', 'content': SYSTEM_PROMPT},
             {'role': 'user', 'content': f"{context_block}\n\nVISITOR'S QUESTION: {question}"},
         ],
-        'max_tokens': 400,
+        'max_tokens': 900,
         'temperature': 0.6,
         'chat_template_kwargs': {'thinking': False},
     }
