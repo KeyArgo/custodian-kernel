@@ -1206,12 +1206,15 @@
         // talking about. Built with real DOM nodes/createTextNode only -- never
         // innerHTML -- so this stays safe regardless of what the model outputs;
         // an unrecognized [[jump:...]] key just falls back to plain text.
+        // selector is the actual content being shown -- NOT the tab bar -- so the
+        // overlap check below tests against what the visitor is really looking at,
+        // not a thin strip of tab buttons that almost never overlaps anything.
         const NEMOTRON_JUMP_TARGETS = {
             pipeline: { selector: '.pipeline-rail' },
             verdict: { selector: '.verdict-grid' },
             authority: { selector: '#status-grid' },
-            audit: { selector: '.tab-bar', tab: 'audit' },
-            policy: { selector: '.tab-bar', tab: 'policy' },
+            audit: { selector: '#tab-panel-audit', tab: 'audit' },
+            policy: { selector: '#tab-panel-policy', tab: 'policy' },
             playground: { selector: '#tab-panel-try', tab: 'try' },
         };
 
@@ -1219,10 +1222,16 @@ function nemotronRenderAnswer(rawText) {
             // Suggestions live on their own trailing lines -- pull them out first so
             // the main message body only ever contains prose + jump links.
             const suggestions = [];
-            const text = rawText.replace(/\[\[suggest:([^\]]+)\]\]/g, (full, q) => {
+            let text = rawText.replace(/\[\[suggest:([^\]]+)\]\]/g, (full, q) => {
                 suggestions.push(q.trim());
                 return '';
             }).trim();
+            // Defensive fallback: the model occasionally slips into ordinary Markdown
+            // link syntax instead of [[jump:...]] despite being told not to. There's
+            // no real URL behind it on this page, so just drop the link wrapper and
+            // keep the visible label rather than showing raw brackets/parens to a visitor.
+            text = text.replace(/\[([^\]]+)\]\((?:\/[^)]*|https?:\/\/[^)]*)\)/g, '$1')
+                       .replace(/\*\*([^*]+)\*\*/g, '$1');
 
             const div = document.createElement('div');
             div.className = 'nemotron-msg bot';
@@ -1267,14 +1276,47 @@ function nemotronRenderAnswer(rawText) {
 
         // If scrolling a jump target into view would put it behind the chat panel
         // (both fixed bottom-right), move the panel to the opposite side instead
-        // of leaving the thing being shown about hidden behind it.
+        // of leaving the thing being shown about hidden behind it. Most sections in
+        // the main column sit just left of the panel and only graze its edge by a
+        // few px -- that's not real blocking, so we measure actual overlap AREA and
+        // only switch sides once a meaningful chunk (>15% of the panel) is covered.
+        function nemotronCheckOverlap(target) {
+            const t = target.getBoundingClientRect();
+            let p = nemotronPanel.getBoundingClientRect();
+            if (nemotronPanel.classList.contains('panel-left')) {
+                // Always decide against the DEFAULT (right) position, never the
+                // current one -- otherwise switching sides changes the very rect
+                // being measured next time, and it oscillates forever (right
+                // overlaps -> switch left -> left doesn't overlap -> switch back
+                // -> overlaps again -> ...). When switched left, p.left IS the
+                // margin (CSS sets `left: <margin>px`); the right/left margins
+                // are symmetric, so mirror that same margin off the right edge.
+                const vw = document.documentElement.clientWidth;
+                const margin = p.left;
+                const right = vw - margin;
+                p = { left: right - p.width, right, top: p.top, bottom: p.bottom, width: p.width, height: p.height };
+            }
+            const overlapW = Math.max(0, Math.min(t.right, p.right) - Math.max(t.left, p.left));
+            const overlapH = Math.max(0, Math.min(t.bottom, p.bottom) - Math.max(t.top, p.top));
+            const overlapArea = overlapW * overlapH;
+            const panelArea = p.width * p.height;
+            const overlaps = panelArea > 0 && (overlapArea / panelArea) > 0.15;
+            nemotronPanel.classList.toggle('panel-left', overlaps);
+        }
+
+        // This page polls and re-renders live data every few seconds, so the
+        // target's actual position can keep shifting well after the scroll
+        // animation itself finishes -- a one-shot or two-shot check can catch a
+        // transient layout state and then never correct itself. Keep re-checking
+        // for as long as the highlight is shown instead, so the panel side stays
+        // in sync with whatever the page actually looks like at any moment.
         function nemotronAvoidOverlap(target) {
-            requestAnimationFrame(() => {
-                const t = target.getBoundingClientRect();
-                const p = nemotronPanel.getBoundingClientRect();
-                const overlaps = !(t.right < p.left || t.left > p.right || t.bottom < p.top || t.top > p.bottom);
-                nemotronPanel.classList.toggle('panel-left', overlaps);
-            });
+            let elapsed = 0;
+            const interval = setInterval(() => {
+                nemotronCheckOverlap(target);
+                elapsed += 200;
+                if (elapsed >= 2600) clearInterval(interval);
+            }, 200);
         }
 
         nemotronBody.addEventListener('click', (e) => {
@@ -1289,7 +1331,7 @@ function nemotronRenderAnswer(rawText) {
             if (el) {
                 el.classList.add('tour-highlight');
                 el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                setTimeout(() => nemotronAvoidOverlap(el), 500);
+                nemotronAvoidOverlap(el);
                 setTimeout(() => el.classList.remove('tour-highlight'), 2500);
             }
         });

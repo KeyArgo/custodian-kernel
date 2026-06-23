@@ -10,6 +10,7 @@ https://integrate.api.nvidia.com/v1 directly. Same model, same provider,
 different credential -- the sandbox's key is deliberately not reusable here.
 """
 import json
+import re
 import time
 import urllib.error
 import urllib.request
@@ -22,6 +23,33 @@ from flask import Blueprint, jsonify, request
 import api.hermes as hermes
 
 bp = Blueprint('nemotron_chat', __name__)
+
+# The model is told to use [[jump:KEY|label]] but reliably reverts to ordinary
+# Markdown links anyway -- it has even fabricated a URL that doesn't exist
+# (https://argobox.com/rail). Rather than trust prompt-following alone,
+# deterministically rewrite any Markdown link whose label names a known
+# section into the real jump syntax; anything else collapses to plain text
+# so a visitor is never shown a dead or invented link.
+_JUMP_KEYWORDS = {
+    'pipeline': ('pipeline', 'rail', 'observe', 'judge/act', 'decision pipeline'),
+    'verdict': ('verdict', 'ops/finance/security', 'breakdown'),
+    'authority': ('authority', 'band', 'cap', 'session spend', 'session budget'),
+    'audit': ('audit',),
+    'policy': ('kernel policy', 'policy log', 'ocsf', 'kernel-level'),
+    'playground': ('try it', 'playground', 'sandbox decision', 'decide('),
+}
+_MD_LINK_RE = re.compile(r'\[([^\]]+)\]\([^)]*\)')
+
+
+def _rewrite_markdown_links_to_jumps(text):
+    def repl(match):
+        label = match.group(1)
+        lower = label.lower()
+        for key, keywords in _JUMP_KEYWORDS.items():
+            if any(kw in lower for kw in keywords):
+                return f'[[jump:{key}|{label}]]'
+        return label
+    return _MD_LINK_RE.sub(repl, text)
 
 NVIDIA_SECRET_FILE = Path(__file__).resolve().parent.parent / 'secrets' / 'nvidia.env'
 NVIDIA_ENDPOINT = 'https://integrate.api.nvidia.com/v1/chat/completions'
@@ -113,6 +141,12 @@ it would genuinely help): [[jump:KEY|short link text]] -- where KEY is one of ex
 Never invent a KEY outside this list. Example: "you can see that in [[jump:audit|the live audit
 feed]]." Do not overuse this -- most answers don't need one at all.
 
+This is a single-page app with no real URLs or routes for its sections. NEVER use ordinary
+Markdown link syntax like [text](url) or [text](/#/something) to point at a part of this page --
+there is no such link and it will not work. The ONLY valid way to link anywhere on this page is
+the exact [[jump:KEY|label]] syntax above. If a visitor directly asks for a link to a specific
+section, use [[jump:KEY|label]] for it, not prose describing where to find it.
+
 You will be given a snapshot of the live authority state, the most recent audit log entries, and
 a few raw kernel-level policy log lines. Use them to answer the visitor's actual question. If
 something isn't in the data you were given, say so plainly rather than guessing.
@@ -170,4 +204,5 @@ def ask():
     except (KeyError, IndexError, json.JSONDecodeError):
         return jsonify({'error': 'Unexpected response shape from Nemotron'}), 502
 
+    answer = _rewrite_markdown_links_to_jumps(answer)
     return jsonify({'answer': answer})
