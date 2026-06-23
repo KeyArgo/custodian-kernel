@@ -49,13 +49,13 @@ class TestAuditEntry:
             description="Backup automation license renewal for NAS systems",
             band=Band.L2,
             ts=1741234567.0,
-            approved_by="Daniel",
+            approved_by="Operator",
             payment_intent_id="pi_3TkZWEPfSF4TGXT90AWlrnle",
         )
         d = entry.to_dict()
         assert d["event"] == "executed"
         assert d["amount"] == 45.0
-        assert d["approved_by"] == "Daniel"
+        assert d["approved_by"] == "Operator"
         assert d["payment_intent_id"] == "pi_3TkZWEPfSF4TGXT90AWlrnle"
         assert d["band"] == "L2"
 
@@ -72,7 +72,7 @@ class TestAuditEntry:
             description="Backup automation license renewal for NAS systems",
             band=Band.L2,
             ts=1741234567.0,
-            approved_by="Daniel",
+            approved_by="Operator",
             payment_intent_id="pi_3TkZWEPfSF4TGXT90AWlrnle",
         )
         d = entry.to_dict()
