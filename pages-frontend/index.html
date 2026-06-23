@@ -621,6 +621,29 @@
             '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
         }[c]));
 
+        // Pipe real browser-side errors somewhere a developer can actually see them,
+        // instead of only a generic "Error" status with no detail. Best-effort --
+        // never lets a reporting failure throw back into the caller. Absolute URL
+        // here (unlike the relative path on the server-rendered dashboard) because
+        // this static page is served from a different origin than the backend.
+        let _lastReportedError = '';
+        function reportError(message, stack, context) {
+            const key = context + ':' + message;
+            if (key === _lastReportedError) return; // don't spam identical repeats every 3s
+            _lastReportedError = key;
+            fetch('https://rein-local.argobox.com/api/v1/debug/report-error', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ message, stack: stack || '', url: location.href, context }),
+            }).catch(() => {});
+        }
+        window.addEventListener('error', (e) => {
+            reportError(e.message, e.error && e.error.stack, 'window.onerror');
+        });
+        window.addEventListener('unhandledrejection', (e) => {
+            reportError(String(e.reason), e.reason && e.reason.stack, 'unhandledrejection');
+        });
+
         function renderEvent(ev) {
             const badgeClass = ev.event || 'unknown';
             const label = (ev.event || 'unknown').replace(/_/g, ' ');
