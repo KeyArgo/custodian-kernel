@@ -18,6 +18,9 @@ something a visitor can feel, not just read.
 from __future__ import annotations
 
 import sys
+import time
+from collections import defaultdict, deque
+from functools import wraps
 from pathlib import Path
 
 from flask import Blueprint, jsonify, request
@@ -29,6 +32,37 @@ from custodian.types import AuthorityState, Band, SpendRequest
 
 bp = Blueprint('playground', __name__)
 
+# Simple in-memory, per-IP, per-process sliding-window rate limiter. No new
+# dependency, no shared store -- appropriate for what this actually is (a
+# demo endpoint with no auth, low expected traffic), not pretending to be a
+# production-grade distributed limiter. Real limitation worth stating
+# plainly: gunicorn runs multiple worker processes, each with its own copy
+# of this dict, so the *effective* ceiling across the whole deployment is
+# up to (limit x worker_count) for a client that gets round-robined across
+# workers -- still strictly better than the zero rate limiting that existed
+# before, not a claim of perfect enforcement.
+_RATE_LIMIT_WINDOW_SECONDS = 60
+_RATE_LIMIT_MAX_REQUESTS = 30
+_request_log: dict[str, deque] = defaultdict(deque)
+
+
+def rate_limited(f):
+    @wraps(f)
+    def wrapper(*args, **kwargs):
+        ip = request.headers.get('CF-Connecting-IP', request.remote_addr) or 'unknown'
+        now = time.time()
+        log = _request_log[ip]
+        while log and now - log[0] > _RATE_LIMIT_WINDOW_SECONDS:
+            log.popleft()
+        if len(log) >= _RATE_LIMIT_MAX_REQUESTS:
+            return jsonify({
+                'error': f'Rate limit exceeded -- max {_RATE_LIMIT_MAX_REQUESTS} requests per '
+                         f'{_RATE_LIMIT_WINDOW_SECONDS}s per IP on this demo endpoint.',
+            }), 429
+        log.append(now)
+        return f(*args, **kwargs)
+    return wrapper
+
 POLICY_PATH = Path(__file__).resolve().parent / "playground_policy.yaml"
 
 # A fresh, isolated state -- L2, $2.00 per-action cap, $10.00 session cap,
@@ -39,8 +73,17 @@ FRESH_STATE = AuthorityState(
     band=Band.L2, per_action_cap=2.00, session_cap=10.00, spent_this_session=0.0,
 )
 
+# Loaded once at import time, not per-request. This file is a fixed demo
+# policy that ships with the code -- it never changes at runtime, so
+# re-reading and re-parsing it on every single /decide call (disk I/O + YAML
+# parse + schema validation, every request) was pure waste, and combined
+# with no rate limiting on a public endpoint, it made flooding cheaper to do
+# damage with than it needed to be.
+_PLAYGROUND_POLICY = load_policy(POLICY_PATH)
+
 
 @bp.route('/decide', methods=['POST'])
+@rate_limited
 def try_decide():
     data = request.get_json(force=True, silent=True) or {}
     try:
@@ -56,10 +99,9 @@ def try_decide():
     if amount > 1_000_000:
         return jsonify({'error': 'amount too large for this demo'}), 400
 
-    policy = load_policy(POLICY_PATH)
     request_obj = SpendRequest(amount=amount, description=description)
     context = {'critical': True} if critical else {}
-    decision = decide(request_obj, FRESH_STATE, policy, context=context, killed=kill_switch)
+    decision = decide(request_obj, FRESH_STATE, _PLAYGROUND_POLICY, context=context, killed=kill_switch)
 
     note = (
         'This is the real decide() function from custodian/policy/evaluator.py, '
@@ -82,6 +124,7 @@ def try_decide():
 
 
 @bp.route('/try-approve', methods=['POST'])
+@rate_limited
 def try_approve():
     data = request.get_json(force=True, silent=True) or {}
     code = str(data.get('code', ''))[:32]
