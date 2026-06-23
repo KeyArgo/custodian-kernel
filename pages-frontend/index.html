@@ -437,8 +437,25 @@
             cursor: pointer; margin: 0 2px;
         }
         .nemotron-jump-link:hover { background: rgba(118,185,0,0.32); }
+        .nemotron-chat-panel.panel-left { right: auto; left: 24px; }
+        .nemotron-suggest-row { display: flex; flex-direction: column; gap: 6px; align-self: flex-start; max-width: 92%; }
+        .nemotron-suggest-chip {
+            background: rgba(118,185,0,0.06); border: 1px dashed rgba(118,185,0,0.4); color: #9fd968;
+            border-radius: 8px; padding: 6px 10px; font-family: inherit; font-size: 0.78em; text-align: left;
+            cursor: pointer;
+        }
+        .nemotron-suggest-chip:hover { background: rgba(118,185,0,0.16); border-style: solid; }
+        .nemotron-bubble {
+            display: none;
+            position: fixed; bottom: 24px; right: 24px; width: 52px; height: 52px;
+            border-radius: 50%; background: var(--nvidia-green); border: none; cursor: pointer;
+            font-size: 1.5em; box-shadow: 0 4px 20px rgba(0,0,0,0.5); z-index: 899;
+            align-items: center; justify-content: center;
+        }
+        .nemotron-bubble.show { display: flex; }
         @media (max-width: 600px) {
             .nemotron-chat-panel { right: 12px; left: 12px; width: auto; bottom: 12px; }
+            .nemotron-chat-panel.panel-left { left: 12px; }
         }
         .tour-highlight {
             position: relative;
@@ -716,6 +733,7 @@
             <button class="nemotron-send-btn" id="nemotron-send-btn">Ask</button>
         </div>
     </div>
+    <button class="nemotron-bubble" id="nemotron-bubble" title="Reopen Nemotron chat">🤖</button>
 
     <script>
         const fmtUSD = (n) => '$' + Number(n).toFixed(2);
@@ -1172,6 +1190,7 @@
         const nemotronBody = document.getElementById('nemotron-chat-body');
         const nemotronInput = document.getElementById('nemotron-chat-input');
         const nemotronSendBtn = document.getElementById('nemotron-send-btn');
+        const nemotronBubble = document.getElementById('nemotron-bubble');
         let nemotronOpenedOnce = false;
 
         function nemotronAddMessage(text, cls) {
@@ -1196,7 +1215,15 @@
             playground: { selector: '#tab-panel-try', tab: 'try' },
         };
 
-        function nemotronRenderAnswer(text) {
+function nemotronRenderAnswer(rawText) {
+            // Suggestions live on their own trailing lines -- pull them out first so
+            // the main message body only ever contains prose + jump links.
+            const suggestions = [];
+            const text = rawText.replace(/\[\[suggest:([^\]]+)\]\]/g, (full, q) => {
+                suggestions.push(q.trim());
+                return '';
+            }).trim();
+
             const div = document.createElement('div');
             div.className = 'nemotron-msg bot';
             const re = /\[\[jump:([a-z]+)\|([^\]]+)\]\]/g;
@@ -1217,11 +1244,42 @@
             }
             div.appendChild(document.createTextNode(text.slice(lastIndex)));
             nemotronBody.appendChild(div);
+
+            if (suggestions.length) {
+                const chipRow = document.createElement('div');
+                chipRow.className = 'nemotron-suggest-row';
+                for (const q of suggestions.slice(0, 3)) {
+                    const chip = document.createElement('button');
+                    chip.className = 'nemotron-suggest-chip';
+                    chip.textContent = q;
+                    chip.addEventListener('click', () => {
+                        nemotronInput.value = q;
+                        nemotronSend();
+                    });
+                    chipRow.appendChild(chip);
+                }
+                nemotronBody.appendChild(chipRow);
+            }
+
             nemotronBody.scrollTop = nemotronBody.scrollHeight;
             return div;
         }
 
+        // If scrolling a jump target into view would put it behind the chat panel
+        // (both fixed bottom-right), move the panel to the opposite side instead
+        // of leaving the thing being shown about hidden behind it.
+        function nemotronAvoidOverlap(target) {
+            requestAnimationFrame(() => {
+                const t = target.getBoundingClientRect();
+                const p = nemotronPanel.getBoundingClientRect();
+                const overlaps = !(t.right < p.left || t.left > p.right || t.bottom < p.top || t.top > p.bottom);
+                nemotronPanel.classList.toggle('panel-left', overlaps);
+            });
+        }
+
         nemotronBody.addEventListener('click', (e) => {
+            const chip = e.target.closest('.nemotron-suggest-chip');
+            if (chip) return; // handled by its own listener
             const btn = e.target.closest('.nemotron-jump-link');
             if (!btn) return;
             const target = NEMOTRON_JUMP_TARGETS[btn.dataset.jumpKey];
@@ -1231,12 +1289,15 @@
             if (el) {
                 el.classList.add('tour-highlight');
                 el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                setTimeout(() => nemotronAvoidOverlap(el), 500);
                 setTimeout(() => el.classList.remove('tour-highlight'), 2500);
             }
         });
 
         function nemotronOpen(focusInput) {
             nemotronPanel.classList.add('open');
+            nemotronPanel.classList.remove('panel-left');
+            nemotronBubble.classList.remove('show');
             if (!nemotronOpenedOnce) {
                 nemotronOpenedOnce = true;
                 nemotronAddMessage(
@@ -1248,8 +1309,15 @@
             }
             if (focusInput) nemotronInput.focus();
         }
+        function nemotronClose() {
+            nemotronPanel.classList.remove('open');
+            // Leave a small persistent bubble so closing doesn't mean losing the bot
+            // entirely -- only show it once there's actually been a conversation.
+            if (nemotronOpenedOnce) nemotronBubble.classList.add('show');
+        }
         nemotronLauncherBtn.addEventListener('click', () => nemotronOpen(true));
-        nemotronCloseBtn.addEventListener('click', () => nemotronPanel.classList.remove('open'));
+        nemotronCloseBtn.addEventListener('click', nemotronClose);
+        nemotronBubble.addEventListener('click', () => nemotronOpen(true));
         // Auto-open a few seconds after load so the bot introduces itself without
         // requiring a visitor to spot and click a small button first. Don't steal
         // focus on auto-open -- only do that for an explicit click.
