@@ -188,6 +188,46 @@ You will see the autonomous verdict (the default policy has no rules, so
 like the one in the policy language docs, this request would be routed to
 L4 (always requires approval).
 
+## Step 9: The kill switch
+
+An operator-only emergency stop that overrides every band and cap, with no
+exceptions:
+
+```bash
+custodian kill --by "Alice" --reason "testing" --state-dir /tmp/custodian-demo/state
+```
+
+You will see:
+
+```
+KILL SWITCH ENGAGED by Alice. Every request will be denied until 'custodian resume' is run.
+Reason: testing
+```
+
+Now the same request that would normally be autonomous is denied:
+
+```bash
+custodian request --amount 1.00 --description "test" --state-dir /tmp/custodian-demo/state --policy /tmp/custodian-demo/policy.yaml
+```
+
+```
+DENIED: kill switch is engaged (by Alice, reason: testing).
+Run 'custodian resume --by <name>' to release it.
+```
+
+(Exit code 3.) Release it:
+
+```bash
+custodian resume --by "Alice" --state-dir /tmp/custodian-demo/state
+```
+
+```
+Kill switch released by Alice. Normal decisions will resume.
+```
+
+This is the same mechanism wired into the real, live, authoritative
+`spend.py` script used elsewhere in this project — not a separate demo path.
+
 ## Cleanup
 
 ```bash
@@ -205,3 +245,5 @@ rm -rf /tmp/custodian-demo
 | `custodian deny --denied-by NAME` | Denies a pending escalation |
 | `custodian status` | Shows current authority state |
 | `custodian audit` | Shows audit log entries |
+| `custodian kill --by NAME` | Engages the kill switch -- denies everything until released |
+| `custodian resume --by NAME` | Releases the kill switch |

@@ -3,9 +3,15 @@
 Live proof for the Custodian engine + ops-officer demo. Reads the NemoClaw
 sandbox's stripe-spend skill state directly off disk (this app runs on the
 same host as the sandbox, so no SSH or extra network hop), and reads raw
-kernel-level OCSF policy decisions straight from the sandbox container's own
-docker logs — the actual proof of kernel enforcement, not application-level
-reasoning describing itself.
+kernel-level OCSF policy decisions from a plain text file maintained by a
+separate process (scripts/dump_ocsf_log.py).
+
+Deliberately has NO Docker socket access of its own. This process is public-
+facing on a shared production host running many other real services -- it
+must never have the ability to enumerate or touch containers beyond what it
+explicitly needs, which is nothing. See scripts/dump_ocsf_log.py for the
+one, narrowly-scoped process that does need that access, and why splitting
+the two matters.
 
 Deliberately has zero dependency on any other ArgoBox/command-center code —
 this is a hackathon submission artifact, not a feature of that production
@@ -21,6 +27,30 @@ app = Flask(__name__, template_folder='templates')
 app.register_blueprint(hermes.bp, url_prefix='/api/v1/hermes')
 app.register_blueprint(playground.bp, url_prefix='/api/v1/playground')
 app.register_blueprint(debug.bp, url_prefix='/api/v1/debug')
+
+# Allows the separately-hosted static frontend (Cloudflare Pages) to call
+# this backend's read-only/sandboxed-demo API cross-origin. rein.argobox.com
+# is now a custom domain bound to the Pages project -- a browser visiting it
+# sends that hostname as the real Origin, not rein-custodian.pages.dev, so
+# both need to be allowed. This app itself is reached at rein-local.argobox.com
+# now, not rein.argobox.com -- see commit history for the cutover. Deliberately
+# scoped to only the /api/ routes -- never the root page route -- and to
+# GET/POST, matching what those endpoints actually do.
+ALLOWED_ORIGINS = {
+    'https://rein.argobox.com',           # custom domain bound to the Pages project
+    'https://rein-custodian.pages.dev',   # the underlying Pages domain
+}
+
+
+@app.after_request
+def add_cors_headers(response):
+    from flask import request
+    origin = request.headers.get('Origin')
+    if origin in ALLOWED_ORIGINS:
+        response.headers['Access-Control-Allow-Origin'] = origin
+        response.headers['Access-Control-Allow-Methods'] = 'GET, POST'
+        response.headers['Access-Control-Allow-Headers'] = 'Content-Type'
+    return response
 
 
 @app.route('/')

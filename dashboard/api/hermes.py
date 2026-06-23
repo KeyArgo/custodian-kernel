@@ -21,6 +21,11 @@ SKILL_PATH = Path(os.getenv(
     '/tmp/hermes-mount/sandbox/.hermes/skills/payments/stripe-spend/state',
 ))
 
+OCSF_LOG_PATH = Path(os.getenv(
+    'HERMES_OCSF_LOG_PATH',
+    '/tmp/hermes-state-snapshot/ocsf_log.txt',
+))
+
 DEFAULT_AUTHORITY = {
     "band": "L2",
     "per_action_cap": 2.00,
@@ -103,25 +108,20 @@ def get_audit_log(limit=50):
 
 
 def get_policy_log(limit=20):
-    """Raw kernel-level OCSF policy decisions (ALLOWED/DENIED) from the sandbox
-    container's own docker logs — the actual proof of kernel-level enforcement,
-    not application-level reasoning."""
+    """Raw kernel-level OCSF policy decisions (ALLOWED/DENIED), read from a
+    plain text file maintained by a separate, narrowly-scoped dump script
+    (dashboard/scripts/dump_ocsf_log.py) -- this process never touches the
+    Docker socket itself. See that script's docstring for why that split
+    matters on a shared production host."""
     cached, hit = _cached(f'policy_{limit}')
     if hit:
         return cached
 
     lines = []
     try:
-        import docker
-        client = docker.from_env()
-        sandbox = next(
-            (c for c in client.containers.list()
-             if c.name.startswith('openshell-hermes-hackathon')),
-            None,
-        )
-        if sandbox:
-            raw = sandbox.logs(tail=300).decode('utf-8', errors='replace')
-            ocsf_lines = [l for l in raw.splitlines() if 'OCSF' in l]
+        if OCSF_LOG_PATH.exists():
+            raw = OCSF_LOG_PATH.read_text()
+            ocsf_lines = [l for l in raw.splitlines() if l.strip()]
             lines = ocsf_lines[-limit:][::-1]
     except Exception as e:
         print(f"[hermes] Error reading policy log: {e}")

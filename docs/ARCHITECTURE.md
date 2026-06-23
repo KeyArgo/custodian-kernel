@@ -132,11 +132,12 @@ the band's cap and session budget, and returns a `Decision`.
 ## Storage
 
 Only one storage backend is shipped: SQLite (`custodian/storage/sqlite.py`).
-It uses WAL mode for concurrent reads, with three tables:
+It uses WAL mode for concurrent reads, with four tables:
 
 - `authority_state` — single-row table (enforced by `CHECK(id=1)`)
 - `audit_log` — append-only, auto-incrementing rows
 - `pending_approval` — single-row table (enforced by `CHECK(id=1)`)
+- `kill_switch` — single-row table (enforced by `CHECK(id=1)`)
 
 ## Approval backends
 
@@ -144,3 +145,22 @@ Only one backend is shipped: `TwilioVerifyBackend`. It uses Twilio's Verify
 API to send an SMS code and check the response. The code is generated and
 held by Twilio's servers — it is never returned to the requesting process
 or written to any file the agent can read.
+
+## The kill switch
+
+A single override that, when engaged, makes `decide()` return `DENIED` for
+every request regardless of band, amount, or context — checked first, before
+any other rule. It is operator-only by construction: `decide()` takes a
+`killed: bool` parameter, but nothing in `custodian.policy` or the agent's
+own code path can set it. Only `custodian.storage.StorageBackend.set_kill_switch()`
+can, and the only callers of that are `custodian kill --by <name>` and
+`custodian resume --by <name>` — both CLI commands, both requiring a human
+name, neither reachable from the agent's own request path.
+
+This is wired into the real, live, authoritative `spend.py` script (not a
+parallel demo copy) via a small, dependency-free stdlib `sqlite3` check
+against the same `kill_switch` table — `spend.py` does not import the
+`custodian` package itself, so the sandbox stays free of that dependency.
+Fails open (not-killed) if the table doesn't exist yet, since the kill
+switch is opt-in infrastructure layered onto an already-working script, not
+a precondition for it to run at all.

@@ -207,9 +207,6 @@
         .process-step.is-blocked .process-status { color: var(--red); }
 
         /* ---- verdict cards ---- */
-        .why-section { margin-bottom: 44px; max-width: 760px; }
-        .why-body { color: #b0b0b0; font-size: 0.92em; line-height: 1.7; }
-        .why-body strong { color: #ffb000; }
         .verdict-section { margin-bottom: 44px; }
         .verdict-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0; }
         @media (max-width: 760px) { .verdict-grid { grid-template-columns: 1fr; } }
@@ -422,7 +419,7 @@
         <main class="content-col">
             <div class="hero">
                 <h1 class="hero-claim">The first AI agent you can hand a real wallet to.</h1>
-                <div class="hero-sub">Custodian is the trust layer underneath: kernel-enforced authority, not a promise in a prompt. The agent itself cannot exceed its limit or approve its own escalation — even if it tries. Below: a real agent — protecting ArgoBox, a real production homelab — proving it, live.</div>
+                <div class="hero-sub">Custodian is the trust layer underneath: kernel-enforced authority, not a promise in a prompt. The agent itself cannot exceed its limit or approve its own escalation — even if it tries. Below: a real agent proving it, live, on real infrastructure.</div>
                 <div class="spec-strip" id="spec-strip">
                     <span class="spec-item">AUTHORITY <strong id="spec-band">—</strong></span>
                     <span class="spec-sep">·</span>
@@ -433,20 +430,6 @@
                     <span class="spec-item enforced">ENFORCED AT KERNEL LEVEL</span>
                 </div>
                 <button class="tour-btn" id="tour-start-btn">▶ How this works (30s)</button>
-            </div>
-
-            <div class="why-section">
-                <div class="section-label">Why this exists</div>
-                <div class="why-body">
-                    Agents that get broad real access are unreliable today — not malicious, just unreliable.
-                    That's not a guess; it's what operators already running agents against real systems report
-                    firsthand. The question that actually matters isn't "will it make a mistake," it's
-                    <strong>"can a mistake cost real money."</strong> Custodian is the answer to that second
-                    question: a kernel-enforced ceiling an agent cannot talk its way past, with a real human
-                    out-of-band the only path beyond it. It's infrastructure for any team — an MSP, a fintech,
-                    anyone giving an agent real account access — that needs that guarantee before they'll let
-                    an agent near a real account at all.
-                </div>
             </div>
 
             <div class="verdict-section">
@@ -638,27 +621,6 @@
             '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
         }[c]));
 
-        // Pipe real browser-side errors somewhere a developer can actually see them,
-        // instead of only a generic "Error" status with no detail. Best-effort --
-        // never lets a reporting failure throw back into the caller.
-        let _lastReportedError = '';
-        function reportError(message, stack, context) {
-            const key = context + ':' + message;
-            if (key === _lastReportedError) return; // don't spam identical repeats every 3s
-            _lastReportedError = key;
-            fetch('/api/v1/debug/report-error', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ message, stack: stack || '', url: location.href, context }),
-            }).catch(() => {});
-        }
-        window.addEventListener('error', (e) => {
-            reportError(e.message, e.error && e.error.stack, 'window.onerror');
-        });
-        window.addEventListener('unhandledrejection', (e) => {
-            reportError(String(e.reason), e.reason && e.reason.stack, 'unhandledrejection');
-        });
-
         function renderEvent(ev) {
             const badgeClass = ev.event || 'unknown';
             const label = (ev.event || 'unknown').replace(/_/g, ' ');
@@ -681,7 +643,7 @@
 
         async function poll() {
             try {
-                const res = await fetch('/api/v1/hermes/summary');
+                const res = await fetch('https://rein-local.argobox.com/api/v1/hermes/summary');
                 const data = await res.json();
 
                 const auth = data.authority || {};
@@ -757,7 +719,6 @@
             } catch (e) {
                 document.getElementById('conn-dot').className = 'conn-dot down';
                 document.getElementById('conn-text').textContent = 'Error';
-                reportError(e.message, e.stack, 'poll()');
             }
         }
 
@@ -964,7 +925,7 @@
             resultBox.className = 'try-result show';
             resultBox.textContent = 'Deciding…';
             try {
-                const res = await fetch('/api/v1/playground/decide', {
+                const res = await fetch('https://rein-local.argobox.com/api/v1/playground/decide', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ amount, description, critical, kill_switch: killSwitch }),
@@ -984,7 +945,6 @@
             } catch (e) {
                 resultBox.className = 'try-result rejected show';
                 resultBox.textContent = 'Could not reach the decision engine.';
-                reportError(e.message, e.stack, 'try-submit');
             }
         });
 
@@ -994,7 +954,7 @@
             resultBox.className = 'try-result show';
             resultBox.textContent = 'Checking…';
             try {
-                const res = await fetch('/api/v1/playground/try-approve', {
+                const res = await fetch('https://rein-local.argobox.com/api/v1/playground/try-approve', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ code }),
@@ -1005,7 +965,6 @@
             } catch (e) {
                 resultBox.className = 'try-result rejected show';
                 resultBox.textContent = 'Could not reach the approval endpoint.';
-                reportError(e.message, e.stack, 'try-approve-submit');
             }
         });
     </script>

@@ -11,6 +11,14 @@ human approval required via Twilio Verify). The agent never holds the keys to
 both sides of that decision, so self-approval is structurally impossible, not
 just discouraged.
 
+**New here? Read [`docs/WHAT_THIS_IS.md`](docs/WHAT_THIS_IS.md) first** — a plain-language
+walkthrough of what this actually does, why it needs AI in exactly one place and nowhere
+else, and a worked real example end to end.
+
+**Wondering what this is actually for beyond one demo?** See
+[`docs/BUSINESSES_THIS_UNLOCKS.md`](docs/BUSINESSES_THIS_UNLOCKS.md) — the same enforcement
+pattern applied to five concrete, named business shapes, not just the one shown here.
+
 ## Installation
 
 ```bash
@@ -59,7 +67,13 @@ custodian audit
   `pi_3TkZWEPfSF4TGXT90AWlrnle` — confirm it at Stripe's own API or dashboard.
 - A real Twilio Verify integration sends SMS approval codes to an operator's
   phone. The code is never written to any file the agent can read.
-- 117 passing tests, 1 skipped (CLI placeholder), tested with Python 3.13.
+- A real, operator-only kill switch (`custodian kill --by <name>` / `custodian
+  resume --by <name>`) is wired into the live, authoritative `spend.py` —
+  not a separate demo path. Verified live: a real autonomous spend succeeded,
+  the kill switch was engaged, the exact same request was denied by the real
+  script running inside the live sandbox, then released, then the real spend
+  succeeded again. The full sequence is in the real audit log.
+- 124 passing tests, 1 skipped (CLI placeholder), tested with Python 3.13.
 - The test suite includes `test_self_approval_regression.py` — a regression
   test for the exact security bug this design prevents. The fix was proven
   by deliberately reintroducing the bug, confirming the test failed, then
