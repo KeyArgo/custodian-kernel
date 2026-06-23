@@ -19,6 +19,7 @@
         :root {
             --amber: #ffb000;
             --green: #2ee6a6;
+            --nvidia-green: #76b900;
             --red: #ff3b3b;
             --gray: #5a5a5a;
         }
@@ -361,6 +362,75 @@
             cursor: pointer;
         }
         .tour-btn:hover { background: rgba(255,176,0,0.1); }
+
+        /* ---- nemotron chat: a friendly, cartoony robot you can actually talk to ---- */
+        .nemotron-launcher {
+            margin-top: 16px;
+            margin-left: 10px;
+            background: rgba(118,185,0,0.08);
+            border: 1px solid var(--nvidia-green);
+            color: var(--nvidia-green);
+            border-radius: 20px;
+            padding: 8px 18px 8px 14px;
+            font-family: inherit;
+            font-size: 0.8em;
+            font-weight: 700;
+            letter-spacing: 0.03em;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .nemotron-launcher:hover { background: rgba(118,185,0,0.18); }
+        .nemotron-bot-face { font-size: 1.3em; display: inline-block; animation: nemotron-bob 2.4s ease-in-out infinite; }
+        @keyframes nemotron-bob { 0%, 100% { transform: translateY(0) rotate(-3deg); } 50% { transform: translateY(-3px) rotate(3deg); } }
+
+        .nemotron-chat-panel {
+            display: none;
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            width: 380px;
+            max-height: 560px;
+            background: #0d0f0a;
+            border: 2px solid var(--nvidia-green);
+            border-radius: 16px;
+            box-shadow: 0 8px 40px rgba(0,0,0,0.6);
+            z-index: 900;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        .nemotron-chat-panel.open { display: flex; }
+        .nemotron-chat-header {
+            background: rgba(118,185,0,0.12);
+            padding: 12px 14px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid rgba(118,185,0,0.3);
+        }
+        .nemotron-chat-title { display: flex; align-items: center; gap: 8px; font-weight: 700; color: var(--nvidia-green); font-size: 0.9em; }
+        .nemotron-close-btn { background: none; border: none; color: #888; cursor: pointer; font-size: 1.1em; padding: 0 4px; }
+        .nemotron-close-btn:hover { color: #fff; }
+        .nemotron-chat-body { flex: 1; overflow-y: auto; padding: 14px; display: flex; flex-direction: column; gap: 10px; font-size: 0.85em; line-height: 1.5; }
+        .nemotron-msg { padding: 9px 12px; border-radius: 10px; max-width: 90%; white-space: pre-wrap; }
+        .nemotron-msg.bot { background: rgba(118,185,0,0.1); border: 1px solid rgba(118,185,0,0.25); align-self: flex-start; }
+        .nemotron-msg.user { background: rgba(255,255,255,0.06); align-self: flex-end; color: #ddd; }
+        .nemotron-msg.thinking { color: #777; font-style: italic; }
+        .nemotron-chat-input-row { display: flex; border-top: 1px solid rgba(118,185,0,0.25); padding: 10px; gap: 8px; }
+        .nemotron-chat-input {
+            flex: 1; background: #161913; border: 1px solid #2a2e22; border-radius: 8px;
+            color: #eee; padding: 8px 10px; font-family: inherit; font-size: 0.85em;
+        }
+        .nemotron-chat-input:focus { outline: none; border-color: var(--nvidia-green); }
+        .nemotron-send-btn {
+            background: var(--nvidia-green); border: none; color: #0a0c07; font-weight: 700;
+            border-radius: 8px; padding: 8px 14px; cursor: pointer; font-family: inherit; font-size: 0.85em;
+        }
+        .nemotron-send-btn:disabled { opacity: 0.5; cursor: default; }
+        @media (max-width: 600px) {
+            .nemotron-chat-panel { right: 12px; left: 12px; width: auto; bottom: 12px; }
+        }
         .tour-highlight {
             position: relative;
             z-index: 500;
@@ -430,6 +500,9 @@
                     <span class="spec-item enforced">ENFORCED AT KERNEL LEVEL</span>
                 </div>
                 <button class="tour-btn" id="tour-start-btn">▶ How this works (30s)</button>
+                <button class="nemotron-launcher" id="nemotron-launcher-btn">
+                    <span class="nemotron-bot-face">🤖</span> Ask Nemotron about this
+                </button>
             </div>
 
             <div class="verdict-section">
@@ -606,6 +679,18 @@
         <div class="tour-actions">
             <button id="tour-skip-btn">Skip</button>
             <button class="tour-next" id="tour-next-btn">Next →</button>
+        </div>
+    </div>
+
+    <div class="nemotron-chat-panel" id="nemotron-chat-panel">
+        <div class="nemotron-chat-header">
+            <div class="nemotron-chat-title"><span class="nemotron-bot-face">🤖</span> Nemotron 3 Super — live</div>
+            <button class="nemotron-close-btn" id="nemotron-close-btn">✕</button>
+        </div>
+        <div class="nemotron-chat-body" id="nemotron-chat-body"></div>
+        <div class="nemotron-chat-input-row">
+            <input class="nemotron-chat-input" id="nemotron-chat-input" type="text" placeholder="Ask about the log, the kill switch, why this matters…" maxlength="500">
+            <button class="nemotron-send-btn" id="nemotron-send-btn">Ask</button>
         </div>
     </div>
 
@@ -989,6 +1074,73 @@
                 resultBox.className = 'try-result rejected show';
                 resultBox.textContent = 'Could not reach the approval endpoint.';
             }
+        });
+
+        // ---- nemotron chat: talk to the real model behind the agent ----
+        const nemotronLauncherBtn = document.getElementById('nemotron-launcher-btn');
+        const nemotronPanel = document.getElementById('nemotron-chat-panel');
+        const nemotronCloseBtn = document.getElementById('nemotron-close-btn');
+        const nemotronBody = document.getElementById('nemotron-chat-body');
+        const nemotronInput = document.getElementById('nemotron-chat-input');
+        const nemotronSendBtn = document.getElementById('nemotron-send-btn');
+        let nemotronOpenedOnce = false;
+
+        function nemotronAddMessage(text, cls) {
+            const div = document.createElement('div');
+            div.className = `nemotron-msg ${cls}`;
+            div.textContent = text;
+            nemotronBody.appendChild(div);
+            nemotronBody.scrollTop = nemotronBody.scrollHeight;
+            return div;
+        }
+
+        nemotronLauncherBtn.addEventListener('click', () => {
+            nemotronPanel.classList.add('open');
+            if (!nemotronOpenedOnce) {
+                nemotronOpenedOnce = true;
+                nemotronAddMessage(
+                    "Beep boop. I'm Nemotron 3 Super — the actual model running this agent, not a scripted FAQ. " +
+                    "Ask me what just happened, why a request got escalated, or why NVIDIA letting a model touch real money " +
+                    "(safely) is a big deal.",
+                    'bot'
+                );
+            }
+            nemotronInput.focus();
+        });
+        nemotronCloseBtn.addEventListener('click', () => nemotronPanel.classList.remove('open'));
+
+        async function nemotronSend() {
+            const question = nemotronInput.value.trim();
+            if (!question) return;
+            nemotronInput.value = '';
+            nemotronSendBtn.disabled = true;
+            nemotronAddMessage(question, 'user');
+            const thinkingMsg = nemotronAddMessage('thinking…', 'bot thinking');
+            try {
+                const res = await fetch('https://rein-local.argobox.com/api/v1/nemotron/ask', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ question }),
+                });
+                const data = await res.json();
+                thinkingMsg.remove();
+                if (data.error) {
+                    nemotronAddMessage(`(couldn't get an answer: ${data.error})`, 'bot');
+                } else {
+                    nemotronAddMessage(data.answer, 'bot');
+                }
+            } catch (e) {
+                thinkingMsg.remove();
+                nemotronAddMessage("Couldn't reach Nemotron right now.", 'bot');
+                reportError(e.message, e.stack, 'nemotron-ask');
+            } finally {
+                nemotronSendBtn.disabled = false;
+                nemotronInput.focus();
+            }
+        }
+        nemotronSendBtn.addEventListener('click', nemotronSend);
+        nemotronInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') nemotronSend();
         });
     </script>
 </body>
