@@ -69,7 +69,7 @@ def main():
         print(f"[authority] DENIED -- kill switch is engaged (by {kill_by or 'operator'}"
               f"{f', reason: ' + kill_reason if kill_reason else ''}).")
         print('[authority] This overrides every refund request, with no exceptions. '
-              'Run `custodian resume --by <name>` to release it.')
+              'Run `kill_toggle.py release --by <name>` to release it.')
         sys.exit(3)
 
     if args.denied_by:

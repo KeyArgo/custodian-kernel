@@ -7,11 +7,11 @@ approve.py, which performs a real Twilio Verify check it cannot fake, then
 calls the privileged executor itself. That split is the actual safety
 boundary, not a convention this script could be talked out of.
 
-Checks the kill switch (state/custodian.db, the same database the real
-`custodian kill`/`custodian resume` CLI writes to) before anything else --
-an operator-only override that this script has no way to set or clear
-itself, only consult. Uses plain stdlib sqlite3, not the custodian package
-itself, so this stays dependency-free inside the sandbox.
+Checks the kill switch (state/custodian.db, the same database kill_toggle.py
+writes to) before anything else -- an operator-only override that this
+script has no way to set or clear itself, only consult. Uses plain stdlib
+sqlite3, not the custodian package itself, so this stays dependency-free
+inside the sandbox.
 """
 import argparse
 import sqlite3
@@ -59,7 +59,7 @@ def main():
         print(f"[authority] DENIED — kill switch is engaged (by {kill_by or 'operator'}"
               f"{f', reason: ' + kill_reason if kill_reason else ''}).")
         print("[authority] This overrides every band and cap, with no exceptions. "
-              "Run `custodian resume --by <name>` to release it.")
+              "Run `kill_toggle.py release --by <name>` to release it.")
         sys.exit(3)
 
     if args.amount < 0.50 and not args.denied_by:
