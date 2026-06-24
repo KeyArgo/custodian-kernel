@@ -607,6 +607,7 @@
                         <div class="value" id="session-value">—</div>
                         <div class="bar-track"><div class="bar-fill" id="session-bar" style="width:0%"></div></div>
                         <div class="sub-note" id="override-note"></div>
+                        <div class="sub-note" id="refund-note"></div>
                     </div>
                     <div class="card">
                         <div class="label">Sandbox</div>
@@ -846,6 +847,16 @@
                 } else {
                     overrideNote.textContent = '';
                     overrideNote.classList.remove('has-override');
+                }
+
+                const refundNote = document.getElementById('refund-note');
+                const refundedTotal = auth.refunded_total || 0;
+                if (refundedTotal > 0) {
+                    refundNote.textContent = `− ${fmtUSD(refundedTotal)} refunded -- already netted out above`;
+                    refundNote.classList.add('has-override');
+                } else {
+                    refundNote.textContent = '';
+                    refundNote.classList.remove('has-override');
                 }
 
                 document.getElementById('spec-band').textContent = auth.band || '—';

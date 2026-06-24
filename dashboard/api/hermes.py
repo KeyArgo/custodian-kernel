@@ -67,23 +67,47 @@ def get_authority_state():
     # Split spend into autonomous (within the band, no human involved) vs
     # human-approved overrides — these can legitimately push the total past
     # session_cap, and conflating them makes the cap look broken on screen.
+    # A refund nets back out of whichever bucket its ORIGINAL spend came
+    # from (looked up by payment_intent_id), not just subtracted from the
+    # total blindly -- otherwise an autonomous spend refunded later would
+    # incorrectly shrink the override bucket instead, or vice versa.
     autonomous = 0.0
     approved_override = 0.0
+    refunded_total = 0.0
+    spend_bucket_by_pi = {}
     raw_audit = _read_remote_file('audit_log.jsonl')
     if raw_audit:
+        events = []
         for line in raw_audit.strip().splitlines():
             try:
-                ev = json.loads(line)
+                events.append(json.loads(line))
             except json.JSONDecodeError:
                 continue
+        for ev in events:
             if ev.get('event') != 'executed':
                 continue
-            if ev.get('approved_by'):
-                approved_override += ev.get('amount', 0)
+            pi_id = ev.get('payment_intent_id')
+            amount = ev.get('amount', 0)
+            bucket = 'override' if ev.get('approved_by') else 'autonomous'
+            if pi_id:
+                spend_bucket_by_pi[pi_id] = bucket
+            if bucket == 'override':
+                approved_override += amount
             else:
-                autonomous += ev.get('amount', 0)
+                autonomous += amount
+        for ev in events:
+            if ev.get('event') != 'refund_executed':
+                continue
+            amount = ev.get('amount', 0)
+            refunded_total += amount
+            bucket = spend_bucket_by_pi.get(ev.get('payment_intent_id'), 'autonomous')
+            if bucket == 'override':
+                approved_override -= amount
+            else:
+                autonomous -= amount
     state['autonomous_spent'] = round(autonomous, 2)
     state['approved_override_spent'] = round(approved_override, 2)
+    state['refunded_total'] = round(refunded_total, 2)
 
     _cache['authority'] = (state, time.time())
     return state
