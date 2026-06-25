@@ -309,6 +309,7 @@
         .badge.execution_failed { background: rgba(255,59,59,0.1); color: var(--red); }
         @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.5; } }
         .event .desc { flex: 1; color: #aaa; min-width: 200px; }
+        .event .who { font-size: 0.78em; color: #6a6a6a; margin-top: 2px; }
         .event .amount { color: #d4d4d4; min-width: 64px; text-align: right; }
 
         .empty-state { padding: 24px; text-align: center; color: #5a5a5a; font-size: 0.85em; }
@@ -878,10 +879,16 @@
         function renderEvent(ev) {
             const badgeClass = ev.event || 'unknown';
             const label = (ev.event || 'unknown').replace(/_/g, ' ');
+            const who = ev.approved_by
+                ? `approved by ${ev.approved_by}`
+                : ev.denied_by
+                    ? `denied by ${ev.denied_by}`
+                    : '';
+            const whoHtml = who ? `<div class="who">${escapeHtml(who)}</div>` : '';
             return `<div class="event">
                 <div class="ts">${escapeHtml(fmtTime(ev.iso))}</div>
                 <div class="badge ${escapeHtml(badgeClass)}">${escapeHtml(label)}</div>
-                <div class="desc">${escapeHtml(ev.description || '')}</div>
+                <div class="desc">${escapeHtml(ev.description || '')}${whoHtml}</div>
                 <div class="amount">${ev.amount != null ? fmtUSD(ev.amount) : ''}</div>
             </div>`;
         }
