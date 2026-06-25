@@ -134,6 +134,32 @@ def execute_spend(amount, description, approved_by, recipe=None, to=None, messag
     return True
 
 
+def execute_earn(amount, description):
+    """Real revenue in. Unlike execute_spend, this never touches
+    spent_this_session and has no caller-must-have-verified-authorization
+    contract -- earn.py calls this directly, unconditionally (after only the
+    kill switch and Stripe minimum checks), because receiving money carries
+    none of the risk that spending it does. There is no band, no cap, no
+    approval path for earning -- that asymmetry IS the policy, not a gap in
+    it. The kernel still gates SPEND; it was never meant to gate income."""
+    try:
+        pi = create_payment_intent(amount, description)
+    except Exception as e:
+        append_log({
+            "event": "earn_failed", "amount": amount, "description": description, "error": str(e),
+        })
+        print(f"[stripe] FAILED: {e}")
+        return False
+
+    append_log({
+        "event": "earned", "amount": amount, "description": description,
+        "payment_intent_id": pi["id"], "stripe_status": pi["status"],
+    })
+    print(f"[stripe] PaymentIntent created: {pi['id']} (${amount:.2f}, test mode, revenue in)")
+    print("[audit] logged: earned")
+    return True
+
+
 def create_refund(payment_intent_id, amount_dollars, reason):
     key = stripe_key()
     cents = int(round(amount_dollars * 100))

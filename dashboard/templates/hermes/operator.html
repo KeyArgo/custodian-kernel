@@ -42,6 +42,13 @@
 
 <div id="panel">
     <div class="step">
+        <h2>Step 0 — Real revenue in (no cap)</h2>
+        <p>Earning isn't gated -- only spend is. No band, no approval needed.</p>
+        <button id="step0-btn">Run: earn $1,200.00 (support contract payment)</button>
+        <div class="out" id="step0-out"></div>
+    </div>
+
+    <div class="step">
         <h2>Step 1 — Autonomous spend (no human needed)</h2>
         <p>$85.00, within the agent's authority band. Note the PaymentIntent ID printed below -- you'll need it for the refund in step 6.</p>
         <button id="step1-btn">Run: spend $85.00 (cloud backup renewal)</button>
@@ -161,6 +168,11 @@ document.getElementById('login-btn').addEventListener('click', async () => {
 });
 
 if (token) showPanel();
+
+document.getElementById('step0-btn').addEventListener('click', async () => {
+    const data = await call('/earn', { amount: '1200.00', description: 'Demo: support contract renewal -- customer payment received' });
+    renderOut('step0-out', data);
+});
 
 document.getElementById('step1-btn').addEventListener('click', async () => {
     const data = await call('/spend', { amount: '85.00', description: 'Demo: cloud backup storage renewal' });

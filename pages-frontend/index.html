@@ -255,7 +255,7 @@
 
         /* ---- metrics ---- */
         .metrics-section { margin-bottom: 44px; }
-        .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0; }
+        .grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 0; }
         @media (max-width: 760px) { .grid { grid-template-columns: repeat(2, 1fr); } }
         .card { background: #0a0a0a; border-radius: 0; padding: 16px 18px; border: 1px solid #2a2a2a; margin-right: -1px; margin-bottom: -1px; }
         .card .label { font-size: 0.72em; color: #6b6b6b; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px; }
@@ -306,6 +306,9 @@
         .badge.executed { background: rgba(46,230,166,0.08); color: var(--green); }
         .badge.escalation_required { background: rgba(255,176,0,0.08); color: var(--amber); animation: pulse 1.6s infinite; }
         .badge.denied { background: rgba(255,59,59,0.1); color: var(--red); }
+        .badge.earned { background: rgba(118,185,0,0.12); color: var(--green); }
+        .pnl-value.pnl-positive, #pnl-value.pnl-positive { color: var(--green); }
+        .pnl-value.pnl-negative, #pnl-value.pnl-negative { color: var(--red); }
         .badge.execution_failed { background: rgba(255,59,59,0.1); color: var(--red); }
         @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.5; } }
         .event .desc { flex: 1; color: #aaa; min-width: 200px; }
@@ -669,6 +672,11 @@
                         <div class="label">Sandbox</div>
                         <div class="value"><span class="conn-dot down" id="conn-dot"></span><span id="conn-text">checking…</span></div>
                     </div>
+                    <div class="card">
+                        <div class="label">Net (Real Revenue − Spend)</div>
+                        <div class="value" id="pnl-value">—</div>
+                        <div class="sub-note" id="earned-note"></div>
+                    </div>
                 </div>
             </div>
 
@@ -850,7 +858,7 @@
                     </svg></div>
 
     <script>
-        const fmtUSD = (n) => '$' + Number(n).toFixed(2);
+        const fmtUSD = (n) => '$' + Number(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
         const fmtTime = (iso) => iso ? iso.replace('T', ' ').replace('Z', '') : '';
         // Any string that ends up inside an innerHTML template literal must go
         // through this first -- some of these strings ultimately trace back to
@@ -957,6 +965,17 @@
                     refundNote.textContent = '';
                     refundNote.classList.remove('has-override');
                 }
+
+                const pnlValue = document.getElementById('pnl-value');
+                const earnedNote = document.getElementById('earned-note');
+                const netPnl = auth.net_pnl || 0;
+                const earnedTotal = auth.earned_total || 0;
+                pnlValue.textContent = (netPnl >= 0 ? '+' : '−') + fmtUSD(Math.abs(netPnl));
+                pnlValue.classList.toggle('pnl-positive', netPnl >= 0);
+                pnlValue.classList.toggle('pnl-negative', netPnl < 0);
+                earnedNote.textContent = earnedTotal > 0
+                    ? `${fmtUSD(earnedTotal)} real revenue in, kernel-enforced both directions`
+                    : 'no revenue yet -- earning has no cap, only spend is gated';
 
                 document.getElementById('spec-band').textContent = auth.band || '—';
                 document.getElementById('spec-cap').textContent = auth.per_action_cap != null ? fmtUSD(auth.per_action_cap) : '—';

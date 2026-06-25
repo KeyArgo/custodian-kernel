@@ -74,6 +74,7 @@ def get_authority_state():
     autonomous = 0.0
     approved_override = 0.0
     refunded_total = 0.0
+    earned_total = 0.0
     spend_bucket_by_pi = {}
     raw_audit = _read_remote_file('audit_log.jsonl')
     if raw_audit:
@@ -84,6 +85,9 @@ def get_authority_state():
             except json.JSONDecodeError:
                 continue
         for ev in events:
+            if ev.get('event') == 'earned':
+                earned_total += ev.get('amount', 0)
+                continue
             if ev.get('event') != 'executed':
                 continue
             pi_id = ev.get('payment_intent_id')
@@ -108,6 +112,11 @@ def get_authority_state():
     state['autonomous_spent'] = round(autonomous, 2)
     state['approved_override_spent'] = round(approved_override, 2)
     state['refunded_total'] = round(refunded_total, 2)
+    state['earned_total'] = round(earned_total, 2)
+    # Net P&L: real revenue in, minus real spend net of refunds. Earning has
+    # no band/cap (see earn.py) so it isn't part of the autonomous/override
+    # split above -- it's a separate number entirely, not folded into spend.
+    state['net_pnl'] = round(earned_total - (autonomous + approved_override), 2)
 
     _cache['authority'] = (state, time.time())
     return state

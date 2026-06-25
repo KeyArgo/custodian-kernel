@@ -105,6 +105,16 @@ def login():
     return jsonify({'token': _make_token(), 'expires_in': TOKEN_TTL_SECONDS})
 
 
+@bp.route('/earn', methods=['POST'])
+@require_operator
+def earn():
+    data = request.get_json(force=True, silent=True) or {}
+    amount = str(data.get('amount', ''))
+    description = str(data.get('description', ''))[:200]
+    result = _run_script('earn.py', '--amount', amount, '--description', description)
+    return jsonify(result)
+
+
 @bp.route('/spend', methods=['POST'])
 @require_operator
 def spend():

@@ -34,6 +34,11 @@ pause_for_code() {
     echo "$CODE"
 }
 
+banner "STEP 0 -- real revenue in (no cap -- earning isn't the risky direction)"
+echo "The agent just got paid for a completed job. No band, no approval needed -- only spend is gated."
+exec_remote earn.py --amount 1200.00 --description "Demo: support contract renewal -- customer payment received"
+read -rp "Press Enter to continue to the autonomous spend... "
+
 banner "STEP 1 -- autonomous spend, within authority (no human needed)"
 echo "Requesting an \$85.00 spend the agent is allowed to make on its own..."
 exec_remote spend.py --amount 85.00 --description "Demo: cloud backup storage renewal"
@@ -84,6 +89,8 @@ exec_remote approve.py "$CODE" --approved-by "$APPROVER"
 banner "DONE -- the complete arc just ran for real"
 cat <<'EOF'
 What just happened, all real, no simulation:
+  0. The agent earned real revenue -- unconditionally, no cap, because
+     receiving money isn't the risky direction.
   1. An AI agent requested money autonomously, within its authority band.
   2. It requested more than its band allows -- and could not act on it,
      full stop, until a human approved via a code the agent never saw.

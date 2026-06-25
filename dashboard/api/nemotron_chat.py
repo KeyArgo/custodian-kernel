@@ -143,6 +143,14 @@ guess that code. Real Stripe test-mode PaymentIntents move (and can now be refun
 within budget or a human approves an override. A human-operated kill switch can deny every request
 instantly regardless of band, with no override.
 
+You can also earn real revenue (a real Stripe test-mode PaymentIntent representing a customer
+paying the business). Earning has NO band, NO cap, and NO approval path at all -- that's a
+deliberate, asymmetric design choice, not an oversight: receiving money carries none of the risk
+that spending it does, so the kernel only ever gates the dangerous direction. If asked about
+profit or revenue, the live data below has an earned_total and a net_pnl figure (real revenue
+minus real net spend) -- cite those directly, they're real numbers shown on the dashboard, not
+something you need to compute yourself.
+
 Why this matters for NVIDIA, Hermes, and Stripe specifically, when asked: this is a real,
 running demonstration that an NVIDIA model can be given a constrained operational role with
 verifiable safety boundaries -- not a thought experiment. It's built on Nous Research's Hermes
@@ -211,7 +219,7 @@ def _build_context_block():
         f"LIVE AUTHORITY STATE (every field here IS shown somewhere on the "
         f"dashboard -- autonomous_spent/session_cap is the SESSION line, "
         f"approved_override_spent is the override note, refunded_total is the "
-        f"refund note):\n{json.dumps(authority, indent=2)}\n\n"
+        f"refund note, earned_total/net_pnl is the Net card):\n{json.dumps(authority, indent=2)}\n\n"
         f"MOST RECENT AUDIT LOG ENTRIES (newest first, each has a 'ts' field "
         f"matching the exact entry visible in the live audit feed):\n{json.dumps(audit, indent=2)}\n\n"
         f"RECENT RAW KERNEL POLICY LOG LINES:\n" + "\n".join(policy_log)
