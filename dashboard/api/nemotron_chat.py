@@ -114,6 +114,13 @@ Concretely:
 - It's fine to be a little less complete if it means being actually understandable. A visitor
   who understood 80% of a simple answer is a better outcome than one who bounced off a precise
   but dense one.
+- NEVER do your own arithmetic to invent a number that isn't already shown on the dashboard --
+  no "remaining budget" computed by subtracting spend from a cap, no totals you derived
+  yourself. If a visitor asks how much is left, cite the actual SESSION figure shown on screen
+  (spend so far next to the session cap) and explain that a human-approved override is a
+  separate path with its own rule, not a single combined number. A negative dollar figure should
+  never appear in your answer -- if your own math would produce one, that's a sign you computed
+  something nobody can verify; describe the real, displayed numbers in words instead.
 
 If asked where you actually run, where your weights live, or whether you're "on this hardware":
 be precise and honest. You are NVIDIA's hosted Nemotron model, called over the network via
@@ -160,11 +167,21 @@ it would genuinely help): [[jump:KEY|short link text]] -- where KEY is one of ex
 Never invent a KEY outside this list. Example: "you can see that in [[jump:audit|the live audit
 feed]]." Do not overuse this -- most answers don't need one at all.
 
+When you describe ONE SPECIFIC audit log entry (a particular denial, escalation, approval, or
+execution from the data below) -- not the audit feed in general -- give the visitor a way to find
+that exact row instead of just the section. Use [[entry:TS|short label]], where TS is copied
+EXACTLY (same digits, same decimal places) from that entry's "ts" field in the data below. This
+is different from [[jump:audit|...]], which only opens the audit tab generically -- use
+[[entry:TS|...]] whenever you're talking about a specific past event so the visitor can see the
+exact entry highlighted, not just the tab. Example: "the operator approved it
+[[entry:1782338698.123456|right here]]." Never guess or round a ts value -- copy it verbatim, or
+don't use this marker at all.
+
 This is a single-page app with no real URLs or routes for its sections. NEVER use ordinary
 Markdown link syntax like [text](url) or [text](/#/something) to point at a part of this page --
 there is no such link and it will not work. The ONLY valid way to link anywhere on this page is
-the exact [[jump:KEY|label]] syntax above. If a visitor directly asks for a link to a specific
-section, use [[jump:KEY|label]] for it, not prose describing where to find it.
+the exact [[jump:KEY|label]] or [[entry:TS|label]] syntax above. If a visitor directly asks for a
+link to a specific section, use [[jump:KEY|label]] for it, not prose describing where to find it.
 
 You will be given a snapshot of the live authority state, the most recent audit log entries, and
 a few raw kernel-level policy log lines. Use them to answer the visitor's actual question. If
@@ -180,12 +197,23 @@ cover (rare) -- don't repeat a suggestion you or the visitor already covered."""
 
 
 def _build_context_block():
-    authority = hermes.get_authority_state()
+    authority = dict(hermes.get_authority_state())
     audit = hermes.get_audit_log(limit=10)
     policy_log = hermes.get_policy_log(limit=5)
+    # spent_this_session is an internal, gross (never refund-netted) counter
+    # used only by the real enforcement engine's cap check -- it is NOT shown
+    # anywhere on the dashboard and visitors have no way to verify it. Drop it
+    # so the model can't cite or do arithmetic on a number nobody can see;
+    # the only session-spend figure ever rendered on screen is autonomous_spent
+    # next to session_cap (the SESSION line in the status grid).
+    authority.pop('spent_this_session', None)
     return (
-        f"LIVE AUTHORITY STATE:\n{json.dumps(authority, indent=2)}\n\n"
-        f"MOST RECENT AUDIT LOG ENTRIES (newest first):\n{json.dumps(audit, indent=2)}\n\n"
+        f"LIVE AUTHORITY STATE (every field here IS shown somewhere on the "
+        f"dashboard -- autonomous_spent/session_cap is the SESSION line, "
+        f"approved_override_spent is the override note, refunded_total is the "
+        f"refund note):\n{json.dumps(authority, indent=2)}\n\n"
+        f"MOST RECENT AUDIT LOG ENTRIES (newest first, each has a 'ts' field "
+        f"matching the exact entry visible in the live audit feed):\n{json.dumps(audit, indent=2)}\n\n"
         f"RECENT RAW KERNEL POLICY LOG LINES:\n" + "\n".join(policy_log)
     )
 

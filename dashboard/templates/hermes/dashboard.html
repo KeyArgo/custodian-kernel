@@ -310,6 +310,12 @@
         @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.5; } }
         .event .desc { flex: 1; color: #aaa; min-width: 200px; }
         .event .who { font-size: 0.78em; color: #6a6a6a; margin-top: 2px; }
+        .event.entry-highlight { animation: nemotron-entry-flash 2.6s ease-out; }
+        @keyframes nemotron-entry-flash {
+            0%   { background: rgba(118,185,0,0.35); outline: 2px solid var(--green); }
+            70%  { background: rgba(118,185,0,0.35); outline: 2px solid var(--green); }
+            100% { background: transparent; outline: 2px solid transparent; }
+        }
         .event .amount { color: #d4d4d4; min-width: 64px; text-align: right; }
 
         .empty-state { padding: 24px; text-align: center; color: #5a5a5a; font-size: 0.85em; }
@@ -885,7 +891,7 @@
                     ? `denied by ${ev.denied_by}`
                     : '';
             const whoHtml = who ? `<div class="who">${escapeHtml(who)}</div>` : '';
-            return `<div class="event">
+            return `<div class="event" data-ts="${escapeHtml(String(ev.ts))}">
                 <div class="ts">${escapeHtml(fmtTime(ev.iso))}</div>
                 <div class="badge ${escapeHtml(badgeClass)}">${escapeHtml(label)}</div>
                 <div class="desc">${escapeHtml(ev.description || '')}${whoHtml}</div>
@@ -1390,16 +1396,22 @@ function nemotronRenderAnswer(rawText) {
 
             const div = document.createElement('div');
             div.className = 'nemotron-msg bot';
-            const re = /\[\[jump:([a-z]+)\|([^\]]+)\]\]/g;
+            const re = /\[\[(jump|entry):([^\|]+)\|([^\]]+)\]\]/g;
             let lastIndex = 0, match;
             while ((match = re.exec(text)) !== null) {
                 div.appendChild(document.createTextNode(text.slice(lastIndex, match.index)));
-                const [full, key, label] = match;
-                if (NEMOTRON_JUMP_TARGETS[key]) {
+                const [full, kind, key, label] = match;
+                if (kind === 'jump' && NEMOTRON_JUMP_TARGETS[key]) {
                     const btn = document.createElement('button');
                     btn.className = 'nemotron-jump-link';
                     btn.textContent = label;
                     btn.dataset.jumpKey = key;
+                    div.appendChild(btn);
+                } else if (kind === 'entry') {
+                    const btn = document.createElement('button');
+                    btn.className = 'nemotron-jump-link';
+                    btn.textContent = label;
+                    btn.dataset.entryTs = key.trim();
                     div.appendChild(btn);
                 } else {
                     div.appendChild(document.createTextNode(label));
@@ -1479,6 +1491,23 @@ function nemotronRenderAnswer(rawText) {
             if (chip) return; // handled by its own listener
             const btn = e.target.closest('.nemotron-jump-link');
             if (!btn) return;
+
+            if (btn.dataset.entryTs) {
+                document.querySelector('.tab-btn[data-tab="audit"]').click();
+                const row = document.querySelector(`#feed .event[data-ts="${btn.dataset.entryTs}"]`);
+                if (row) {
+                    row.classList.remove('entry-highlight');
+                    // restart the CSS animation even if this entry was just highlighted a moment ago
+                    void row.offsetWidth;
+                    row.classList.add('entry-highlight');
+                    row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    setTimeout(() => row.classList.remove('entry-highlight'), 2700);
+                } else {
+                    nemotronAddMessage("That entry isn't in the most recent rows currently shown -- it may have scrolled further back.", 'bot thinking');
+                }
+                return;
+            }
+
             const target = NEMOTRON_JUMP_TARGETS[btn.dataset.jumpKey];
             if (!target) return;
             if (target.tab) document.querySelector(`.tab-btn[data-tab="${target.tab}"]`).click();
