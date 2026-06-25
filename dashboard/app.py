@@ -22,6 +22,7 @@ from flask import Flask, render_template
 import api.debug as debug
 import api.hermes as hermes
 import api.nemotron_chat as nemotron_chat
+import api.operator as operator
 import api.playground as playground
 
 app = Flask(__name__, template_folder='templates')
@@ -29,6 +30,7 @@ app.register_blueprint(hermes.bp, url_prefix='/api/v1/hermes')
 app.register_blueprint(playground.bp, url_prefix='/api/v1/playground')
 app.register_blueprint(debug.bp, url_prefix='/api/v1/debug')
 app.register_blueprint(nemotron_chat.bp, url_prefix='/api/v1/nemotron')
+app.register_blueprint(operator.bp, url_prefix='/api/v1/operator')
 
 # Allows the separately-hosted static frontend (Cloudflare Pages) to call
 # this backend's read-only/sandboxed-demo API cross-origin. rein.argobox.com
@@ -61,6 +63,13 @@ def add_cors_headers(response):
 @app.route('/hermes')
 def dashboard():
     return render_template('hermes/dashboard.html')
+
+
+@app.route('/operator')
+def operator_panel():
+    # Deliberately NOT linked from the public dashboard or robots-indexed --
+    # see api/operator.py's module docstring for why this stays operator-only.
+    return render_template('hermes/operator.html')
 
 
 if __name__ == '__main__':

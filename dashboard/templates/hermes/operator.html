@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="robots" content="noindex, nofollow">
+<title>Custodian — Operator Panel</title>
+<style>
+    body { background: #060606; color: #e8e8e8; font-family: 'Courier New', monospace; padding: 24px; max-width: 760px; margin: 0 auto; }
+    h1 { color: #76b900; font-size: 1.3em; }
+    .warn { color: #ffb000; font-size: 0.85em; margin-bottom: 20px; }
+    .step { background: #0a0a0a; border: 1px solid #2a2a2a; border-top: 2px solid #76b900; padding: 14px 16px; margin-bottom: 14px; }
+    .step h2 { font-size: 0.95em; margin: 0 0 8px 0; color: #76b900; }
+    .step p { font-size: 0.8em; color: #999; margin: 0 0 10px 0; }
+    .row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
+    input { background: #111; border: 1px solid #333; color: #e8e8e8; padding: 6px 8px; font-family: inherit; font-size: 0.85em; }
+    button { background: rgba(118,185,0,0.12); border: 1px solid #76b900; color: #76b900; padding: 7px 14px;
+        cursor: pointer; font-family: inherit; font-size: 0.85em; }
+    button:hover { background: rgba(118,185,0,0.25); }
+    button:disabled { opacity: 0.4; cursor: not-allowed; }
+    .out { background: #000; border: 1px solid #222; padding: 8px 10px; margin-top: 8px; font-size: 0.78em;
+        white-space: pre-wrap; max-height: 200px; overflow-y: auto; display: none; }
+    .out.show { display: block; }
+    .out.err { border-color: #ff3b3b; color: #ff9b9b; }
+    #login-box { display: block; }
+    #panel { display: none; }
+</style>
+</head>
+<body>
+<h1>Custodian — Operator Panel</h1>
+<div class="warn">Every button below moves real Stripe test-mode money and/or sends a real Twilio SMS to the operator's phone. Not for visitors.</div>
+
+<div id="login-box">
+    <div class="step">
+        <h2>Login</h2>
+        <div class="row">
+            <input type="password" id="password" placeholder="Operator password">
+            <button id="login-btn">Login</button>
+        </div>
+        <div class="out err" id="login-out"></div>
+    </div>
+</div>
+
+<div id="panel">
+    <div class="step">
+        <h2>Step 1 — Autonomous spend (no human needed)</h2>
+        <p>$1.20, within the agent's authority band. Note the PaymentIntent ID printed below -- you'll need it for the refund in step 6.</p>
+        <button id="step1-btn">Run: spend $1.20 (cloud backup renewal)</button>
+        <div class="out" id="step1-out"></div>
+    </div>
+
+    <div class="step">
+        <h2>Step 2 — Over-budget escalation (real SMS incoming)</h2>
+        <p>$45.00 exceeds the band. Watch your phone for the Twilio Verify code.</p>
+        <button id="step2-btn">Run: request $45.00 (NAS license renewal)</button>
+        <div class="out" id="step2-out"></div>
+    </div>
+
+    <div class="step">
+        <h2>Step 3 — Approve with the real code</h2>
+        <div class="row">
+            <input type="text" id="approve1-code" placeholder="6-digit code from your phone">
+            <input type="text" id="approve1-by" placeholder="Approved by" value="Operator">
+            <button id="approve1-btn">Approve</button>
+        </div>
+        <div class="out" id="approve1-out"></div>
+    </div>
+
+    <div class="step">
+        <h2>Step 4 — Engage the kill switch</h2>
+        <div class="row">
+            <input type="text" id="kill-reason" placeholder="Reason" value="demo: proving the override is absolute">
+            <button id="kill-btn">Engage kill switch</button>
+        </div>
+        <div class="out" id="kill-out"></div>
+    </div>
+
+    <div class="step">
+        <h2>Step 5 — Prove the kill switch overrides everything</h2>
+        <p>A normally-fine $1.00 in-band request -- should be denied outright while the kill switch is engaged.</p>
+        <button id="step5-btn">Run: attempt $1.00 spend (expect DENIED)</button>
+        <div class="out" id="step5-out"></div>
+    </div>
+
+    <div class="step">
+        <h2>Step 6 — Release the kill switch</h2>
+        <button id="resume-btn">Release kill switch</button>
+        <div class="out" id="resume-out"></div>
+    </div>
+
+    <div class="step">
+        <h2>Step 7 — Refund (always escalates, real SMS again)</h2>
+        <p>Paste the PaymentIntent ID from step 1.</p>
+        <div class="row">
+            <input type="text" id="refund-pi" placeholder="pi_..." style="flex:1;">
+            <button id="refund-btn">Run: refund $1.20</button>
+        </div>
+        <div class="out" id="refund-out"></div>
+    </div>
+
+    <div class="step">
+        <h2>Step 8 — Approve the refund</h2>
+        <div class="row">
+            <input type="text" id="approve2-code" placeholder="6-digit code from your phone">
+            <input type="text" id="approve2-by" placeholder="Approved by" value="Operator">
+            <button id="approve2-btn">Approve</button>
+        </div>
+        <div class="out" id="approve2-out"></div>
+    </div>
+</div>
+
+<script>
+const API = '/api/v1/operator';
+let token = localStorage.getItem('operator_token') || '';
+
+function showPanel() {
+    document.getElementById('login-box').style.display = 'none';
+    document.getElementById('panel').style.display = 'block';
+}
+
+async function call(path, body) {
+    const res = await fetch(API + path, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Operator-Token': token },
+        body: JSON.stringify(body || {}),
+    });
+    const data = await res.json();
+    if (res.status === 401) {
+        token = '';
+        localStorage.removeItem('operator_token');
+        document.getElementById('login-box').style.display = 'block';
+        document.getElementById('panel').style.display = 'none';
+        throw new Error('session expired -- please log in again');
+    }
+    return data;
+}
+
+function renderOut(elId, data) {
+    const el = document.getElementById(elId);
+    el.classList.add('show');
+    const failed = data.error || (data.returncode !== undefined && data.returncode !== 0 && data.returncode !== 2 && data.returncode !== 3);
+    el.classList.toggle('err', !!failed);
+    el.textContent = data.error || [data.stdout, data.stderr].filter(Boolean).join('\n');
+}
+
+document.getElementById('login-btn').addEventListener('click', async () => {
+    const password = document.getElementById('password').value;
+    const out = document.getElementById('login-out');
+    try {
+        const res = await fetch(API + '/login', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ password }),
+        });
+        const data = await res.json();
+        if (!res.ok) { out.classList.add('show'); out.textContent = data.error || 'login failed'; return; }
+        token = data.token;
+        localStorage.setItem('operator_token', token);
+        showPanel();
+    } catch (e) {
+        out.classList.add('show'); out.textContent = 'network error: ' + e.message;
+    }
+});
+
+if (token) showPanel();
+
+document.getElementById('step1-btn').addEventListener('click', async () => {
+    const data = await call('/spend', { amount: '1.20', description: 'Demo: cloud backup storage renewal' });
+    renderOut('step1-out', data);
+});
+
+document.getElementById('step2-btn').addEventListener('click', async () => {
+    const data = await call('/spend', { amount: '45.00', description: 'Demo: NAS license renewal' });
+    renderOut('step2-out', data);
+});
+
+document.getElementById('approve1-btn').addEventListener('click', async () => {
+    const code = document.getElementById('approve1-code').value;
+    const by = document.getElementById('approve1-by').value || 'Operator';
+    const data = await call('/approve', { code, approved_by: by });
+    renderOut('approve1-out', data);
+});
+
+document.getElementById('kill-btn').addEventListener('click', async () => {
+    const reason = document.getElementById('kill-reason').value;
+    const data = await call('/kill', { by: 'Operator', reason });
+    renderOut('kill-out', data);
+});
+
+document.getElementById('step5-btn').addEventListener('click', async () => {
+    const data = await call('/spend', { amount: '1.00', description: 'Demo: this should be denied' });
+    renderOut('step5-out', data);
+});
+
+document.getElementById('resume-btn').addEventListener('click', async () => {
+    const data = await call('/resume', { by: 'Operator' });
+    renderOut('resume-out', data);
+});
+
+document.getElementById('refund-btn').addEventListener('click', async () => {
+    const pi = document.getElementById('refund-pi').value;
+    const data = await call('/refund', { payment_intent_id: pi, amount: '1.20', description: 'Demo: refund -- double-billed' });
+    renderOut('refund-out', data);
+});
+
+document.getElementById('approve2-btn').addEventListener('click', async () => {
+    const code = document.getElementById('approve2-code').value;
+    const by = document.getElementById('approve2-by').value || 'Operator';
+    const data = await call('/approve', { code, approved_by: by });
+    renderOut('approve2-out', data);
+});
+</script>
+</body>
+</html>

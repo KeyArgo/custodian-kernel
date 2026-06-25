@@ -208,6 +208,13 @@
         .process-step.is-blocked .process-status { color: var(--red); }
 
         /* ---- verdict cards ---- */
+        .flow-diagram { display: flex; align-items: stretch; gap: 14px; margin-bottom: 44px; flex-wrap: wrap; }
+        .flow-box { flex: 1; min-width: 180px; background: #0a0a0a; border: 1px solid #2a2a2a; border-top: 2px solid var(--green);
+            padding: 16px 18px; }
+        .flow-label { font-weight: 700; letter-spacing: 0.08em; color: var(--green); font-size: 0.95em; margin-bottom: 8px; }
+        .flow-desc { color: #999; font-size: 0.85em; line-height: 1.4; }
+        .flow-arrow { display: flex; align-items: center; color: #3a3a3a; font-size: 1.6em; }
+        @media (max-width: 700px) { .flow-arrow { transform: rotate(90deg); align-self: center; } }
         .why-section { margin-bottom: 44px; max-width: 760px; }
         .why-body { color: #b0b0b0; font-size: 0.92em; line-height: 1.7; }
         .why-body strong { color: #ffb000; }
@@ -316,6 +323,10 @@
         .footer-note code { background: #0a0a0a; border: 1px solid #2a2a2a; padding: 1px 5px; border-radius: 0; font-size: 0.95em; color: var(--amber); }
 
         .try-it-box { background: #0a0a0a; border-radius: 0; border: 1px solid #2a2a2a; padding: 16px 18px; margin-top: 16px; }
+        .try-preset-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+        .try-preset-btn { background: rgba(118,185,0,0.08); border: 1px solid rgba(118,185,0,0.3); color: var(--green);
+            padding: 7px 12px; font-size: 0.82em; border-radius: 0; cursor: pointer; font-family: inherit; }
+        .try-preset-btn:hover { background: rgba(118,185,0,0.18); }
         .try-it-row { display: flex; flex-wrap: wrap; align-items: end; gap: 14px; }
         .try-it-row label { display: flex; flex-direction: column; gap: 4px; color: #8a8a8a; font-size: 0.82em; }
         .try-it-row input[type="number"], .try-it-row input[type="text"] {
@@ -571,6 +582,23 @@
                 </button>
             </div>
 
+            <div class="flow-diagram">
+                <div class="flow-box">
+                    <div class="flow-label">AGENT</div>
+                    <div class="flow-desc">Requests money movement. Can never approve its own escalation.</div>
+                </div>
+                <div class="flow-arrow">→</div>
+                <div class="flow-box">
+                    <div class="flow-label">KERNEL</div>
+                    <div class="flow-desc">Deterministic policy decides. No prompt, no plea, ever changes the verdict.</div>
+                </div>
+                <div class="flow-arrow">→</div>
+                <div class="flow-box">
+                    <div class="flow-label">HUMAN</div>
+                    <div class="flow-desc">Real out-of-band code, on a separate device, is the only way past the agent's limit.</div>
+                </div>
+            </div>
+
             <div class="why-section">
                 <div class="section-label">Why this exists</div>
                 <div class="why-body">
@@ -667,6 +695,16 @@
                         live, against an isolated sandbox state. Nothing here ever touches real money, sends a real SMS,
                         or affects the live data shown above.
                     </div>
+                    <div class="try-preset-row" id="try-preset-row">
+                        <button class="try-preset-btn" data-amount="1.20" data-description="Cloud backup storage renewal" data-critical="false" data-kill="false">Autonomous spend (in budget)</button>
+                        <button class="try-preset-btn" data-amount="45.00" data-description="NAS license renewal" data-critical="false" data-kill="false">Over-budget escalation</button>
+                        <button class="try-preset-btn" data-amount="1.00" data-description="Routine renewal (kill switch demo)" data-critical="false" data-kill="true">Kill switch denies anyway</button>
+                        <button class="try-preset-btn" data-amount="0.50" data-description="Critical infra change" data-critical="true" data-kill="false">Critical -- always escalates</button>
+                    </div>
+                    <div class="footer-note" style="margin-top:0; margin-bottom:12px; text-align:left;">
+                        These mirror the exact scenarios in the real live demo arc -- same real <code>decide()</code> engine, simulated state.
+                    </div>
+
                     <div class="try-it-box">
                         <div class="try-it-row">
                             <label>Amount ($)<input type="number" id="try-amount" value="1.00" step="0.01" min="0.01"></label>
@@ -1206,6 +1244,16 @@
             tourIndex++;
             if (tourIndex >= TOUR_STEPS.length) { endTour(); return; }
             showTourStep(tourIndex);
+        });
+
+        document.querySelectorAll('.try-preset-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.getElementById('try-amount').value = btn.dataset.amount;
+                document.getElementById('try-description').value = btn.dataset.description;
+                document.getElementById('try-critical').checked = btn.dataset.critical === 'true';
+                document.getElementById('try-kill-switch').checked = btn.dataset.kill === 'true';
+                document.getElementById('try-submit').click();
+            });
         });
 
         document.getElementById('try-submit').addEventListener('click', async () => {
