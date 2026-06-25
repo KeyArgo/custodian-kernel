@@ -43,15 +43,15 @@
 <div id="panel">
     <div class="step">
         <h2>Step 1 — Autonomous spend (no human needed)</h2>
-        <p>$1.20, within the agent's authority band. Note the PaymentIntent ID printed below -- you'll need it for the refund in step 6.</p>
-        <button id="step1-btn">Run: spend $1.20 (cloud backup renewal)</button>
+        <p>$85.00, within the agent's authority band. Note the PaymentIntent ID printed below -- you'll need it for the refund in step 6.</p>
+        <button id="step1-btn">Run: spend $85.00 (cloud backup renewal)</button>
         <div class="out" id="step1-out"></div>
     </div>
 
     <div class="step">
         <h2>Step 2 — Over-budget escalation (real SMS incoming)</h2>
-        <p>$45.00 exceeds the band. Watch your phone for the Twilio Verify code.</p>
-        <button id="step2-btn">Run: request $45.00 (NAS license renewal)</button>
+        <p>$3,500.00 exceeds the band. Watch your phone for the Twilio Verify code.</p>
+        <button id="step2-btn">Run: request $3,500.00 (NAS license renewal)</button>
         <div class="out" id="step2-out"></div>
     </div>
 
@@ -76,8 +76,8 @@
 
     <div class="step">
         <h2>Step 5 — Prove the kill switch overrides everything</h2>
-        <p>A normally-fine $1.00 in-band request -- should be denied outright while the kill switch is engaged.</p>
-        <button id="step5-btn">Run: attempt $1.00 spend (expect DENIED)</button>
+        <p>A normally-fine $40.00 in-band request -- should be denied outright while the kill switch is engaged.</p>
+        <button id="step5-btn">Run: attempt $40.00 spend (expect DENIED)</button>
         <div class="out" id="step5-out"></div>
     </div>
 
@@ -92,7 +92,7 @@
         <p>Paste the PaymentIntent ID from step 1.</p>
         <div class="row">
             <input type="text" id="refund-pi" placeholder="pi_..." style="flex:1;">
-            <button id="refund-btn">Run: refund $1.20</button>
+            <button id="refund-btn">Run: refund $85.00</button>
         </div>
         <div class="out" id="refund-out"></div>
     </div>
@@ -163,12 +163,12 @@ document.getElementById('login-btn').addEventListener('click', async () => {
 if (token) showPanel();
 
 document.getElementById('step1-btn').addEventListener('click', async () => {
-    const data = await call('/spend', { amount: '1.20', description: 'Demo: cloud backup storage renewal' });
+    const data = await call('/spend', { amount: '85.00', description: 'Demo: cloud backup storage renewal' });
     renderOut('step1-out', data);
 });
 
 document.getElementById('step2-btn').addEventListener('click', async () => {
-    const data = await call('/spend', { amount: '45.00', description: 'Demo: NAS license renewal' });
+    const data = await call('/spend', { amount: '3500.00', description: 'Demo: NAS license renewal' });
     renderOut('step2-out', data);
 });
 
@@ -186,7 +186,7 @@ document.getElementById('kill-btn').addEventListener('click', async () => {
 });
 
 document.getElementById('step5-btn').addEventListener('click', async () => {
-    const data = await call('/spend', { amount: '1.00', description: 'Demo: this should be denied' });
+    const data = await call('/spend', { amount: '40.00', description: 'Demo: this should be denied' });
     renderOut('step5-out', data);
 });
 
@@ -197,7 +197,7 @@ document.getElementById('resume-btn').addEventListener('click', async () => {
 
 document.getElementById('refund-btn').addEventListener('click', async () => {
     const pi = document.getElementById('refund-pi').value;
-    const data = await call('/refund', { payment_intent_id: pi, amount: '1.20', description: 'Demo: refund -- double-billed' });
+    const data = await call('/refund', { payment_intent_id: pi, amount: '85.00', description: 'Demo: refund -- double-billed' });
     renderOut('refund-out', data);
 });
 

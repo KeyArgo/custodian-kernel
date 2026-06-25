@@ -26,8 +26,8 @@ SECRET_FILE = Path("/sandbox/.hermes/secrets/stripe.env")
 
 DEFAULT_STATE = {
     "band": "L2",
-    "per_action_cap": 2.00,
-    "session_cap": 10.00,
+    "per_action_cap": 250.00,
+    "session_cap": 1000.00,
     "spent_this_session": 0.0,
 }
 

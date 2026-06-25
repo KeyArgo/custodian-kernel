@@ -35,16 +35,16 @@ pause_for_code() {
 }
 
 banner "STEP 1 -- autonomous spend, within authority (no human needed)"
-echo "Requesting a \$1.20 spend the agent is allowed to make on its own..."
-exec_remote spend.py --amount 1.20 --description "Demo: cloud backup storage renewal"
+echo "Requesting an \$85.00 spend the agent is allowed to make on its own..."
+exec_remote spend.py --amount 85.00 --description "Demo: cloud backup storage renewal"
 echo
 echo "--> That PaymentIntent ID is what we'll refund in step 6."
 read -rp "Press Enter to continue to the over-budget request... "
 
 banner "STEP 2 -- over-budget spend, real escalation (REAL SMS incoming)"
-echo "Requesting \$45.00 -- this exceeds the current band. Watch your phone."
+echo "Requesting \$3,500.00 -- this exceeds the current band. Watch your phone."
 set +e
-exec_remote spend.py --amount 45.00 --description "Demo: NAS license renewal"
+exec_remote spend.py --amount 3500.00 --description "Demo: NAS license renewal"
 set -e
 echo
 echo "--> The agent CANNOT proceed past this point. There is no override flag."
@@ -59,7 +59,7 @@ exec_remote kill_toggle.py engage --by "$APPROVER" --reason "demo: proving the o
 echo
 echo "Now attempting an in-budget spend that would normally succeed instantly..."
 set +e
-exec_remote spend.py --amount 1.00 --description "Demo: this should be denied"
+exec_remote spend.py --amount 40.00 --description "Demo: this should be denied"
 set -e
 echo
 echo "--> Denied regardless of band/cap. No exceptions, no override flag exists."
@@ -74,7 +74,7 @@ echo "Requesting a refund of the step-1 charge. Unlike spend, refunds have NO au
 echo "You'll need the PaymentIntent ID printed in step 1 -- paste it below."
 read -rp ">>> PaymentIntent ID from step 1: " PI_ID
 set +e
-exec_remote refund.py --payment-intent-id "$PI_ID" --amount 1.20 --description "Demo: refund -- double-billed"
+exec_remote refund.py --payment-intent-id "$PI_ID" --amount 85.00 --description "Demo: refund -- double-billed"
 set -e
 CODE=$(pause_for_code)
 

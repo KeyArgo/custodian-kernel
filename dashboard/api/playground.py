@@ -70,7 +70,7 @@ POLICY_PATH = Path(__file__).resolve().parent / "playground_policy.yaml"
 # same clean starting point, and nothing here ever touches the real
 # production authority.json/audit_log.jsonl.
 FRESH_STATE = AuthorityState(
-    band=Band.L2, per_action_cap=2.00, session_cap=10.00, spent_this_session=0.0,
+    band=Band.L2, per_action_cap=250.00, session_cap=1000.00, spent_this_session=0.0,
 )
 
 # Loaded once at import time, not per-request. This file is a fixed demo
