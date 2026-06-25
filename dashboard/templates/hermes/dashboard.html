@@ -385,8 +385,18 @@
             gap: 8px;
         }
         .nemotron-launcher:hover { background: rgba(118,185,0,0.18); }
-        .nemotron-bot-face { font-size: 1.3em; display: inline-block; animation: nemotron-bob 2.4s ease-in-out infinite; }
+        .nemotron-bot-face { width: 1.5em; height: 1.5em; vertical-align: middle; color: var(--nvidia-green);
+            display: inline-block; animation: nemotron-bob 2.4s ease-in-out infinite; }
         @keyframes nemotron-bob { 0%, 100% { transform: translateY(0) rotate(-3deg); } 50% { transform: translateY(-3px) rotate(3deg); } }
+        .nemotron-bot-face.thinking { animation: nemotron-think-sway 0.7s ease-in-out infinite; }
+        @keyframes nemotron-think-sway { 0%, 100% { transform: rotate(-8deg) scale(1); } 50% { transform: rotate(8deg) scale(1.08); } }
+        .nemotron-bot-face .antenna-ball { animation: nemotron-glow 2.4s ease-in-out infinite; }
+        .nemotron-bot-face.thinking .antenna-ball { animation: nemotron-glow 0.5s ease-in-out infinite; }
+        @keyframes nemotron-glow { 0%, 100% { opacity: 0.55; } 50% { opacity: 1; } }
+        .nemotron-thinking-dots span { display: inline-block; animation: nemotron-dot-bounce 1.1s ease-in-out infinite; }
+        .nemotron-thinking-dots span:nth-child(2) { animation-delay: 0.15s; }
+        .nemotron-thinking-dots span:nth-child(3) { animation-delay: 0.3s; }
+        @keyframes nemotron-dot-bounce { 0%, 60%, 100% { transform: translateY(0); opacity: 0.4; } 30% { transform: translateY(-4px); opacity: 1; } }
 
         .nemotron-flyin {
             position: fixed;
@@ -438,7 +448,8 @@
         .nemotron-msg { padding: 9px 12px; border-radius: 10px; max-width: 90%; white-space: pre-wrap; }
         .nemotron-msg.bot { background: rgba(118,185,0,0.1); border: 1px solid rgba(118,185,0,0.25); align-self: flex-start; }
         .nemotron-msg.user { background: rgba(255,255,255,0.06); align-self: flex-end; color: #ddd; }
-        .nemotron-msg.thinking { color: #777; font-style: italic; }
+        .nemotron-msg.thinking { color: #9fb38a; font-style: italic; display: flex; align-items: center; gap: 4px; }
+        .nemotron-msg.thinking .nemotron-bot-face { width: 1.2em; height: 1.2em; }
         .nemotron-chat-input-row { display: flex; border-top: 1px solid rgba(118,185,0,0.25); padding: 10px; gap: 8px; }
         .nemotron-chat-input {
             flex: 1; background: #161913; border: 1px solid #2a2e22; border-radius: 8px;
@@ -472,6 +483,7 @@
             align-items: center; justify-content: center;
         }
         .nemotron-bubble.show { display: flex; }
+        .nemotron-bubble .nemotron-bot-face { color: #0d0f0a; }
         @media (max-width: 600px) {
             .nemotron-chat-panel { right: 12px; left: 12px; width: auto; bottom: 12px; }
             .nemotron-chat-panel.panel-left { left: 12px; }
@@ -546,7 +558,16 @@
                 </div>
                 <button class="tour-btn" id="tour-start-btn">▶ How this works (30s)</button>
                 <button class="nemotron-launcher" id="nemotron-launcher-btn">
-                    <span class="nemotron-bot-face">🤖</span> Ask Nemotron about this
+                    <svg class="nemotron-bot-face" viewBox="0 0 100 100" aria-hidden="true">
+                        <line x1="50" y1="8" x2="50" y2="20" stroke="currentColor" stroke-width="5" stroke-linecap="round"/>
+                        <circle class="antenna-ball" cx="50" cy="7" r="6" fill="currentColor"/>
+                        <rect x="14" y="20" width="72" height="62" rx="24" fill="#0d1208" stroke="currentColor" stroke-width="5"/>
+                        <circle cx="38" cy="49" r="11" fill="#fff"/>
+                        <circle cx="62" cy="49" r="11" fill="#fff"/>
+                        <circle cx="38" cy="49" r="5" fill="#0d0f0a"/>
+                        <circle cx="62" cy="49" r="5" fill="#0d0f0a"/>
+                        <path d="M 34 65 Q 50 76 66 65" stroke="currentColor" stroke-width="5" fill="none" stroke-linecap="round"/>
+                    </svg> Ask Nemotron about this
                 </button>
             </div>
 
@@ -744,7 +765,16 @@
 
     <div class="nemotron-chat-panel" id="nemotron-chat-panel">
         <div class="nemotron-chat-header">
-            <div class="nemotron-chat-title"><span class="nemotron-bot-face">🤖</span> Nemotron 3 Super — live</div>
+            <div class="nemotron-chat-title"><svg class="nemotron-bot-face" viewBox="0 0 100 100" aria-hidden="true">
+                        <line x1="50" y1="8" x2="50" y2="20" stroke="currentColor" stroke-width="5" stroke-linecap="round"/>
+                        <circle class="antenna-ball" cx="50" cy="7" r="6" fill="currentColor"/>
+                        <rect x="14" y="20" width="72" height="62" rx="24" fill="#0d1208" stroke="currentColor" stroke-width="5"/>
+                        <circle cx="38" cy="49" r="11" fill="#fff"/>
+                        <circle cx="62" cy="49" r="11" fill="#fff"/>
+                        <circle cx="38" cy="49" r="5" fill="#0d0f0a"/>
+                        <circle cx="62" cy="49" r="5" fill="#0d0f0a"/>
+                        <path d="M 34 65 Q 50 76 66 65" stroke="currentColor" stroke-width="5" fill="none" stroke-linecap="round"/>
+                    </svg> Nemotron 3 Super — live</div>
             <button class="nemotron-close-btn" id="nemotron-close-btn">✕</button>
         </div>
         <div class="nemotron-chat-body" id="nemotron-chat-body"></div>
@@ -753,8 +783,26 @@
             <button class="nemotron-send-btn" id="nemotron-send-btn">Ask</button>
         </div>
     </div>
-    <button class="nemotron-bubble" id="nemotron-bubble" title="Reopen Nemotron chat">🤖</button>
-    <div class="nemotron-flyin" id="nemotron-flyin">🤖</div>
+    <button class="nemotron-bubble" id="nemotron-bubble" title="Reopen Nemotron chat"><svg class="nemotron-bot-face" viewBox="0 0 100 100" aria-hidden="true">
+                        <line x1="50" y1="8" x2="50" y2="20" stroke="currentColor" stroke-width="5" stroke-linecap="round"/>
+                        <circle class="antenna-ball" cx="50" cy="7" r="6" fill="currentColor"/>
+                        <rect x="14" y="20" width="72" height="62" rx="24" fill="#0d1208" stroke="currentColor" stroke-width="5"/>
+                        <circle cx="38" cy="49" r="11" fill="#fff"/>
+                        <circle cx="62" cy="49" r="11" fill="#fff"/>
+                        <circle cx="38" cy="49" r="5" fill="#0d0f0a"/>
+                        <circle cx="62" cy="49" r="5" fill="#0d0f0a"/>
+                        <path d="M 34 65 Q 50 76 66 65" stroke="currentColor" stroke-width="5" fill="none" stroke-linecap="round"/>
+                    </svg></button>
+    <div class="nemotron-flyin" id="nemotron-flyin"><svg class="nemotron-bot-face" viewBox="0 0 100 100" aria-hidden="true">
+                        <line x1="50" y1="8" x2="50" y2="20" stroke="currentColor" stroke-width="5" stroke-linecap="round"/>
+                        <circle class="antenna-ball" cx="50" cy="7" r="6" fill="currentColor"/>
+                        <rect x="14" y="20" width="72" height="62" rx="24" fill="#0d1208" stroke="currentColor" stroke-width="5"/>
+                        <circle cx="38" cy="49" r="11" fill="#fff"/>
+                        <circle cx="62" cy="49" r="11" fill="#fff"/>
+                        <circle cx="38" cy="49" r="5" fill="#0d0f0a"/>
+                        <circle cx="62" cy="49" r="5" fill="#0d0f0a"/>
+                        <path d="M 34 65 Q 50 76 66 65" stroke="currentColor" stroke-width="5" fill="none" stroke-linecap="round"/>
+                    </svg></div>
 
     <script>
         const fmtUSD = (n) => '$' + Number(n).toFixed(2);
@@ -1234,6 +1282,26 @@
             return div;
         }
 
+        // A visible "it's actually working right now" indicator while we wait
+        // on the real model call -- an animated face (faster sway + glowing
+        // antenna while thinking) plus a bouncing-dots row, not just static
+        // gray text. Built with real DOM nodes, same as everything else here.
+        function nemotronAddThinkingMessage() {
+            const div = document.createElement('div');
+            div.className = 'nemotron-msg bot thinking';
+            const face = document.getElementById('nemotron-flyin').querySelector('svg').cloneNode(true);
+            face.classList.add('thinking');
+            div.appendChild(face);
+            div.appendChild(document.createTextNode(' thinking '));
+            const dots = document.createElement('span');
+            dots.className = 'nemotron-thinking-dots';
+            for (let i = 0; i < 3; i++) dots.appendChild(document.createElement('span')).textContent = '●';
+            div.appendChild(dots);
+            nemotronBody.appendChild(div);
+            nemotronBody.scrollTop = nemotronBody.scrollHeight;
+            return div;
+        }
+
         // Lets a bot answer include a clickable jump to the page section it's
         // talking about. Built with real DOM nodes/createTextNode only -- never
         // innerHTML -- so this stays safe regardless of what the model outputs;
@@ -1412,7 +1480,7 @@ function nemotronRenderAnswer(rawText) {
             nemotronInput.value = '';
             nemotronSendBtn.disabled = true;
             nemotronAddMessage(question, 'user');
-            const thinkingMsg = nemotronAddMessage('thinking…', 'bot thinking');
+            const thinkingMsg = nemotronAddThinkingMessage();
             try {
                 const res = await fetch('/api/v1/nemotron/ask', {
                     method: 'POST',
