@@ -1,21 +1,18 @@
 /**
- * CF Pages _worker.js — transparent reverse proxy for the Flask dashboard.
+ * CF Pages _worker.js
  *
- * Routes proxied to the Flask backend (rein-local.argobox.com):
- *   /hermes          → live ops dashboard HTML
- *   /operator        → password-gated operator panel HTML
- *   /triage          → Flask-served triage walkthrough (without .html)
- *   /api/v1/*        → all API endpoints
- *
- * Everything else → env.ASSETS.fetch() to serve the CF Pages static files
- * (index.html, triage.html, favicon.svg, etc.)
+ * /hermes          → hermes.html static asset (public live-console page)
+ * /operator        → Flask operator panel (proxied, password-gated)
+ * /triage          → Flask triage walkthrough (proxied)
+ * /api/v1/*        → Flask API endpoints (proxied)
+ * everything else  → CF Pages static assets
  */
 
 const BACKEND = 'https://rein-local.argobox.com';
 
-// Exact-match routes proxied to Flask (no sub-paths needed)
-const PROXY_EXACT = new Set(['/hermes', '/operator', '/triage']);
-// Prefix-match routes (Flask has many /api/v1/* endpoints)
+// Routes proxied to Flask
+const PROXY_EXACT = new Set(['/operator', '/triage']);
+// Prefix-match routes
 const PROXY_PREFIX = '/api/v1/';
 
 export default {
@@ -23,11 +20,16 @@ export default {
     const url = new URL(request.url);
     const path = url.pathname;
 
+    // /hermes served from static hermes.html (CF Pages asset, not Flask)
+    if (path === '/hermes') {
+      const hermesUrl = new URL('/hermes.html', request.url);
+      return env.ASSETS.fetch(new Request(hermesUrl.toString(), request));
+    }
+
     const shouldProxy =
       PROXY_EXACT.has(path) || path.startsWith(PROXY_PREFIX);
 
     if (!shouldProxy) {
-      // Serve static CF Pages asset (index.html, triage.html, favicon.svg…)
       return env.ASSETS.fetch(request);
     }
 
