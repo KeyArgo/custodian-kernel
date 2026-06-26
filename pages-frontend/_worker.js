@@ -13,16 +13,18 @@
 
 const BACKEND = 'https://rein-local.argobox.com';
 
-const PROXY_PREFIXES = ['/hermes', '/operator', '/triage', '/api/v1/'];
+// Exact-match routes proxied to Flask (no sub-paths needed)
+const PROXY_EXACT = new Set(['/hermes', '/operator', '/triage']);
+// Prefix-match routes (Flask has many /api/v1/* endpoints)
+const PROXY_PREFIX = '/api/v1/';
 
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
     const path = url.pathname;
 
-    const shouldProxy = PROXY_PREFIXES.some(
-      (prefix) => path === prefix || path.startsWith(prefix),
-    );
+    const shouldProxy =
+      PROXY_EXACT.has(path) || path.startsWith(PROXY_PREFIX);
 
     if (!shouldProxy) {
       // Serve static CF Pages asset (index.html, triage.html, favicon.svg…)
