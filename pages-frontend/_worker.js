@@ -20,16 +20,11 @@ export default {
     const url = new URL(request.url);
     const path = url.pathname;
 
-    // /hermes served from static hermes.html (CF Pages asset, not Flask)
-    if (path === '/hermes') {
-      const hermesUrl = new URL('/hermes.html', request.url);
-      return env.ASSETS.fetch(new Request(hermesUrl.toString(), request));
-    }
-
     const shouldProxy =
       PROXY_EXACT.has(path) || path.startsWith(PROXY_PREFIX);
 
     if (!shouldProxy) {
+      // /hermes falls here — CF Pages ASSETS serves hermes.html at /hermes automatically
       return env.ASSETS.fetch(request);
     }
 
