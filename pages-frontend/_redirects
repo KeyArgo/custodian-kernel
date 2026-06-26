@@ -1,0 +1,8 @@
+# Proxy the live Flask dashboard through rein.argobox.com
+# so the whole demo lives under one domain for judges/visitors.
+# CF Pages proxying (200 status) is only available on Workers-backed Pages;
+# for static Pages, these are 302 redirects to the local API server.
+/hermes         https://rein-local.argobox.com/hermes       302
+/operator       https://rein-local.argobox.com/operator     302
+/triage         /triage.html                                 302
+/api/v1/*       https://rein-local.argobox.com/api/v1/:splat  302
