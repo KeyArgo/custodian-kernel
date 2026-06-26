@@ -1,0 +1,234 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Custodian — Refund Triage Walkthrough</title>
+<style>
+  :root{
+    --bg:#0b0e14; --panel:#121722; --panel2:#0e131c; --line:#222c3d;
+    --ink:#e6edf6; --dim:#8a97ad; --accent:#5db0ff; --good:#39d98a;
+    --bad:#ff5d6c; --warn:#ffc857; --chip:#1b2433;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font:15px/1.55 ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial}
+  a{color:var(--accent)}
+  .wrap{max-width:920px;margin:0 auto;padding:28px 20px 80px}
+  header h1{font-size:22px;margin:0 0 4px}
+  header p{color:var(--dim);margin:0 0 18px}
+  .tier{background:var(--panel);border:1px solid var(--line);border-radius:14px;
+    margin:14px 0;overflow:hidden}
+  .tier > button.head{all:unset;display:flex;gap:14px;align-items:flex-start;
+    width:100%;cursor:pointer;padding:18px 20px}
+  .tier .num{flex:0 0 30px;height:30px;border-radius:50%;background:var(--chip);
+    color:var(--accent);font-weight:700;display:grid;place-items:center;font-size:14px}
+  .tier .htext h2{margin:0 0 4px;font-size:17px}
+  .tier .htext p{margin:0;color:var(--dim);font-size:14px}
+  .tier .body{padding:0 20px 20px 64px;display:none}
+  .tier.open .body{display:block}
+  .tier .why{color:var(--warn);font-size:13px;margin:10px 0 14px;font-style:italic}
+  .badge{display:inline-block;font-size:11px;letter-spacing:.04em;text-transform:uppercase;
+    padding:2px 8px;border-radius:999px;background:var(--chip);color:var(--dim);margin-left:8px}
+  .badge.weeds{color:var(--warn)}
+  button.run{all:unset;cursor:pointer;background:var(--accent);color:#04101f;font-weight:700;
+    padding:9px 16px;border-radius:9px;font-size:14px}
+  button.ghost{all:unset;cursor:pointer;border:1px solid var(--line);color:var(--ink);
+    padding:8px 14px;border-radius:9px;font-size:13px}
+  .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:6px 0 2px}
+  .email{background:var(--panel2);border-left:3px solid var(--accent);border-radius:8px;
+    padding:12px 14px;color:#cdd8e6;white-space:pre-wrap;font-size:14px;margin:12px 0}
+  .panel{background:var(--panel2);border:1px solid var(--line);border-radius:12px;
+    padding:16px;margin-top:14px}
+  .lbl{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--dim)}
+  .agentline{display:flex;gap:10px;align-items:baseline;flex-wrap:wrap}
+  .verdict{font-weight:800;font-size:16px}
+  .v-approve{color:var(--good)} .v-deny{color:var(--dim)}
+  .v-flag{color:var(--bad)} .v-escalate{color:var(--warn)}
+  table.claims{width:100%;border-collapse:collapse;margin:10px 0;font-size:13px}
+  table.claims th,table.claims td{text-align:left;padding:7px 8px;border-bottom:1px solid var(--line);
+    vertical-align:top}
+  table.claims th{color:var(--dim);font-weight:600;font-size:11px;text-transform:uppercase}
+  .q{color:#cdd8e6;font-style:italic}
+  .truth{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px}
+  .st-verified{color:var(--good);font-weight:700}
+  .st-contradicted{color:var(--bad);font-weight:800}
+  .st-unverifiable{color:var(--dim)}
+  .override{background:rgba(255,93,108,.12);border:1px solid var(--bad);border-radius:10px;
+    padding:12px 14px;margin:12px 0;color:#ffd7db}
+  .override b{color:var(--bad)}
+  .reason{color:var(--dim);font-size:13px;margin:4px 0;padding-left:14px;border-left:2px solid var(--line)}
+  .kernel{margin-top:12px;padding:12px 14px;border-radius:10px;background:var(--chip)}
+  .kernel b{color:var(--accent)}
+  .final{margin-top:10px}
+  .final .verdict{font-size:14px;padding:8px 14px}
+  .source{font-size:12px;color:var(--dim);margin-top:10px}
+  .slider{display:flex;gap:14px;align-items:center;margin:12px 0}
+  .slider input{flex:1}
+  .flip{display:flex;gap:16px;flex-wrap:wrap;margin-top:10px}
+  .flipcard{flex:1;min-width:200px;background:var(--panel2);border:1px solid var(--line);
+    border-radius:10px;padding:12px}
+  .flipcard .big{font-weight:800;font-size:16px;margin-top:4px}
+  .arrow{align-self:center;color:var(--accent);font-size:22px}
+  .casebar{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}
+  .casebar button{all:unset;cursor:pointer;border:1px solid var(--line);border-radius:8px;
+    padding:6px 10px;font-size:12px;color:var(--dim)}
+  .casebar button.active{border-color:var(--accent);color:var(--ink)}
+  .spin{color:var(--dim);font-size:13px}
+  footer{color:var(--dim);font-size:12px;margin-top:24px;text-align:center}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Custodian — can you trust an AI with the company card?</h1>
+    <p>A guided walkthrough. We start with the most important moment and go deeper only if you want to.</p>
+  </header>
+  <div id="tiers"></div>
+  <footer>
+    Every panel here runs the real deterministic engine the sandboxed agent is governed by.
+    Envelope source is labelled on each result (captured vs. live model).
+  </footer>
+</div>
+
+<script>
+const API = '/api/v1/triage';
+const VCLASS = {approve_recommended:'v-approve', deny_recommended:'v-deny',
+  flag_abuse:'v-flag', escalate_ambiguous:'v-escalate',
+  auto_pay:'v-approve', escalate_approval:'v-escalate', flag_hold:'v-flag'};
+const VLABEL = {approve_recommended:'APPROVE', deny_recommended:'DENY',
+  flag_abuse:'FLAG / ABUSE', escalate_ambiguous:'ESCALATE',
+  auto_pay:'AUTO-PAY', escalate_approval:'ESCALATE', flag_hold:'FLAG / HOLD'};
+const FINAL = {
+  executed_autonomously:{t:'💸 PAID AUTONOMOUSLY — no human; kernel + domain both cleared it', c:'v-approve'},
+  pending_human_approval:{t:'✋ PENDING HUMAN APPROVAL — domain cleared it; the amount needs a signature', c:'v-escalate'},
+  needs_human_review:{t:'✋ HELD FOR A HUMAN — domain did not clear autonomy', c:'v-escalate'},
+  blocked_kill_switch:{t:'⛔ BLOCKED — kill switch engaged', c:'v-deny'},
+};
+const esc = s => (s??'').toString().replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+
+function vchip(d){return `<span class="verdict ${VCLASS[d]||''}">${VLABEL[d]||esc(d)}</span>`;}
+
+function renderPanel(p){
+  let claims = p.claims.map(c=>`<tr>
+      <td>${esc(c.statement)}<div class="q">"${esc(c.customer_quote)}"</div></td>
+      <td class="truth">${esc(c.ledger_path)} = <b>${esc(JSON.stringify(c.actual))}</b><br>
+        <span style="color:var(--dim)">claim: ${esc(c.relation)} ${esc(JSON.stringify(c.asserted))}</span></td>
+      <td class="st-${c.status}">${c.status==='contradicted'?'✗ CONTRADICTED':
+         c.status==='verified'?'✓ verified':c.status==='unverifiable'?'? unverifiable':c.status}</td>
+    </tr>`).join('');
+  let override = p.overrode_agent ? `<div class="override">
+      <b>⚠ Ground truth overrode the AI.</b> The agent recommended ${vchip(p.agent_recommended)} —
+      the guardrail re-derived <b>${VLABEL[p.adapter_disposition]||esc(p.adapter_disposition)}</b> from the real record.
+    </div>` : '';
+  let reasons = p.adapter_reasons.map(r=>`<div class="reason">${esc(r)}</div>`).join('');
+  return `
+    ${p.customer_email?`<div class="lbl">The customer wrote</div><div class="email">${esc(p.customer_email)}</div>`:''}
+    <div class="panel">
+      <div class="lbl">What the AI agent concluded</div>
+      <div class="agentline">${vchip(p.agent_recommended)}
+        <span style="color:var(--dim)">confidence ${(p.agent_confidence*100).toFixed(0)}%</span></div>
+      <div style="margin:6px 0 2px">${esc(p.agent_summary)}</div>
+      <div class="lbl" style="margin-top:14px">Every factual claim, checked against the real order record</div>
+      <table class="claims"><tr><th>Claim</th><th>Ground truth</th><th>Result</th></tr>${claims}</table>
+      ${override}
+      <div class="lbl">Deterministic disposition (zero AI)</div>
+      <div style="margin:4px 0">${vchip(p.adapter_disposition)}</div>
+      ${reasons}
+      <div style="color:var(--dim);font-size:12px;margin-top:8px"><b>Why not just a script?</b> ${esc(p.why_not_a_script)}</div>
+      <div class="kernel"><b>Authority outcome:</b> ${esc((p.kernel_verdict||'').toUpperCase())} — ${esc(p.kernel_reason)}</div>
+      ${p.final_action?`<div class="final"><span class="verdict ${(FINAL[p.final_action]||{}).c||''}">${esc((FINAL[p.final_action]||{}).t||p.final_action)}</span></div>`:''}
+      <div class="source">envelope source: ${esc(p.envelope_source)}${p.expected_disposition?` · expected ${esc(p.expected_disposition)} · ${p.adapter_disposition===p.expected_disposition?'✓ match':'✗ MISMATCH'}`:''}</div>
+    </div>`;
+}
+
+async function runCase(caseId, mount){
+  mount.innerHTML = '<div class="spin">running the real engine…</div>';
+  try{
+    const r = await fetch(`${API}/run?case_id=${encodeURIComponent(caseId)}`,{method:'POST'});
+    const p = await r.json();
+    if(p.error){mount.innerHTML = `<div class="spin">${esc(p.error)}</div>`;return;}
+    mount.innerHTML = renderPanel(p);
+  }catch(e){mount.innerHTML = `<div class="spin">error: ${esc(e.message)}</div>`;}
+}
+
+async function buildAllCases(mount){
+  const r = await fetch(`${API}/cases`); const {cases} = await r.json();
+  const bar = document.createElement('div'); bar.className='casebar';
+  const out = document.createElement('div');
+  cases.forEach((c,i)=>{
+    const b=document.createElement('button'); b.textContent=c.title; b.title=c.case_id;
+    b.onclick=()=>{[...bar.children].forEach(x=>x.classList.remove('active'));
+      b.classList.add('active'); runCase(c.case_id,out);};
+    bar.appendChild(b); if(i===0) b.classList.add('active');
+  });
+  mount.appendChild(bar); mount.appendChild(out);
+  if(cases[0]) runCase(cases[0].case_id, out);
+}
+
+async function buildSlider(cfg, mount){
+  const caseId = cfg.show_case;
+  const wrap=document.createElement('div');
+  wrap.innerHTML = `
+    <div class="slider"><span class="lbl">Return window</span>
+      <input type="range" min="15" max="60" value="30" id="win"><b><span id="winv">30</span> days</b>
+      <button class="ghost" id="rep">Replay this case</button></div>
+    <div id="flip"></div>`;
+  mount.appendChild(wrap);
+  const win=wrap.querySelector('#win'), winv=wrap.querySelector('#winv'),
+        flip=wrap.querySelector('#flip');
+  win.oninput=()=>winv.textContent=win.value;
+  wrap.querySelector('#rep').onclick=async()=>{
+    flip.innerHTML='<div class="spin">replaying with the new rule…</div>';
+    const r=await fetch(`${API}/replay`,{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({case_id:caseId, rule_overrides:{window_days:Number(win.value)}})});
+    const d=await r.json();
+    if(d.error){flip.innerHTML=`<div class="spin">${esc(d.error)}</div>`;return;}
+    flip.innerHTML=`<div class="flip">
+      <div class="flipcard"><div class="lbl">window 30 days (original)</div>
+        <div class="big">${vchip(d.before.adapter_disposition)}</div>
+        <div class="reason">${esc(d.before.adapter_reasons[0]||'')}</div></div>
+      <div class="arrow">→</div>
+      <div class="flipcard"><div class="lbl">window ${win.value} days</div>
+        <div class="big">${vchip(d.after.adapter_disposition)}</div>
+        <div class="reason">${esc(d.after.adapter_reasons[0]||'')}</div></div>
+    </div>
+    <div style="margin-top:10px;color:${d.flipped?'var(--good)':'var(--dim)'};font-size:13px">
+      ${d.flipped?'A non-engineer changed one business rule and the decision flipped — no code change, no retrain.'
+        :'Same decision at this window. Try a different value to find the threshold.'}</div>`;
+  };
+}
+
+async function build(){
+  const r = await fetch(`${API}/tour`); const {tour} = await r.json();
+  const root = document.getElementById('tiers');
+  tour.forEach((t,idx)=>{
+    const el=document.createElement('div'); el.className='tier'+(idx===0?' open':'');
+    const badge = t.depth==='weeds'?'<span class="badge weeds">deep dive</span>'
+      : t.depth==='detail'?'<span class="badge">detail</span>':'';
+    el.innerHTML=`<button class="head"><div class="num">${t.tier}</div>
+      <div class="htext"><h2>${esc(t.headline)}${badge}</h2><p>${esc(t.one_liner)}</p></div></button>
+      <div class="body"><div class="why">${esc(t.why_it_matters)}</div>
+        <div class="row"></div><div class="mount"></div></div>`;
+    const head=el.querySelector('.head'), body=el.querySelector('.body'),
+          row=el.querySelector('.row'), mount=el.querySelector('.mount');
+    head.onclick=()=>el.classList.toggle('open');
+
+    if(t.show_case==='all'){
+      const btn=document.createElement('button'); btn.className='run';
+      btn.textContent='Walk all six cases'; row.appendChild(btn);
+      btn.onclick=()=>{btn.style.display='none'; buildAllCases(mount);};
+    }else{
+      const btn=document.createElement('button'); btn.className='run';
+      btn.textContent = t.id==='hook' ? '▶ Show me' : 'Run this case'; row.appendChild(btn);
+      btn.onclick=()=>{btn.style.display='none'; runCase(t.show_case, mount);
+        if(t.replay) buildSlider(t, mount);};
+    }
+    root.appendChild(el);
+  });
+}
+build();
+</script>
+</body>
+</html>

@@ -1,0 +1,31 @@
+# Kernel BAND policy for the refund pack.
+# Refunds always route to a band that requires a human signature, regardless
+# of amount -- there is no autonomous refund path, by design. The agent does
+# the reading; a human always signs. This is enforced by the kernel, not by
+# the agent's good behavior.
+version: "1.0"
+default_band: L3
+
+bands:
+  L3:
+    max_spend: 50.00
+    requires_approval: true
+    approval_backend: twilio_verify
+    description: "Refunds: always require human approval via Twilio Verify"
+  L4:
+    max_spend: null
+    requires_approval: true
+    approval_backend: twilio_verify
+    description: "High-value refunds: always require approval"
+
+rules:
+  - match:
+      skill: refund.create
+      spend_estimate_gt: 50.0
+    assign_band: L4
+    order: 0
+
+escalation:
+  timeout_seconds: 600
+  on_timeout: deny
+  retry_count: 0

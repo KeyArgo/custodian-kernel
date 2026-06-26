@@ -1,0 +1,22 @@
+{
+  "title": "Unapproved provider → escalates (a human must vet them)",
+  "expect": "escalate_approval",
+  "customer_email": "Can we use Fly.io for the background worker? It's $0.02/hr and really cheap.",
+  "envelope": {
+    "case_id": "04-unapproved-provider",
+    "customer_id": "fly_unknown",
+    "order_id": "fly_shared_cpu_1x",
+    "amount": 0.02,
+    "requested_action": "compute.provision",
+    "recommended_disposition": "auto_provision",
+    "confidence": 0.70,
+    "agent_summary": "Very cheap Fly.io instance at $0.02/hr. Looks fine cost-wise.",
+    "policy_clauses_cited": [
+      {"source": "policy", "quote": "Routine compute provisions autonomously when under the cap.", "locator": "cloud_rules.yaml:auto_provision_max"}
+    ],
+    "claims": [
+      {"id": "cost_accurate", "statement": "Cost is well under the autonomous limit", "customer_quote": "$0.02/hr", "ledger_path": "instance.cost_per_hour", "relation": "lte", "asserted": 5.0},
+      {"id": "provider_approved", "statement": "Provider appears legitimate", "customer_quote": "Fly.io", "ledger_path": "provider.approved", "relation": "eq", "asserted": true}
+    ]
+  }
+}

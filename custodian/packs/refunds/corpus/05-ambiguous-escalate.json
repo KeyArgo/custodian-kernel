@@ -1,0 +1,21 @@
+{
+  "title": "Genuine ambiguity — agent unsure, escalates",
+  "expect": "escalate_ambiguous",
+  "customer_email": "I ordered ord_3003 as a gift back in May. The recipient says it never worked but I only found out recently. I'm not sure if I'm eligible but I'd like to try. — Priya",
+  "envelope": {
+    "case_id": "05-ambiguous-escalate",
+    "customer_id": "cus_priya",
+    "order_id": "ord_3003",
+    "amount": 24.0,
+    "requested_action": "refund.create",
+    "recommended_disposition": "escalate_ambiguous",
+    "confidence": 0.40,
+    "agent_summary": "Far outside the window, no clear defect report on file, gift scenario complicates timing. Genuine ambiguity — recommend escalating to a human.",
+    "policy_clauses_cited": [
+      {"source": "policy", "quote": "Cases with insufficient evidence should be escalated.", "locator": "refund-policy.md:escalation"}
+    ],
+    "claims": [
+      {"id": "purchase_age", "statement": "Order was placed well outside the refund window", "customer_quote": "back in May", "ledger_path": "order.purchase_age_days", "relation": "gt", "asserted": 30}
+    ]
+  }
+}

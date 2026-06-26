@@ -1,0 +1,23 @@
+{
+  "title": "THE LIE — vendor invoices more than the authorized PO",
+  "expect": "flag_hold",
+  "customer_email": "Invoice for PO po_6010 — parts shipment, total $180.00. Please remit promptly. — BrightParts LLC",
+  "envelope": {
+    "case_id": "03-inflated-invoice",
+    "customer_id": "vnd_brightparts",
+    "order_id": "po_6010",
+    "amount": 180.0,
+    "requested_action": "invoice.pay",
+    "recommended_disposition": "auto_pay",
+    "confidence": 0.84,
+    "agent_summary": "Approved vendor, invoice cites PO po_6010 for $180. Reads as a normal payable.",
+    "policy_clauses_cited": [
+      {"source": "policy", "quote": "Pay invoices that match their purchase order.", "locator": "purchasing_rules.yaml:require_open_po"}
+    ],
+    "claims": [
+      {"id": "amount_matches_po", "statement": "Invoice amount matches the authorized PO amount", "customer_quote": "total $180.00", "ledger_path": "po.amount", "relation": "eq", "asserted": 180.0},
+      {"id": "vendor_approved", "statement": "Vendor is on the approved list", "customer_quote": "BrightParts LLC", "ledger_path": "vendor.approved", "relation": "eq", "asserted": true},
+      {"id": "po_open", "statement": "Purchase order is open", "customer_quote": "Invoice for PO po_6010", "ledger_path": "po.status", "relation": "eq", "asserted": "open"}
+    ]
+  }
+}

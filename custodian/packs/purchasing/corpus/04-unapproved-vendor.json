@@ -1,0 +1,23 @@
+{
+  "title": "Unapproved vendor → escalates (a human must vet them)",
+  "expect": "escalate_approval",
+  "customer_email": "Hi, invoice for PO po_7003, freight services rendered, $60.00. We're a new supplier. — QuickShip Logistics",
+  "envelope": {
+    "case_id": "04-unapproved-vendor",
+    "customer_id": "vnd_quickship",
+    "order_id": "po_7003",
+    "amount": 60.0,
+    "requested_action": "invoice.pay",
+    "recommended_disposition": "escalate_approval",
+    "confidence": 0.6,
+    "agent_summary": "Invoice $60 matches PO po_7003, but this is a new/unverified supplier. Recommend a human approve onboarding.",
+    "policy_clauses_cited": [
+      {"source": "policy", "quote": "A brand-new vendor should be approved by a human first.", "locator": "purchasing_rules.yaml"}
+    ],
+    "claims": [
+      {"id": "amount_matches_po", "statement": "Invoice amount matches the authorized PO amount", "customer_quote": "$60.00", "ledger_path": "po.amount", "relation": "eq", "asserted": 60.0},
+      {"id": "vendor_approved", "statement": "Vendor appears to be new / not yet approved", "customer_quote": "We're a new supplier", "ledger_path": "vendor.approved", "relation": "eq", "asserted": false},
+      {"id": "po_open", "statement": "Purchase order is open", "customer_quote": "invoice for PO po_7003", "ledger_path": "po.status", "relation": "eq", "asserted": "open"}
+    ]
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "title": "Clean, in-window refund → approve recommended",
+  "expect": "approve_recommended",
+  "customer_email": "Hi, I bought item ord_1001 last week and it's not working as expected. I'd like a refund please. — Amara",
+  "envelope": {
+    "case_id": "01-clean-approve",
+    "customer_id": "cus_amara",
+    "order_id": "ord_1001",
+    "amount": 39.0,
+    "requested_action": "refund.create",
+    "recommended_disposition": "approve_recommended",
+    "confidence": 0.92,
+    "agent_summary": "Customer within 30-day window, no exception needed. Straightforward approve.",
+    "policy_clauses_cited": [
+      {"source": "policy", "quote": "Refunds within 30 days are approved automatically.", "locator": "refund-policy.md:window"}
+    ],
+    "claims": [
+      {"id": "purchase_age", "statement": "Order was placed within the refund window", "customer_quote": "bought item ord_1001 last week", "ledger_path": "order.purchase_age_days", "relation": "lte", "asserted": 30}
+    ]
+  }
+}

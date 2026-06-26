@@ -1,0 +1,23 @@
+{
+  "title": "Clean invoice → pays autonomously (no human)",
+  "expect": "auto_pay",
+  "customer_email": "Invoice for PO po_5001 — monthly cloud hosting, $40.00 as agreed. — CloudHost Inc billing",
+  "envelope": {
+    "case_id": "01-clean-autopay",
+    "customer_id": "vnd_cloudhost",
+    "order_id": "po_5001",
+    "amount": 40.0,
+    "requested_action": "invoice.pay",
+    "recommended_disposition": "auto_pay",
+    "confidence": 0.96,
+    "agent_summary": "Approved vendor, invoice $40 matches open PO po_5001, small and routine. Pay.",
+    "policy_clauses_cited": [
+      {"source": "policy", "quote": "Routine payables can be paid autonomously up to $100 when fully clean.", "locator": "purchasing_rules.yaml:auto_pay_max"}
+    ],
+    "claims": [
+      {"id": "amount_matches_po", "statement": "Invoice amount matches the authorized PO amount", "customer_quote": "$40.00 as agreed", "ledger_path": "po.amount", "relation": "eq", "asserted": 40.0},
+      {"id": "vendor_approved", "statement": "Vendor is on the approved list", "customer_quote": "CloudHost Inc billing", "ledger_path": "vendor.approved", "relation": "eq", "asserted": true},
+      {"id": "po_open", "statement": "Purchase order is open", "customer_quote": "Invoice for PO po_5001", "ledger_path": "po.status", "relation": "eq", "asserted": "open"}
+    ]
+  }
+}

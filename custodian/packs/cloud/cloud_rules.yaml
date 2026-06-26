@@ -1,0 +1,7 @@
+# Cloud provisioning DOMAIN policy -- the policy-as-code surface an
+# infrastructure/ops owner controls. Separate from the kernel band policy.
+# Change a value here and every pending provisioning request re-resolves,
+# with no model retrain and no code change.
+auto_provision_max: 5.00       # jobs at/under this $/hr cost, fully clean, provision autonomously
+require_approved_instance: true # instance type must be in the approved catalog
+block_duplicate_jobs: true      # block if a job with this instance_id is already running

@@ -1,0 +1,42 @@
+{
+  "_comment": "Ground truth for cloud provisioning. The verifier checks the agent's cost claims against THIS -- real catalog prices, approved instances, and which jobs are already running. In production this is your cloud provider's price API; here it is fixtures so the demo is reproducible.",
+  "budget": { "category": "compute", "remaining": 50.00 },
+  "providers": {
+    "modal_main": {
+      "name": "Modal",
+      "approved": true,
+      "running_jobs": [],
+      "instances": {
+        "modal_cpu_small": { "cost_per_hour": 0.50, "approved": true, "description": "Modal CPU (2 vCPU, 2GB)" },
+        "modal_a10g":      { "cost_per_hour": 3.20, "approved": true, "description": "Modal A10G GPU" },
+        "modal_a100_40g":  { "cost_per_hour": 7.50, "approved": false, "description": "Modal A100 40GB (unapproved)" }
+      }
+    },
+    "azure_main": {
+      "name": "Azure",
+      "approved": true,
+      "running_jobs": ["az_ncv3_job1"],
+      "instances": {
+        "az_b2s":    { "cost_per_hour": 0.05, "approved": true,  "description": "Azure B2s (burstable CPU)" },
+        "az_ncv3":   { "cost_per_hour": 6.00, "approved": true,  "description": "Azure NCv3 (V100 GPU)" }
+      }
+    },
+    "nvidia_nim": {
+      "name": "NVIDIA NIM (build.nvidia.com)",
+      "approved": true,
+      "running_jobs": [],
+      "instances": {
+        "nim_nemotron_super": { "cost_per_hour": 1.20, "approved": true, "description": "Nemotron-3-Super-120B inference" },
+        "nim_llama4_scout":   { "cost_per_hour": 0.80, "approved": true, "description": "Llama-4-Scout inference" }
+      }
+    },
+    "fly_unknown": {
+      "name": "Fly.io (unapproved provider)",
+      "approved": false,
+      "running_jobs": [],
+      "instances": {
+        "fly_shared_cpu_1x": { "cost_per_hour": 0.02, "approved": false, "description": "Fly shared CPU" }
+      }
+    }
+  }
+}

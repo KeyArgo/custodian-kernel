@@ -1,0 +1,7 @@
+# Purchasing (accounts payable) DOMAIN policy -- the policy-as-code surface a
+# finance/ops owner controls. Separate from the kernel band policy. Change a
+# value here and every pending payable re-resolves (policy-diff replay), with
+# no model retrain and no code change.
+auto_pay_max: 100.00        # invoices at/under this, fully clean, can pay autonomously
+require_open_po: true       # an invoice with no matching open purchase order escalates
+block_duplicate_invoices: true
