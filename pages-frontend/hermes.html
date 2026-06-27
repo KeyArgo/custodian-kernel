@@ -661,20 +661,23 @@
                 </button>
             </div>
 
+            <div style="background:#080a06;border:1px solid #1a2a10;border-radius:10px;padding:14px 16px;margin-bottom:18px;font-size:0.82em;color:#8a9a80;line-height:1.6;">
+                <b style="color:#76b900;">How the kernel actually stops the AI:</b> Nemotron 3 Super has no direct access to Stripe or any payment API. The only way money moves is through <code style="color:#b0d080;">spend.py</code> — a script the kernel controls. Before touching Stripe, <code style="color:#b0d080;">spend.py</code> checks: Is the amount within the band? Is the kill switch off? Is the session cap intact? If any check fails, it returns DENIED and exits. The AI can think about spending $10,000 all it wants — without passing those checks, nothing happens. The door is the only path, and the door checks the rules before opening.
+            </div>
             <div class="flow-diagram">
                 <div class="flow-box">
-                    <div class="flow-label">AGENT</div>
-                    <div class="flow-desc">Requests money movement. Can never approve its own escalation.</div>
+                    <div class="flow-label">AGENT (Nemotron)</div>
+                    <div class="flow-desc">Decides to act. Calls spend.py — the only door to real money. Cannot call Stripe directly.</div>
                 </div>
                 <div class="flow-arrow">→</div>
                 <div class="flow-box">
-                    <div class="flow-label">KERNEL</div>
-                    <div class="flow-desc">Deterministic policy decides. No prompt, no plea, ever changes the verdict.</div>
+                    <div class="flow-label">KERNEL (spend.py)</div>
+                    <div class="flow-desc">Checks band, cap, kill switch. If any fails → DENIED, no exceptions. No prompt or plea changes this.</div>
                 </div>
                 <div class="flow-arrow">→</div>
                 <div class="flow-box">
-                    <div class="flow-label">HUMAN</div>
-                    <div class="flow-desc">Real out-of-band code, on a separate device, is the only way past the agent's limit.</div>
+                    <div class="flow-label">HUMAN (SMS code)</div>
+                    <div class="flow-desc">Over-budget requests need a real one-time code from a separate device. The kernel cannot generate or intercept it.</div>
                 </div>
             </div>
 

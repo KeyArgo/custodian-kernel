@@ -10,6 +10,9 @@
 <meta property="og:title" content="Custodian — Kernel-Enforced Authority for AI Agents">
 <meta property="og:description" content="The agent can only request. A deterministic kernel decides. It can't overspend, self-approve, or lie its way past the rules — enforced at the OS level.">
 <meta property="og:type" content="website">
+<meta property="og:url" content="https://getcustodian.xyz">
+<meta property="og:site_name" content="Custodian">
+<link rel="canonical" href="https://getcustodian.xyz">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
@@ -371,24 +374,27 @@
   <div class="wrap">
     <div class="reveal">
       <div class="sec-eyebrow">Competitive landscape</div>
-      <h2>Why this isn't another spend-limit tool</h2>
-      <p class="sec-sub">The whole category ships caps, approval, and audit. Only one row below is shared — the bottom four, together, are Custodian's alone.</p>
+      <h2>Honest comparison</h2>
+      <p class="sec-sub">Payman, Skyfire, Rain, Ramp, Catena — these are real B2B fintech companies, not hackathon projects. They have card issuance, stablecoin rails, and compliance frameworks we don't. What they don't have is the bottom three rows.</p>
     </div>
     <div class="table-wrap reveal">
       <table>
         <thead><tr>
           <th>Capability</th>
-          <th>Payman · Skyfire · Catena · Rain · Ramp</th>
+          <th>Payman · Skyfire · Rain · Ramp · Catena</th>
           <th class="us">Custodian</th>
         </tr></thead>
         <tbody>
-          <tr><td class="feat">Spend caps · approval · audit</td><td class="them">✓ table stakes</td><td class="usc col-us">✓</td></tr>
-          <tr><td class="feat">Catches the agent <b>lying</b> (facts vs ground truth)</td><td class="x">✕</td><td class="usc col-us">✓</td></tr>
-          <tr><td class="feat">Enforcement <b>below</b> the agent (kernel, not API)</td><td class="x">✕</td><td class="usc col-us">✓</td></tr>
-          <tr><td class="feat">Non-custodial · rail-agnostic · self-hosted</td><td class="x">✕ they hold funds</td><td class="usc col-us">✓</td></tr>
-          <tr><td class="feat">Domain-general — one kernel, many modules</td><td class="x">✕ money only</td><td class="usc col-us">✓</td></tr>
+          <tr><td class="feat">Spend caps · approval · audit trail</td><td class="them">✓ table stakes</td><td class="usc col-us">✓</td></tr>
+          <tr><td class="feat">Real card issuance &amp; payment rails</td><td class="them">✓ (Ramp, Rain)</td><td class="x" style="text-align:center;color:#5a3a3a;">✕ not our lane</td></tr>
+          <tr><td class="feat">Stablecoin / crypto rails</td><td class="them">✓ (Skyfire, Rain)</td><td class="x" style="text-align:center;color:#5a3a3a;">✕ not our lane</td></tr>
+          <tr><td class="feat">SOC 2 / KYC compliance</td><td class="them">✓ (Payman, Catena)</td><td class="x" style="text-align:center;color:#5a3a3a;">✕ early stage</td></tr>
+          <tr><td class="feat">Catches the agent <b>lying</b> — facts vs ground truth</td><td class="x">✕ none</td><td class="usc col-us">✓ only us</td></tr>
+          <tr><td class="feat">Enforcement <b>below</b> the agent — kernel, not API policy</td><td class="x">✕ none</td><td class="usc col-us">✓ only us</td></tr>
+          <tr><td class="feat">Self-hosted · non-custodial · rail-agnostic</td><td class="x">✕ they hold the funds</td><td class="usc col-us">✓ only us</td></tr>
         </tbody>
       </table>
+      <p style="padding:14px 18px;font-size:0.8em;color:var(--dim);border-top:1px solid var(--line);">Our differentiator isn't payment infrastructure — it's enforcement architecture. The kernel sits <em>underneath</em> whatever rails you use. Plug in Stripe, a bank API, or a stablecoin — the enforcement model doesn't change.</p>
     </div>
   </div>
 </section>

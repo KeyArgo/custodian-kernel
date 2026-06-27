@@ -107,8 +107,13 @@
 </nav>
 <div class="wrap">
   <header>
-    <h1>Custodian — can you trust an AI with the company card?</h1>
-    <p>A guided walkthrough. We start with the most important moment and go deeper only if you want to.</p>
+    <h1>The Lie-Catch — when the AI is wrong, the kernel wins</h1>
+    <p>This page runs the real deterministic enforcement engine. <strong>Zero AI is involved here</strong> — every verdict comes from code that checks facts against a real database.</p>
+    <div style="background:#0a0e06;border:1px solid #1a2a10;border-left:3px solid #39d98a;border-radius:8px;padding:12px 16px;margin:14px 0;font-size:0.88em;line-height:1.6;color:#8ab88a;">
+      <b style="color:#39d98a;">What happened before this page:</b> The AI agent (Nemotron 3 Super) read a customer's refund request and made a recommendation — APPROVE or DENY — based on what the customer told it.<br>
+      <b style="color:#39d98a;">What happens on this page:</b> The kernel ignores the AI's recommendation and checks every factual claim the customer made against the real order database. If the AI was fooled — or if the customer lied — the kernel catches it and overrides the AI's verdict.<br>
+      <b style="color:#ff5d6c;">The key moment:</b> When you see <b style="color:#ff5d6c;">✗ CONTRADICTED</b> next to a claim, the AI recommended APPROVE based on a lie. The kernel saw through it. No code change, no retraining — the same rules, applied deterministically, every time.
+    </div>
   </header>
   <div id="tiers"></div>
   <footer>
