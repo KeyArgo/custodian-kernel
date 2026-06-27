@@ -59,14 +59,29 @@ ALLOWED_ORIGINS = {
 }
 
 
+@app.before_request
+def handle_preflight():
+    from flask import request, make_response
+    if request.method == 'OPTIONS':
+        origin = request.headers.get('Origin')
+        resp = make_response('', 204)
+        if origin in ALLOWED_ORIGINS:
+            resp.headers['Access-Control-Allow-Origin'] = origin
+            resp.headers['Access-Control-Allow-Methods'] = 'GET, POST, OPTIONS'
+            resp.headers['Access-Control-Allow-Headers'] = 'Content-Type, X-Operator-Token'
+            resp.headers['Access-Control-Max-Age'] = '86400'
+        return resp
+
+
 @app.after_request
 def add_cors_headers(response):
     from flask import request
     origin = request.headers.get('Origin')
     if origin in ALLOWED_ORIGINS:
         response.headers['Access-Control-Allow-Origin'] = origin
-        response.headers['Access-Control-Allow-Methods'] = 'GET, POST'
-        response.headers['Access-Control-Allow-Headers'] = 'Content-Type'
+        response.headers['Access-Control-Allow-Methods'] = 'GET, POST, OPTIONS'
+        response.headers['Access-Control-Allow-Headers'] = 'Content-Type, X-Operator-Token'
+        response.headers['Access-Control-Max-Age'] = '86400'
     response.headers['X-Content-Type-Options'] = 'nosniff'
     response.headers['X-Frame-Options'] = 'DENY'
     return response

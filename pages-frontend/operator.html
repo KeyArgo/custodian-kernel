@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="robots" content="noindex, nofollow">
+<title>Custodian — Operator Panel</title>
+<link rel="icon" type="image/svg+xml" href="/favicon-operator.svg">
+<style>
+    body { background: #060606; color: #e8e8e8; font-family: 'Courier New', monospace; padding: 0; max-width: 100%; margin: 0; }
+    .page-wrap { max-width: 800px; margin: 0 auto; padding: 24px; }
+    .site-nav { display: flex; align-items: center; gap: 4px; background: #030303;
+        border-bottom: 1px solid #1a1a1a; padding: 0 20px; overflow-x: auto; }
+    .site-nav a { display: inline-block; padding: 10px 12px; font-size: 0.74em; font-weight: 600;
+        letter-spacing: 0.05em; text-transform: uppercase; text-decoration: none; color: #4a4a4a;
+        white-space: nowrap; border-bottom: 2px solid transparent; margin-bottom: -1px; transition: color 0.15s; }
+    .site-nav a:hover { color: #c0c0c0; }
+    .site-nav a.active { color: #76b900; border-bottom-color: #76b900; }
+    .site-nav .nav-brand { color: #76b900; font-weight: 700; font-size: 0.85em; margin-right: 8px;
+        display: flex; align-items: center; gap: 6px; text-decoration: none; }
+    .site-nav .nav-brand svg { width: 18px; height: 18px; }
+    .site-nav .nav-sep { color: #2a2a2a; margin: 0 2px; }
+    h1 { color: #76b900; font-size: 1.3em; margin-bottom: 4px; }
+    .warn { color: #ffb000; font-size: 0.82em; margin-bottom: 16px; }
+    .step { background: #0a0a0a; border: 1px solid #2a2a2a; border-top: 2px solid #76b900; padding: 14px 16px; margin-bottom: 14px; }
+    .step h2 { font-size: 0.95em; margin: 0 0 6px 0; color: #76b900; }
+    .step p { font-size: 0.8em; color: #999; margin: 0 0 10px 0; line-height: 1.5; }
+    .row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; align-items: center; }
+    input { background: #111; border: 1px solid #333; color: #e8e8e8; padding: 6px 8px; font-family: inherit; font-size: 0.85em; }
+    button { background: rgba(118,185,0,0.12); border: 1px solid #76b900; color: #76b900; padding: 7px 14px;
+        cursor: pointer; font-family: inherit; font-size: 0.85em; }
+    button:hover { background: rgba(118,185,0,0.25); }
+    button:disabled { opacity: 0.4; cursor: not-allowed; }
+    .btn-copy { background: rgba(255,176,0,0.1); border-color: #ffb000; color: #ffb000; font-size: 0.75em; padding: 4px 10px; display: none; }
+    .btn-copy.show { display: inline-block; }
+    .btn-copy:hover { background: rgba(255,176,0,0.22); }
+    .out { background: #000; border: 1px solid #222; padding: 8px 10px; margin-top: 8px; font-size: 0.78em;
+        white-space: pre-wrap; max-height: 200px; overflow-y: auto; display: none; }
+    .out.show { display: block; }
+    .out.err { border-color: #ff3b3b; color: #ff9b9b; }
+    /* ---- SMS phone mockup ---- */
+    .sms-banner { display: none; margin-top: 14px; }
+    .sms-banner.show { display: block; }
+    .phone-wrap { background: #111; border: 2px solid #333; border-radius: 20px; padding: 12px 10px;
+        max-width: 320px; font-family: -apple-system, 'Helvetica Neue', sans-serif; }
+    .phone-top { display: flex; align-items: center; justify-content: space-between;
+        font-size: 10px; color: #888; padding: 0 4px 8px; border-bottom: 1px solid #222; margin-bottom: 10px; }
+    .phone-top .carrier { letter-spacing: 0.05em; }
+    .phone-top .signal { display: flex; gap: 2px; align-items: flex-end; }
+    .phone-top .signal span { background: #888; border-radius: 1px; width: 3px; display: inline-block; }
+    .notif-card { background: #1c1c1e; border-radius: 12px; padding: 12px 14px; }
+    .notif-header { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+    .notif-app-icon { width: 22px; height: 22px; border-radius: 6px; background: #2cc64f;
+        display: flex; align-items: center; justify-content: center; font-size: 12px; flex-shrink: 0; }
+    .notif-app-name { font-size: 11px; color: #999; font-weight: 600; text-transform: uppercase;
+        letter-spacing: 0.06em; }
+    .notif-time { margin-left: auto; font-size: 11px; color: #666; }
+    .notif-sender { font-size: 13px; color: #e8e8e8; font-weight: 600; margin-bottom: 4px; }
+    .notif-body { font-size: 13px; color: #c8c8c8; line-height: 1.4; }
+    .notif-code { color: #2cc64f; font-weight: 700; letter-spacing: 0.12em; font-size: 15px; }
+    .sms-note { margin-top: 10px; font-size: 0.78em; color: #76b900; font-family: 'Courier New', monospace;
+        padding: 6px 10px; border: 1px solid #1a2a10; border-radius: 6px; background: #050d00; }
+
+    /* ---- instructions panel ---- */
+    .instructions { background: #08080a; border: 1px solid #1e1e2a; border-left: 3px solid #5db0ff;
+        padding: 14px 16px; margin-bottom: 20px; font-size: 0.82em; }
+    .instructions summary { color: #5db0ff; cursor: pointer; font-weight: 700; letter-spacing: 0.04em;
+        text-transform: uppercase; font-size: 0.9em; margin-bottom: 0; list-style: none; }
+    .instructions summary::before { content: '▶ '; }
+    details[open] summary::before { content: '▼ '; }
+    .instructions ol { margin: 12px 0 0 16px; color: #999; line-height: 1.9; }
+    .instructions ol li b { color: #e8e8e8; }
+    .instructions ol li .note { color: #ffb000; font-size: 0.9em; }
+    .instructions ol li .sms-note { color: #76b900; }
+    .tip { background: #0a0800; border: 1px solid #2a1a00; border-radius: 6px; padding: 8px 12px;
+        margin-top: 10px; color: #9a7a40; font-size: 0.88em; line-height: 1.5; }
+
+    #login-box { display: block; }
+    #panel { display: none; }
+</style>
+</head>
+<body>
+<nav class="site-nav">
+  <a href="/" class="nav-brand">
+    <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M32 6 L54 14 V30 C54 44.5 44.2 54 32 58 C19.8 54 10 44.5 10 30 V14 Z" stroke="#76b900" stroke-width="5" stroke-linejoin="round"/>
+      <circle cx="32" cy="29" r="6" stroke="#76b900" stroke-width="4"/>
+      <rect x="30" y="32" width="4" height="10" rx="1" fill="#76b900"/>
+    </svg>
+    Custodian
+  </a>
+  <span class="nav-sep">|</span>
+  <a href="/">Home</a>
+  <a href="/hermes.html">Live Console</a>
+  <a href="/triage.html">Lie-Catch Demo</a>
+  <a href="/operator.html" class="active">Operator Panel</a>
+</nav>
+<div class="page-wrap">
+<h1>Custodian — Operator Panel</h1>
+<div class="warn">⚠ Every button below moves real Stripe test-mode money and/or sends a real SMS to the operator's phone.</div>
+
+<details class="instructions">
+    <summary>Demo Script — run steps in order</summary>
+    <ol>
+        <li><b>Step 0 — Earn $1,200</b> — Shows revenue in. No band, no approval, no cap. Earning is always unrestricted by design.</li>
+        <li><b>Step 1 — Spend $85 autonomously</b> — Within the agent's authority band → executes with zero human input. <span class="note">PaymentIntent ID auto-fills the Step 7 refund input.</span></li>
+        <li><b>Step 2 — Request $3,500</b> — Exceeds the band. System escalates and sends a real SMS to the operator's phone. <span class="sms-note">The code appears in the mockup below AND auto-fills Step 3.</span></li>
+        <li><b>Step 3 — Approve with the SMS code</b> — Code is pre-filled. Just hit Approve. Money moves only after a real human approves.</li>
+        <li><b>Step 4 — Engage kill switch</b> — Absolute override. No band, no approval, no exception can bypass it.</li>
+        <li><b>Step 5 — Prove kill switch blocks everything</b> — Try a normally-fine $40 spend. Gets denied outright. The AI cannot override this.</li>
+        <li><b>Step 6 — Release kill switch</b> — Normal evaluation resumes.</li>
+        <li><b>Step 7 — Refund $85</b> — PI is pre-filled from Step 1. Refunds always escalate — no autonomous refund path by design.</li>
+        <li><b>Step 8 — Approve the refund</b> — Second SMS code auto-fills. Hit Approve to execute.</li>
+    </ol>
+    <div class="tip">💡 Watch the <a href="/hermes.html" style="color:#76b900;">Live Console</a> in another tab — the audit feed and verdict panels update in real time as you run each step.</div>
+</details>
+
+<div id="login-box">
+    <div class="step">
+        <h2>Login</h2>
+        <div class="row">
+            <input type="password" id="password" placeholder="Operator password">
+            <button id="login-btn">Login</button>
+        </div>
+        <div class="out err" id="login-out"></div>
+    </div>
+</div>
+
+<div id="panel">
+    <div class="step">
+        <h2>Step 0 — Real revenue in (no cap)</h2>
+        <p>Earning isn't gated — only spend is. No band, no approval needed. This is intentional asymmetric design: receiving money carries none of the risk that spending it does.</p>
+        <button id="step0-btn">Run: earn $1,200.00 (support contract payment)</button>
+        <div class="out" id="step0-out"></div>
+    </div>
+
+    <div class="step">
+        <h2>Step 1 — Autonomous spend (no human needed)</h2>
+        <p>$85.00 is within the agent's authority band — the kernel clears it with zero human involvement. The PaymentIntent ID auto-fills the refund input in Step 7.</p>
+        <button id="step1-btn">Run: spend $85.00 (cloud backup renewal)</button>
+        <div class="row" style="margin-top:8px;">
+            <button class="btn-copy" id="copy-pi-btn">📋 Copy PaymentIntent ID for Step 7</button>
+        </div>
+        <div class="out" id="step1-out"></div>
+    </div>
+
+    <div class="step">
+        <h2>Step 2 — Over-budget escalation (real SMS incoming)</h2>
+        <p>$3,500.00 exceeds the per-action cap. The kernel cannot approve this — it escalates and sends a real SMS code to the operator's phone. The code appears in the mockup and auto-fills Step 3.</p>
+        <button id="step2-btn">Run: request $3,500.00 (NAS license renewal)</button>
+        <div class="sms-banner" id="sms-banner">
+            <div class="phone-wrap">
+                <div class="phone-top">
+                    <span class="carrier">Verizon</span>
+                    <div class="signal">
+                        <span style="height:4px"></span><span style="height:6px"></span>
+                        <span style="height:8px"></span><span style="height:10px"></span>
+                    </div>
+                    <span id="sms-time-2">—</span>
+                </div>
+                <div class="notif-card">
+                    <div class="notif-header">
+                        <div class="notif-app-icon">💬</div>
+                        <span class="notif-app-name">Messages</span>
+                        <span class="notif-time" id="sms-time-2b">now</span>
+                    </div>
+                    <div class="notif-sender">Custodian</div>
+                    <div class="notif-body">Your <b>Custodian</b> approval code is: <span class="notif-code" id="sms-code-2">••••••</span><br>This code expires in 10 minutes.</div>
+                </div>
+            </div>
+            <div class="sms-note">⬆ Real SMS delivered to operator's phone · Code auto-fills Step 3</div>
+        </div>
+        <div class="out" id="step2-out"></div>
+    </div>
+
+    <div class="step">
+        <h2>Step 3 — Approve with the real code</h2>
+        <p>The code is pre-filled from the SMS mockup above. Click Approve — money moves only after a real human confirms a code sent to their own device.</p>
+        <div class="row">
+            <input type="text" id="approve1-code" placeholder="6-digit code" maxlength="6" style="width:160px;">
+            <input type="text" id="approve1-by" placeholder="Approved by" value="Operator" style="width:120px;">
+            <button id="approve1-btn">Approve</button>
+        </div>
+        <div class="out" id="approve1-out"></div>
+    </div>
+
+    <div class="step">
+        <h2>Step 4 — Engage the kill switch</h2>
+        <p>Absolute override — every spend and refund request is denied instantly, regardless of band or cap. Not even a valid approval code can bypass it while this is engaged.</p>
+        <div class="row">
+            <input type="text" id="kill-reason" placeholder="Reason" value="demo: proving the override is absolute" style="flex:1;">
+            <button id="kill-btn">Engage kill switch</button>
+        </div>
+        <div class="out" id="kill-out"></div>
+    </div>
+
+    <div class="step">
+        <h2>Step 5 — Prove the kill switch overrides everything</h2>
+        <p>A normally-fine $40.00 in-band request — denied outright while the kill switch is engaged. The AI has no recourse.</p>
+        <button id="step5-btn">Run: attempt $40.00 spend (expect DENIED)</button>
+        <div class="out" id="step5-out"></div>
+    </div>
+
+    <div class="step">
+        <h2>Step 6 — Release the kill switch</h2>
+        <p>Normal evaluation resumes. Requests are checked against the band and cap again.</p>
+        <button id="resume-btn">Release kill switch</button>
+        <div class="out" id="resume-out"></div>
+    </div>
+
+    <div class="step">
+        <h2>Step 7 — Refund (always escalates — no autonomous refund path)</h2>
+        <p>The PaymentIntent ID from Step 1 is pre-filled below. Refunds always require human approval — there is intentionally no autonomous refund path.</p>
+        <div class="row">
+            <input type="text" id="refund-pi" placeholder="pi_3... (auto-filled from Step 1)" style="flex:1;">
+            <button id="refund-btn">Run: refund $85.00</button>
+        </div>
+        <div class="sms-banner" id="sms-banner-refund">
+            <div class="phone-wrap">
+                <div class="phone-top">
+                    <span class="carrier">Verizon</span>
+                    <div class="signal">
+                        <span style="height:4px"></span><span style="height:6px"></span>
+                        <span style="height:8px"></span><span style="height:10px"></span>
+                    </div>
+                    <span id="sms-time-7">—</span>
+                </div>
+                <div class="notif-card">
+                    <div class="notif-header">
+                        <div class="notif-app-icon">💬</div>
+                        <span class="notif-app-name">Messages</span>
+                        <span class="notif-time" id="sms-time-7b">now</span>
+                    </div>
+                    <div class="notif-sender">Custodian</div>
+                    <div class="notif-body">Your <b>Custodian</b> approval code is: <span class="notif-code" id="sms-code-7">••••••</span><br>This code expires in 10 minutes.</div>
+                </div>
+            </div>
+            <div class="sms-note">⬆ Real SMS delivered to operator's phone · Code auto-fills Step 8</div>
+        </div>
+        <div class="out" id="refund-out"></div>
+    </div>
+
+    <div class="step">
+        <h2>Step 8 — Approve the refund</h2>
+        <p>Code is pre-filled from the SMS mockup above. The refund executes only after a human approves — same pattern as the large spend.</p>
+        <div class="row">
+            <input type="text" id="approve2-code" placeholder="6-digit code" maxlength="6" style="width:160px;">
+            <input type="text" id="approve2-by" placeholder="Approved by" value="Operator" style="width:120px;">
+            <button id="approve2-btn">Approve refund</button>
+        </div>
+        <div class="out" id="approve2-out"></div>
+    </div>
+</div>
+
+<script>
+const API = 'https://rein-local.argobox.com/api/v1/operator';
+let token = localStorage.getItem('operator_token') || '';
+let spendPI = '';
+
+function showPanel() {
+    document.getElementById('login-box').style.display = 'none';
+    document.getElementById('panel').style.display = 'block';
+}
+
+async function call(path, body) {
+    const res = await fetch(API + path, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Operator-Token': token },
+        body: JSON.stringify(body || {}),
+    });
+    const data = await res.json();
+    if (res.status === 401) {
+        token = '';
+        localStorage.removeItem('operator_token');
+        document.getElementById('login-box').style.display = 'block';
+        document.getElementById('panel').style.display = 'none';
+        throw new Error('session expired -- please log in again');
+    }
+    return data;
+}
+
+function renderOut(elId, data) {
+    const el = document.getElementById(elId);
+    el.classList.add('show');
+    const failed = data.error || (data.returncode !== undefined && data.returncode !== 0 && data.returncode !== 2 && data.returncode !== 3);
+    el.classList.toggle('err', !!failed);
+    el.textContent = data.error || [data.stdout, data.stderr].filter(Boolean).join('\n');
+}
+
+function extractPI(text) {
+    const m = text.match(/pi_[A-Za-z0-9]+/);
+    return m ? m[0] : null;
+}
+
+document.getElementById('login-btn').addEventListener('click', async () => {
+    const password = document.getElementById('password').value;
+    const out = document.getElementById('login-out');
+    try {
+        const res = await fetch(API + '/login', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ password }),
+        });
+        const data = await res.json();
+        if (!res.ok) { out.classList.add('show'); out.textContent = data.error || 'login failed'; return; }
+        token = data.token;
+        localStorage.setItem('operator_token', token);
+        showPanel();
+    } catch (e) {
+        out.classList.add('show'); out.textContent = 'network error: ' + e.message;
+    }
+});
+
+if (token) showPanel();
+
+document.getElementById('step0-btn').addEventListener('click', async () => {
+    const data = await call('/earn', { amount: '1200.00', description: 'Demo: support contract renewal -- customer payment received' });
+    renderOut('step0-out', data);
+});
+
+document.getElementById('step1-btn').addEventListener('click', async () => {
+    const data = await call('/spend', { amount: '85.00', description: 'Demo: cloud backup storage renewal' });
+    renderOut('step1-out', data);
+    const text = data.error || [data.stdout, data.stderr].filter(Boolean).join('\n');
+    const pi = extractPI(text);
+    if (pi) {
+        spendPI = pi;
+        document.getElementById('refund-pi').value = pi;
+        const copyBtn = document.getElementById('copy-pi-btn');
+        copyBtn.classList.add('show');
+        copyBtn.onclick = () => {
+            navigator.clipboard.writeText(pi).then(() => {
+                copyBtn.textContent = '✓ Copied!';
+                setTimeout(() => copyBtn.textContent = '📋 Copy PaymentIntent ID for Step 7', 2000);
+            });
+        };
+    }
+});
+
+function smsNow() {
+    const d = new Date();
+    return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+}
+
+let _codePoller = null;
+function startCodePoll(codeElId, approveInputId) {
+    if (_codePoller) clearInterval(_codePoller);
+    _codePoller = setInterval(async () => {
+        try {
+            const res = await fetch(API + '/pending_code', { headers: { 'X-Operator-Token': token } });
+            if (!res.ok) return;
+            const d = await res.json();
+            if (d.code) {
+                document.getElementById(codeElId).textContent = d.code;
+                if (approveInputId) document.getElementById(approveInputId).value = d.code;
+                if (_codePoller) { clearInterval(_codePoller); _codePoller = null; }
+            }
+        } catch (_) {}
+    }, 1500);
+    setTimeout(() => { if (_codePoller) { clearInterval(_codePoller); _codePoller = null; } }, 620000);
+}
+
+document.getElementById('step2-btn').addEventListener('click', async () => {
+    const data = await call('/spend', { amount: '3500.00', description: 'Demo: NAS license renewal' });
+    renderOut('step2-out', data);
+    const text = data.error || [data.stdout, data.stderr].filter(Boolean).join('\n');
+    if (text.includes('TWILIO') || text.includes('approval code') || text.includes('escalation')) {
+        const t = smsNow();
+        document.getElementById('sms-time-2').textContent = t;
+        document.getElementById('sms-time-2b').textContent = t;
+        document.getElementById('sms-code-2').textContent = '••••••';
+        document.getElementById('sms-banner').classList.add('show');
+        startCodePoll('sms-code-2', 'approve1-code');
+    }
+});
+
+document.getElementById('approve1-btn').addEventListener('click', async () => {
+    const code = document.getElementById('approve1-code').value;
+    const by = document.getElementById('approve1-by').value || 'Operator';
+    const data = await call('/approve', { code, approved_by: by });
+    renderOut('approve1-out', data);
+});
+
+document.getElementById('kill-btn').addEventListener('click', async () => {
+    const reason = document.getElementById('kill-reason').value;
+    const data = await call('/kill', { by: 'Operator', reason });
+    renderOut('kill-out', data);
+});
+
+document.getElementById('step5-btn').addEventListener('click', async () => {
+    const data = await call('/spend', { amount: '40.00', description: 'Demo: this should be denied' });
+    renderOut('step5-out', data);
+});
+
+document.getElementById('resume-btn').addEventListener('click', async () => {
+    const data = await call('/resume', { by: 'Operator' });
+    renderOut('resume-out', data);
+});
+
+document.getElementById('refund-btn').addEventListener('click', async () => {
+    const pi = document.getElementById('refund-pi').value.trim();
+    const data = await call('/refund', { payment_intent_id: pi, amount: '85.00', description: 'Demo: refund -- double-billed' });
+    renderOut('refund-out', data);
+    const text = data.error || [data.stdout, data.stderr].filter(Boolean).join('\n');
+    if (text.includes('TWILIO') || text.includes('approval code') || text.includes('escalation')) {
+        const t = smsNow();
+        document.getElementById('sms-time-7').textContent = t;
+        document.getElementById('sms-time-7b').textContent = t;
+        document.getElementById('sms-code-7').textContent = '••••••';
+        document.getElementById('sms-banner-refund').classList.add('show');
+        startCodePoll('sms-code-7', 'approve2-code');
+    }
+});
+
+document.getElementById('approve2-btn').addEventListener('click', async () => {
+    const code = document.getElementById('approve2-code').value;
+    const by = document.getElementById('approve2-by').value || 'Operator';
+    const data = await call('/approve', { code, approved_by: by });
+    renderOut('approve2-out', data);
+});
+</script>
+</div><!-- /page-wrap -->
+</body>
+</html>
