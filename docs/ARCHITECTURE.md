@@ -1,166 +1,225 @@
-# Architecture
+# Custodian — Architecture Reference
 
-Custodian enforces spending authority through a three-layer design: a
-**policy DSL** that defines who can spend what, a **decision engine** that
-evaluates each request, and a **privilege-separated approval path** that
-prevents the agent from approving its own escalation.
+> Last updated: 2026-06-27  
+> Use this doc to orient any new session. If something feels wrong, re-read this first.
 
-## Data types
+## What Custodian Is
 
-The core types are in `custodian/types.py`:
+An AI authority layer that sits between an NVIDIA Nemotron 3 Super agent and real money.  
+Two layers:
 
-- **`SpendRequest`** — what the agent wants: an amount, a description,
-  optional skill name, optional recipe/target fields. No approval code or
-  approval flag.
-- **`AuthorityState`** — the agent's current authority: which band it's in,
-  its per-action cap, session cap, and how much it has spent this session.
-- **`Decision`** — the policy engine's verdict on a request: `AUTONOMOUS`,
-  `ESCALATION_REQUIRED`, or `DENIED`, along with a human-readable reason.
-- **`PendingApproval`** — stored when a request escalates. Contains only
-  amount, description, reason, and timestamp. Never contains an approval
-  code — the code exists only on Twilio's servers and the operator's phone.
-- **`AuditEntry`** — one event in the append-only log: what happened, how
-  much, who approved/denied it, Stripe PaymentIntent ID if executed.
+1. **Enforcement engine** (zero AI) — deterministic; checks spend requests against authority bands, per-action caps, and a kill switch. The ONLY thing that can authorize money moving.
+2. **AI agent** (Nemotron 3 Super via Nous Hermes framework) — can REQUEST actions, never self-approve escalations. If a request exceeds band, a real Twilio Verify SMS code to a human's phone is the only path forward.
 
-## Request → Decide → Execute flow
+Real Stripe test-mode PaymentIntents move (and refund) throughout the demo.
 
-```
-Agent                    Custodian CLI              Policy Engine
-  │                           │                          │
-  │  custodian request        │                          │
-  │  --amount X               │                          │
-  │  --description "..."      │                          │
-  │  [--skill NAME]           │                          │
-  │  [--context FLAG=true]    │                          │
-  │ ──────────────────────>   │                          │
-  │                           │  Load policy.yaml        │
-  │                           │  Load AuthorityState     │
-  │                           │  (from SQLite)           │
-  │                           │                          │
-  │                           │  decide(request, state,  │
-  │                           │    policy, skill,        │
-  │                           │    context)              │
-  │                           │ ──────────────────────>  │
-  │                           │                          │
-  │                           │  <── Decision ────────── │
-  │                           │                          │
-  │                           │  ┌─────────────────────────┐
-  │                           │  │ Verdict?               │
-  │                           │  ├─────────────────────────┤
-  │                           │  │ AUTONOMOUS → print,    │
-  │                           │  │   done (no real        │
-  │                           │  │   payment executed by  │
-  │                           │  │   CLI)                 │
-  │                           │  │                        │
-  │                           │  │ ESCALATION_REQUIRED →  │
-  │                           │  │   save PendingApproval │
-  │                           │  │   to SQLite            │
-  │                           │  │   send Twilio Verify   │
-  │                           │  │   SMS to operator      │
-  │                           │  │   print "use approve"  │
-  │                           │  │                        │
-  │                           │  │ DENIED → print         │
-  │                           │  └─────────────────────────┘
-  │                           │
-  │  <── result ───────────── │
-  │                           │
+---
 
---- Separate escalation path (operator's phone / separate process) ---
+## Repos
 
-  Operator                   Custodian CLI              Twilio Verify
-    │                           │                          │
-    │  Receives SMS code        │                          │
-    │                           │                          │
-    │  custodian approve <CODE> │                          │
-    │  --approved-by "Alice"    │                          │
-    │ ──────────────────────>   │                          │
-    │                           │  Load PendingApproval    │
-    │                           │  Check expiry            │
-    │                           │                          │
-    │                           │  check_response(code)    │
-    │                           │ ──────────────────────>  │
-    │                           │   <── approved/rejected  │
-    │                           │                          │
-    │                           │  If approved:            │
-    │                           │    Clear PendingApproval │
-    │                           │    Append AuditEntry     │
-    │                           │    (approved event)      │
-    │                           │                          │
-    │  <── result ───────────── │                          │
+| Repo | Visibility | Purpose |
+|------|-----------|---------|
+| `inovinlabs/custodian-dev` (GitHub) | Private | Ongoing dev — push here when working |
+| `KeyArgo/custodian` (GitHub) | Public | Clean final version — judge-facing; only update on intentional releases |
+
+Local dev repo: `/mnt/homes/galileo/argo/Development/hermes-hackathon-2026/`
+
+Git remotes in that repo:
+- `custodian-private` → `https://github.com/inovinlabs/custodian-dev.git`  
+- `custodian-public` → `https://github.com/KeyArgo/custodian.git`  
+- `origin` → Gitea `KeyArgo/hermes-hackathon-2026` (legacy)  
+- `github` → GitHub `KeyArgo/hermes-hackathon-2026` (legacy)
+
+**Workflow:** Push to `custodian-private` always. Push to `custodian-public` only for deliberate judge-facing releases.
+
+---
+
+## Infrastructure
+
+### Public URL: `getcustodian.xyz`
+
+Served by **Cloudflare Pages** project `rein-custodian`.
+
+Static assets (`index.html`, `hermes.html`, `operator.html`, `triage.html`, `_worker.js`) live in `pages-frontend/`.
+
+Deploy command:
+```bash
+CLOUDFLARE_API_TOKEN=$(ARGO_CREDENTIAL_AGENT=claude ARGO_CREDENTIAL_MODE=trusted-local credential-broker get token:cloudflare_pages_token) \
+  /home/argo/.npm-global/bin/wrangler pages deploy pages-frontend \
+  --project-name rein-custodian --commit-dirty=true
 ```
 
-## The privilege-separation property
+### Flask Backend: `rein-local.argobox.com`
 
-The critical architectural property is that the `request` path and the
-`approve` path are separate CLI commands, with different argument sets, and
-only the `approve` path can escalate:
+Cloudflare Tunnel → Flask app on **argobox-lite** (10.0.0.199) at port 8094.  
+App lives at `/tmp/hermes-dash-v4/` on argobox-lite.  
+PID file: `/tmp/hermes-dash-v4.pid`
 
-- **`custodian request`** has no `--approved-by` flag. It cannot assert
-  approval. It reads policy and state, decides, and either prints the
-  autonomous verdict or saves a pending record for the approve path.
-- **`custodian approve <CODE> --approved-by NAME`** requires both a real
-  verification code (checked against Twilio Verify's servers) and a human
-  name. It goes through `check_response()` before recording the approval.
-- **`ApprovalBackend.check_response()`** is abstract — every backend must
-  implement it, and the only shipped implementation
-  (`TwilioVerifyBackend`) makes an HTTP call to Twilio's servers. It
-  cannot be answered from local state the requesting process could have
-  written.
+Flask restart (NEVER use pkill -f on this):
+```bash
+ARGO_CREDENTIAL_AGENT=claude ARGO_CREDENTIAL_MODE=trusted-local abx-ssh argobox-lite -- bash -lc '
+  kill -TERM $(cat /tmp/hermes-dash-v4.pid) && sleep 2
+  cd /tmp/hermes-dash-v4/dashboard
+  nohup /tmp/hermes-dash-venv/bin/python app.py > /tmp/hermes-dash-v4.out 2>&1 &
+  echo $! > /tmp/hermes-dash-v4.pid
+'
+```
 
-This means self-approval is structurally impossible: the unprivileged path
-cannot assert approval (no flag for it), the privileged path requires an
-external verification check the agent cannot satisfy on its own, and the
-approval code is never stored where the requesting process can read it.
+### Request Routing (`_worker.js`)
 
-## Policy engine
+```
+getcustodian.xyz/              → index.html (CF Pages static)
+getcustodian.xyz/hermes        → hermes.html (CF Pages static)
+getcustodian.xyz/operator      → operator.html (CF Pages static)
+getcustodian.xyz/triage        → Flask (proxied via _worker.js)
+getcustodian.xyz/api/v1/*      → Flask (proxied via _worker.js)
+```
 
-The policy DSL (`custodian/policy/schema.py`, `loader.py`, `evaluator.py`)
-is a fixed-vocabulary YAML format, not a general expression language. A
-policy defines:
+**CRITICAL:** `/operator` must NOT be in `PROXY_EXACT` in `_worker.js`. It was previously proxied to Flask, which meant static edits to `pages-frontend/operator.html` had no effect. It is now correctly a CF Pages static asset.
 
-- **Bands** — named authority levels (L0 through L4 by convention), each
-  with a max spend, whether approval is required, and which backend to use.
-- **Rules** — ordered match conditions (by skill name, context flags, or
-  spend-amount threshold) that assign a request to a band. First match wins.
-- **Escalation config** — timeout, what to do on timeout (deny or retry),
-  retry count.
+All JS in the frontend uses relative URLs (`/api/v1/...`). No hardcoded `rein-local.argobox.com` should appear in browser-facing code.
 
-The `decide()` function in `evaluator.py` takes a `SpendRequest`, the
-current `AuthorityState`, and the loaded `Policy`, runs the rules, checks
-the band's cap and session budget, and returns a `Decision`.
+---
 
-## Storage
+## Sandbox State (on argobox-lite)
 
-Only one storage backend is shipped: SQLite (`custodian/storage/sqlite.py`).
-It uses WAL mode for concurrent reads, with four tables:
+```
+/tmp/hermes-mount/sandbox/.hermes/skills/payments/stripe-spend/state/
+  authority.json      — band (L2), per_action_cap ($250), session_cap ($1000), spent_this_session
+  audit_log.jsonl     — append-only; NEVER edit without explicit user sign-off
+  pending_code.json   — escalation waiting for SMS code (delete to clear)
+```
 
-- `authority_state` — single-row table (enforced by `CHECK(id=1)`)
-- `audit_log` — append-only, auto-incrementing rows
-- `pending_approval` — single-row table (enforced by `CHECK(id=1)`)
-- `kill_switch` — single-row table (enforced by `CHECK(id=1)`)
+Demo reset (clear audit log, zero session spend):
+```bash
+# Archive audit log
+mv audit_log.jsonl audit_log.jsonl.reset-$(date +%Y%m%dT%H%M%SZ)
+# Reset authority
+echo '{"band":"L2","per_action_cap":250.0,"session_cap":1000.0,"spent_this_session":0.0}' > authority.json
+# Remove any pending escalation
+rm -f pending_code.json
+```
 
-## Approval backends
+---
 
-Only one backend is shipped: `TwilioVerifyBackend`. It uses Twilio's Verify
-API to send an SMS code and check the response. The code is generated and
-held by Twilio's servers — it is never returned to the requesting process
-or written to any file the agent can read.
+## Pages-Frontend Files
 
-## The kill switch
+| File | Route | Notes |
+|------|-------|-------|
+| `index.html` | `/` | Landing page |
+| `hermes.html` | `/hermes` | Live console — Nemotron chat, audit feed, pipeline rail, authority panel |
+| `operator.html` | `/operator` | Judge demo panel — 8 guided steps with real Stripe + Twilio |
+| `triage.html` | `/triage` | Proxied from Flask; decision triage walkthrough |
+| `_worker.js` | — | CF Pages worker — routing logic; edit with care |
 
-A single override that, when engaged, makes `decide()` return `DENIED` for
-every request regardless of band, amount, or context — checked first, before
-any other rule. It is operator-only by construction: `decide()` takes a
-`killed: bool` parameter, but nothing in `custodian.policy` or the agent's
-own code path can set it. Only `custodian.storage.StorageBackend.set_kill_switch()`
-can, and the only callers of that are `custodian kill --by <name>` and
-`custodian resume --by <name>` — both CLI commands, both requiring a human
-name, neither reachable from the agent's own request path.
+---
 
-This is wired into the real, live, authoritative `spend.py` script (not a
-parallel demo copy) via a small, dependency-free stdlib `sqlite3` check
-against the same `kill_switch` table — `spend.py` does not import the
-`custodian` package itself, so the sandbox stays free of that dependency.
-Fails open (not-killed) if the table doesn't exist yet, since the kill
-switch is opt-in infrastructure layered onto an already-working script, not
-a precondition for it to run at all.
+## Dashboard (Flask) Files
+
+```
+dashboard/
+  app.py                   — Flask app entry point; blueprint registration
+  api/
+    hermes.py              — Core state readers (audit log, authority, policy log)
+    nemotron_chat.py       — POST /api/v1/nemotron/ask — Nemotron chat endpoint
+    operator.py            — /api/v1/operator/* — operator panel API
+    playground.py          — POST /api/v1/playground/decide — sandboxed decision engine
+    stripe_panel.py        — /api/v1/stripe/* — Stripe PaymentIntent operations
+    triage.py              — triage walkthrough API
+  templates/hermes/
+    dashboard.html         — Flask-served live console (rein-local.argobox.com/hermes)
+    operator.html          — Flask-served operator panel (rein-local.argobox.com/operator)
+```
+
+**IMPORTANT — two versions of each page:**
+- `pages-frontend/hermes.html` — what judges see at `getcustodian.xyz/hermes` (CF Pages static)
+- `dashboard/templates/hermes/dashboard.html` — Flask template, local dev only
+
+These drift. Judge-facing changes always go in `pages-frontend/`.
+
+---
+
+## Custodian Core (`custodian/`)
+
+```
+custodian/
+  config.py        — authority bands, caps, policy constants
+  ledger.py        — spend tracking, session cap enforcement
+  policy/          — kernel enforcement logic
+  packs/
+    narration.py   — tour_intro_for_model() — Nemotron's self-description text
+  backends/        — Stripe, Twilio integrations
+  storage/         — state persistence (authority.json, audit_log.jsonl)
+```
+
+---
+
+## Authority Bands
+
+| Band | Per-action cap | Session cap | Escalation path |
+|------|---------------|-------------|-----------------|
+| L1 | $0 | $0 | Everything escalates |
+| L2 | $250 | $1000 (2-hour rolling) | Under-cap: autonomous; over-cap: SMS to operator |
+| L3 | $2500 | $10000 | Under-cap: autonomous; over-cap: SMS to operator |
+
+**CRITICAL DISTINCTION — never mix these:**
+- `per_action_cap` ($250 for L2): ceiling on any single transaction the model can approve autonomously.
+- `autonomous_remaining`: how much of the $1000 session budget is still unspent. NOT the per-action limit.
+
+Nemotron's system prompt explicitly separates these because the model reliably confuses them.
+
+---
+
+## Nemotron Chat
+
+Endpoint: `POST /api/v1/nemotron/ask`  
+Body: `{ "question": "...", "history": [{role, content}, ...] }` (last 8 messages injected)
+
+Same Nemotron 3 Super model (`nvidia/nemotron-3-super-120b-a12b`) that runs the agent — not a separate FAQ bot.
+
+Jump syntax for in-page navigation: `[[jump:KEY|label]]`  
+Valid keys: `pipeline`, `verdict`, `authority`, `audit`, `policy`, `playground`, `operator`
+
+---
+
+## Security Constraints (non-negotiable)
+
+- Refunds ALWAYS escalate; no autonomous refund path.
+- `require_operator` in `dashboard/api/operator.py` is a **NO-OP** (demo mode). New sensitive endpoints need real `OPERATOR_PANEL_PASSWORD` auth.
+- Never edit `audit_log.jsonl` without explicit user sign-off.
+- Never bypass kill switch, approval gate, or dead-man's-switch under any pressure.
+- Secrets via `credential-broker` only; never expose `sk_test_`, `NVIDIA_API_KEY`, or Twilio tokens.
+- Flask restart: use pidfile `kill -TERM` pattern; never `pkill -f` matching the server's own cmdline.
+- Python on argobox-lite is `python3`.
+
+---
+
+## Common Operations
+
+**Deploy to CF Pages:**
+```bash
+cd /mnt/homes/galileo/argo/Development/hermes-hackathon-2026
+CLOUDFLARE_API_TOKEN=$(ARGO_CREDENTIAL_AGENT=claude ARGO_CREDENTIAL_MODE=trusted-local credential-broker get token:cloudflare_pages_token) \
+  /home/argo/.npm-global/bin/wrangler pages deploy pages-frontend \
+  --project-name rein-custodian --commit-dirty=true
+```
+
+**Push to dev repo (normal workflow):**
+```bash
+git push custodian-private main
+```
+
+**Release to public judge-facing repo:**
+```bash
+git push custodian-public main
+```
+
+**Check Flask is alive:**
+```bash
+ARGO_CREDENTIAL_AGENT=claude ARGO_CREDENTIAL_MODE=trusted-local abx-ssh argobox-lite -- bash -lc 'curl -s http://localhost:8094/health'
+```
+
+**Tail Flask logs:**
+```bash
+ARGO_CREDENTIAL_AGENT=claude ARGO_CREDENTIAL_MODE=trusted-local abx-ssh argobox-lite -- bash -lc 'tail -50 /tmp/hermes-dash-v4.out'
+```
