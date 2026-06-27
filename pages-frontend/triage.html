@@ -91,7 +91,6 @@
     white-space:nowrap;border-bottom:2px solid transparent;margin-bottom:-1px;transition:color 0.15s}
   .site-nav a:hover{color:#c0c0c0}
   .site-nav a.active{color:#e8e8e8;border-bottom-color:#5db0ff}
-  .site-nav a.soon{color:#2a2a2a;cursor:default;pointer-events:none}
   .site-nav a.console-link{margin-left:auto;color:#5db0ff;border:1px solid rgba(93,176,255,0.3);
     border-radius:6px;padding:6px 12px;margin-top:4px;margin-bottom:4px}
   .site-nav a.console-link:hover{background:rgba(93,176,255,0.08)}
@@ -116,8 +115,7 @@
   <a href="/">Home</a>
   <a href="/hermes">Live Console</a>
   <a href="/triage.html" class="active">Lie-Catch Demo</a>
-  <a class="soon">Docs (soon)</a>
-  <a href="https://rein-local.argobox.com/operator" class="console-link" target="_blank" rel="noopener">⚡ Operator Panel</a>
+  <a href="/operator" class="console-link" target="_blank" rel="noopener">⚡ Operator Panel</a>
 </nav>
 <div class="wrap">
   <header>
@@ -151,12 +149,12 @@
   <footer>
     Every panel here runs the real deterministic engine the sandboxed agent is governed by.
     Envelope source is labelled on each result (captured vs. live model).
-    Backend: <a href="https://rein-local.argobox.com" target="_blank" rel="noopener">rein-local.argobox.com</a>
+    Backend: getcustodian.xyz (via API proxy)
   </footer>
 </div>
 
 <script>
-const API = 'https://rein-local.argobox.com/api/v1/triage';
+const API = '/api/v1/triage';
 let useLive = false;
 const ACTIVE = new Map(); // tier id -> {caseId, mount}
 
@@ -329,7 +327,7 @@ async function runCustom() {
   btn.disabled = true; btn.textContent = 'Analyzing…';
   const result = document.getElementById('custom-result');
   result.innerHTML = '<div class="spin">🔴 Nemotron 3 Super is reading your message…</div>';
-  const BACKEND = 'https://rein-local.argobox.com';
+  const BACKEND = '';
   try {
     const r = await fetch(`${BACKEND}/api/v1/triage/custom`, {
       method: 'POST',

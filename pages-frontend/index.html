@@ -242,7 +242,7 @@
       <a href="#compare">Compare</a>
       <a href="#video">Demo</a>
       <a href="/triage.html">Lie-Catch</a>
-      <a href="https://rein-local.argobox.com/operator" target="_blank" rel="noopener">Operator Panel</a>
+      <a href="/operator" target="_blank" rel="noopener">Operator Panel</a>
       <a class="btn btn-primary" href="/hermes">Launch live console →</a>
     </div>
   </div>
@@ -455,7 +455,7 @@
   }
 
   // ---- live data (same backend the console uses; absolute URLs, CORS-enabled) ----
-  const API='https://rein-local.argobox.com/api/v1';
+  const API='/api/v1';
   const money=n=>'$'+Number(n).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
   async function loadLive(){
     try{

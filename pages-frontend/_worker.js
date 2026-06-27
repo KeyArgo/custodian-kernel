@@ -2,7 +2,7 @@
  * CF Pages _worker.js
  *
  * /hermes          → hermes.html static asset (public live-console page)
- * /operator        → Flask operator panel (proxied, password-gated)
+ * /operator        → operator.html static asset (CF Pages; JS calls Flask API directly)
  * /triage          → Flask triage walkthrough (proxied)
  * /api/v1/*        → Flask API endpoints (proxied)
  * everything else  → CF Pages static assets
@@ -10,8 +10,8 @@
 
 const BACKEND = 'https://rein-local.argobox.com';
 
-// Routes proxied to Flask
-const PROXY_EXACT = new Set(['/operator', '/triage']);
+// Routes proxied to Flask — /operator removed; it's now a static CF Pages asset
+const PROXY_EXACT = new Set(['/triage']);
 // Prefix-match routes
 const PROXY_PREFIX = '/api/v1/';
 

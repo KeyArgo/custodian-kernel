@@ -1397,6 +1397,7 @@
             audit: { selector: '#tab-panel-audit', tab: 'audit' },
             policy: { selector: '#tab-panel-policy', tab: 'policy' },
             playground: { selector: '#tab-panel-try', tab: 'try' },
+            operator: { href: '/operator' },
         };
 
 function nemotronRenderAnswer(rawText) {
@@ -1530,6 +1531,7 @@ function nemotronRenderAnswer(rawText) {
 
             const target = NEMOTRON_JUMP_TARGETS[btn.dataset.jumpKey];
             if (!target) return;
+            if (target.href) { window.open(target.href, '_blank'); return; }
             if (target.tab) document.querySelector(`.tab-btn[data-tab="${target.tab}"]`).click();
             const el = document.querySelector(target.selector);
             if (el) {
@@ -1578,6 +1580,8 @@ function nemotronRenderAnswer(rawText) {
             }, 1100);
         }, 2500);
 
+        const nemotronHistory = []; // [{role:'user'|'assistant', content:string}]
+
         async function nemotronSend() {
             const question = nemotronInput.value.trim();
             if (!question) return;
@@ -1589,7 +1593,7 @@ function nemotronRenderAnswer(rawText) {
                 const res = await fetch('/api/v1/nemotron/ask', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ question }),
+                    body: JSON.stringify({ question, history: nemotronHistory.slice(-8) }),
                 });
                 const data = await res.json();
                 thinkingMsg.remove();
@@ -1597,6 +1601,11 @@ function nemotronRenderAnswer(rawText) {
                     nemotronAddMessage(`(couldn't get an answer: ${data.error})`, 'bot');
                 } else {
                     nemotronRenderAnswer(data.answer);
+                    // Store clean versions (no [[...]] routing markers) so the model
+                    // doesn't re-parse its own output syntax in future turns.
+                    const clean = data.answer.replace(/\[\[(jump|entry|suggest):[^\]]*\]\]/g, '').trim();
+                    nemotronHistory.push({role: 'user', content: question});
+                    nemotronHistory.push({role: 'assistant', content: clean});
                 }
             } catch (e) {
                 thinkingMsg.remove();

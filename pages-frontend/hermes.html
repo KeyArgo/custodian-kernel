@@ -292,7 +292,6 @@
         }
         .site-nav a:hover { color: #c8c8c8; }
         .site-nav a.active { color: #f2f2f2; border-bottom-color: var(--nvidia-green); }
-        .site-nav a.soon { color: #3a3a3a; cursor: default; pointer-events: none; }
         .site-nav a.console-link {
             margin-left: auto; color: var(--nvidia-green);
             border: 1px solid rgba(118,185,0,0.3); border-radius: 6px;
@@ -615,8 +614,7 @@
         <a href="/">Home</a>
         <a href="/hermes" class="active">Live Console</a>
         <a href="/triage.html">Lie-Catch Demo</a>
-        <a class="soon">Docs (soon)</a>
-        <a href="https://rein-local.argobox.com/operator" class="console-link" target="_blank" rel="noopener">⚡ Operator Panel</a>
+        <a href="/operator" class="console-link" target="_blank" rel="noopener">⚡ Operator Panel</a>
     </nav>
     <div class="top-bar">
         <div class="top-bar-brand">
@@ -768,7 +766,7 @@
                     <div style="background:#0a0800;border:1px solid #2a2000;border-radius:8px;padding:12px 14px;margin-bottom:10px;font-size:0.8em;color:#9a8a60;line-height:1.5;">
                         <b style="color:#ffb000;">What fills this feed:</b> Every time the AI agent earns revenue, requests a spend, gets escalated for human approval, or hits the kill switch — each event lands here with a timestamp and the kernel's verdict. It's an append-only record; nothing can be edited or deleted after the fact.<br>
                         <b style="color:#ffb000;margin-top:6px;display:inline-block;">To see it live:</b> Open the Operator Panel and run through the steps — earn, spend, escalate, kill-switch, refund. Each action writes a real entry here within seconds.
-                        <br><a href="https://rein-local.argobox.com/operator" target="_blank" rel="noopener" style="color:#76b900;font-weight:700;margin-top:6px;display:inline-block;">⚡ Open Operator Panel →</a>
+                        <br><a href="/operator" target="_blank" rel="noopener" style="color:#76b900;font-weight:700;margin-top:6px;display:inline-block;">⚡ Open Operator Panel →</a>
                     </div>
                     <div class="feed" id="feed">
                         <div class="empty-state">No events yet — run the operator demo to populate this feed.</div>
@@ -961,7 +959,12 @@
 
     <script>
         const fmtUSD = (n) => '$' + Number(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-        const fmtTime = (iso) => iso ? iso.replace('T', ' ').replace('Z', '') : '';
+        const fmtTime = (iso) => {
+            if (!iso) return '';
+            const d = new Date(iso);
+            return d.toLocaleString([], { year: 'numeric', month: '2-digit', day: '2-digit',
+                hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
+        };
         // Any string that ends up inside an innerHTML template literal must go
         // through this first -- some of these strings ultimately trace back to
         // user input (the playground's 'code' field, descriptions on real audit
@@ -1770,6 +1773,8 @@ function nemotronRenderAnswer(rawText) {
             }, 1100);
         }, 2500);
 
+        const nemotronHistory = []; // [{role:'user'|'assistant', content:string}]
+
         async function nemotronSend() {
             const question = nemotronInput.value.trim();
             if (!question) return;
@@ -1781,7 +1786,7 @@ function nemotronRenderAnswer(rawText) {
                 const res = await fetch('/api/v1/nemotron/ask', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ question }),
+                    body: JSON.stringify({ question, history: nemotronHistory.slice(-8) }),
                 });
                 const data = await res.json();
                 thinkingMsg.remove();
@@ -1789,6 +1794,9 @@ function nemotronRenderAnswer(rawText) {
                     nemotronAddMessage(`(couldn't get an answer: ${data.error})`, 'bot');
                 } else {
                     nemotronRenderAnswer(data.answer);
+                    const clean = data.answer.replace(/\[\[(jump|entry|suggest):[^\]]*\]\]/g, '').trim();
+                    nemotronHistory.push({role: 'user', content: question});
+                    nemotronHistory.push({role: 'assistant', content: clean});
                 }
             } catch (e) {
                 thinkingMsg.remove();

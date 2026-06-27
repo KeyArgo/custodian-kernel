@@ -74,7 +74,7 @@
     .tip { background: #0a0800; border: 1px solid #2a1a00; border-radius: 6px; padding: 8px 12px;
         margin-top: 10px; color: #9a7a40; font-size: 0.88em; line-height: 1.5; }
 
-    #panel { display: block; }
+    #panel { display: block; max-width: 860px; margin: 0 auto; padding: 0 24px 40px; }
 </style>
 </head>
 <body>
@@ -247,6 +247,8 @@
 const API = '/api/v1/operator';
 let spendPI = '';
 
+document.addEventListener('DOMContentLoaded', function () {
+
 async function call(path, body) {
     const res = await fetch(API + path, {
         method: 'POST',
@@ -374,6 +376,8 @@ document.getElementById('approve2-btn').addEventListener('click', async () => {
     const data = await call('/approve', { code, approved_by: by });
     renderOut('approve2-out', data);
 });
+
+}); // DOMContentLoaded
 </script>
 </div><!-- /page-wrap -->
 </body>

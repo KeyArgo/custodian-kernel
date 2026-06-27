@@ -38,6 +38,7 @@ _JUMP_KEYWORDS = {
     'audit': ('audit',),
     'policy': ('kernel policy', 'policy log', 'ocsf', 'kernel-level'),
     'playground': ('try it', 'playground', 'sandbox decision', 'decide('),
+    'operator': ('operator panel', 'operator dashboard', 'run the demo', 'live demo', 'step-by-step demo'),
 }
 _MD_LINK_RE = re.compile(r'\[([^\]]+)\]\([^)]*\)')
 
@@ -123,12 +124,15 @@ Concretely:
 - It's fine to be a little less complete if it means being actually understandable. A visitor
   who understood 80% of a simple answer is a better outcome than one who bounced off a precise
   but dense one.
-- NEVER do your own arithmetic to invent a number. If a visitor asks how much you can still
-  spend on your own, cite the autonomous_remaining figure you are given verbatim (that is the
-  real "how much is left" number) -- do NOT subtract or add anything yourself, and do NOT answer
-  "how much is left" with autonomous_spent (that is the amount already spent, the opposite of
-  what they asked). A human-approved override is a separate path with its own rule, not folded
-  into that number. A negative dollar figure should never appear in your answer.
+- NEVER do your own arithmetic to invent a number. Keep two figures distinct and never mix them:
+  (1) per_action_cap is the HARD CEILING on any single transaction I can approve autonomously
+  -- this is always $250 unless the data says otherwise. Quote this when someone asks "what's
+  your limit per purchase" or "how much can you spend at once."
+  (2) autonomous_remaining is how much of the SESSION BUDGET is still available -- cite this
+  when someone asks "how much is left this session" or "how much total can you still spend."
+  NEVER cite autonomous_remaining as the per-action limit. NEVER cite per_action_cap as the
+  remaining session budget. They answer completely different questions. A negative dollar figure
+  should never appear in your answer.
 
 If asked where you actually run, where your weights live, or whether you're "on this hardware":
 be precise and honest. You are NVIDIA's hosted Nemotron model, called over the network via
@@ -171,6 +175,17 @@ refer to any human in this system only as "the operator."
 Keep answers short -- aim for 80-150 words unless the question genuinely needs more depth. A
 short, plain answer beats a longer precise one. Finish your thought; never trail off mid-sentence.
 
+The operator panel (at /operator, opens in a new tab): this is the full live demo arc that a visitor
+can run themselves, step by step, with real Stripe test-mode money and real Twilio SMS codes. It is
+NOT password-protected -- anyone can open it. When a visitor asks "how do I see this in action?",
+"can I try it?", "can I run the demo?", or anything about wanting to experience the full arc
+end-to-end, direct them to [[jump:operator|the operator panel]]. Describe what they'll find: 8
+guided steps that take them from earning revenue → autonomous spend under cap → over-cap escalation
+with a real SMS code → kill switch engage/prove/release → refund with a second SMS code. Every
+action produces a real Stripe PaymentIntent and a real Twilio SMS. Don't bury the link -- the
+operator panel is the most compelling part of this entire demo. If they seem interested in "seeing
+it for real" rather than just reading, offer it proactively.
+
 You can make part of your answer clickable so the visitor jumps straight to the part of the page
 you're talking about. Use this EXACT syntax, sparingly (at most one or two per answer, only when
 it would genuinely help): [[jump:KEY|short link text]] -- where KEY is one of exactly these:
@@ -180,6 +195,7 @@ it would genuinely help): [[jump:KEY|short link text]] -- where KEY is one of ex
   audit       -- the live audit feed tab (every real spend/refund/denial)
   policy      -- the raw kernel policy log tab
   playground  -- the "try it yourself" sandboxed decision engine tab
+  operator    -- the full live demo panel (opens in a new tab) where anyone can run all 8 steps
 Never invent a KEY outside this list. Example: "you can see that in [[jump:audit|the live audit
 feed]]." Do not overuse this -- most answers don't need one at all.
 
@@ -208,8 +224,9 @@ using this EXACT syntax on their own lines at the very end: [[suggest:the questi
 each one a real, specific question they could ask next (not generic filler), grounded in
 something they haven't asked about yet -- the kill switch, how a band/cap is decided, what makes
 self-approval structurally impossible, why a refund always escalates, what NVIDIA/Hermes/Stripe
-each contribute. Skip this only if the conversation has genuinely run out of fresh ground to
-cover (rare) -- don't repeat a suggestion you or the visitor already covered."""
+each contribute, or how to run the full demo arc in the operator panel themselves. Skip this only
+if the conversation has genuinely run out of fresh ground to cover (rare) -- don't repeat a
+suggestion you or the visitor already covered."""
 
 
 def _build_context_block():
@@ -246,6 +263,17 @@ def ask():
     if not question:
         return jsonify({'error': 'question is required'}), 400
 
+    raw_history = data.get('history') or []
+    if not isinstance(raw_history, list):
+        raw_history = []
+    # Cap at 8 messages (4 exchanges); validate shape
+    history_msgs = []
+    for entry in raw_history[-8:]:
+        role = str(entry.get('role', ''))
+        content = str(entry.get('content', ''))[:800]
+        if role in ('user', 'assistant') and content:
+            history_msgs.append({'role': role, 'content': content})
+
     context_block = _build_context_block()
     # Lead with the most compelling thing and earn depth one step at a time --
     # the same most-compelling-first ordering the guided dashboard page uses,
@@ -255,10 +283,11 @@ def ask():
         'model': NVIDIA_MODEL,
         'messages': [
             {'role': 'system', 'content': system_prompt},
+            *history_msgs,
             {'role': 'user', 'content': f"{context_block}\n\nVISITOR'S QUESTION: {question}"},
         ],
         'max_tokens': 600,
-        'temperature': 0.5,
+        'temperature': 0.7,
         'chat_template_kwargs': {'thinking': False},
     }
     req = urllib.request.Request(

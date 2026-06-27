@@ -7,7 +7,7 @@
 <link rel="icon" type="image/svg+xml" href="/favicon-operator.svg">
 <style>
     body { background: #060606; color: #e8e8e8; font-family: 'Courier New', monospace; padding: 0; max-width: 100%; margin: 0; }
-    .page-wrap { max-width: 800px; margin: 0 auto; padding: 24px; }
+    .page-wrap { max-width: 860px; margin: 0 auto; padding: 24px 24px 40px; }
     .site-nav { display: flex; align-items: center; gap: 4px; background: #030303;
         border-bottom: 1px solid #1a1a1a; padding: 0 20px; overflow-x: auto; }
     .site-nav a { display: inline-block; padding: 10px 12px; font-size: 0.74em; font-weight: 600;
@@ -112,8 +112,6 @@
     </ol>
     <div class="tip">💡 Watch the <a href="/hermes.html" style="color:#76b900;">Live Console</a> in another tab — the audit feed and verdict panels update in real time as you run each step.</div>
 </details>
-
-</div>
 
 <div id="panel">
     <div class="step">
@@ -241,11 +239,41 @@
         <div id="approve2-note" style="display:none;font-size:0.75em;color:#76b900;margin-top:4px;">✓ Code auto-filled from SMS — masked for security. Hit Approve refund to execute.</div>
         <div class="out" id="approve2-out"></div>
     </div>
+
+    <div style="margin-top:28px; border:1px solid #1a2a10; border-left:3px solid #76b900;
+                background:#050d00; padding:18px 20px; font-size:0.85em; line-height:1.7;">
+        <div style="color:#76b900; font-weight:700; font-size:1em; margin-bottom:10px; letter-spacing:0.04em; text-transform:uppercase;">
+            Arc complete — see what happened
+        </div>
+        <p style="color:#999; margin:0 0 14px;">Every action you just took is recorded in real time. Open the
+            <a href="/hermes" target="_blank" style="color:#76b900; font-weight:600;">Live Console</a>
+            and look at three things:
+        </p>
+        <div style="display:grid; gap:10px;">
+            <div style="background:#0a0a0a; border:1px solid #2a2a2a; padding:10px 14px; border-radius:4px;">
+                <span style="color:#76b900; font-weight:700;">Audit Feed</span>
+                <span style="color:#666;"> → </span>
+                <span style="color:#bbb;">Every earn, spend, denial, kill-switch toggle, and refund — timestamped and in order. The $40 denial during the kill-switch test will show <code style="color:#ff9b9b;">DENIED</code> while every approved action shows the real Stripe PaymentIntent ID.</span>
+            </div>
+            <div style="background:#0a0a0a; border:1px solid #2a2a2a; padding:10px 14px; border-radius:4px;">
+                <span style="color:#76b900; font-weight:700;">Net Balance card</span>
+                <span style="color:#666;"> → </span>
+                <span style="color:#bbb;">Shows real revenue in vs. net spend. The $1,200 earn was uncapped; the $85 autonomous spend and $3,500 override are tracked separately; the $85 refund nets out. You can see exactly which dollars the AI moved on its own vs. which required you.</span>
+            </div>
+            <div style="background:#0a0a0a; border:1px solid #2a2a2a; padding:10px 14px; border-radius:4px;">
+                <span style="color:#76b900; font-weight:700;">Ask Nemotron</span>
+                <span style="color:#666;"> → </span>
+                <span style="color:#bbb;">Click the chat bubble on the Live Console and ask <em>"what just happened?"</em> — you'll get an answer from the actual model that ran all those requests, explaining what it could and couldn't do and why.</span>
+            </div>
+        </div>
+    </div>
 </div>
 
 <script>
-const API = 'https://rein-local.argobox.com/api/v1/operator';
+const API = '/api/v1/operator';
 let spendPI = '';
+
+document.addEventListener('DOMContentLoaded', function () {
 
 async function call(path, body) {
     const res = await fetch(API + path, {
@@ -379,6 +407,8 @@ document.getElementById('approve2-btn').addEventListener('click', async () => {
     const data = await call('/approve', { code, approved_by: by });
     renderOut('approve2-out', data);
 });
+
+}); // DOMContentLoaded
 </script>
 </div><!-- /page-wrap -->
 </body>
