@@ -1166,11 +1166,10 @@
                 const newLatestTs = events.length ? (events[0].ts || null) : null;
                 renderPipelineStage(events, pendingRecForVerdict);
                 renderVerdictPanel(events, policyLines, pendingRecForVerdict);
-                // Scroll to the live decision section when a new event arrives
+                // Track latest event ts but do NOT auto-scroll — let the visitor
+                // read the page where they left it; they can scroll themselves.
                 if (newLatestTs && newLatestTs !== prevLatestTs) {
                     window._lastEventTs = newLatestTs;
-                    const verdictEl = document.querySelector('.verdict-section');
-                    if (verdictEl) verdictEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
                 }
             } catch (e) {
                 document.getElementById('conn-dot').className = 'conn-dot down';
