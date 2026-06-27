@@ -270,24 +270,6 @@ function extractPI(text) {
     return m ? m[0] : null;
 }
 
-document.getElementById('login-btn').addEventListener('click', async () => {
-    const password = document.getElementById('password').value;
-    const out = document.getElementById('login-out');
-    try {
-        const res = await fetch(API + '/login', {
-            method: 'POST', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ password }),
-        });
-        const data = await res.json();
-        if (!res.ok) { out.classList.add('show'); out.textContent = data.error || 'login failed'; return; }
-        token = data.token;
-        localStorage.setItem('operator_token', token);
-        showPanel();
-    } catch (e) {
-        out.classList.add('show'); out.textContent = 'network error: ' + e.message;
-    }
-});
-
 document.getElementById('step0-btn').addEventListener('click', async () => {
     const data = await call('/earn', { amount: '1200.00', description: 'Demo: support contract renewal -- customer payment received' });
     renderOut('step0-out', data);
