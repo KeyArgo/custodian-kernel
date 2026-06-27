@@ -114,17 +114,26 @@
 <nav class="site-nav">
   <a href="/">Home</a>
   <a href="/hermes">Live Console</a>
-  <a href="/triage.html" class="active">Lie-Catch Demo</a>
+  <a href="/triage" class="active">Lie-Catch Demo</a>
   <a href="/operator" class="console-link" target="_blank" rel="noopener">⚡ Operator Panel</a>
 </nav>
 <div class="wrap">
   <header>
-    <h1>The Lie-Catch — when the AI is wrong, the kernel wins</h1>
-    <p>This page runs the real deterministic enforcement engine. <strong>Zero AI is involved here</strong> — every verdict comes from code that checks facts against a real database.</p>
-    <div style="background:#0a0e06;border:1px solid #1a2a10;border-left:3px solid #39d98a;border-radius:8px;padding:12px 16px;margin:14px 0;font-size:0.88em;line-height:1.6;color:#8ab88a;">
-      <b style="color:#39d98a;">What happened before this page:</b> The AI agent (Nemotron 3 Super) read a customer's refund request and made a recommendation — APPROVE or DENY — based on what the customer told it.<br>
-      <b style="color:#39d98a;">What happens on this page:</b> The kernel ignores the AI's recommendation and checks every factual claim the customer made against the real order database. If the AI was fooled — or if the customer lied — the kernel catches it and overrides the AI's verdict.<br>
-      <b style="color:#ff5d6c;">The key moment:</b> When you see <b style="color:#ff5d6c;">✗ CONTRADICTED</b> next to a claim, the AI recommended APPROVE based on a lie. The kernel saw through it. No code change, no retraining — the same rules, applied deterministically, every time.
+    <h1>Lie-Catch: the AI reads it, the kernel checks if it's true</h1>
+    <p style="color:var(--dim);margin:4px 0 14px">Two phases, separated by design. The AI reasons. The kernel verifies. They can disagree — and when they do, the kernel wins.</p>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:0 0 14px">
+      <div style="background:#0a0e06;border:1px solid #1a2a10;border-left:3px solid #5db0ff;border-radius:8px;padding:12px 14px;font-size:0.86em;line-height:1.65">
+        <div style="color:#5db0ff;font-weight:700;font-size:0.78em;letter-spacing:0.08em;text-transform:uppercase;margin-bottom:6px">Phase 1 · AI reads the request</div>
+        Nemotron 3 Super reads the customer's message and forms a recommendation — APPROVE or DENY — based on what they claimed. The AI can be tricked. That's fine. It isn't the last line of defense.
+      </div>
+      <div style="background:#0a0e06;border:1px solid #1a2a10;border-left:3px solid #39d98a;border-radius:8px;padding:12px 14px;font-size:0.86em;line-height:1.65">
+        <div style="color:#39d98a;font-weight:700;font-size:0.78em;letter-spacing:0.08em;text-transform:uppercase;margin-bottom:6px">Phase 2 · Kernel checks the facts</div>
+        Zero AI. The enforcement engine extracts every factual claim from the message and resolves each one against the real order database. A lie gets <span style="color:#ff5d6c;font-weight:700">✗ CONTRADICTED</span>. The AI's verdict is then overridden if the facts don't hold.
+      </div>
+    </div>
+    <div style="background:#0b0a04;border:1px solid #2a2200;border-left:3px solid #ffc857;border-radius:8px;padding:10px 14px;font-size:0.84em;color:#a09060;margin-bottom:4px">
+      <b style="color:#ffc857">The key moment to watch:</b> when the AI says APPROVE and the kernel says DENY. That gap — the AI being fooled and the kernel not caring — is what Custodian is. No other AI payment system can demonstrate this, because they stop at "did the agent ask nicely?"
     </div>
   </header>
   <div id="tiers"></div>

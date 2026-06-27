@@ -427,6 +427,45 @@
   </div>
 </section>
 
+<!-- PLAIN-ENGLISH KERNEL EXPLAINER -->
+<section id="kernel" style="padding:48px 0">
+  <div class="wrap">
+    <div class="reveal" style="background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.08); border-radius:20px; padding:40px; max-width:860px; margin:0 auto">
+      <div class="sec-eyebrow">Plain English</div>
+      <h2 style="font-size:clamp(1.4em,2.8vw,2em);margin-bottom:20px">How does the kernel actually stop the AI?</h2>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:28px;margin-bottom:28px">
+        <div>
+          <p style="color:var(--muted);line-height:1.75;font-size:0.98em">
+            Think of it like a new employee at a company. They can fill out a purchase order and decide it makes sense — but they can't <em>sign</em> their own check. The signed check is a separate system, run by people with authority the employee doesn't have.
+          </p>
+          <p style="color:var(--muted);line-height:1.75;font-size:0.98em;margin-top:14px">
+            Custodian does the same thing for AI. The agent (Nemotron) can <em>decide</em> a payment makes sense. But the actual move of money goes through a second system — the kernel — that checks the amount, the session budget, and whether the agent has been tricked. The agent never holds both keys at once.
+          </p>
+        </div>
+        <div>
+          <div style="background:rgba(255,255,255,0.03); border-radius:12px; padding:18px; font-family:'JetBrains Mono',monospace; font-size:0.78em; line-height:1.8; color:var(--muted)">
+            <div style="color:var(--amber);margin-bottom:8px">// What happens when the AI requests $180</div>
+            <div>agent → kernel: "refund $180, order #4821"</div>
+            <div style="color:var(--dim)">kernel: check per_action_cap... $250 ✓</div>
+            <div style="color:var(--dim)">kernel: check session_spent... $340 of $1000 ✓</div>
+            <div style="color:var(--dim)">kernel: check kill_switch... not set ✓</div>
+            <div style="color:var(--dim)">kernel: verify order exists... ✓</div>
+            <div style="color:var(--green)">kernel: AUTONOMOUS — stripe.charge()</div>
+            <div style="margin-top:14px;color:var(--amber)">// What happens when the AI requests $800</div>
+            <div>agent → kernel: "approve $800, order #4822"</div>
+            <div style="color:var(--dim)">kernel: check per_action_cap... $250 ✗</div>
+            <div style="color:var(--amber)">kernel: ESCALATE → SMS to operator</div>
+            <div style="color:var(--dim)">// agent waits. it cannot proceed.</div>
+          </div>
+        </div>
+      </div>
+      <div style="border-top:1px solid var(--line); padding-top:18px; color:var(--muted); font-size:0.9em; line-height:1.7">
+        <b style="color:var(--text)">Why kernel-level?</b> Because an agent running in software can, in principle, be told to bypass software-level controls. The kernel enforces egress at the OS — the agent's process literally cannot open a socket to a payment endpoint the OS hasn't allowed. A prompt can't override that. A clever argument can't override that. The model's own output can't override that.
+      </div>
+    </div>
+  </div>
+</section>
+
 <!-- COMPARE -->
 <section id="compare">
   <div class="wrap">
