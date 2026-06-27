@@ -174,12 +174,13 @@
 
     <div class="step">
         <h2>Step 3 — Approve with the real code</h2>
-        <p>The code is pre-filled from the SMS mockup above. Click Approve — money moves only after a real human confirms a code sent to their own device.</p>
+        <p>The code is pre-filled from the SMS — shown as asterisks so it stays off-screen. Click Approve.</p>
         <div class="row">
-            <input type="text" id="approve1-code" placeholder="6-digit code" maxlength="6" style="width:160px;">
+            <input type="password" id="approve1-code" placeholder="••••••" maxlength="6" style="width:160px;">
             <input type="text" id="approve1-by" placeholder="Approved by" value="Operator" style="width:120px;">
             <button id="approve1-btn">Approve</button>
         </div>
+        <div id="approve1-note" style="display:none;font-size:0.75em;color:#76b900;margin-top:4px;">✓ Code auto-filled from SMS — masked for security. Hit Approve to execute.</div>
         <div class="out" id="approve1-out"></div>
     </div>
 
@@ -241,12 +242,13 @@
 
     <div class="step">
         <h2>Step 8 — Approve the refund</h2>
-        <p>Code is pre-filled from the SMS mockup above. The refund executes only after a human approves — same pattern as the large spend.</p>
+        <p>Code is pre-filled from the SMS — masked for security. Click Approve refund to execute.</p>
         <div class="row">
-            <input type="text" id="approve2-code" placeholder="6-digit code" maxlength="6" style="width:160px;">
+            <input type="password" id="approve2-code" placeholder="••••••" maxlength="6" style="width:160px;">
             <input type="text" id="approve2-by" placeholder="Approved by" value="Operator" style="width:120px;">
             <button id="approve2-btn">Approve refund</button>
         </div>
+        <div id="approve2-note" style="display:none;font-size:0.75em;color:#76b900;margin-top:4px;">✓ Code auto-filled from SMS — masked for security. Hit Approve refund to execute.</div>
         <div class="out" id="approve2-out"></div>
     </div>
 </div>
@@ -341,7 +343,7 @@ function smsNow() {
 }
 
 let _codePoller = null;
-function startCodePoll(codeElId, approveInputId) {
+function startCodePoll(codeElId, approveInputId, noteId) {
     if (_codePoller) clearInterval(_codePoller);
     _codePoller = setInterval(async () => {
         try {
@@ -349,8 +351,13 @@ function startCodePoll(codeElId, approveInputId) {
             if (!res.ok) return;
             const d = await res.json();
             if (d.code) {
-                document.getElementById(codeElId).textContent = d.code;
+                // keep mockup blurred — code is sensitive, never shown on screen
+                document.getElementById(codeElId).textContent = '••••••';
                 if (approveInputId) document.getElementById(approveInputId).value = d.code;
+                if (noteId) {
+                    const n = document.getElementById(noteId);
+                    if (n) { n.style.display = 'block'; }
+                }
                 if (_codePoller) { clearInterval(_codePoller); _codePoller = null; }
             }
         } catch (_) {}
@@ -368,7 +375,7 @@ document.getElementById('step2-btn').addEventListener('click', async () => {
         document.getElementById('sms-time-2b').textContent = t;
         document.getElementById('sms-code-2').textContent = '••••••';
         document.getElementById('sms-banner').classList.add('show');
-        startCodePoll('sms-code-2', 'approve1-code');
+        startCodePoll('sms-code-2', 'approve1-code', 'approve1-note');
     }
 });
 
@@ -406,7 +413,7 @@ document.getElementById('refund-btn').addEventListener('click', async () => {
         document.getElementById('sms-time-7b').textContent = t;
         document.getElementById('sms-code-7').textContent = '••••••';
         document.getElementById('sms-banner-refund').classList.add('show');
-        startCodePoll('sms-code-7', 'approve2-code');
+        startCodePoll('sms-code-7', 'approve2-code', 'approve2-note');
     }
 });
 

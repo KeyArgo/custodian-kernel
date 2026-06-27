@@ -176,10 +176,11 @@
         <h2>Step 3 — Approve with the real code</h2>
         <p>Enter the 6-digit code from your phone. This code was sent to the operator's real device — nothing in the system can intercept or replay it.</p>
         <div class="row">
-            <input type="text" id="approve1-code" placeholder="6-digit code from your phone" maxlength="6" style="width:160px;">
+            <input type="password" id="approve1-code" placeholder="••••••" maxlength="6" style="width:160px;">
             <input type="text" id="approve1-by" placeholder="Approved by" value="Operator" style="width:120px;">
             <button id="approve1-btn">Approve</button>
         </div>
+        <div id="approve1-note" style="display:none;font-size:0.75em;color:#76b900;margin-top:4px;">✓ Code auto-filled from SMS — masked for security. Hit Approve to execute.</div>
         <div class="out" id="approve1-out"></div>
     </div>
 
@@ -243,10 +244,11 @@
         <h2>Step 8 — Approve the refund</h2>
         <p>Second SMS code from your phone. The refund executes only after a human enters a code from their own device — same pattern as the large spend in Step 3.</p>
         <div class="row">
-            <input type="text" id="approve2-code" placeholder="6-digit code from your phone" maxlength="6" style="width:160px;">
+            <input type="password" id="approve2-code" placeholder="••••••" maxlength="6" style="width:160px;">
             <input type="text" id="approve2-by" placeholder="Approved by" value="Operator" style="width:120px;">
             <button id="approve2-btn">Approve refund</button>
         </div>
+        <div id="approve2-note" style="display:none;font-size:0.75em;color:#76b900;margin-top:4px;">✓ Code auto-filled from SMS — masked for security. Hit Approve refund to execute.</div>
         <div class="out" id="approve2-out"></div>
     </div>
 </div>
@@ -341,7 +343,7 @@ function smsNow() {
 }
 
 let _codePoller = null;
-function startCodePoll(codeElId) {
+function startCodePoll(codeElId, approveInputId, noteId) {
     if (_codePoller) clearInterval(_codePoller);
     _codePoller = setInterval(async () => {
         try {
@@ -367,7 +369,7 @@ document.getElementById('step2-btn').addEventListener('click', async () => {
         document.getElementById('sms-time-2b').textContent = t;
         document.getElementById('sms-code-2').textContent = '••••••';
         document.getElementById('sms-banner').classList.add('show');
-        startCodePoll('sms-code-2');
+        startCodePoll('sms-code-2', 'approve1-code', 'approve1-note');
     }
 });
 
@@ -405,7 +407,7 @@ document.getElementById('refund-btn').addEventListener('click', async () => {
         document.getElementById('sms-time-7b').textContent = t;
         document.getElementById('sms-code-7').textContent = '••••••';
         document.getElementById('sms-banner-refund').classList.add('show');
-        startCodePoll('sms-code-7');
+        startCodePoll('sms-code-7', 'approve2-code', 'approve2-note');
     }
 });
 
