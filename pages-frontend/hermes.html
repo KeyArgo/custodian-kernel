@@ -194,7 +194,10 @@
         .process-step.is-active .process-title { color: var(--amber); }
         .process-step.is-blocked .process-title { color: var(--red); }
         .process-step.is-skipped { opacity: 0.45; }
-        .process-desc { display: none; }
+        .process-desc { display: block; font-size: 0.78em; color: #4a5a4a; margin-top: 2px; }
+        .process-step.is-active .process-desc,
+        .process-step.is-complete .process-desc,
+        .process-step.is-blocked .process-desc { color: #8a9a8a; }
         .process-status {
             margin-top: 6px;
             font-size: 0.74em;
@@ -463,13 +466,13 @@
             display: none;
             position: fixed;
             bottom: 24px;
-            right: 24px;
+            right: 0;
             width: 380px;
             max-height: 560px;
             background: #0d0f0a;
             border: 2px solid var(--nvidia-green);
-            border-radius: 16px;
-            box-shadow: 0 8px 40px rgba(0,0,0,0.6);
+            border-radius: 16px 0 0 16px;
+            box-shadow: -4px 8px 40px rgba(0,0,0,0.6);
             z-index: 900;
             flex-direction: column;
             overflow: hidden;
@@ -518,8 +521,7 @@
            from under it is the real fix.) */
         @media (min-width: 601px) {
             body.nemotron-chat-open .page-grid {
-                margin-left: 24px;
-                margin-right: 432px;   /* 24 gutter + 380 panel + 28 breathing room */
+                margin-right: 388px;   /* exact panel width + 8px breathing room */
                 max-width: none;
                 transition: margin 0.18s ease;
             }
@@ -527,13 +529,13 @@
         .nemotron-suggest-row { display: flex; flex-direction: column; gap: 6px; align-self: flex-start; max-width: 92%; }
         .nemotron-suggest-chip {
             background: rgba(118,185,0,0.06); border: 1px dashed rgba(118,185,0,0.4); color: #9fd968;
-            border-radius: 8px; padding: 6px 10px; font-family: inherit; font-size: 0.78em; text-align: left;
+            border-radius: 8px; padding: 7px 10px; font-family: inherit; font-size: 0.88em; text-align: left;
             cursor: pointer;
         }
         .nemotron-suggest-chip:hover { background: rgba(118,185,0,0.16); border-style: solid; }
         .nemotron-bubble {
             display: none;
-            position: fixed; bottom: 24px; right: 24px; width: 52px; height: 52px;
+            position: fixed; bottom: 24px; right: 12px; width: 52px; height: 52px;
             border-radius: 50%; background: var(--nvidia-green); border: none; cursor: pointer;
             font-size: 1.5em; box-shadow: 0 4px 20px rgba(0,0,0,0.5); z-index: 899;
             align-items: center; justify-content: center;
@@ -805,6 +807,9 @@
 
         <aside class="pipeline-rail">
             <div class="section-label">What's happening right now, live</div>
+            <div id="pipeline-idle-hint" style="display:none;font-size:0.75em;color:#5a7a5a;border:1px dashed #2a3a2a;border-radius:8px;padding:8px 10px;margin-bottom:12px;line-height:1.4;">
+                ↓ Scroll to <b style="color:#76b900">Try It Yourself</b> to fire a real decision and watch this pipeline animate step-by-step.
+            </div>
             <div class="process-diagram">
                 <div class="process-step" id="stage-observe">
                     <div class="step-marker"><span class="stage-dot"></span></div>
@@ -1062,8 +1067,16 @@
                     : '<div class="empty-state">No kernel activity yet.</div>';
 
                 const pendingRecForVerdict = codes.length > 0 ? pending[codes[0]] : null;
+                const prevLatestTs = window._lastEventTs || null;
+                const newLatestTs = events.length ? (events[0].ts || null) : null;
                 renderPipelineStage(events, pendingRecForVerdict);
                 renderVerdictPanel(events, policyLines, pendingRecForVerdict);
+                // Scroll to the live decision section when a new event arrives
+                if (newLatestTs && newLatestTs !== prevLatestTs) {
+                    window._lastEventTs = newLatestTs;
+                    const verdictEl = document.querySelector('.verdict-section');
+                    if (verdictEl) verdictEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
             } catch (e) {
                 document.getElementById('conn-dot').className = 'conn-dot down';
                 document.getElementById('conn-text').textContent = 'Error';
@@ -1084,14 +1097,19 @@
 
             if (!events.length && !pendingRec) {
                 setStage('observe', 'is-active', 'watching real signals…');
-                setStage('judge', '', '');
-                setStage('act', '', '');
-                setStage('verify', '', '');
-                setStage('prove', '', '');
+                setStage('judge', '', 'waiting for a decision to judge');
+                setStage('act', '', 'will execute or escalate once judged');
+                setStage('verify', '', 'only needed if escalated');
+                setStage('prove', '', 'logged after every action');
                 titleAct.textContent = 'ACT or ESCALATE';
                 descAct.textContent = 'In-band: executes autonomously via real Stripe. Over-band: blocked at the kernel level, a one-time code goes to a human.';
+                // Show a hint on the pipeline pointing to Try It Yourself
+                const hint = document.getElementById('pipeline-idle-hint');
+                if (hint) hint.style.display = 'block';
                 return;
             }
+            const hint = document.getElementById('pipeline-idle-hint');
+            if (hint) hint.style.display = 'none';
 
             setStage('observe', 'is-complete', 'real signals read');
             setStage('judge', 'is-complete', 'judgment made');
