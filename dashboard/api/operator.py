@@ -167,3 +167,21 @@ def resume():
     by = str(data.get('by', 'Operator'))[:100]
     result = _run_script('kill_toggle.py', 'release', '--by', by)
     return jsonify(result)
+
+
+import json as _json
+_PENDING_CODE_PATH = Path('/tmp/hermes-mount/sandbox/.hermes/skills/payments/stripe-spend/state/pending_code.json')
+
+
+@bp.route('/pending_code', methods=['GET'])
+@require_operator
+def pending_code():
+    if not _PENDING_CODE_PATH.exists():
+        return jsonify({'code': None, 'reason': 'no pending code'})
+    try:
+        data = _json.loads(_PENDING_CODE_PATH.read_text())
+    except (ValueError, OSError):
+        return jsonify({'code': None, 'reason': 'unreadable'})
+    if time.time() > data.get('expires_at', 0):
+        return jsonify({'code': None, 'reason': 'expired'})
+    return jsonify({'code': data.get('code'), 'expires_at': data.get('expires_at')})
