@@ -12,6 +12,11 @@
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://getcustodian.xyz">
 <meta property="og:site_name" content="Custodian">
+<meta property="og:image" content="https://getcustodian.xyz/og-image.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Custodian — Kernel-Enforced Authority for AI Agents">
+<meta name="twitter:description" content="Give your AI agent a company card. Under the limit it spends autonomously. Over the limit it calls you. Lies get caught. OS-level enforcement, not a prompt.">
+<meta name="twitter:image" content="https://getcustodian.xyz/og-image.png">
 <link rel="canonical" href="https://getcustodian.xyz">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -82,6 +87,34 @@
     font-size:0.74em; letter-spacing:0.14em; text-transform:uppercase; color:var(--amber2);
     border:1px solid rgba(255,176,0,0.3); background:rgba(255,176,0,0.06);
     padding:7px 15px; border-radius:100px; margin-bottom:28px}
+
+  /* employee + company card visual */
+  .card-metaphor{display:flex; gap:14px; justify-content:center; align-items:stretch;
+    flex-wrap:wrap; margin:36px auto 0; max-width:680px}
+  .cc{width:220px; border-radius:14px; padding:18px 20px; text-align:left; flex-shrink:0;
+    font-family:'JetBrains Mono',monospace; font-size:0.78em; position:relative; overflow:hidden}
+  .cc-employee{background:linear-gradient(135deg,#1a1a2e 0%,#16213e 100%);
+    border:1px solid rgba(255,255,255,0.12)}
+  .cc-company{background:linear-gradient(135deg,#1a1200 0%,#1f1600 100%);
+    border:1px solid rgba(255,176,0,0.4);
+    box-shadow:0 0 30px -8px rgba(255,176,0,0.3)}
+  .cc .chip{width:26px; height:18px; border-radius:4px; background:linear-gradient(135deg,#c8a94a,#a07d30);
+    margin-bottom:18px; display:flex; align-items:center; justify-content:center}
+  .cc .chip::after{content:''; width:8px; height:8px; border:1px solid rgba(0,0,0,0.2);
+    border-radius:1px; background:linear-gradient(135deg,#d4b35a,#8a6525)}
+  .cc .name{font-size:0.75em; letter-spacing:0.06em; color:rgba(255,255,255,0.5); margin-bottom:4px}
+  .cc .val{font-weight:700; letter-spacing:0.04em}
+  .cc-employee .val{color:rgba(255,255,255,0.9)}
+  .cc-company .val{color:var(--amber2)}
+  .cc .limit-row{display:flex; justify-content:space-between; margin-top:14px; padding-top:10px;
+    border-top:1px solid rgba(255,255,255,0.08)}
+  .cc .limit-key{font-size:0.7em; color:rgba(255,255,255,0.35); letter-spacing:0.08em}
+  .cc .limit-val{font-size:0.7em; color:var(--green); letter-spacing:0.06em}
+  .cc-vs{display:flex; align-items:center; color:var(--dim); font-size:0.9em; padding:0 4px; flex-shrink:0}
+  .cc-enforced{text-align:center; font-family:'JetBrains Mono',monospace; font-size:0.68em;
+    color:var(--amber); letter-spacing:0.1em; background:rgba(255,176,0,0.07);
+    border:1px solid rgba(255,176,0,0.2); border-radius:8px; padding:10px 14px;
+    margin-top:12px; width:100%; max-width:680px}
   .eyebrow .pulse{width:7px; height:7px; border-radius:50%; background:var(--green);
     box-shadow:0 0 0 0 rgba(46,230,166,0.6); animation:pulse 2s infinite}
   @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(46,230,166,0.5)}70%{box-shadow:0 0 0 9px rgba(46,230,166,0)}100%{box-shadow:0 0 0 0 rgba(46,230,166,0)}}
@@ -241,7 +274,7 @@
       <a href="#proof">Live proof</a>
       <a href="#compare">Compare</a>
       <a href="#video">Demo</a>
-      <a href="/triage.html">Lie-Catch</a>
+      <a href="/triage">Lie-Catch</a>
       <a href="/operator" target="_blank" rel="noopener">Operator Panel</a>
       <a class="btn btn-primary" href="/hermes">Launch live console →</a>
     </div>
@@ -251,16 +284,41 @@
 <!-- HERO -->
 <header class="hero">
   <div class="wrap">
-    <div class="eyebrow"><span class="pulse"></span> Give your AI agent a company card</div>
-    <h1>Your AI can spend.<br><span class="grad">It can't overspend, self-approve, or lie.</span></h1>
-    <p class="lede">Custodian works like a company card + expense policy for AI agents. Under the limit, it spends autonomously. Over the limit, it calls you first. If a customer lies to get a refund, the kernel catches it — regardless of what the AI concluded. <b>The rules are enforced below the agent at the OS level, not promised in a prompt.</b></p>
-    <div class="hero-cta">
-      <a class="btn btn-primary" href="/hermes">▶ See it spend real money</a>
-      <a class="btn btn-ghost" href="/triage.html">Try lying to it →</a>
+    <div class="eyebrow"><span class="pulse"></span> NVIDIA · Nous Research · Stripe · Hackathon 2026</div>
+    <h1>Give your AI a company card.<br><span class="grad">With a kernel that actually enforces it.</span></h1>
+    <p class="lede">A new employee gets a company card with a spending limit. They can buy what they need — but can't approve their own expense reports, and can't lie about a receipt once it's in the ledger. <b>Custodian is that card, that limit, and that ledger — for AI agents.</b> Enforced at the OS level, not promised in a prompt.</p>
+
+    <!-- employee + company card visual -->
+    <div class="card-metaphor">
+      <div class="cc cc-employee">
+        <div class="chip"></div>
+        <div class="name">AGENT</div>
+        <div class="val">Nemotron 3 Super</div>
+        <div class="limit-row">
+          <span class="limit-key">ROLE</span>
+          <span class="limit-val">REQUESTS ONLY</span>
+        </div>
+      </div>
+      <div class="cc-vs">+</div>
+      <div class="cc cc-company">
+        <div class="chip"></div>
+        <div class="name">AUTHORITY</div>
+        <div class="val">Custodian Kernel</div>
+        <div class="limit-row">
+          <span class="limit-key">PER-ACTION CAP</span>
+          <span class="limit-val" id="s-cap">$250</span>
+        </div>
+      </div>
     </div>
-    <div class="specs" id="specs">
+    <div class="cc-enforced">LIMITS ENFORCED BELOW THE AGENT · OS-LEVEL · NOT A PROMPT · NOT A PROMISE</div>
+
+    <div class="hero-cta" style="margin-top:28px">
+      <a class="btn btn-primary" href="/operator" target="_blank" rel="noopener">▶ Run the live demo</a>
+      <a class="btn btn-ghost" href="/hermes">Watch it spend real money →</a>
+    </div>
+    <div class="specs" id="specs" style="margin-top:8px">
       <div class="spec"><div class="k">Authority band</div><div class="v" id="s-band">—</div></div>
-      <div class="spec live"><div class="k">Autonomous left</div><div class="v" id="s-remaining">—</div></div>
+      <div class="spec live"><div class="k">Session budget left</div><div class="v" id="s-remaining">—</div></div>
       <div class="spec"><div class="k">Decision modules</div><div class="v" id="s-packs">3</div></div>
       <div class="spec"><div class="k">Boundary</div><div class="v enf">ENFORCED AT KERNEL</div></div>
     </div>
@@ -428,8 +486,8 @@
       <h2>Hand your agent a wallet. Keep the keys.</h2>
       <p>Money is just the first module. The same kernel governs any consequential action an AI agent can take — provisioning, payroll, data egress, infrastructure.</p>
       <div class="hero-cta" style="margin-bottom:0">
-        <a class="btn btn-primary" href="/hermes">▶ Launch the live console</a>
-        <a class="btn btn-ghost" href="/triage.html" target="_blank" rel="noopener">Watch the lie-catch</a>
+        <a class="btn btn-primary" href="/operator" target="_blank" rel="noopener">▶ Run the demo yourself</a>
+        <a class="btn btn-ghost" href="/hermes">Open the live console →</a>
       </div>
     </div>
   </div>
@@ -462,6 +520,7 @@
       const r=await fetch(API+'/hermes/summary'); if(r.ok){
         const d=await r.json(); const a=d.authority||{};
         if(a.band){const b=document.getElementById('s-band'); if(b)b.textContent=a.band;}
+        if(a.per_action_cap!=null){const el=document.getElementById('s-cap'); if(el)el.textContent=money(a.per_action_cap);}
         if(a.autonomous_remaining!=null){
           const rem=money(a.autonomous_remaining);
           ['s-remaining','m-remaining'].forEach(id=>{const el=document.getElementById(id); if(el)el.textContent=rem;});
