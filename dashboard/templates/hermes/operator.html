@@ -24,12 +24,28 @@
         white-space: pre-wrap; max-height: 200px; overflow-y: auto; display: none; }
     .out.show { display: block; }
     .out.err { border-color: #ff3b3b; color: #ff9b9b; }
-    .sms-banner { display: none; background: #050d00; border: 1px solid #76b900; border-radius: 8px;
-        padding: 10px 14px; margin-top: 10px; font-size: 0.82em; }
-    .sms-banner.show { display: flex; align-items: center; gap: 10px; }
-    .sms-icon { font-size: 1.4em; }
-    .sms-text { color: #b0e060; line-height: 1.5; }
-    .sms-text b { color: #76b900; }
+    /* ---- SMS phone mockup ---- */
+    .sms-banner { display: none; margin-top: 14px; }
+    .sms-banner.show { display: block; }
+    .phone-wrap { background: #111; border: 2px solid #333; border-radius: 20px; padding: 12px 10px;
+        max-width: 320px; font-family: -apple-system, 'Helvetica Neue', sans-serif; }
+    .phone-top { display: flex; align-items: center; justify-content: space-between;
+        font-size: 10px; color: #888; padding: 0 4px 8px; border-bottom: 1px solid #222; margin-bottom: 10px; }
+    .phone-top .carrier { letter-spacing: 0.05em; }
+    .phone-top .signal { display: flex; gap: 2px; align-items: flex-end; }
+    .phone-top .signal span { background: #888; border-radius: 1px; width: 3px; display: inline-block; }
+    .notif-card { background: #1c1c1e; border-radius: 12px; padding: 12px 14px; }
+    .notif-header { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+    .notif-app-icon { width: 22px; height: 22px; border-radius: 6px; background: #2cc64f;
+        display: flex; align-items: center; justify-content: center; font-size: 12px; flex-shrink: 0; }
+    .notif-app-name { font-size: 11px; color: #999; font-weight: 600; text-transform: uppercase;
+        letter-spacing: 0.06em; }
+    .notif-time { margin-left: auto; font-size: 11px; color: #666; }
+    .notif-sender { font-size: 13px; color: #e8e8e8; font-weight: 600; margin-bottom: 4px; }
+    .notif-body { font-size: 13px; color: #c8c8c8; line-height: 1.4; }
+    .notif-code { color: #2cc64f; font-weight: 700; letter-spacing: 0.12em; font-size: 15px; }
+    .sms-note { margin-top: 10px; font-size: 0.78em; color: #76b900; font-family: 'Courier New', monospace;
+        padding: 6px 10px; border: 1px solid #1a2a10; border-radius: 6px; background: #050d00; }
 
     /* ---- instructions panel ---- */
     .instructions { background: #08080a; border: 1px solid #1e1e2a; border-left: 3px solid #5db0ff;
@@ -103,9 +119,26 @@
         <p>$3,500.00 exceeds the per-action cap. The kernel cannot approve this — it escalates and sends a real Twilio Verify code to the operator's phone. Watch your phone.</p>
         <button id="step2-btn">Run: request $3,500.00 (NAS license renewal)</button>
         <div class="sms-banner" id="sms-banner">
-            <div class="sms-icon">📱</div>
-            <div class="sms-text"><b>Twilio Verify code sent</b> to operator phone<br>
-            Enter the 6-digit code from your SMS in Step 3 below.</div>
+            <div class="phone-wrap">
+                <div class="phone-top">
+                    <span class="carrier">Verizon</span>
+                    <div class="signal">
+                        <span style="height:4px"></span><span style="height:6px"></span>
+                        <span style="height:8px"></span><span style="height:10px"></span>
+                    </div>
+                    <span id="sms-time-2">—</span>
+                </div>
+                <div class="notif-card">
+                    <div class="notif-header">
+                        <div class="notif-app-icon">💬</div>
+                        <span class="notif-app-name">Messages</span>
+                        <span class="notif-time" id="sms-time-2b">now</span>
+                    </div>
+                    <div class="notif-sender">Twilio Verify</div>
+                    <div class="notif-body">Your <b>Custodian</b> verification code is: <span class="notif-code" id="sms-code-2">••••••</span><br>This code expires in 10 minutes. Don't share it.</div>
+                </div>
+            </div>
+            <div class="sms-note">⬆ Real SMS just arrived on operator's phone · Enter the 6-digit code in Step 3</div>
         </div>
         <div class="out" id="step2-out"></div>
     </div>
@@ -153,9 +186,26 @@
             <button id="refund-btn">Run: refund $85.00</button>
         </div>
         <div class="sms-banner" id="sms-banner-refund">
-            <div class="sms-icon">📱</div>
-            <div class="sms-text"><b>Twilio Verify code sent</b> to operator phone<br>
-            Enter the 6-digit code in Step 8 below to approve the refund.</div>
+            <div class="phone-wrap">
+                <div class="phone-top">
+                    <span class="carrier">Verizon</span>
+                    <div class="signal">
+                        <span style="height:4px"></span><span style="height:6px"></span>
+                        <span style="height:8px"></span><span style="height:10px"></span>
+                    </div>
+                    <span id="sms-time-7">—</span>
+                </div>
+                <div class="notif-card">
+                    <div class="notif-header">
+                        <div class="notif-app-icon">💬</div>
+                        <span class="notif-app-name">Messages</span>
+                        <span class="notif-time" id="sms-time-7b">now</span>
+                    </div>
+                    <div class="notif-sender">Twilio Verify</div>
+                    <div class="notif-body">Your <b>Custodian</b> verification code is: <span class="notif-code" id="sms-code-7">••••••</span><br>This code expires in 10 minutes. Don't share it.</div>
+                </div>
+            </div>
+            <div class="sms-note">⬆ Real SMS just arrived on operator's phone · Enter the 6-digit code in Step 8</div>
         </div>
         <div class="out" id="refund-out"></div>
     </div>
@@ -256,11 +306,19 @@ document.getElementById('step1-btn').addEventListener('click', async () => {
     }
 });
 
+function smsNow() {
+    const d = new Date();
+    return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+}
+
 document.getElementById('step2-btn').addEventListener('click', async () => {
     const data = await call('/spend', { amount: '3500.00', description: 'Demo: NAS license renewal' });
     renderOut('step2-out', data);
     const text = data.error || [data.stdout, data.stderr].filter(Boolean).join('\n');
     if (text.includes('TWILIO') || text.includes('approval code') || text.includes('escalation')) {
+        const t = smsNow();
+        document.getElementById('sms-time-2').textContent = t;
+        document.getElementById('sms-time-2b').textContent = t;
         document.getElementById('sms-banner').classList.add('show');
     }
 });
@@ -294,6 +352,9 @@ document.getElementById('refund-btn').addEventListener('click', async () => {
     renderOut('refund-out', data);
     const text = data.error || [data.stdout, data.stderr].filter(Boolean).join('\n');
     if (text.includes('TWILIO') || text.includes('approval code') || text.includes('escalation')) {
+        const t = smsNow();
+        document.getElementById('sms-time-7').textContent = t;
+        document.getElementById('sms-time-7b').textContent = t;
         document.getElementById('sms-banner-refund').classList.add('show');
     }
 });
