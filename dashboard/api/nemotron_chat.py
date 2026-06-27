@@ -315,8 +315,30 @@ There is also a mini live audit feed on this page showing the last ~7 events fro
 When the operator mentions what they just ran, you can reference that action.
 """
 
+_TRIAGE_GUIDANCE = """
+PAGE CONTEXT: The visitor is on the LIE-CATCH DEMO page (/triage). This page shows the verifier
+layer in action: Nemotron reads a customer message and recommends APPROVE or DENY based on what
+was claimed, then the deterministic verifier checks every factual claim against the real order
+record. The visitor can try preset lies (never arrived, defective, double-billed) or write their
+own. The interesting moment is when the AI is fooled and the kernel isn't.
+
+Your role here: help the visitor understand WHY the two-layer design matters — not just that it
+works, but what would break if the verifier didn't exist (the AI alone could be socially engineered
+into approving a false refund). The verifier is purely deterministic — zero AI. It can't be
+talked into anything. The AI can. That's the gap this page demonstrates.
+
+Key facts about the triage sandbox order: ord_6006, $80.00, DELIVERED, no defect on file, 19 days
+old. So "it never arrived" is CONTRADICTED (delivered). "It arrived defective" is CONTRADICTED
+(no defect on file). "I want to return within the window" is fact-checkable (19 days — depends on
+the policy window, which the verifier applies). "I was charged twice" is CONTRADICTED (one charge).
+
+IMPORTANT: Do NOT use [[jump:KEY|label]] syntax — this page has no dashboard sections to navigate.
+Plain prose only. Do offer [[suggest:...]] questions to continue the tour.
+"""
+
 _PAGE_GUIDANCE: dict[str, str] = {
     'operator': _OPERATOR_GUIDANCE,
+    'triage': _TRIAGE_GUIDANCE,
 }
 
 

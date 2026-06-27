@@ -357,5 +357,159 @@ async function runCustom() {
   }
 }
 </script>
+
+<!-- ── NEMOTRON WIDGET (shared across all pages) ────────────────────── -->
+<style>
+#tr-nemo-bubble{position:fixed;bottom:24px;right:24px;width:52px;height:52px;border-radius:50%;
+  background:#08100a;border:2px solid #76b900;cursor:pointer;display:flex;align-items:center;
+  justify-content:center;font-size:1.4em;z-index:1000;box-shadow:0 4px 20px rgba(118,185,0,0.3);
+  transition:transform .15s}
+#tr-nemo-bubble:hover{transform:scale(1.08)}
+#tr-nemo-panel{position:fixed;bottom:86px;right:24px;width:340px;max-height:480px;
+  background:#060c08;border:1px solid #1e3020;border-radius:16px;display:none;
+  flex-direction:column;z-index:999;box-shadow:0 8px 40px rgba(0,0,0,0.75);overflow:hidden}
+.tr-np-hdr{display:flex;align-items:center;gap:10px;padding:13px 16px;border-bottom:1px solid #1a2a10;
+  background:rgba(118,185,0,0.04)}
+.tr-np-body{flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:10px;
+  max-height:300px;font-size:0.83em;line-height:1.6;color:#c8d8c0}
+.tr-np-foot{border-top:1px solid #1a2a10;padding:10px 12px;display:flex;gap:8px}
+.tr-np-input{flex:1;background:#0e1a10;border:1px solid #2a3a1a;border-radius:8px;color:#ccc;
+  font-size:0.85em;padding:8px 12px;outline:none;font-family:inherit}
+.tr-np-send{background:rgba(118,185,0,0.15);border:1px solid #76b900;color:#76b900;
+  border-radius:8px;padding:8px 14px;cursor:pointer;font-family:inherit}
+.tr-np-send:hover{background:rgba(118,185,0,0.28)}
+.tr-msg-user{align-self:flex-end;background:rgba(118,185,0,0.1);border:1px solid rgba(118,185,0,0.2);
+  border-radius:12px 12px 3px 12px;padding:8px 12px;max-width:88%;word-break:break-word}
+.tr-msg-bot{align-self:flex-start;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.07);
+  border-radius:12px 12px 12px 3px;padding:8px 12px;max-width:92%;word-break:break-word}
+.tr-suggest-row{display:flex;flex-direction:column;gap:6px;align-self:flex-start;max-width:94%;margin-top:4px}
+.tr-suggest-label{font-size:0.68em;letter-spacing:.1em;text-transform:uppercase;color:rgba(118,185,0,0.4);font-family:monospace}
+.tr-suggest-chip{background:rgba(118,185,0,0.07);border:1px solid rgba(118,185,0,0.3);color:#9fd968;
+  border-radius:9px;padding:8px 12px;font-family:inherit;font-size:0.86em;text-align:left;
+  cursor:pointer;display:flex;align-items:flex-start;gap:7px}
+.tr-suggest-chip::before{content:'→';color:rgba(118,185,0,0.45);flex-shrink:0}
+.tr-suggest-chip:hover{background:rgba(118,185,0,0.14);border-color:rgba(118,185,0,0.55);color:#c0ff88}
+</style>
+
+<button id="tr-nemo-bubble" title="Ask Nemotron about the lie-catch demo">🤖</button>
+<div id="tr-nemo-panel">
+  <div class="tr-np-hdr">
+    <span style="font-size:1.05em">🤖</span>
+    <div>
+      <div style="font-size:0.78em;font-weight:700;color:#76b900;letter-spacing:.04em">Nemotron 3 Super</div>
+      <div style="font-size:0.67em;color:#3a5a3a">intelligence layer · lie-catch guide</div>
+    </div>
+    <button id="tr-nemo-close" style="all:unset;cursor:pointer;color:#444;font-size:1.2em;margin-left:auto;padding:4px 6px">✕</button>
+  </div>
+  <div id="tr-nemo-body" class="tr-np-body"></div>
+  <div class="tr-np-foot">
+    <input id="tr-nemo-input" class="tr-np-input" type="text" placeholder="Ask why the kernel overrides the AI…">
+    <button id="tr-nemo-send" class="tr-np-send">→</button>
+  </div>
+</div>
+
+<script>
+(function(){
+const HISTORY_KEY = 'custodian_nemotron_history';
+const TRIAGE_POOL = [
+    "What kinds of lies can the verifier actually catch — and which ones slip through?",
+    "How does a contradicted claim physically stop money from moving?",
+    "What happens if the AI says APPROVE and the verifier says DENY — who wins?",
+    "Why can't the AI just rephrase the request to avoid the verifier?",
+    "Where does the verifier actually run — is it AI too?",
+    "What would it take to fool the verifier rather than the AI?",
+    "Why does it matter that the AI and the verifier are separate layers?",
+    "What happens after a DENY here — does it loop back to the AI?",
+    "How does the kernel know what the 'real' facts are to check against?",
+    "Can you walk me through the full path from lie to audit log entry?",
+];
+let poolIdx = 0;
+function nextSuggest(skip){
+    let tries=0;
+    while(tries<TRIAGE_POOL.length){
+        const q=TRIAGE_POOL[poolIdx%TRIAGE_POOL.length]; poolIdx++; tries++;
+        if(!skip.has(q)) return q;
+    }
+    return TRIAGE_POOL[0];
+}
+
+const history = (()=>{try{return JSON.parse(sessionStorage.getItem(HISTORY_KEY)||'[]')}catch{return []}})();
+const bubble  = document.getElementById('tr-nemo-bubble');
+const panel   = document.getElementById('tr-nemo-panel');
+const body    = document.getElementById('tr-nemo-body');
+const input   = document.getElementById('tr-nemo-input');
+const sendBtn = document.getElementById('tr-nemo-send');
+const closeBtn= document.getElementById('tr-nemo-close');
+let opened = false;
+
+function addMsg(text, role){
+    const d=document.createElement('div');
+    d.className=role==='user'?'tr-msg-user':'tr-msg-bot';
+    d.textContent=text;
+    body.appendChild(d); body.scrollTop=body.scrollHeight;
+    return d;
+}
+
+function renderAnswer(raw){
+    const suggestions=[];
+    let text=raw.replace(/\[\[suggest:([^\]]+)\]\]/g,(_,q)=>{suggestions.push(q.trim());return '';})
+               .replace(/\[\[(?:jump|entry):[^\]]*\]\]/g,'').trim();
+    const d=document.createElement('div'); d.className='tr-msg-bot'; d.textContent=text;
+    body.appendChild(d);
+    // Guarantee chips
+    const skip=new Set(suggestions);
+    while(suggestions.length<2){suggestions.push(nextSuggest(skip));skip.add(suggestions[suggestions.length-1]);}
+    const row=document.createElement('div'); row.className='tr-suggest-row';
+    const lbl=document.createElement('div'); lbl.className='tr-suggest-label'; lbl.textContent='Explore next →';
+    row.appendChild(lbl);
+    suggestions.slice(0,3).forEach(q=>{
+        const chip=document.createElement('button'); chip.className='tr-suggest-chip'; chip.textContent=q;
+        chip.addEventListener('click',()=>{chip.disabled=true;chip.style.opacity='.4';input.value=q;send();});
+        row.appendChild(chip);
+    });
+    body.appendChild(row); body.scrollTop=body.scrollHeight;
+}
+
+function open(){
+    panel.style.display='flex'; bubble.style.display='none';
+    if(!opened){
+        opened=true;
+        const thinking=addMsg('…','bot');
+        const greet=history.length>0
+            ?'We were just talking on another page. I\'m now on the lie-catch demo. Introduce yourself in one sentence as the intelligence layer that reads requests — and tell the visitor in one sentence what this page specifically demonstrates about how the verifier catches lies.'
+            :'Greet in 2 sentences: you\'re Nemotron on the lie-catch demo page. This page shows what happens when the AI (you) gets fooled by a lying customer — and the deterministic verifier catches it anyway. End with one [[suggest:]] question to draw them in.';
+        fetch('/api/v1/nemotron/ask',{method:'POST',headers:{'Content-Type':'application/json'},
+            body:JSON.stringify({question:greet,history:history.slice(-4),page:'triage'})
+        }).then(r=>r.json()).then(d=>{thinking.remove();renderAnswer(d.answer||"I'm Nemotron — try a lie above and ask me what the kernel found.");})
+          .catch(()=>{thinking.remove();addMsg("I'm Nemotron — try a lie above and ask me what the kernel found.",'bot');});
+    }
+    input.focus();
+}
+
+bubble.addEventListener('click',open);
+closeBtn.addEventListener('click',()=>{panel.style.display='none';bubble.style.display='flex';});
+
+async function send(){
+    const q=input.value.trim(); if(!q) return;
+    input.value=''; sendBtn.disabled=true;
+    addMsg(q,'user');
+    const thinking=addMsg('…','bot');
+    try{
+        const r=await fetch('/api/v1/nemotron/ask',{method:'POST',headers:{'Content-Type':'application/json'},
+            body:JSON.stringify({question:q,history:history.slice(-8),page:'triage'})});
+        const d=await r.json(); thinking.remove();
+        const ans=(d.answer||d.error||'No answer.').trim();
+        renderAnswer(ans);
+        history.push({role:'user',content:q});
+        history.push({role:'assistant',content:ans.replace(/\[\[.*?\]\]/g,'').trim()});
+        try{sessionStorage.setItem(HISTORY_KEY,JSON.stringify(history.slice(-16)));}catch{}
+    }catch(e){thinking.remove();addMsg('Could not reach Nemotron right now.','bot');}
+    finally{sendBtn.disabled=false;input.focus();}
+}
+
+sendBtn.addEventListener('click',send);
+input.addEventListener('keydown',e=>{if(e.key==='Enter')send();});
+})();
+</script>
 </body>
 </html>
