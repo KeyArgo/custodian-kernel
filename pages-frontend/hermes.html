@@ -368,6 +368,10 @@
             100% { background: transparent; outline: 2px solid transparent; }
         }
         .event .amount { color: #d4d4d4; min-width: 64px; text-align: right; }
+        .entry-ask-btn { all: unset; cursor: pointer; font-size: 0.72em; color: #555; border: 1px solid #2a2a2a; border-radius: 5px; padding: 2px 7px; margin-left: 4px; white-space: nowrap; transition: color .15s, border-color .15s; }
+        .entry-ask-btn:hover:not(:disabled) { color: var(--amber); border-color: var(--amber); }
+        .entry-ask-btn:disabled { opacity: 0.5; cursor: default; }
+        .entry-reason { flex-basis: 100%; font-size: 0.83em; color: #888; line-height: 1.55; padding: 6px 0 2px 0; font-style: italic; border-top: 1px solid #1a1a1a; margin-top: 4px; }
 
         .empty-state { padding: 24px; text-align: center; color: #5a5a5a; font-size: 0.85em; }
 
@@ -995,6 +999,9 @@
             reportError(String(e.reason), e.reason && e.reason.stack, 'unhandledrejection');
         });
 
+        // Nemotron explanations cached by entry ts so poll re-renders preserve them
+        const _entryExplanations = new Map();
+
         function renderEvent(ev) {
             const badgeClass = ev.event || 'unknown';
             const label = (ev.event || 'unknown').replace(/_/g, ' ');
@@ -1004,13 +1011,46 @@
                     ? `denied by ${ev.denied_by}`
                     : '';
             const whoHtml = who ? `<div class="who">${escapeHtml(who)}</div>` : '';
-            return `<div class="event" data-ts="${escapeHtml(String(ev.ts))}">
+            const tsKey = String(ev.ts);
+            const cached = _entryExplanations.get(tsKey);
+            const evMini = JSON.stringify({event:ev.event,amount:ev.amount,description:ev.description,band:ev.band,reason:ev.reason,iso:ev.iso});
+            const reasonHtml = cached
+                ? `<div class="entry-reason">${escapeHtml(cached)}</div>`
+                : `<button class="entry-ask-btn" data-ts="${escapeHtml(tsKey)}"
+                     data-ev="${escapeHtml(evMini).replace(/"/g,'&quot;')}"
+                     title="Ask Nemotron to explain this decision">Why?</button>
+                   <div class="entry-reason" data-ts="${escapeHtml(tsKey)}" style="display:none"></div>`;
+            return `<div class="event" data-ts="${escapeHtml(tsKey)}">
                 <div class="ts">${escapeHtml(fmtTime(ev.iso))}</div>
                 <div class="badge ${escapeHtml(badgeClass)}">${escapeHtml(label)}</div>
                 <div class="desc">${escapeHtml(ev.description || '')}${whoHtml}</div>
                 <div class="amount">${ev.amount != null ? fmtUSD(ev.amount) : ''}</div>
+                ${reasonHtml}
             </div>`;
         }
+
+        // Delegated "Why?" click handler — ask Nemotron to explain a specific audit entry
+        document.addEventListener('click', async (e) => {
+            const btn = e.target.closest('.entry-ask-btn');
+            if (!btn) return;
+            btn.disabled = true; btn.textContent = '…';
+            const tsKey = btn.dataset.ts;
+            let evData = {};
+            try { evData = JSON.parse(btn.dataset.ev || '{}'); } catch (_) {}
+            const q = `Explain this audit entry in one plain-English paragraph (no bullets, under 80 words): event="${evData.event}", amount=${evData.amount != null ? '$'+evData.amount : 'none'}, description="${evData.description||''}", band=${evData.band||'?'}, kernel reason="${evData.reason||'none'}". Be specific about what the kernel decided and why — not generic.`;
+            try {
+                const r = await fetch('/api/v1/nemotron/ask', {
+                    method: 'POST', headers: {'Content-Type':'application/json'},
+                    body: JSON.stringify({ question: q, history: [] }),
+                });
+                const d = await r.json();
+                const answer = (d.answer || '').replace(/\[\[(jump|entry|suggest):[^\]]*\]\]/g,'').trim() || 'No explanation returned.';
+                _entryExplanations.set(tsKey, answer);
+                const el = document.querySelector(`.entry-reason[data-ts="${tsKey}"]`);
+                if (el) { el.textContent = answer; el.style.display = 'block'; }
+                btn.remove();
+            } catch (_) { btn.disabled = false; btn.textContent = 'Why?'; }
+        });
 
         function renderPolicyLine(line) {
             let cls = 'other';
