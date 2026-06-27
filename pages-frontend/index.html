@@ -396,9 +396,9 @@
       <div class="stage s1 reveal">
         <div class="num">01 · AI JUDGMENT</div>
         <div class="ic">🤖</div>
-        <h4>The agent requests</h4>
-        <p>Nemotron reads the email, invoice, or task and proposes an action — refund, payment, provision a GPU. It recommends. It never decides money.</p>
-        <span class="role">can be wrong · can lie</span>
+        <h4>The intelligence layer</h4>
+        <p>Nemotron reads messy, unstructured customer messages and extracts structured claims — was it delivered? in the return window? defective? — assigns confidence, and proposes a disposition it has zero power to act on. Everything after that is deterministic code.</p>
+        <span class="role">can be wrong · can lie · doesn't matter</span>
       </div>
       <div class="stage s2 reveal">
         <div class="num">02 · VERIFIER</div>
@@ -557,9 +557,10 @@
           <tr><td class="feat">Catches the agent <b>lying</b> — facts vs ground truth</td><td class="x">✕ none</td><td class="usc col-us">✓ only us</td></tr>
           <tr><td class="feat">Enforcement <b>below</b> the agent — kernel, not API policy</td><td class="x">✕ none</td><td class="usc col-us">✓ only us</td></tr>
           <tr><td class="feat">Self-hosted · non-custodial · rail-agnostic</td><td class="x">✕ they hold the funds</td><td class="usc col-us">✓ only us</td></tr>
+          <tr><td class="feat">Model-agnostic enforcement — swap Gemini, GPT, or a local DGX model; kernel safety properties don't change</td><td class="x">✕ coupled to their stack</td><td class="usc col-us">✓ LLMClient Protocol</td></tr>
         </tbody>
       </table>
-      <p style="padding:14px 18px;font-size:0.8em;color:var(--dim);border-top:1px solid var(--line);">Our differentiator isn't payment infrastructure — it's enforcement architecture. The kernel sits <em>underneath</em> whatever rails you use. Plug in Stripe, a bank API, or a stablecoin — the enforcement model doesn't change.</p>
+      <p style="padding:14px 18px;font-size:0.8em;color:var(--dim);border-top:1px solid var(--line);">Our differentiator isn't payment infrastructure — it's enforcement architecture. The kernel sits <em>underneath</em> whatever rails and whatever model you use. Plug in Stripe, a bank API, or a stablecoin; swap Nemotron for any other model — the enforcement model doesn't change.</p>
     </div>
   </div>
 </section>
