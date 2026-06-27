@@ -410,38 +410,41 @@ document.getElementById('approve2-btn').addEventListener('click', async () => {
 
 }); // DOMContentLoaded
 
-// ----- Admin Reset (password-gated, collapsed by default) -----
-document.getElementById('reset-toggle').addEventListener('click', () => {
-    const body = document.getElementById('reset-body');
-    const tog = document.getElementById('reset-toggle');
-    const open = body.style.display === 'block';
-    body.style.display = open ? 'none' : 'block';
-    tog.textContent = open ? '▸ Admin reset' : '▾ Admin reset';
-});
+// Admin Reset listeners — in a separate DOMContentLoaded so they run after
+// the reset HTML (which is below this script tag) exists in the DOM.
+document.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('reset-toggle').addEventListener('click', () => {
+        const body = document.getElementById('reset-body');
+        const tog = document.getElementById('reset-toggle');
+        const open = body.style.display === 'block';
+        body.style.display = open ? 'none' : 'block';
+        tog.textContent = open ? '▸ Admin reset' : '▾ Admin reset';
+    });
 
-document.getElementById('reset-btn').addEventListener('click', async () => {
-    const pw = document.getElementById('reset-pw').value;
-    if (!pw) { document.getElementById('reset-out').textContent = 'Enter the operator password first.'; return; }
-    document.getElementById('reset-out').textContent = 'Resetting…';
-    try {
-        const r = await fetch(API + '/reset', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({ password: pw }),
-        });
-        const d = await r.json();
-        if (d.ok) {
-            document.getElementById('reset-out').style.color = '#2ee6a6';
-            document.getElementById('reset-out').textContent = '✓ Reset complete:\n' + (d.steps || []).join('\n');
-            document.getElementById('reset-pw').value = '';
-        } else {
+    document.getElementById('reset-btn').addEventListener('click', async () => {
+        const pw = document.getElementById('reset-pw').value;
+        if (!pw) { document.getElementById('reset-out').textContent = 'Enter the operator password first.'; return; }
+        document.getElementById('reset-out').textContent = 'Resetting…';
+        try {
+            const r = await fetch(API + '/reset', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ password: pw }),
+            });
+            const d = await r.json();
+            if (d.ok) {
+                document.getElementById('reset-out').style.color = '#2ee6a6';
+                document.getElementById('reset-out').textContent = '✓ Reset complete:\n' + (d.steps || []).join('\n');
+                document.getElementById('reset-pw').value = '';
+            } else {
+                document.getElementById('reset-out').style.color = '#ff5c5c';
+                document.getElementById('reset-out').textContent = '✗ ' + (d.error || 'Failed');
+            }
+        } catch(e) {
             document.getElementById('reset-out').style.color = '#ff5c5c';
-            document.getElementById('reset-out').textContent = '✗ ' + (d.error || 'Failed');
+            document.getElementById('reset-out').textContent = '✗ Network error: ' + e.message;
         }
-    } catch(e) {
-        document.getElementById('reset-out').style.color = '#ff5c5c';
-        document.getElementById('reset-out').textContent = '✗ Network error: ' + e.message;
-    }
+    });
 });
 </script>
 
