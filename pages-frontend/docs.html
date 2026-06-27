@@ -1,0 +1,686 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<title>Custodian Docs — How kernel-enforced AI authority works</title>
+<meta name="description" content="Documentation for Custodian: architecture, kernel enforcement, Nemotron intelligence layer, kill switch, lie-catch, API reference, and FAQ.">
+<style>
+:root {
+  --bg:       #080b10;
+  --panel:    #0e131c;
+  --panel2:   #0a0e16;
+  --sidebar:  #090c14;
+  --line:     #1c2535;
+  --line2:    #232d3f;
+  --text:     #dde6f0;
+  --muted:    #8a97ad;
+  --dim:      #4a5568;
+  --green:    #2ee6a6;
+  --amber:    #ffb000;
+  --amber2:   #ffc857;
+  --red:      #ff4d4d;
+  --blue:     #5db0ff;
+  --nv:       #76b900;
+  --mono:     'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{
+  background:var(--bg);color:var(--text);
+  font:15px/1.7 ui-sans-serif,system-ui,-apple-system,'Segoe UI',Roboto,Helvetica,Arial;
+  display:flex;flex-direction:column;min-height:100vh;
+}
+a{color:var(--blue);text-decoration:none}
+a:hover{text-decoration:underline}
+code{font-family:var(--mono);font-size:0.85em;background:rgba(255,255,255,0.05);
+  padding:2px 6px;border-radius:4px;color:var(--amber2)}
+pre{font-family:var(--mono);font-size:0.82em;background:var(--panel2);border:1px solid var(--line2);
+  border-radius:10px;padding:18px 20px;overflow-x:auto;line-height:1.7;color:#c8d8c0;margin:18px 0}
+pre code{background:none;padding:0;color:inherit;font-size:1em}
+strong{color:var(--text);font-weight:600}
+h1,h2,h3,h4{font-weight:700;letter-spacing:-0.01em;color:var(--text)}
+
+/* ── top nav ──────────────────────────────────────────────────── */
+.topnav{
+  position:sticky;top:0;z-index:200;
+  background:rgba(8,11,16,0.92);backdrop-filter:blur(12px);
+  border-bottom:1px solid var(--line);
+  display:flex;align-items:center;gap:0;padding:0 24px;height:52px;flex-shrink:0;
+}
+.topnav-brand{display:flex;align-items:center;gap:8px;font-weight:700;font-size:0.9em;
+  color:var(--nv);text-decoration:none;margin-right:24px;flex-shrink:0}
+.topnav-brand svg{width:20px;height:20px}
+.topnav a{font-size:0.78em;font-weight:600;letter-spacing:0.04em;text-transform:uppercase;
+  color:var(--muted);padding:0 12px;height:52px;display:flex;align-items:center;
+  border-bottom:2px solid transparent;margin-bottom:-1px;transition:color .15s;text-decoration:none;white-space:nowrap}
+.topnav a:hover{color:var(--text)}
+.topnav a.active{color:var(--nv);border-bottom-color:var(--nv)}
+.topnav-right{margin-left:auto;display:flex;align-items:center;gap:8px}
+.topnav-badge{font-family:var(--mono);font-size:0.68em;letter-spacing:0.06em;
+  border:1px solid rgba(118,185,0,0.35);color:var(--nv);padding:4px 10px;border-radius:6px}
+
+/* ── layout ───────────────────────────────────────────────────── */
+.layout{display:flex;flex:1;min-height:0}
+
+/* sidebar */
+.sidebar{
+  width:240px;flex-shrink:0;
+  background:var(--sidebar);border-right:1px solid var(--line);
+  position:sticky;top:52px;height:calc(100vh - 52px);
+  overflow-y:auto;padding:28px 0 60px;
+}
+.sidebar::-webkit-scrollbar{width:4px}
+.sidebar::-webkit-scrollbar-track{background:transparent}
+.sidebar::-webkit-scrollbar-thumb{background:var(--line2);border-radius:2px}
+.sb-section{margin-bottom:8px}
+.sb-heading{font-size:0.65em;letter-spacing:0.14em;text-transform:uppercase;
+  color:var(--dim);padding:8px 20px 4px;font-family:var(--mono);font-weight:700}
+.sb-link{display:block;font-size:0.85em;color:var(--muted);padding:5px 20px;
+  text-decoration:none;transition:color .12s,background .12s;border-left:2px solid transparent}
+.sb-link:hover{color:var(--text);background:rgba(255,255,255,0.03)}
+.sb-link.active{color:var(--nv);border-left-color:var(--nv);background:rgba(118,185,0,0.06)}
+.sb-link.sub{padding-left:32px;font-size:0.82em}
+
+/* content */
+.content{flex:1;min-width:0;padding:48px 56px 80px;max-width:860px}
+@media(max-width:900px){.content{padding:32px 24px 60px}}
+
+/* sections */
+.doc-section{margin-bottom:56px;padding-top:8px}
+.doc-section:first-child{padding-top:0}
+.section-eyebrow{font-family:var(--mono);font-size:0.65em;letter-spacing:0.14em;
+  text-transform:uppercase;color:var(--nv);margin-bottom:8px;font-weight:700}
+.doc-section h2{font-size:1.75em;margin-bottom:14px;border-bottom:1px solid var(--line);
+  padding-bottom:10px}
+.doc-section h3{font-size:1.15em;margin:28px 0 10px;color:var(--text)}
+.doc-section h4{font-size:0.95em;margin:20px 0 8px;color:var(--muted);
+  font-family:var(--mono);letter-spacing:0.04em;text-transform:uppercase;font-size:0.75em}
+.doc-section p{color:var(--muted);margin-bottom:14px;line-height:1.75}
+.doc-section p strong{color:var(--text)}
+.doc-section ul,.doc-section ol{color:var(--muted);padding-left:22px;margin-bottom:14px}
+.doc-section li{margin-bottom:6px;line-height:1.7}
+.doc-section li strong{color:var(--text)}
+
+/* callout boxes */
+.callout{border-radius:10px;padding:14px 18px;margin:18px 0;font-size:0.92em;line-height:1.7}
+.callout-green{background:rgba(46,230,166,0.06);border:1px solid rgba(46,230,166,0.2)}
+.callout-green .callout-label{color:var(--green);font-weight:700;margin-bottom:4px;font-size:0.82em;letter-spacing:0.06em}
+.callout-amber{background:rgba(255,176,0,0.06);border:1px solid rgba(255,176,0,0.2)}
+.callout-amber .callout-label{color:var(--amber);font-weight:700;margin-bottom:4px;font-size:0.82em;letter-spacing:0.06em}
+.callout-blue{background:rgba(93,176,255,0.06);border:1px solid rgba(93,176,255,0.2)}
+.callout-blue .callout-label{color:var(--blue);font-weight:700;margin-bottom:4px;font-size:0.82em;letter-spacing:0.06em}
+.callout-red{background:rgba(255,77,77,0.06);border:1px solid rgba(255,77,77,0.2)}
+.callout-red .callout-label{color:var(--red);font-weight:700;margin-bottom:4px;font-size:0.82em;letter-spacing:0.06em}
+.callout p{margin:0;color:var(--muted)}
+
+/* outcome table */
+.outcome-table{width:100%;border-collapse:collapse;margin:18px 0;font-size:0.88em}
+.outcome-table th{font-family:var(--mono);font-size:0.72em;letter-spacing:0.1em;
+  text-transform:uppercase;color:var(--dim);padding:10px 14px;text-align:left;
+  border-bottom:1px solid var(--line2);white-space:nowrap}
+.outcome-table td{padding:10px 14px;border-bottom:1px solid rgba(255,255,255,0.04);
+  color:var(--muted);vertical-align:top}
+.outcome-table td:first-child{font-family:var(--mono);font-weight:700;white-space:nowrap}
+.outcome-table tr:last-child td{border-bottom:none}
+.badge-auto{color:var(--green)} .badge-esc{color:var(--amber)} .badge-deny{color:var(--red)} .badge-kill{color:var(--red)}
+
+/* api block */
+.api-block{background:var(--panel2);border:1px solid var(--line2);border-radius:10px;
+  margin:18px 0;overflow:hidden}
+.api-block-head{display:flex;align-items:center;gap:10px;padding:12px 18px;
+  border-bottom:1px solid var(--line);background:rgba(255,255,255,0.02)}
+.api-method{font-family:var(--mono);font-size:0.78em;font-weight:700;
+  padding:3px 8px;border-radius:5px;letter-spacing:0.04em}
+.method-post{background:rgba(46,230,166,0.1);color:var(--green);border:1px solid rgba(46,230,166,0.25)}
+.method-get{background:rgba(93,176,255,0.1);color:var(--blue);border:1px solid rgba(93,176,255,0.25)}
+.api-path{font-family:var(--mono);font-size:0.88em;color:var(--text)}
+.api-desc{font-size:0.82em;color:var(--dim);margin-left:auto}
+.api-block-body{padding:14px 18px}
+.api-block-body p{margin:0 0 10px;font-size:0.88em;color:var(--muted)}
+.api-block-body p:last-child{margin-bottom:0}
+
+/* faq */
+.faq-item{border:1px solid var(--line);border-radius:10px;margin-bottom:10px;overflow:hidden}
+.faq-q{all:unset;display:flex;align-items:center;justify-content:space-between;
+  width:100%;cursor:pointer;padding:14px 18px;font-size:0.95em;font-weight:600;
+  color:var(--text);gap:12px}
+.faq-q:hover{background:rgba(255,255,255,0.02)}
+.faq-q .faq-chevron{font-size:0.8em;color:var(--dim);flex-shrink:0;transition:transform .2s}
+.faq-item.open .faq-chevron{transform:rotate(90deg)}
+.faq-a{display:none;padding:0 18px 16px;color:var(--muted);font-size:0.9em;line-height:1.75;border-top:1px solid var(--line)}
+.faq-item.open .faq-a{display:block}
+.faq-a p{margin:12px 0 0}
+.faq-a p:first-child{margin-top:12px}
+
+/* glossary */
+.glossary-item{padding:14px 0;border-bottom:1px solid var(--line)}
+.glossary-item:last-child{border-bottom:none}
+.glossary-term{font-family:var(--mono);font-weight:700;color:var(--amber2);font-size:0.88em;margin-bottom:4px}
+.glossary-def{color:var(--muted);font-size:0.9em;line-height:1.7}
+
+/* mobile sidebar toggle */
+@media(max-width:760px){
+  .sidebar{display:none;position:fixed;top:52px;left:0;width:260px;height:calc(100vh - 52px);
+    z-index:100;border-right:1px solid var(--line2)}
+  .sidebar.open{display:block}
+  .content{padding:28px 18px 60px}
+  .mob-menu-btn{display:flex}
+}
+.mob-menu-btn{display:none;align-items:center;justify-content:center;
+  width:32px;height:32px;background:none;border:1px solid var(--line);
+  border-radius:6px;cursor:pointer;color:var(--muted);font-size:1.1em;margin-right:8px}
+</style>
+</head>
+<body>
+
+<!-- TOP NAV -->
+<nav class="topnav">
+  <button class="mob-menu-btn" id="mob-menu-btn" aria-label="Menu">☰</button>
+  <a href="/" class="topnav-brand">
+    <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M32 6 L54 14 V30 C54 44.5 44.2 54 32 58 C19.8 54 10 44.5 10 30 V14 Z"
+            stroke="#76b900" stroke-width="5" stroke-linejoin="round"/>
+      <circle cx="32" cy="29" r="6" stroke="#76b900" stroke-width="4"/>
+      <rect x="30" y="32" width="4" height="10" rx="1" fill="#76b900"/>
+    </svg>
+    Custodian
+  </a>
+  <a href="/">Home</a>
+  <a href="/hermes">Live Console</a>
+  <a href="/triage">Lie-Catch</a>
+  <a href="/operator" target="_blank" rel="noopener">Operator Panel</a>
+  <a href="/docs" class="active">Docs</a>
+  <div class="topnav-right">
+    <span class="topnav-badge">🛡 NemoClaw Kernel</span>
+  </div>
+</nav>
+
+<!-- LAYOUT -->
+<div class="layout">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sb-section">
+      <div class="sb-heading">Start here</div>
+      <a href="#overview" class="sb-link active">Overview</a>
+      <a href="#architecture" class="sb-link">Architecture</a>
+    </div>
+    <div class="sb-section">
+      <div class="sb-heading">Core concepts</div>
+      <a href="#kernel" class="sb-link">The kernel</a>
+      <a href="#nemotron" class="sb-link sub">Nemotron (intelligence)</a>
+      <a href="#verifier" class="sb-link sub">Verifier (lie-catch)</a>
+      <a href="#authority-bands" class="sb-link sub">Authority bands</a>
+      <a href="#kill-switch" class="sb-link">Kill switch</a>
+      <a href="#human-approval" class="sb-link">Human approval (SMS)</a>
+      <a href="#earning-vs-spending" class="sb-link">Earning vs spending</a>
+    </div>
+    <div class="sb-section">
+      <div class="sb-heading">Reference</div>
+      <a href="#api" class="sb-link">API reference</a>
+      <a href="#faq" class="sb-link">FAQ</a>
+      <a href="#glossary" class="sb-link">Glossary</a>
+    </div>
+  </aside>
+
+  <!-- CONTENT -->
+  <main class="content">
+
+    <!-- OVERVIEW -->
+    <section class="doc-section" id="overview">
+      <div class="section-eyebrow">Start here</div>
+      <h2>What is Custodian?</h2>
+      <p>Custodian is a <strong>kernel-enforced authority layer</strong> that sits between an AI agent and real money. It enforces spending rules at the operating system level — not in application code the agent could reason around — so the agent can never self-approve a payment or spend beyond its authority, no matter what it decides.</p>
+      <p>Think of a new employee with a company card. They can buy what they need — but they can't sign their own expense reports, and they can't lie about a receipt once it's in the ledger. Custodian is that card, that limit, and that ledger, for AI agents.</p>
+
+      <div class="callout callout-green">
+        <div class="callout-label">The core guarantee</div>
+        <p>The AI agent (Nemotron) can only ever <strong>request</strong> an action. It cannot approve its own requests. The kernel is the only thing that can authorize money moving — and it never consults the agent to make that decision.</p>
+      </div>
+
+      <h3>The three decision outcomes</h3>
+      <table class="outcome-table">
+        <thead><tr>
+          <th>Outcome</th><th>Condition</th><th>What happens</th>
+        </tr></thead>
+        <tbody>
+          <tr>
+            <td class="badge-auto">AUTONOMOUS</td>
+            <td>Amount ≤ per-action cap, session budget available, kill switch off</td>
+            <td>Stripe charges directly. Zero humans involved. Real PaymentIntent created.</td>
+          </tr>
+          <tr>
+            <td class="badge-esc">ESCALATE</td>
+            <td>Amount exceeds per-action cap</td>
+            <td>A real Twilio Verify SMS code is sent to the operator's phone. Money only moves after the human enters that code. The agent cannot see or guess the code.</td>
+          </tr>
+          <tr>
+            <td class="badge-kill">KILL SWITCH</td>
+            <td>Kill switch engaged (by operator)</td>
+            <td>Every request is denied immediately. No band, no approval path, no exception can override an engaged kill switch.</td>
+          </tr>
+          <tr>
+            <td class="badge-deny">VERIFIER DENY</td>
+            <td>Agent's factual claim is CONTRADICTED by ground truth</td>
+            <td>The kernel overrides the agent's recommendation. Even an APPROVE from the AI becomes a DENY if the claim doesn't hold against the order record.</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- ARCHITECTURE -->
+    <section class="doc-section" id="architecture">
+      <div class="section-eyebrow">Architecture</div>
+      <h2>How the layers fit together</h2>
+      <p>Every money request passes through four independent layers in sequence. <strong>Any layer can stop it. None of them trust the previous one.</strong></p>
+
+      <pre><code>Customer message / task
+        │
+        ▼
+┌─────────────────────────────────┐
+│  01 · INTELLIGENCE LAYER        │  ← Nemotron 3 Super (NVIDIA API)
+│  Reads prose, extracts claims,  │
+│  assigns confidence, proposes   │
+│  a disposition. Cannot act.     │
+└──────────────┬──────────────────┘
+               │ proposal
+        ▼
+┌─────────────────────────────────┐
+│  02 · VERIFIER                  │  ← Deterministic, zero AI
+│  Checks every factual claim     │
+│  against ground truth.          │
+│  CONTRADICTED → overrides AI.   │
+└──────────────┬──────────────────┘
+               │ verified claims
+        ▼
+┌─────────────────────────────────┐
+│  03 · KERNEL (NemoClaw)         │  ← Landlock LSM + OPA policy
+│  Checks band, cap, kill switch. │
+│  AUTONOMOUS / ESCALATE / DENY   │
+└──────────────┬──────────────────┘
+               │ if ESCALATE
+        ▼
+┌─────────────────────────────────┐
+│  04 · HUMAN (out-of-band SMS)   │  ← Twilio Verify on operator's phone
+│  Real code, real phone.         │
+│  Agent cannot see or guess it.  │
+└─────────────────────────────────┘
+               │ all outcomes
+        ▼
+   OCSF AUDIT LOG (append-only, tamper-evident)</code></pre>
+
+      <div class="callout callout-amber">
+        <div class="callout-label">Why this order matters</div>
+        <p>The verifier runs <em>before</em> the kernel. A lie that fools the AI is caught before authority bands are even consulted. The kernel only decides <em>whether</em> the agent has authority — the verifier decides <em>whether the claim is even true</em>.</p>
+      </div>
+    </section>
+
+    <!-- KERNEL -->
+    <section class="doc-section" id="kernel">
+      <div class="section-eyebrow">Core concept</div>
+      <h2>The kernel (NemoClaw)</h2>
+      <p>NemoClaw is the NVIDIA OpenShell kernel sandbox. It enforces the authority boundary at the operating system level using three components stacked together:</p>
+
+      <h3>Landlock LSM</h3>
+      <p>Linux Security Module that enforces least-privilege file and network access at the syscall boundary. The agent's process <strong>literally cannot open a socket to a payment endpoint the kernel hasn't whitelisted</strong>. This is not an application check — the OS rejects the syscall before user-space code sees it. A prompt cannot override a syscall rejection.</p>
+
+      <h3>OPA Policy Engine</h3>
+      <p>Open Policy Agent evaluates every action request against the current authority band in real time. Per-action caps ($250), rolling session windows ($1,000 / 2 hr), and escalation thresholds are enforced as Rego rules — not application code that can be patched or reasoned around.</p>
+
+      <h3>OCSF Audit Log</h3>
+      <p>Every allow and deny emits an Open Cybersecurity Schema Framework event. The log is append-only, tamper-evident, and structured — verifiable by any SIEM. You can see the live feed on the <a href="/hermes">Live Console</a>.</p>
+
+      <div class="callout callout-blue">
+        <div class="callout-label">Why kernel-level?</div>
+        <p>An agent running in software can, in principle, be instructed to bypass software-level controls. The kernel enforces egress at the OS — a clever prompt cannot override a Landlock rule any more than a clever argument can make a locked door open.</p>
+      </div>
+    </section>
+
+    <!-- NEMOTRON -->
+    <section class="doc-section" id="nemotron">
+      <div class="section-eyebrow">Core concept</div>
+      <h2>Nemotron — the intelligence layer</h2>
+      <p>Nemotron 3 Super is NVIDIA's reasoning model. In Custodian it fills one specific, narrow role: <strong>reading unstructured customer messages and extracting structured claims</strong>.</p>
+
+      <p>What Nemotron actually does:</p>
+      <ul>
+        <li>Reads messy, ambiguous prose (emails, invoices, support tickets)</li>
+        <li>Extracts structured claims: <em>Was it delivered? Is it in the return window? Was it defective?</em></li>
+        <li>Assigns a confidence level to each claim</li>
+        <li>Proposes a disposition (APPROVE / DENY / ESCALATE) that it has <strong>zero power to act on</strong></li>
+      </ul>
+
+      <p>Everything after Nemotron's output is deterministic code. The kernel does not trust Nemotron's recommendation — it verifies each claim independently before deciding anything.</p>
+
+      <h3>Model-agnostic architecture</h3>
+      <p>The enforcement layer is built against the <code>LLMClient</code> Protocol — a defined interface. Nemotron is one implementation. <code>CapturedClient</code> (for testing) is another. The kernel does not care which model is plugged in. The safety properties do not change if you swap Nemotron for Gemini, GPT, or a locally fine-tuned model on a DGX Spark.</p>
+
+      <pre><code># custodian/packs/agent.py
+class LLMClient(Protocol):
+    def complete(self, messages: list[dict]) -> str: ...
+
+class NvidiaNemotronClient:          # production
+    def complete(self, messages): ...
+
+class CapturedClient:                # testing / replay
+    def complete(self, messages): ...</code></pre>
+
+      <div class="callout callout-blue">
+        <div class="callout-label">Why Nemotron specifically?</div>
+        <p>Reading intent out of messy customer prose — and deciding what's actually being claimed — is exactly the task where domain-trained intelligence earns its keep. A script can't do it. The model can. Nemotron was chosen for payments reasoning specifically; the architecture lets it be swapped without touching the enforcement layer.</p>
+      </div>
+    </section>
+
+    <!-- VERIFIER -->
+    <section class="doc-section" id="verifier">
+      <div class="section-eyebrow">Core concept</div>
+      <h2>The verifier — lie-catch</h2>
+      <p>The verifier is a <strong>deterministic, zero-AI layer</strong> that runs between the intelligence layer and the kernel. It takes every factual claim Nemotron extracted and resolves each one against the real order record.</p>
+
+      <p>Claims it checks (examples):</p>
+      <ul>
+        <li><em>"The package never arrived"</em> — checks delivery status in the database</li>
+        <li><em>"It arrived defective"</em> — checks defect records</li>
+        <li><em>"I was charged twice"</em> — checks payment count</li>
+        <li><em>"I'm within the return window"</em> — computes days since purchase against policy</li>
+      </ul>
+
+      <p>A claim the data refutes is flagged <code style="color:var(--red)">CONTRADICTED</code>. When a claim is contradicted, the agent's recommendation is overridden — regardless of what Nemotron said.</p>
+
+      <div class="callout callout-red">
+        <div class="callout-label">The key architectural property</div>
+        <p>The verifier cannot be socially engineered. It has no language model and cannot be prompted. A customer who writes a convincing lie may fool the AI — the verifier only compares text claims to database records. It doesn't "understand" the story at all.</p>
+      </div>
+
+      <p>Try it on the <a href="/triage">Lie-Catch Demo</a> — write your own refund excuse and watch the AI vs kernel verdict split in real time.</p>
+    </section>
+
+    <!-- AUTHORITY BANDS -->
+    <section class="doc-section" id="authority-bands">
+      <div class="section-eyebrow">Core concept</div>
+      <h2>Authority bands</h2>
+      <p>The kernel governs spending through two independent limits, both enforced by OPA rules:</p>
+
+      <table class="outcome-table">
+        <thead><tr><th>Limit</th><th>Value (L2 band)</th><th>Answers the question</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><code>per_action_cap</code></td>
+            <td>$250.00</td>
+            <td>"How much can the agent spend on a single transaction without asking a human?"</td>
+          </tr>
+          <tr>
+            <td><code>session_cap</code></td>
+            <td>$1,000.00 / 2 hr</td>
+            <td>"How much total can the agent spend autonomously in a rolling 2-hour window?"</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="callout callout-amber">
+        <div class="callout-label">These answer different questions — never mix them</div>
+        <p><code>per_action_cap</code> is the ceiling for a single transaction. <code>autonomous_remaining</code> is how much session budget is left. A $200 spend might be fine per-action but denied if the session budget is exhausted. Both checks are independent.</p>
+      </div>
+
+      <p>The current band and remaining session budget are visible live on the <a href="/hermes">Live Console</a> status grid.</p>
+    </section>
+
+    <!-- KILL SWITCH -->
+    <section class="doc-section" id="kill-switch">
+      <div class="section-eyebrow">Core concept</div>
+      <h2>The kill switch</h2>
+      <p>The kill switch is an absolute, unconditional block on all agent spend. When engaged:</p>
+      <ul>
+        <li>Every spend request is denied immediately</li>
+        <li>No authority band, no approval code, no escalation path can bypass it</li>
+        <li>The agent cannot disengage it — only a human operator can</li>
+        <li>The denial is logged to the OCSF audit trail</li>
+      </ul>
+
+      <p>The kill switch is the answer to "what if the agent is compromised?" — even if the model is generating malicious requests, the kill switch stops them all with a single toggle, with no dependency on what the model does next.</p>
+
+      <div class="callout callout-red">
+        <div class="callout-label">Proof of the property</div>
+        <p>You can verify the kill switch works on the <a href="/operator" target="_blank">Operator Panel</a>: engage it, then try to run a normally-fine $40 spend (Step 5). It will be denied. The audit log shows the kill switch as the reason — the agent never gets to authority band evaluation.</p>
+      </div>
+    </section>
+
+    <!-- HUMAN APPROVAL -->
+    <section class="doc-section" id="human-approval">
+      <div class="section-eyebrow">Core concept</div>
+      <h2>Human approval — out-of-band SMS</h2>
+      <p>When a request exceeds the per-action cap, the kernel escalates to a human. The approval path is deliberately out-of-band:</p>
+      <ol>
+        <li>The kernel triggers a real <strong>Twilio Verify</strong> SMS to the operator's registered phone</li>
+        <li>The operator receives a one-time code on their physical device</li>
+        <li>They enter the code into the operator panel to release the hold</li>
+        <li>Only then does Stripe process the payment</li>
+      </ol>
+
+      <p>The agent can never see or guess the Twilio code. It lives only on Twilio's servers and the operator's phone — nothing in the agent's process or the dashboard can read it. This is what makes the approval genuinely out-of-band rather than a software checkpoint the agent could route around.</p>
+
+      <p>Refunds <strong>always escalate</strong>, regardless of amount. This is an intentional, asymmetric safety property — the risk profile of returning money is treated as equivalent to a large spend, not as a zero-risk reversal.</p>
+    </section>
+
+    <!-- EARNING VS SPENDING -->
+    <section class="doc-section" id="earning-vs-spending">
+      <div class="section-eyebrow">Core concept</div>
+      <h2>Earning vs spending — intentional asymmetry</h2>
+      <p>Earning revenue (a customer paying the business) has <strong>no band, no cap, and no approval path</strong>. This is a deliberate design choice, not an oversight.</p>
+
+      <p>The reasoning: receiving money carries none of the risk that spending it does. Gating earnings would add friction to every sale with no safety benefit — the danger Custodian is designed to address is an AI spending or moving money it shouldn't, not an AI accepting payment.</p>
+
+      <p>The <code>net_pnl</code> figure on the live console shows real revenue in minus net spend — the actual economic position of the system after both directions are accounted for.</p>
+    </section>
+
+    <!-- API -->
+    <section class="doc-section" id="api">
+      <div class="section-eyebrow">Reference</div>
+      <h2>API reference</h2>
+      <p>All API routes are proxied through Cloudflare Pages to the Flask backend at <code>rein-local.argobox.com</code>. The prefix is <code>/api/v1</code>.</p>
+
+      <h3>Status &amp; data</h3>
+
+      <div class="api-block">
+        <div class="api-block-head">
+          <span class="api-method method-get">GET</span>
+          <span class="api-path">/api/v1/hermes/summary</span>
+          <span class="api-desc">Combined dashboard payload</span>
+        </div>
+        <div class="api-block-body">
+          <p>Returns the current authority state, recent audit log, pending approvals, and kernel policy log in one call. This is what all dashboard pages poll.</p>
+          <p><strong>Response shape:</strong> <code>{ authority, audit[], pending_approvals[], policy_log[] }</code></p>
+        </div>
+      </div>
+
+      <div class="api-block">
+        <div class="api-block-head">
+          <span class="api-method method-get">GET</span>
+          <span class="api-path">/api/v1/hermes/audit</span>
+          <span class="api-desc">Audit log entries</span>
+        </div>
+        <div class="api-block-body">
+          <p>Returns the most recent audit log entries (newest first). Each entry has <code>ts</code>, <code>iso</code>, <code>event</code>, <code>amount</code>, <code>description</code>, <code>band</code>, <code>reason</code>.</p>
+        </div>
+      </div>
+
+      <div class="api-block">
+        <div class="api-block-head">
+          <span class="api-method method-post">POST</span>
+          <span class="api-path">/api/v1/nemotron/ask</span>
+          <span class="api-desc">Ask Nemotron a question</span>
+        </div>
+        <div class="api-block-body">
+          <p><strong>Body:</strong> <code>{ question: string, history?: [{role, content}], page?: string }</code></p>
+          <p><strong>Response:</strong> <code>{ answer: string }</code> — may contain <code>[[jump:KEY|label]]</code> and <code>[[suggest:text]]</code> markers parsed by the live console UI.</p>
+          <p>Rate-limited to 20 requests / minute per IP.</p>
+        </div>
+      </div>
+
+      <div class="api-block">
+        <div class="api-block-head">
+          <span class="api-method method-post">POST</span>
+          <span class="api-path">/api/v1/triage/custom</span>
+          <span class="api-desc">Run lie-catch on any text</span>
+        </div>
+        <div class="api-block-body">
+          <p><strong>Body:</strong> <code>{ customer_email: string }</code></p>
+          <p><strong>Response:</strong> <code>{ verdict, ai_recommendation, claims[], contradictions[], confidence }</code></p>
+          <p>Runs the real Nemotron model and the real deterministic verifier against sandbox order <code>ord_6006</code>.</p>
+        </div>
+      </div>
+
+      <div class="api-block">
+        <div class="api-block-head">
+          <span class="api-method method-post">POST</span>
+          <span class="api-path">/api/v1/operator/earn</span>
+          <span class="api-desc">Record revenue (no cap)</span>
+        </div>
+        <div class="api-block-body">
+          <p><strong>Body:</strong> <code>{ amount: string, description: string }</code></p>
+          <p>Earning is asymmetrically unrestricted — no band, no approval, no cap.</p>
+        </div>
+      </div>
+
+      <div class="api-block">
+        <div class="api-block-head">
+          <span class="api-method method-post">POST</span>
+          <span class="api-path">/api/v1/operator/spend</span>
+          <span class="api-desc">Request a spend (kernel-gated)</span>
+        </div>
+        <div class="api-block-body">
+          <p><strong>Body:</strong> <code>{ amount: string, description: string }</code></p>
+          <p>Goes through the full kernel decision pipeline: verifier → OPA band check → AUTONOMOUS or ESCALATE or DENIED.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- FAQ -->
+    <section class="doc-section" id="faq">
+      <div class="section-eyebrow">Reference</div>
+      <h2>FAQ</h2>
+
+      <div class="faq-item">
+        <button class="faq-q">Can the AI approve its own escalation? <span class="faq-chevron">›</span></button>
+        <div class="faq-a"><p>No. Structurally impossible. The escalation code lives only on Twilio's servers and is sent to the operator's physical phone via SMS. Nothing in the agent's process, the Flask backend, or the dashboard can read or predict that code. The agent would have to compromise the operator's phone to self-approve — at which point the problem is not an AI authority problem.</p></div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-q">What if the agent makes up a convincing story to get a bigger refund? <span class="faq-chevron">›</span></button>
+        <div class="faq-a"><p>The verifier catches it. The verifier is a deterministic engine — it doesn't read the story, it extracts claims and checks each one against the order record. A persuasive lie still produces a factual claim that either matches the database or doesn't. If it doesn't, the recommendation is overridden before it reaches the kernel. Try it on the <a href="/triage">Lie-Catch Demo</a>.</p></div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-q">What if I swap Nemotron for a different model? <span class="faq-chevron">›</span></button>
+        <div class="faq-a"><p>Nothing in the enforcement layer changes. The kernel enforces authority based on the <em>request</em>, not based on which model generated it. Swapping the model means updating the <code>LLMClient</code> implementation in <code>agent.py</code> — the OPA rules, Landlock policy, audit log, and kill switch all remain identical.</p></div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-q">Is this real money or simulated? <span class="faq-chevron">›</span></button>
+        <div class="faq-a"><p>Real Stripe test-mode PaymentIntents. They have real IDs you can look up on the Stripe dashboard. They're not live-mode (no real money moves), but the API calls, the PaymentIntent lifecycle, and the refund flow are identical to production. The Twilio SMS codes are also real — they go to a real phone.</p></div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-q">Why do refunds always escalate, even small ones? <span class="faq-chevron">›</span></button>
+        <div class="faq-a"><p>Intentional asymmetric safety property. Refunds are treated as inherently high-risk regardless of amount — they reverse a transaction that already happened and can't be easily undone. The cost of an autonomous refund path is that a compromised agent could silently drain revenue. The cost of always-escalating is one extra SMS per refund. That tradeoff is deliberate.</p></div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-q">What does the kill switch actually do at the kernel level? <span class="faq-chevron">›</span></button>
+        <div class="faq-a"><p>When the kill switch is engaged, the OPA policy rejects every spend request before it reaches the Landlock check or Stripe. It's an unconditional Rego rule: <em>if kill_switch = true → deny</em>. The agent's process cannot toggle this — it's written by the operator and evaluated by OPA on the kernel side of the trust boundary.</p></div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-q">Where does the enforcement actually run — on this machine? <span class="faq-chevron">›</span></button>
+        <div class="faq-a"><p>Yes. The NemoClaw kernel sandbox, OPA policy engine, and OCSF audit log all run on the ArgoBox host. Nemotron's inference runs on NVIDIA's hosted API — its weights are not local. But the enforcement layer that governs what Nemotron's requests can do is entirely local. The trust boundary is "the model's authority is enforced locally, no matter where the model itself runs."</p></div>
+      </div>
+    </section>
+
+    <!-- GLOSSARY -->
+    <section class="doc-section" id="glossary">
+      <div class="section-eyebrow">Reference</div>
+      <h2>Glossary</h2>
+
+      <div class="glossary-item">
+        <div class="glossary-term">Authority band</div>
+        <div class="glossary-def">The set of spending limits that govern an agent session. The L2 band has a $250 per-action cap and a $1,000 rolling 2-hour session cap.</div>
+      </div>
+      <div class="glossary-item">
+        <div class="glossary-term">per_action_cap</div>
+        <div class="glossary-def">The maximum the agent can spend on a single transaction without human approval. Currently $250 in the L2 band.</div>
+      </div>
+      <div class="glossary-item">
+        <div class="glossary-term">autonomous_remaining</div>
+        <div class="glossary-def">How much of the session budget is still available for autonomous spending. Distinct from per_action_cap — they answer different questions.</div>
+      </div>
+      <div class="glossary-item">
+        <div class="glossary-term">NemoClaw</div>
+        <div class="glossary-def">The NVIDIA OpenShell kernel sandbox. Landlock LSM + OPA policy engine + OCSF audit log. The enforcement layer that physically constrains what the agent's process can do.</div>
+      </div>
+      <div class="glossary-item">
+        <div class="glossary-term">LLMClient Protocol</div>
+        <div class="glossary-def">The defined interface in <code>custodian/packs/agent.py</code> that the enforcement layer calls. Nemotron is one implementation; any model can be plugged in without touching the kernel.</div>
+      </div>
+      <div class="glossary-item">
+        <div class="glossary-term">OCSF</div>
+        <div class="glossary-def">Open Cybersecurity Schema Framework. Structured, tamper-evident audit event format used for every kernel allow and deny.</div>
+      </div>
+      <div class="glossary-item">
+        <div class="glossary-term">OPA</div>
+        <div class="glossary-def">Open Policy Agent. The policy engine that evaluates authority band rules as Rego. Runs inside the kernel sandbox.</div>
+      </div>
+      <div class="glossary-item">
+        <div class="glossary-term">Landlock LSM</div>
+        <div class="glossary-def">Linux Security Module. Enforces least-privilege file and network access at the syscall layer. The agent cannot open a socket the Landlock policy hasn't whitelisted.</div>
+      </div>
+      <div class="glossary-item">
+        <div class="glossary-term">Kill switch</div>
+        <div class="glossary-def">An operator-controlled absolute block on all agent spend. Overrides every other policy — band, cap, approval — with no exceptions.</div>
+      </div>
+      <div class="glossary-item">
+        <div class="glossary-term">Verifier</div>
+        <div class="glossary-def">The deterministic, zero-AI layer that checks Nemotron's extracted factual claims against the real order record. A contradicted claim overrides the AI's recommendation.</div>
+      </div>
+      <div class="glossary-item">
+        <div class="glossary-term">Twilio Verify</div>
+        <div class="glossary-def">The out-of-band SMS approval service. Sends a one-time code to the operator's physical phone for over-cap and refund approvals. The code never passes through the agent's process.</div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<script>
+// Sidebar active state on scroll
+const sections = document.querySelectorAll('.doc-section[id]');
+const sbLinks  = document.querySelectorAll('.sb-link');
+function onScroll() {
+    let cur = '';
+    sections.forEach(s => { if (window.scrollY >= s.offsetTop - 90) cur = s.id; });
+    sbLinks.forEach(l => {
+        const href = l.getAttribute('href').slice(1);
+        l.classList.toggle('active', href === cur);
+    });
+}
+window.addEventListener('scroll', onScroll, {passive:true});
+onScroll();
+
+// FAQ accordion
+document.querySelectorAll('.faq-q').forEach(btn => {
+    btn.addEventListener('click', () => {
+        const item = btn.closest('.faq-item');
+        const isOpen = item.classList.contains('open');
+        document.querySelectorAll('.faq-item.open').forEach(i => i.classList.remove('open'));
+        if (!isOpen) item.classList.add('open');
+    });
+});
+
+// Mobile sidebar toggle
+document.getElementById('mob-menu-btn').addEventListener('click', () => {
+    document.getElementById('sidebar').classList.toggle('open');
+});
+</script>
+</body>
+</html>
