@@ -1655,12 +1655,30 @@ function nemotronRenderAnswer(rawText) {
             nemotronBubble.classList.remove('show');
             if (!nemotronOpenedOnce) {
                 nemotronOpenedOnce = true;
-                nemotronAddMessage(
-                    "Beep boop. I'm Nemotron 3 Super — the actual model running this agent, not a scripted FAQ. " +
-                    "Ask me what just happened, why a request got escalated, or why NVIDIA letting a model touch real money " +
-                    "(safely) is a big deal.",
-                    'bot'
-                );
+                // Fire a real tour intro from the actual model so the visitor gets
+                // live context, clickable [[jump:]] section links, and suggested
+                // questions — not a hardcoded string that never updates.
+                const thinkingMsg = nemotronAddThinkingMessage();
+                fetch('/api/v1/nemotron/ask', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        question: "You just opened for a new visitor. Give them a one-paragraph tour: " +
+                            "who you are, what this dashboard is watching, and point them at the most " +
+                            "important thing to look at first. Use [[jump:]] links so they can click " +
+                            "straight there. End with 2-3 suggested questions to get them started."
+                    }),
+                }).then(r => r.json()).then(data => {
+                    thinkingMsg.remove();
+                    nemotronAddMessage(data.answer || data.error || "I'm Nemotron 3 Super — ask me anything about what you're seeing.", 'bot');
+                }).catch(() => {
+                    thinkingMsg.remove();
+                    nemotronAddMessage(
+                        "I'm Nemotron 3 Super — the actual model running this agent. Ask me what just happened, " +
+                        "why a request escalated, or what the kill switch does.",
+                        'bot'
+                    );
+                });
             }
             if (focusInput) nemotronInput.focus();
         }
