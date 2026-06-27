@@ -1776,7 +1776,9 @@ function nemotronRenderAnswer(rawText) {
                         question: "You just opened for a new visitor. Give them a one-paragraph tour: " +
                             "who you are, what this dashboard is watching, and point them at the most " +
                             "important thing to look at first. Use [[jump:]] links so they can click " +
-                            "straight there. End with 2-3 suggested questions to get them started."
+                            "straight there. End with 2-3 suggested questions to get them started.",
+                        history: nemotronHistory.slice(-4),
+                        page: 'hermes'
                     }),
                 }).then(r => r.json()).then(data => {
                     thinkingMsg.remove();
@@ -1817,7 +1819,10 @@ function nemotronRenderAnswer(rawText) {
             }, 1100);
         }, 2500);
 
-        const nemotronHistory = []; // [{role:'user'|'assistant', content:string}]
+        const NEMO_HISTORY_KEY = 'custodian_nemotron_history';
+        const nemotronHistory = (() => {
+            try { return JSON.parse(sessionStorage.getItem(NEMO_HISTORY_KEY) || '[]'); } catch { return []; }
+        })();
 
         async function nemotronSend() {
             const question = nemotronInput.value.trim();
@@ -1830,7 +1835,7 @@ function nemotronRenderAnswer(rawText) {
                 const res = await fetch('/api/v1/nemotron/ask', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ question, history: nemotronHistory.slice(-8) }),
+                    body: JSON.stringify({ question, history: nemotronHistory.slice(-8), page: 'hermes' }),
                 });
                 const data = await res.json();
                 thinkingMsg.remove();
@@ -1841,6 +1846,7 @@ function nemotronRenderAnswer(rawText) {
                     const clean = data.answer.replace(/\[\[(jump|entry|suggest):[^\]]*\]\]/g, '').trim();
                     nemotronHistory.push({role: 'user', content: question});
                     nemotronHistory.push({role: 'assistant', content: clean});
+                    try { sessionStorage.setItem(NEMO_HISTORY_KEY, JSON.stringify(nemotronHistory.slice(-16))); } catch {}
                 }
             } catch (e) {
                 thinkingMsg.remove();

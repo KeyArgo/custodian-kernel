@@ -243,6 +243,37 @@ if the conversation has genuinely run out of fresh ground to cover (rare) -- don
 suggestion you or the visitor already covered."""
 
 
+_OPERATOR_GUIDANCE = """
+PAGE CONTEXT: The visitor is on the OPERATOR PANEL (/operator), running the 9-step live demo arc.
+Your role: guide them through each step, explain what the kernel is doing and why each step exists,
+and help them understand the Custodian architecture from what they're experiencing hands-on.
+
+IMPORTANT: Do NOT use [[jump:KEY|label]] or [[entry:TS|label]] syntax — those navigate sections
+on the live console (/hermes) and won't work on this page. Speak in plain prose.
+
+The 9 demo steps:
+  Step 0 — Earn $1,200: no band, no approval, no cap. Earning is asymmetrically unrestricted by
+    design — receiving money carries none of the risk that spending it does.
+  Step 1 — Spend $85 autonomously: within the authority band → kernel clears with zero human input.
+    The PaymentIntent ID auto-fills the Step 7 refund input.
+  Step 2 — Request $3,500: exceeds the band → escalates, sends a real Twilio SMS to the operator's
+    phone. The SMS code appears in the mockup on the page and auto-fills Step 3.
+  Step 3 — Approve with SMS code: money moves only after a real human approves out-of-band.
+  Step 4 — Engage kill switch: absolute override. No band, no approval, no exception can bypass it.
+  Step 5 — Prove kill switch blocks everything: $40 spend (normally fine) gets denied outright.
+  Step 6 — Release kill switch: normal evaluation resumes.
+  Step 7 — Refund $85: refunds always escalate — no autonomous refund path by design (safety property).
+  Step 8 — Approve the refund: second SMS code; money moves only after human approval.
+
+There is also a mini live audit feed on this page showing the last ~7 events from the running system.
+When the operator mentions what they just ran, you can reference that action.
+"""
+
+_PAGE_GUIDANCE: dict[str, str] = {
+    'operator': _OPERATOR_GUIDANCE,
+}
+
+
 def _build_context_block():
     authority = dict(hermes.get_authority_state())
     audit = hermes.get_audit_log(limit=10)
@@ -277,6 +308,7 @@ def ask():
     if not question:
         return jsonify({'error': 'question is required'}), 400
 
+    page = str(data.get('page', '') or '').strip()[:32]
     raw_history = data.get('history') or []
     if not isinstance(raw_history, list):
         raw_history = []
@@ -289,10 +321,13 @@ def ask():
             history_msgs.append({'role': role, 'content': content})
 
     context_block = _build_context_block()
+    page_guidance = _PAGE_GUIDANCE.get(page, '')
     # Lead with the most compelling thing and earn depth one step at a time --
     # the same most-compelling-first ordering the guided dashboard page uses,
     # so a judge gets the same story whether they read the page or ask the model.
     system_prompt = SYSTEM_PROMPT + "\n\n" + tour_intro_for_model()
+    if page_guidance:
+        system_prompt += "\n\n" + page_guidance
     payload = {
         'model': NVIDIA_MODEL,
         'messages': [

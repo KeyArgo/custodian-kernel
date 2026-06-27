@@ -78,6 +78,42 @@
         margin-top: 10px; color: #9a7a40; font-size: 0.88em; line-height: 1.5; }
 
     #panel { display: block; }
+
+    /* ---- mini audit feed ---- */
+    .op-feed-wrap { background: #050a00; border: 1px solid #1a2a10; border-radius: 10px; margin-bottom: 18px; overflow: hidden; }
+    .op-feed-hdr { display: flex; align-items: center; gap: 10px; padding: 9px 16px; background: rgba(118,185,0,0.04); border-bottom: 1px solid #1a2a10; }
+    .op-feed-dot { width: 7px; height: 7px; border-radius: 50%; background: #76b900; flex-shrink: 0; animation: op-pulse 2s infinite; }
+    @keyframes op-pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+    .op-feed-title { font-size: 0.72em; letter-spacing: 0.1em; text-transform: uppercase; color: #76b900; font-weight: 700; }
+    .op-feed-link { font-size: 0.68em; color: #4a7a30; text-decoration: none; margin-left: auto; }
+    .op-feed-link:hover { color: #76b900; }
+    #op-feed { padding: 6px 16px; min-height: 46px; max-height: 160px; overflow-y: auto; font-size: 0.74em; line-height: 2; }
+    .op-ev { display: flex; gap: 10px; border-bottom: 1px solid #0a140a; padding: 1px 0; overflow: hidden; }
+    .op-ev:last-child { border-bottom: none; }
+    .op-ev-ts { color: #3a5a3a; flex-shrink: 0; }
+    .op-ev-badge { flex-shrink: 0; text-transform: uppercase; font-size: 0.88em; font-weight: 700; }
+    .op-ev-badge.allow { color: #76b900; }
+    .op-ev-badge.deny  { color: #ff5c5c; }
+    .op-ev-badge.info  { color: #ffb000; }
+    .op-ev-desc { color: #5a7a5a; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+    /* ---- nemotron bubble ---- */
+    #op-nemo-bubble { position: fixed; bottom: 24px; right: 24px; width: 52px; height: 52px; border-radius: 50%;
+      background: #0a1206; border: 2px solid #76b900; cursor: pointer; display: flex; align-items: center;
+      justify-content: center; font-size: 1.35em; z-index: 1000; box-shadow: 0 4px 20px rgba(118,185,0,0.35);
+      transition: transform 0.15s; }
+    #op-nemo-bubble:hover { transform: scale(1.08); }
+    #op-nemo-panel { position: fixed; bottom: 86px; right: 24px; width: 340px; max-height: 500px;
+      background: #0a0e06; border: 1px solid #2a4020; border-radius: 16px; display: none;
+      flex-direction: column; z-index: 999; box-shadow: 0 8px 40px rgba(0,0,0,0.7); overflow: hidden; }
+    .op-np-hdr { display: flex; align-items: center; gap: 10px; padding: 13px 16px; border-bottom: 1px solid #1a2a10; background: rgba(118,185,0,0.04); }
+    .op-np-body { flex: 1; overflow-y: auto; padding: 14px 14px; display: flex; flex-direction: column; gap: 10px; max-height: 320px; font-size: 0.82em; line-height: 1.6; }
+    .op-np-foot { border-top: 1px solid #1a2a10; padding: 10px 12px; display: flex; gap: 8px; }
+    .op-np-input { flex: 1; background: #111; border: 1px solid #2a3a1a; border-radius: 8px; color: #ccc; font-size: 0.85em; padding: 8px 12px; outline: none; font-family: 'Courier New', monospace; }
+    .op-np-send { background: rgba(118,185,0,0.15); border: 1px solid #76b900; color: #76b900; border-radius: 8px; padding: 8px 14px; cursor: pointer; font-family: inherit; }
+    .op-np-send:hover { background: rgba(118,185,0,0.28); }
+    .op-msg-user { align-self: flex-end; background: rgba(118,185,0,0.12); border: 1px solid rgba(118,185,0,0.25); border-radius: 12px 12px 3px 12px; padding: 8px 12px; max-width: 86%; word-break: break-word; }
+    .op-msg-bot { align-self: flex-start; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px 12px 12px 3px; padding: 8px 12px; max-width: 92%; word-break: break-word; color: #c0c0c0; }
 </style>
 </head>
 <body>
@@ -116,6 +152,34 @@
     </ol>
     <div class="tip">💡 Watch the <a href="/hermes" style="color:#76b900;">Live Console</a> in another tab — the audit feed and verdict panels update in real time as you run each step.</div>
 </details>
+
+<!-- MINI LIVE AUDIT FEED -->
+<div class="op-feed-wrap">
+  <div class="op-feed-hdr">
+    <span class="op-feed-dot"></span>
+    <span class="op-feed-title">Live Audit Feed</span>
+    <a href="/hermes" class="op-feed-link">Full console →</a>
+  </div>
+  <div id="op-feed"><div style="color:#2a3a2a;padding:8px 0;font-size:0.8em">No events yet — run a step above to see activity here.</div></div>
+</div>
+
+<!-- NEMOTRON CHAT BUBBLE -->
+<button id="op-nemo-bubble" title="Ask Nemotron about the demo">🤖</button>
+<div id="op-nemo-panel">
+  <div class="op-np-hdr">
+    <span style="font-size:1.05em">🤖</span>
+    <div>
+      <div style="font-size:0.78em;font-weight:700;color:#76b900;letter-spacing:0.04em">Nemotron 3 Super</div>
+      <div style="font-size:0.67em;color:#3a5a3a">intelligence layer · operator guide</div>
+    </div>
+    <button id="op-nemo-close" style="all:unset;cursor:pointer;color:#444;font-size:1.2em;margin-left:auto;padding:4px 6px">✕</button>
+  </div>
+  <div id="op-nemo-body" class="op-np-body"></div>
+  <div class="op-np-foot">
+    <input id="op-nemo-input" class="op-np-input" type="text" placeholder="Ask about a step or what just happened…">
+    <button id="op-nemo-send" class="op-np-send">→</button>
+  </div>
+</div>
 
 <div id="panel">
     <div class="step">
@@ -413,6 +477,133 @@ document.getElementById('approve2-btn').addEventListener('click', async () => {
 });
 
 }); // DOMContentLoaded
+
+// ---- Mini audit feed ----
+const FEED_API = '/api/v1/hermes/summary';
+
+function opFeedBadgeCls(ev) {
+    const s = (ev||'').toLowerCase();
+    if (s.includes('deny')||s.includes('kill')||s.includes('block')||s.includes('reject')) return 'deny';
+    if (s.includes('allow')||s.includes('earn')||s.includes('approve')||s.includes('refund')) return 'allow';
+    return 'info';
+}
+
+async function refreshOpFeed() {
+    try {
+        const r = await fetch(FEED_API);
+        if (!r.ok) return;
+        const d = await r.json();
+        const events = (d.audit || []).slice(0, 7);
+        const feed = document.getElementById('op-feed');
+        if (!feed) return;
+        if (!events.length) {
+            feed.innerHTML = '<div style="color:#2a3a2a;padding:6px 0;font-size:0.82em">No events yet — run a step to see activity here.</div>';
+            return;
+        }
+        feed.innerHTML = events.map(ev => {
+            const ts = ev.iso ? new Date(ev.iso).toLocaleTimeString('en-US',{hour12:false}) : '--:--:--';
+            const badge = (ev.event||'event').replace(/_/g,' ');
+            const cls = opFeedBadgeCls(badge);
+            const amt = ev.amount != null ? ' $' + Number(ev.amount).toFixed(2) : '';
+            const desc = (ev.description||'').substring(0,50);
+            return `<div class="op-ev"><span class="op-ev-ts">${ts}</span><span class="op-ev-badge ${cls}">${badge}</span><span class="op-ev-desc">${desc}${amt}</span></div>`;
+        }).join('');
+    } catch(e) {}
+}
+
+refreshOpFeed();
+setInterval(refreshOpFeed, 3000);
+
+// ---- Nemotron operator widget ----
+const NEMO_HISTORY_KEY = 'custodian_nemotron_history';
+function nemoLoadHistory() {
+    try { return JSON.parse(sessionStorage.getItem(NEMO_HISTORY_KEY) || '[]'); } catch { return []; }
+}
+function nemoSaveHistory(h) {
+    try { sessionStorage.setItem(NEMO_HISTORY_KEY, JSON.stringify(h.slice(-16))); } catch {}
+}
+
+const opNemoHistory = nemoLoadHistory();
+const opNemoBubble = document.getElementById('op-nemo-bubble');
+const opNemoPanel  = document.getElementById('op-nemo-panel');
+const opNemoBody   = document.getElementById('op-nemo-body');
+const opNemoInput  = document.getElementById('op-nemo-input');
+const opNemoSendBtn = document.getElementById('op-nemo-send');
+const opNemoCloseBtn = document.getElementById('op-nemo-close');
+let opNemoOpened = false;
+
+function opNemoAddMsg(text, role) {
+    const div = document.createElement('div');
+    div.className = role === 'user' ? 'op-msg-user' : 'op-msg-bot';
+    div.textContent = text;
+    opNemoBody.appendChild(div);
+    opNemoBody.scrollTop = opNemoBody.scrollHeight;
+    return div;
+}
+
+function opNemoOpen() {
+    opNemoPanel.style.display = 'flex';
+    opNemoBubble.style.display = 'none';
+    if (!opNemoOpened) {
+        opNemoOpened = true;
+        const thinking = opNemoAddMsg('…', 'bot');
+        const greeting = opNemoHistory.length > 0
+            ? 'We were just talking. I\'m here in the operator panel now — ask me about any demo step or what the kernel just did.'
+            : 'You just opened in the operator panel. Greet in 2 sentences: who you are (Nemotron, the intelligence layer for payments reasoning), and offer to explain what any demo step demonstrates about the Custodian architecture. Be concise.';
+        fetch('/api/v1/nemotron/ask', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ question: greeting, history: opNemoHistory.slice(-6), page: 'operator' })
+        }).then(r=>r.json()).then(d => {
+            thinking.remove();
+            const ans = d.answer || "I'm Nemotron — ask me about any of the demo steps.";
+            opNemoAddMsg(ans, 'bot');
+        }).catch(() => {
+            thinking.remove();
+            opNemoAddMsg("I'm Nemotron — ask me about any of the demo steps.", 'bot');
+        });
+    }
+    opNemoInput.focus();
+}
+
+opNemoBubble.addEventListener('click', opNemoOpen);
+opNemoCloseBtn.addEventListener('click', () => {
+    opNemoPanel.style.display = 'none';
+    opNemoBubble.style.display = 'flex';
+});
+
+async function opNemoSend() {
+    const q = opNemoInput.value.trim();
+    if (!q) return;
+    opNemoInput.value = '';
+    opNemoSendBtn.disabled = true;
+    opNemoAddMsg(q, 'user');
+    const thinking = opNemoAddMsg('…', 'bot');
+    try {
+        const r = await fetch('/api/v1/nemotron/ask', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ question: q, history: opNemoHistory.slice(-8), page: 'operator' })
+        });
+        const d = await r.json();
+        thinking.remove();
+        // Strip hermes-specific [[...]] markers before displaying
+        const ans = (d.answer || d.error || 'No answer.').replace(/\[\[(?:jump|entry|suggest):[^\]]*\]\]/g, '').trim();
+        opNemoAddMsg(ans, 'bot');
+        opNemoHistory.push({ role: 'user', content: q });
+        opNemoHistory.push({ role: 'assistant', content: ans });
+        nemoSaveHistory(opNemoHistory);
+    } catch(e) {
+        thinking.remove();
+        opNemoAddMsg('Could not reach Nemotron right now.', 'bot');
+    } finally {
+        opNemoSendBtn.disabled = false;
+        opNemoInput.focus();
+    }
+}
+
+opNemoSendBtn.addEventListener('click', opNemoSend);
+opNemoInput.addEventListener('keydown', e => { if (e.key === 'Enter') opNemoSend(); });
 
 // Admin Reset listeners — in a separate DOMContentLoaded so they run after
 // the reset HTML (which is below this script tag) exists in the DOM.

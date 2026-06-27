@@ -94,7 +94,8 @@
   .cc{width:220px; border-radius:14px; padding:18px 20px; text-align:left; flex-shrink:0;
     font-family:'JetBrains Mono',monospace; font-size:0.78em; position:relative; overflow:hidden}
   .cc-employee{background:linear-gradient(135deg,#1a1a2e 0%,#16213e 100%);
-    border:1px solid rgba(255,255,255,0.12)}
+    border:1px solid rgba(160,160,255,0.2);
+    box-shadow:0 0 30px -8px rgba(100,120,255,0.2)}
   .cc-company{background:linear-gradient(135deg,#1a1200 0%,#1f1600 100%);
     border:1px solid rgba(255,176,0,0.4);
     box-shadow:0 0 30px -8px rgba(255,176,0,0.3)}
@@ -114,7 +115,7 @@
   .cc-enforced{text-align:center; font-family:'JetBrains Mono',monospace; font-size:0.68em;
     color:var(--amber); letter-spacing:0.1em; background:rgba(255,176,0,0.07);
     border:1px solid rgba(255,176,0,0.2); border-radius:8px; padding:10px 14px;
-    margin-top:12px; width:100%; max-width:680px}
+    margin:12px auto 0; width:100%; max-width:480px; box-sizing:border-box}
   .eyebrow .pulse{width:7px; height:7px; border-radius:50%; background:var(--green);
     box-shadow:0 0 0 0 rgba(46,230,166,0.6); animation:pulse 2s infinite}
   @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(46,230,166,0.5)}70%{box-shadow:0 0 0 9px rgba(46,230,166,0)}100%{box-shadow:0 0 0 0 rgba(46,230,166,0)}}
@@ -633,8 +634,8 @@
           const rem=money(a.autonomous_remaining);
           ['s-remaining','m-remaining'].forEach(id=>{const el=document.getElementById(id); if(el)el.textContent=rem;});
         }
-        if(d.policy_log){renderNemoLog(d.policy_log);}
-        else if(d.recent_events){renderNemoLog(d.recent_events);}
+        if(d.policy_log && d.policy_log.length){renderNemoLog(d.policy_log);}
+        else if(d.audit && d.audit.length){renderNemoLog(d.audit);}
       }
     }catch(e){}
     try{
@@ -648,14 +649,26 @@
   // ---- NemoClaw log feed ----
   function renderNemoLog(entries){
     const feed=document.getElementById('nemo-log-feed'); if(!feed) return;
-    if(!entries||!entries.length){feed.innerHTML='<div class="nemo-empty">No kernel events yet — sandbox idle.</div>'; return;}
-    const recent=entries.slice(-12).reverse();
+    if(!entries||!entries.length){feed.innerHTML='<div class="nemo-empty">No kernel events yet — run a step in the operator panel to generate activity.</div>'; return;}
+    const recent=entries.slice(-10).reverse();
     feed.innerHTML=recent.map(e=>{
-      const ts=e.ts?new Date(e.ts*1000).toLocaleTimeString('en-US',{hour12:false}):'--:--:--';
-      const action=(e.action||e.event||'').toUpperCase();
-      const cls=action.includes('DENY')||action.includes('BLOCK')||action.includes('REJECT')?'deny':action.includes('ALLOW')||action.includes('APPROVE')?'allow':'info';
-      const detail=e.description||e.path||e.endpoint||e.reason||e.detail||'';
-      return `<div class="nemo-entry"><span class="ts">${ts}</span><span class="action ${cls}">${action||'EVENT'}</span><span class="detail">${detail}</span></div>`;
+      let ts,action,detail,cls;
+      if(typeof e==='string'){
+        // Raw OCSF text line
+        const m=e.match(/\b(ALLOW(?:ED)?|DENY(?:IED)?|BLOCK(?:ED)?|AUDIT)\b/i);
+        action=(m?m[1]:'EVENT').toUpperCase();
+        ts=new Date().toLocaleTimeString('en-US',{hour12:false});
+        detail=e.replace(/^\d{4}-\d{2}-\d{2}T[\d:.Z]+\s*/,'').substring(0,80);
+        cls=action.startsWith('DENY')||action.startsWith('BLOCK')?'deny':action.startsWith('ALLOW')?'allow':'info';
+      }else{
+        ts=e.iso?new Date(e.iso).toLocaleTimeString('en-US',{hour12:false}):e.ts?new Date(e.ts*1000).toLocaleTimeString('en-US',{hour12:false}):'--:--:--';
+        const ev=(e.event||e.action||'event').replace(/_/g,' ');
+        action=ev.toUpperCase();
+        cls=action.includes('DENY')||action.includes('KILL')||action.includes('BLOCK')?'deny':action.includes('ALLOW')||action.includes('EARN')||action.includes('APPROVE')?'allow':'info';
+        const amt=e.amount!=null?' $'+Number(e.amount).toFixed(2):'';
+        detail=(e.description||e.reason||'')+amt;
+      }
+      return `<div class="nemo-entry"><span class="ts">${ts}</span><span class="action ${cls}">${action}</span><span class="detail">${detail}</span></div>`;
     }).join('');
   }
 
