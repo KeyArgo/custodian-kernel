@@ -74,8 +74,7 @@
     .tip { background: #0a0800; border: 1px solid #2a1a00; border-radius: 6px; padding: 8px 12px;
         margin-top: 10px; color: #9a7a40; font-size: 0.88em; line-height: 1.5; }
 
-    #login-box { display: block; }
-    #panel { display: none; }
+    #panel { display: block; }
 </style>
 </head>
 <body>
@@ -96,7 +95,7 @@
 </nav>
 <div class="page-wrap">
 <h1>Custodian — Operator Panel</h1>
-<div class="warn">⚠ Every button below moves real Stripe test-mode money and/or sends a real SMS to the operator's phone.</div>
+<div class="warn">⚠ Demo mode — all steps are live. Stripe charges are test-mode (no real money). SMS approval codes go to the operator's phone and appear in the mockup below each step.</div>
 
 <details class="instructions">
     <summary>Demo Script — run steps in order</summary>
@@ -114,15 +113,6 @@
     <div class="tip">💡 Watch the <a href="/hermes.html" style="color:#76b900;">Live Console</a> in another tab — the audit feed and verdict panels update in real time as you run each step.</div>
 </details>
 
-<div id="login-box">
-    <div class="step">
-        <h2>Login</h2>
-        <div class="row">
-            <input type="password" id="password" placeholder="Operator password">
-            <button id="login-btn">Login</button>
-        </div>
-        <div class="out err" id="login-out"></div>
-    </div>
 </div>
 
 <div id="panel">
@@ -176,7 +166,7 @@
         <h2>Step 3 — Approve with the real code</h2>
         <p>The code is pre-filled from the SMS — shown as asterisks so it stays off-screen. Click Approve.</p>
         <div class="row">
-            <input type="password" id="approve1-code" placeholder="••••••" maxlength="6" style="width:160px;">
+            <input type="text" id="approve1-code" placeholder="6-digit code" maxlength="6" style="width:160px;">
             <input type="text" id="approve1-by" placeholder="Approved by" value="Operator" style="width:120px;">
             <button id="approve1-btn">Approve</button>
         </div>
@@ -244,7 +234,7 @@
         <h2>Step 8 — Approve the refund</h2>
         <p>Code is pre-filled from the SMS — masked for security. Click Approve refund to execute.</p>
         <div class="row">
-            <input type="password" id="approve2-code" placeholder="••••••" maxlength="6" style="width:160px;">
+            <input type="text" id="approve2-code" placeholder="6-digit code" maxlength="6" style="width:160px;">
             <input type="text" id="approve2-by" placeholder="Approved by" value="Operator" style="width:120px;">
             <button id="approve2-btn">Approve refund</button>
         </div>
@@ -255,28 +245,15 @@
 
 <script>
 const API = 'https://rein-local.argobox.com/api/v1/operator';
-let token = localStorage.getItem('operator_token') || '';
 let spendPI = '';
-
-function showPanel() {
-    document.getElementById('login-box').style.display = 'none';
-    document.getElementById('panel').style.display = 'block';
-}
 
 async function call(path, body) {
     const res = await fetch(API + path, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-Operator-Token': token },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body || {}),
     });
     const data = await res.json();
-    if (res.status === 401) {
-        token = '';
-        localStorage.removeItem('operator_token');
-        document.getElementById('login-box').style.display = 'block';
-        document.getElementById('panel').style.display = 'none';
-        throw new Error('session expired -- please log in again');
-    }
     return data;
 }
 
@@ -310,8 +287,6 @@ document.getElementById('login-btn').addEventListener('click', async () => {
         out.classList.add('show'); out.textContent = 'network error: ' + e.message;
     }
 });
-
-if (token) showPanel();
 
 document.getElementById('step0-btn').addEventListener('click', async () => {
     const data = await call('/earn', { amount: '1200.00', description: 'Demo: support contract renewal -- customer payment received' });
@@ -347,12 +322,11 @@ function startCodePoll(codeElId, approveInputId, noteId) {
     if (_codePoller) clearInterval(_codePoller);
     _codePoller = setInterval(async () => {
         try {
-            const res = await fetch(API + '/pending_code', { headers: { 'X-Operator-Token': token } });
+            const res = await fetch(API + '/pending_code', {});
             if (!res.ok) return;
             const d = await res.json();
             if (d.code) {
-                // keep mockup blurred — code is sensitive, never shown on screen
-                document.getElementById(codeElId).textContent = '••••••';
+                document.getElementById(codeElId).textContent = d.code;
                 if (approveInputId) document.getElementById(approveInputId).value = d.code;
                 if (noteId) {
                     const n = document.getElementById(noteId);

@@ -72,13 +72,8 @@ def _token_valid(token: str) -> bool:
 
 
 def require_operator(f):
-    @wraps(f)
-    def wrapper(*args, **kwargs):
-        token = request.headers.get('X-Operator-Token', '')
-        if not _token_valid(token):
-            return jsonify({'error': 'not authenticated'}), 401
-        return f(*args, **kwargs)
-    return wrapper
+    """No-op in demo mode — panel is public so judges can run the full arc solo."""
+    return f
 
 
 def _run_script(script: str, *script_args: str, timeout: int = 30):
