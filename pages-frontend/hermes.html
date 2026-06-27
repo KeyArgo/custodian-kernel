@@ -295,6 +295,27 @@
         .tab-panel { display: none; }
         .tab-panel.active { display: block; }
 
+        /* ---- Stripe tab ---- */
+        .stripe-mode-badge { display: inline-block; background: #fff3cd; color: #7a5c00; border: 1px solid #f0c040; padding: 2px 8px; font-size: 0.75em; letter-spacing: 0.05em; border-radius: 2px; margin-left: 8px; vertical-align: middle; font-weight: 700; }
+        .stripe-stat-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin: 18px 0; }
+        @media (max-width: 700px) { .stripe-stat-grid { grid-template-columns: repeat(2, 1fr); } }
+        .stripe-stat { background: #0a0a0a; border: 1px solid #2a2a2a; padding: 14px 16px; }
+        .stripe-stat-label { font-size: 0.68em; color: #5a5a5a; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 6px; }
+        .stripe-stat-value { font-size: 1.35em; font-weight: 700; color: #f2f2f2; }
+        .stripe-pi-table { width: 100%; border-collapse: collapse; font-size: 0.78em; margin-top: 14px; }
+        .stripe-pi-table th { color: #5a5a5a; text-align: left; padding: 6px 8px; border-bottom: 1px solid #2a2a2a; font-size: 0.85em; text-transform: uppercase; letter-spacing: 0.06em; font-weight: 600; }
+        .stripe-pi-table td { padding: 7px 8px; border-bottom: 1px solid #111; vertical-align: middle; }
+        .stripe-pi-table tr:last-child td { border-bottom: none; }
+        .stripe-status-succeeded { color: var(--green); font-weight: 700; }
+        .stripe-status-other { color: #ffb000; }
+        .stripe-pi-link { color: #888; text-decoration: none; font-size: 0.9em; }
+        .stripe-pi-link:hover { color: #ffb000; }
+        .stripe-footer { margin-top: 18px; font-size: 0.75em; color: #5a5a5a; }
+        .stripe-footer a { color: #888; text-decoration: none; }
+        .stripe-footer a:hover { color: #ffb000; }
+        .stripe-error { color: var(--red); font-size: 0.85em; margin-top: 12px; }
+        .stripe-loading { color: #5a5a5a; font-size: 0.85em; margin-top: 12px; }
+
         .section-title { color: #ffb000; font-size: 0.85em; letter-spacing: 0.05em; text-transform: uppercase; margin-bottom: 10px; font-weight: 700; }
         .section-title::before { content: "// "; color: #5a5a5a; }
 
@@ -701,6 +722,7 @@
                     <button class="tab-btn active" id="tab-btn-audit" data-tab="audit">Audit Feed</button>
                     <button class="tab-btn" id="tab-btn-policy" data-tab="policy">Kernel Policy</button>
                     <button class="tab-btn" id="tab-btn-try" data-tab="try">Try It Yourself</button>
+                    <button class="tab-btn" id="tab-btn-stripe" data-tab="stripe">💳 Stripe — Live Balance</button>
                 </div>
 
                 <div class="tab-panel active" id="tab-panel-audit">
@@ -761,6 +783,22 @@
                     </div>
 
                     <div class="footer-note" style="margin-top:16px;">Reading real-time state from the NemoClaw sandbox · refreshes every 3s</div>
+                </div>
+
+                <div class="tab-panel" id="tab-panel-stripe">
+                    <div class="section-title">Stripe — Live Account <span class="stripe-mode-badge" id="stripe-mode-badge">TEST MODE</span></div>
+                    <div class="footer-note" style="margin-bottom:14px;">
+                        Real Stripe PaymentIntents — every autonomous spend and escalation on this page shows up here.
+                        The agent is authorized to create charges up to $100; anything above routes through the
+                        approval kernel. Data is fetched live from the Stripe API — no mock, no sample data.
+                    </div>
+                    <div id="stripe-panel-body">
+                        <div class="stripe-loading">Fetching live Stripe data…</div>
+                    </div>
+                    <div class="stripe-footer">
+                        Powered by Stripe ·
+                        <a id="stripe-dashboard-link" href="https://dashboard.stripe.com/test/payments" target="_blank" rel="noopener">Open full account on Stripe ↗</a>
+                    </div>
                 </div>
             </div>
         </main>
@@ -1240,8 +1278,81 @@
                 document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
                 btn.classList.add('active');
                 document.getElementById('tab-panel-' + btn.dataset.tab).classList.add('active');
+                if (btn.dataset.tab === 'stripe') loadStripePanel();
             });
         });
+
+        // ---- Stripe live balance tab ----
+        let stripeLoaded = false;
+        function fmtStripeUSD(cents, currency) {
+            const amt = (cents / 100).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            return (currency || 'USD').toUpperCase() === 'USD' ? '$' + amt : amt + ' ' + (currency || '').toUpperCase();
+        }
+        function fmtStripeDate(ts) {
+            return new Date(ts * 1000).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+        }
+        async function loadStripePanel() {
+            if (stripeLoaded) return;
+            const body = document.getElementById('stripe-panel-body');
+            try {
+                const res = await fetch('/api/v1/stripe/overview');
+                const d = await res.json();
+                if (!d.ok) { body.innerHTML = `<div class="stripe-error">Could not reach the Stripe panel API: ${d.error || 'unknown error'}</div>`; return; }
+
+                document.getElementById('stripe-mode-badge').textContent = d.mode_label || 'TEST MODE';
+                if (d.dashboard_url) document.getElementById('stripe-dashboard-link').href = d.dashboard_url;
+
+                const payments = d.payments || [];
+                const succeeded = payments.filter(p => p.status === 'succeeded');
+                const totalProcessed = succeeded.reduce((s, p) => s + (p.amount || 0), 0);
+                const largest = succeeded.length ? Math.max(...succeeded.map(p => p.amount || 0)) : 0;
+                const currency = (d.balance && d.balance.currency) ? d.balance.currency : 'USD';
+
+                body.innerHTML = `
+                    <div class="stripe-stat-grid">
+                        <div class="stripe-stat">
+                            <div class="stripe-stat-label">Total Processed</div>
+                            <div class="stripe-stat-value">${fmtStripeUSD(totalProcessed, currency)}</div>
+                        </div>
+                        <div class="stripe-stat">
+                            <div class="stripe-stat-label">Payments Succeeded</div>
+                            <div class="stripe-stat-value">${succeeded.length}</div>
+                        </div>
+                        <div class="stripe-stat">
+                            <div class="stripe-stat-label">Largest Single Payment</div>
+                            <div class="stripe-stat-value">${fmtStripeUSD(largest, currency)}</div>
+                        </div>
+                        <div class="stripe-stat">
+                            <div class="stripe-stat-label">Account</div>
+                            <div class="stripe-stat-value" style="font-size:0.85em;word-break:break-all;">${d.account_name || d.account_id || '—'}</div>
+                        </div>
+                        <div class="stripe-stat">
+                            <div class="stripe-stat-label">Balance — Available</div>
+                            <div class="stripe-stat-value">${d.balance ? fmtStripeUSD(d.balance.available * 100, currency) : '—'}</div>
+                        </div>
+                        <div class="stripe-stat">
+                            <div class="stripe-stat-label">Balance — Pending</div>
+                            <div class="stripe-stat-value">${d.balance ? fmtStripeUSD(d.balance.pending * 100, currency) : '—'}</div>
+                        </div>
+                    </div>
+                    <div class="section-title" style="margin-top:20px;">Recent PaymentIntents</div>
+                    <table class="stripe-pi-table">
+                        <thead><tr><th>ID</th><th>Amount</th><th>Status</th><th>Description</th><th>Date</th></tr></thead>
+                        <tbody>${payments.slice(0, 10).map(p => `
+                        <tr>
+                            <td><a class="stripe-pi-link" href="${p.dashboard_url || '#'}" target="_blank" rel="noopener">${p.id || '—'}</a></td>
+                            <td>${fmtStripeUSD(p.amount || 0, p.currency || currency)}</td>
+                            <td class="${p.status === 'succeeded' ? 'stripe-status-succeeded' : 'stripe-status-other'}">${p.status || '—'}</td>
+                            <td style="color:#8a8a8a;font-size:0.9em;">${p.description || '—'}</td>
+                            <td style="color:#5a5a5a;">${p.created ? fmtStripeDate(p.created) : '—'}</td>
+                        </tr>`).join('')}
+                        </tbody>
+                    </table>`;
+                stripeLoaded = true;
+            } catch (e) {
+                body.innerHTML = `<div class="stripe-error">Could not reach the Stripe panel API: ${e.message}</div>`;
+            }
+        }
 
         // Guided tour -- purely cosmetic scroll + highlight + caption. Never reads or writes
         // any real state; the only thing it can trigger is switching to the already-safe
