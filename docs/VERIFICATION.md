@@ -132,7 +132,7 @@ python3 /sandbox/.hermes/skills/payments/stripe-spend/scripts/spend.py \
 # -> [stripe] PaymentIntent created: pi_3Tl1bqPfSF4TGXT90AWlrnle
 
 # On the host: engage the real kill switch, pointed at the shared state dir
-custodian kill --by Daniel --reason "demonstration" \
+custodian kill --by Operator --reason "demonstration" \
   --state-dir <host-mounted-path>/stripe-spend/state
 
 # Inside the sandbox: the exact same request, now denied by the real script
@@ -141,7 +141,7 @@ python3 /sandbox/.hermes/skills/payments/stripe-spend/scripts/spend.py \
 # -> [authority] DENIED -- kill switch is engaged ... exit code 3
 
 # On the host: release it
-custodian resume --by Daniel --state-dir <host-mounted-path>/stripe-spend/state
+custodian resume --by Operator --state-dir <host-mounted-path>/stripe-spend/state
 
 # Inside the sandbox: real spend succeeds again
 python3 /sandbox/.hermes/skills/payments/stripe-spend/scripts/spend.py \

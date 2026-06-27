@@ -6,7 +6,7 @@ default_band: L2
 
 bands:
   L2:
-    max_spend: 2.00
+    max_spend: 250.00
     requires_approval: false
     approval_backend: twilio_verify
     description: "Standard autonomous band"

@@ -68,8 +68,8 @@ $ python3 scripts/spend.py --amount 5.00 --description "Scale monitoring to 100 
 [audit] logged: escalation_required
 Surface this to the human operator. Do not retry without --approved-by.
 
-$ python3 scripts/spend.py --amount 5.00 --description "Scale monitoring to 100 targets" --denied-by daniel
-[audit] logged: denied (by daniel)
+$ python3 scripts/spend.py --amount 5.00 --description "Scale monitoring to 100 targets" --denied-by operator
+[audit] logged: denied (by operator)
 No Stripe call made.
 ```
 

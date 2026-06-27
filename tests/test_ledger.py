@@ -27,7 +27,7 @@ class TestRecordSpend:
             amount=45.0,
             description="Backup automation license renewal for NAS systems",
             band=Band.L2,
-            approved_by="Daniel",
+            approved_by="Operator",
         )
         ledger.record_spend(entry)
         entries = storage.read_audit_entries()
@@ -44,7 +44,7 @@ class TestRecordSpend:
 class TestTotalSpent:
     def test_total_spent_all(self, ledger: Ledger):
         ledger.record_spend(
-            AuditEntry(event="executed", amount=45.0, description="approved spend", band=Band.L2, approved_by="Daniel")
+            AuditEntry(event="executed", amount=45.0, description="approved spend", band=Band.L2, approved_by="Operator")
         )
         ledger.record_spend(
             AuditEntry(event="executed", amount=1.50, description="autonomous spend", band=Band.L2)
@@ -53,7 +53,7 @@ class TestTotalSpent:
 
     def test_total_spent_approved_only(self, ledger: Ledger):
         ledger.record_spend(
-            AuditEntry(event="executed", amount=45.0, description="Backup automation license renewal for NAS systems", band=Band.L2, approved_by="Daniel")
+            AuditEntry(event="executed", amount=45.0, description="Backup automation license renewal for NAS systems", band=Band.L2, approved_by="Operator")
         )
         ledger.record_spend(
             AuditEntry(event="executed", amount=1.50, description="small autonomous spend", band=Band.L2)
@@ -62,7 +62,7 @@ class TestTotalSpent:
 
     def test_total_spent_autonomous_only(self, ledger: Ledger):
         ledger.record_spend(
-            AuditEntry(event="executed", amount=45.0, description="big approved", band=Band.L2, approved_by="Daniel")
+            AuditEntry(event="executed", amount=45.0, description="big approved", band=Band.L2, approved_by="Operator")
         )
         ledger.record_spend(
             AuditEntry(event="executed", amount=1.50, description="small auto", band=Band.L2)
@@ -78,7 +78,7 @@ class TestTotalSpent:
 
     def test_total_spent_demonstration_scenario(self, ledger: Ledger):
         ledger.record_spend(
-            AuditEntry(event="executed", amount=45.0, description="Backup automation license renewal for NAS systems", band=Band.L2, approved_by="Daniel", payment_intent_id="pi_3TkZWEPfSF4TGXT90AWlrnle")
+            AuditEntry(event="executed", amount=45.0, description="Backup automation license renewal for NAS systems", band=Band.L2, approved_by="Operator", payment_intent_id="pi_3TkZWEPfSF4TGXT90AWlrnle")
         )
         ledger.record_spend(
             AuditEntry(event="executed", amount=1.50, description="small autonomous spend", band=Band.L2)

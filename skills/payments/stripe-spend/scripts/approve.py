@@ -36,9 +36,20 @@ def main():
         print("[approve] Code rejected by Twilio Verify — wrong code or already used.")
         sys.exit(1)
 
+    kind_label = record.get("kind", "spend")
+    print(f"[approve] About to execute: {kind_label} ${record['amount']:.2f} -- {record['description']}"
+          + (f" (refunding {record['payment_intent_id']})" if kind_label == "refund" else ""))
+    print("[approve] This is the exact request the Twilio code you just entered was sent for. "
+          "Verify it matches what you intended to approve before this line.")
+
     PENDING_FILE.unlink()
     print(f"[authority] Twilio Verify confirmed — executing with human approval (by {args.approved_by})")
-    ok = _core.execute_spend(record["amount"], record["description"], approved_by=args.approved_by)
+    kind = record.get("kind", "spend")
+    if kind == "refund":
+        ok = _core.execute_refund(record["payment_intent_id"], record["amount"], record["description"],
+                                   approved_by=args.approved_by)
+    else:
+        ok = _core.execute_spend(record["amount"], record["description"], approved_by=args.approved_by)
     sys.exit(0 if ok else 1)
 
 

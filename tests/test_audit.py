@@ -22,14 +22,14 @@ class TestAppendAndRead:
             amount=45.0,
             description="Backup automation license renewal",
             band=Band.L2,
-            approved_by="Daniel",
+            approved_by="Operator",
             payment_intent_id="pi_3TkZWEPfSF4TGXT90AWlrnle",
         )
         audit_log.append(entry)
         entries = list(audit_log.read_all())
         assert len(entries) == 1
         assert entries[0].amount == 45.0
-        assert entries[0].approved_by == "Daniel"
+        assert entries[0].approved_by == "Operator"
 
     def test_round_trip_preserves_fields(self, audit_log: AuditLog):
         original = AuditEntry(
