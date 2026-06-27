@@ -492,7 +492,8 @@
             bottom: 24px;
             right: 0;
             width: 380px;
-            max-height: 560px;
+            min-height: 520px;
+            max-height: calc(100vh - 80px);
             background: #0d0f0a;
             border: 2px solid var(--nvidia-green);
             border-radius: 16px 0 0 16px;
@@ -613,7 +614,6 @@
         <a href="/">Home</a>
         <a href="/hermes" class="active">Live Console</a>
         <a href="/triage.html">Lie-Catch Demo</a>
-        <a href="https://rein-local.argobox.com/triage">Triage Walkthrough</a>
         <a class="soon">Docs (soon)</a>
         <a href="https://rein-local.argobox.com/operator" class="console-link" target="_blank" rel="noopener">⚡ Operator Panel</a>
     </nav>
@@ -760,16 +760,25 @@
                 </div>
 
                 <div class="tab-panel active" id="tab-panel-audit">
-                    <div class="section-title">Live Audit Feed — Ops Decisions &amp; Spend</div>
+                    <div class="section-title">Live Audit Feed — Every spend, earn, refund, and kill-switch the AI agent triggers</div>
+                    <div style="background:#0a0800;border:1px solid #2a2000;border-radius:8px;padding:12px 14px;margin-bottom:10px;font-size:0.8em;color:#9a8a60;line-height:1.5;">
+                        <b style="color:#ffb000;">What fills this feed:</b> Every time the AI agent earns revenue, requests a spend, gets escalated for human approval, or hits the kill switch — each event lands here with a timestamp and the kernel's verdict. It's an append-only record; nothing can be edited or deleted after the fact.<br>
+                        <b style="color:#ffb000;margin-top:6px;display:inline-block;">To see it live:</b> Open the Operator Panel and run through the steps — earn, spend, escalate, kill-switch, refund. Each action writes a real entry here within seconds.
+                        <br><a href="https://rein-local.argobox.com/operator" target="_blank" rel="noopener" style="color:#76b900;font-weight:700;margin-top:6px;display:inline-block;">⚡ Open Operator Panel →</a>
+                    </div>
                     <div class="feed" id="feed">
-                        <div class="empty-state">Waiting for events…</div>
+                        <div class="empty-state">No events yet — run the operator demo to populate this feed.</div>
                     </div>
                 </div>
 
                 <div class="tab-panel" id="tab-panel-policy">
-                    <div class="section-title">Kernel-Level Policy Enforcement — Raw OCSF Log (NemoClaw / OpenShell)</div>
+                    <div class="section-title">Kernel-Level Policy Log — What the enforcement layer actually decided (zero AI in this path)</div>
+                    <div style="background:#080a06;border:1px solid #1a2a10;border-radius:8px;padding:12px 14px;margin-bottom:10px;font-size:0.8em;color:#7a9a60;line-height:1.5;">
+                        <b style="color:#76b900;">What this is:</b> Raw output from the deterministic enforcement kernel (NemoClaw / OpenShell). Every spend request goes through this layer <em>before</em> money moves — no AI involved. The kernel checks the amount against the agent's authority band, the session cap, and the kill-switch state, then logs ALLOW or DENY with a reason. The AI can't see this log, can't override it, and can't rewrite it.<br>
+                        <b style="color:#76b900;margin-top:6px;display:inline-block;">Why it matters:</b> This is proof that the guardrail is deterministic. Same request, same band, same answer — every time. An AI that lies about its intentions still gets the right verdict here.
+                    </div>
                     <div class="feed policy-feed" id="policy-feed">
-                        <div class="empty-state">Waiting for sandbox activity…</div>
+                        <div class="empty-state">No kernel activity yet — run a spend or kill-switch from the Operator Panel to see enforcement decisions logged here.</div>
                     </div>
                 </div>
 
@@ -1720,7 +1729,8 @@ function nemotronRenderAnswer(rawText) {
                     }),
                 }).then(r => r.json()).then(data => {
                     thinkingMsg.remove();
-                    nemotronAddMessage(data.answer || data.error || "I'm Nemotron 3 Super — ask me anything about what you're seeing.", 'bot');
+                    if (data.answer) { nemotronRenderAnswer(data.answer); }
+                    else { nemotronAddMessage(data.error || "I'm Nemotron 3 Super — ask me anything about what you're seeing.", 'bot'); }
                 }).catch(() => {
                     thinkingMsg.remove();
                     nemotronAddMessage(
