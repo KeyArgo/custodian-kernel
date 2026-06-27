@@ -199,6 +199,31 @@
   .liecatch p{color:var(--muted); font-size:0.98em}
   .liecatch b{color:var(--text)}
 
+  /* nemoclaw section */
+  .nemo-grid{display:grid; grid-template-columns:repeat(3,1fr); gap:18px; margin-top:46px}
+  @media(max-width:820px){.nemo-grid{grid-template-columns:1fr}}
+  .nemo-card{background:var(--panel); border:1px solid var(--line); border-radius:18px; padding:28px 24px; position:relative; overflow:hidden; backdrop-filter:blur(8px)}
+  .nemo-card::before{content:''; position:absolute; top:0; left:0; right:0; height:2px; background:linear-gradient(90deg,transparent,#76b900,transparent); opacity:0.7}
+  .nemo-card .nemo-badge{font-family:'JetBrains Mono',monospace; font-size:0.7em; letter-spacing:0.1em; text-transform:uppercase; color:#76b900; margin-bottom:14px; display:block}
+  .nemo-card .nemo-ic{font-size:1.8em; margin-bottom:12px}
+  .nemo-card h4{font-size:1.1em; font-weight:600; margin-bottom:8px; color:var(--text)}
+  .nemo-card p{color:var(--muted); font-size:0.93em; line-height:1.6}
+  .nemo-log-wrap{margin-top:46px; background:var(--panel); border:1px solid rgba(118,185,0,0.2); border-radius:18px; overflow:hidden}
+  .nemo-log-header{display:flex; align-items:center; gap:12px; padding:16px 22px; background:rgba(118,185,0,0.04); border-bottom:1px solid rgba(118,185,0,0.15)}
+  .nemo-log-header .nemo-dot{width:8px; height:8px; border-radius:50%; background:#76b900; animation:pulse 2s infinite; flex-shrink:0}
+  .nemo-log-header .nemo-title{font-family:'JetBrains Mono',monospace; font-size:0.76em; letter-spacing:0.1em; text-transform:uppercase; color:#76b900; font-weight:700}
+  .nemo-log-header .nemo-sub{font-family:'JetBrains Mono',monospace; font-size:0.68em; color:var(--dim); margin-left:auto}
+  #nemo-log-feed{padding:14px 22px; min-height:120px; max-height:240px; overflow-y:auto; font-family:'JetBrains Mono',monospace; font-size:0.78em; line-height:1.8}
+  .nemo-entry{display:flex; align-items:baseline; gap:10px; padding:3px 0; border-bottom:1px solid rgba(255,255,255,0.04)}
+  .nemo-entry:last-child{border-bottom:none}
+  .nemo-entry .ts{color:var(--dim); flex-shrink:0; font-size:0.88em}
+  .nemo-entry .action{font-weight:700; flex-shrink:0}
+  .nemo-entry .action.allow{color:#39d98a}
+  .nemo-entry .action.deny{color:#ff5d6c}
+  .nemo-entry .action.info{color:#5db0ff}
+  .nemo-entry .detail{color:var(--muted); overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+  .nemo-empty{color:var(--dim); font-family:'JetBrains Mono',monospace; font-size:0.82em; padding:20px 0}
+
   /* live proof */
   .proof{display:grid; grid-template-columns:1.1fr 1fr; gap:40px; align-items:center; margin-top:46px}
   @media(max-width:880px){.proof{grid-template-columns:1fr}}
@@ -332,7 +357,7 @@
     <a class="trust-logo" href="https://www.nvidia.com/" target="_blank" rel="noopener"><span class="nv">◉ NVIDIA</span> Nemotron</a>
     <a class="trust-logo" href="https://nousresearch.com/" target="_blank" rel="noopener">◆ Nous Research · Hermes</a>
     <a class="trust-logo" href="https://stripe.com/" target="_blank" rel="noopener"><span class="st">stripe</span></a>
-    <span class="trust-logo">🛡 Landlock LSM</span>
+    <a class="trust-logo" href="#nemoclaw">🛡 <span class="nv">NemoClaw</span> · Kernel Sandbox</a>
   </div>
 </div>
 
@@ -395,6 +420,49 @@
     <div class="liecatch reveal">
       <span class="badge">THE MOAT</span>
       <p><b>The agent can lie — and money still can't move wrong.</b> When a customer invents a story to get a refund and the AI recommends <em>approve</em>, the verifier catches that the claim is contradicted by the ledger and the kernel overrides the AI. No competitor can demonstrate this, because their model is "agent asks → check the limit," not "agent asks → check if the agent is lying."</p>
+    </div>
+  </div>
+</section>
+
+<!-- NEMOCLAW -->
+<section id="nemoclaw" style="padding:70px 0; background:linear-gradient(180deg,rgba(118,185,0,0.03),transparent 80%)">
+  <div class="wrap">
+    <div class="reveal">
+      <div class="sec-eyebrow" style="color:#76b900">NemoClaw · NVIDIA OpenShell Kernel Sandbox</div>
+      <h2>The AI cannot spend what the OS won't allow</h2>
+      <p class="sec-sub">This is not a software firewall. It is not a policy check in Python. NemoClaw is a Landlock LSM + OPA enforcement layer baked into the OS itself. The agent literally cannot open a socket to a payment endpoint the kernel hasn't whitelisted — regardless of what the model decides.</p>
+    </div>
+    <div class="nemo-grid">
+      <div class="nemo-card reveal">
+        <span class="nemo-badge">Layer 1</span>
+        <div class="nemo-ic">🔒</div>
+        <h4>Landlock LSM</h4>
+        <p>Linux Security Module enforcing least-privilege file and network access at the syscall boundary. Even a compromised model cannot open a socket to an un-whitelisted endpoint — the kernel rejects it before user-space sees it.</p>
+      </div>
+      <div class="nemo-card reveal">
+        <span class="nemo-badge">Layer 2</span>
+        <div class="nemo-ic">📋</div>
+        <h4>OPA Policy Engine</h4>
+        <p>Open Policy Agent evaluates every action request against the authority band in real time. Per-action caps ($250), rolling session windows ($1,000/2 hr), and escalation thresholds are enforced as Rego rules — not application code that can be patched around.</p>
+      </div>
+      <div class="nemo-card reveal">
+        <span class="nemo-badge">Layer 3</span>
+        <div class="nemo-ic">📊</div>
+        <h4>OCSF Audit Log</h4>
+        <p>Every allow and deny emits an Open Cybersecurity Schema Framework event — tamper-evident, structured, and verifiable by any SIEM. The log below is the live feed from the running sandbox right now.</p>
+      </div>
+    </div>
+    <div class="nemo-log-wrap reveal" style="margin-top:36px">
+      <div class="nemo-log-header">
+        <div class="nemo-dot"></div>
+        <span class="nemo-title">Live OCSF Kernel Log</span>
+        <span class="nemo-sub">from running NemoClaw sandbox · auto-refreshes</span>
+      </div>
+      <div id="nemo-log-feed"><div class="nemo-empty">Connecting to kernel sandbox…</div></div>
+    </div>
+    <div style="margin-top:28px; text-align:center">
+      <a class="btn btn-ghost" href="/hermes" style="margin-right:12px">Watch the live console →</a>
+      <a class="btn btn-ghost" href="/triage">See the lie-catch demo →</a>
     </div>
   </div>
 </section>
@@ -564,6 +632,8 @@
           const rem=money(a.autonomous_remaining);
           ['s-remaining','m-remaining'].forEach(id=>{const el=document.getElementById(id); if(el)el.textContent=rem;});
         }
+        if(d.policy_log){renderNemoLog(d.policy_log);}
+        else if(d.recent_events){renderNemoLog(d.recent_events);}
       }
     }catch(e){}
     try{
@@ -574,6 +644,20 @@
       }
     }catch(e){}
   }
+  // ---- NemoClaw log feed ----
+  function renderNemoLog(entries){
+    const feed=document.getElementById('nemo-log-feed'); if(!feed) return;
+    if(!entries||!entries.length){feed.innerHTML='<div class="nemo-empty">No kernel events yet — sandbox idle.</div>'; return;}
+    const recent=entries.slice(-12).reverse();
+    feed.innerHTML=recent.map(e=>{
+      const ts=e.ts?new Date(e.ts*1000).toLocaleTimeString('en-US',{hour12:false}):'--:--:--';
+      const action=(e.action||e.event||'').toUpperCase();
+      const cls=action.includes('DENY')||action.includes('BLOCK')||action.includes('REJECT')?'deny':action.includes('ALLOW')||action.includes('APPROVE')?'allow':'info';
+      const detail=e.description||e.path||e.endpoint||e.reason||e.detail||'';
+      return `<div class="nemo-entry"><span class="ts">${ts}</span><span class="action ${cls}">${action||'EVENT'}</span><span class="detail">${detail}</span></div>`;
+    }).join('');
+  }
+
   loadLive(); setInterval(loadLive,5000);
 </script>
 </body>

@@ -19,6 +19,9 @@
         display: flex; align-items: center; gap: 6px; text-decoration: none; }
     .site-nav .nav-brand svg { width: 18px; height: 18px; }
     .site-nav .nav-sep { color: #2a2a2a; margin: 0 2px; }
+    .site-nav .nav-nemoclaw { margin-left: auto; color: #76b900; border: 1px solid rgba(118,185,0,0.3);
+        border-radius: 6px; padding: 6px 12px; margin-top: 4px; margin-bottom: 4px; font-size: 0.78em; }
+    .site-nav .nav-nemoclaw:hover { background: rgba(118,185,0,0.1); }
     h1 { color: #76b900; font-size: 1.3em; margin-bottom: 4px; }
     .warn { color: #ffb000; font-size: 0.82em; margin-bottom: 16px; }
     .step { background: #0a0a0a; border: 1px solid #2a2a2a; border-top: 2px solid #76b900; padding: 14px 16px; margin-bottom: 14px; }
@@ -89,9 +92,10 @@
   </a>
   <span class="nav-sep">|</span>
   <a href="/">Home</a>
-  <a href="/hermes.html">Live Console</a>
-  <a href="/triage.html">Lie-Catch Demo</a>
-  <a href="/operator.html" class="active">Operator Panel</a>
+  <a href="/hermes">Live Console</a>
+  <a href="/triage">Lie-Catch Demo</a>
+  <a href="/operator" class="active">Operator Panel</a>
+  <a href="/#nemoclaw" class="nav-nemoclaw">🛡 NemoClaw Kernel</a>
 </nav>
 <div class="page-wrap">
 <h1>Custodian — Operator Panel</h1>
@@ -110,7 +114,7 @@
         <li><b>Step 7 — Refund $85</b> — PI is pre-filled from Step 1. Refunds always escalate — no autonomous refund path by design.</li>
         <li><b>Step 8 — Approve the refund</b> — Second SMS code auto-fills. Hit Approve to execute.</li>
     </ol>
-    <div class="tip">💡 Watch the <a href="/hermes.html" style="color:#76b900;">Live Console</a> in another tab — the audit feed and verdict panels update in real time as you run each step.</div>
+    <div class="tip">💡 Watch the <a href="/hermes" style="color:#76b900;">Live Console</a> in another tab — the audit feed and verdict panels update in real time as you run each step.</div>
 </details>
 
 <div id="panel">
