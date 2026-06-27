@@ -54,6 +54,8 @@ app.register_blueprint(triage.bp, url_prefix='/api/v1/triage')
 ALLOWED_ORIGINS = {
     'https://rein.argobox.com',           # custom domain bound to the Pages project
     'https://rein-custodian.pages.dev',   # the underlying Pages domain
+    'https://getcustodian.xyz',           # primary public domain
+    'https://www.getcustodian.xyz',       # www variant
 }
 
 
