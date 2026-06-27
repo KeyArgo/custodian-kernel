@@ -180,3 +180,51 @@ def pending_code():
     if time.time() > data.get('expires_at', 0):
         return jsonify({'code': None, 'reason': 'expired'})
     return jsonify({'code': data.get('code'), 'expires_at': data.get('expires_at')})
+
+
+_STATE_DIR = Path('/tmp/hermes-mount/sandbox/.hermes/skills/payments/stripe-spend/state')
+_AUDIT_LOG_PATH = _STATE_DIR / 'audit_log.jsonl'
+_AUTHORITY_PATH = _STATE_DIR / 'authority.json'
+
+
+@bp.route('/reset', methods=['POST'])
+def reset_demo():
+    """Password-gated reset: archives audit log, zeroes session spend, clears pending code.
+    Requires OPERATOR_PANEL_PASSWORD — NOT protected by the no-op require_operator."""
+    data = request.get_json(force=True, silent=True) or {}
+    password = str(data.get('password', ''))
+    try:
+        real_password = _secret('OPERATOR_PANEL_PASSWORD')
+    except RuntimeError:
+        return jsonify({'error': 'Server not configured for reset (no operator secret file)'}), 503
+    if not hmac.compare_digest(password, real_password):
+        return jsonify({'error': 'wrong password'}), 401
+
+    steps = []
+    try:
+        # Archive audit log
+        if _AUDIT_LOG_PATH.exists():
+            ts = int(time.time())
+            archive = _AUDIT_LOG_PATH.with_suffix(f'.jsonl.reset-{ts}')
+            _AUDIT_LOG_PATH.rename(archive)
+            steps.append(f'audit_log archived → {archive.name}')
+        else:
+            steps.append('audit_log not found — skipped')
+
+        # Zero session spend in authority.json, preserve band and caps
+        if _AUTHORITY_PATH.exists():
+            auth = _json.loads(_AUTHORITY_PATH.read_text())
+            auth['spent_this_session'] = 0.0
+            _AUTHORITY_PATH.write_text(_json.dumps(auth, indent=2))
+            steps.append(f'session spend zeroed (band={auth.get("band")}, cap=${auth.get("per_action_cap")})')
+        else:
+            steps.append('authority.json not found — skipped')
+
+        # Clear any pending escalation code
+        if _PENDING_CODE_PATH.exists():
+            _PENDING_CODE_PATH.unlink()
+            steps.append('pending_code cleared')
+
+        return jsonify({'ok': True, 'steps': steps})
+    except Exception as e:
+        return jsonify({'error': str(e), 'steps': steps}), 500
