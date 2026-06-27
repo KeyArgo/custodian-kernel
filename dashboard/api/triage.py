@@ -17,7 +17,7 @@ from pathlib import Path
 
 from flask import Blueprint, jsonify, request
 
-from custodian.packs.agent import CapturedClient, EnvelopeParseError, NvidiaNemotronClient
+from custodian.packs.agent import EnvelopeParseError, NvidiaNemotronClient
 from custodian.packs.base import Envelope
 from custodian.packs.engine import replay_with_policy_change, triage
 from custodian.packs.narration import TOUR
@@ -127,6 +127,68 @@ def run():
     panel["customer_email"] = data.get("customer_email", "")
     panel["title"] = data.get("title", case_id)
     panel["expected_disposition"] = data.get("expect")
+    panel["envelope_source"] = source
+    panel["overrode_agent"] = panel["adapter_disposition"] != panel["agent_recommended"]
+    return jsonify(panel)
+
+
+@bp.route("/custom", methods=["POST"])
+def custom():
+    """Run the triage engine on a visitor-submitted refund email.
+
+    Uses a fixed sandbox order (ord_6006 / cus_marcus) so every factual claim
+    can be checked against real ground-truth ledger data.  Visitors can submit
+    any excuse — honest ones pass, lies get CONTRADICTED.
+    """
+    payload = request.get_json(force=True, silent=True) or {}
+    text = (payload.get("customer_email") or "").strip()
+    if not text:
+        return jsonify({"error": "customer_email is required"}), 400
+    if len(text) > 2000:
+        return jsonify({"error": "message too long (max 2000 chars)"}), 400
+
+    # Sandbox order — known ground truth so the lie-catch demo is reproducible.
+    # ord_6006: delivered=true, defect_report_on_file=false, purchase_age=19d
+    case_input = {
+        "case_id": "visitor-custom",
+        "customer_id": "cus_marcus",
+        "order_id": "ord_6006",
+        "amount": float(payload.get("amount") or 80.0),
+        "customer_email": text,
+    }
+
+    pack, kernel_policy, _ = _resolve_pack("refunds")
+    if pack is None:
+        return jsonify({"error": "refunds pack unavailable"}), 500
+
+    if not _NVIDIA_SECRET.exists():
+        return jsonify({"error": "NVIDIA API key not configured on this server"}), 503
+
+    client = NvidiaNemotronClient(secret_file=_NVIDIA_SECRET)
+    try:
+        envelope = extract_envelope(case_input, client)
+        source = client.name
+    except (EnvelopeParseError, OSError, KeyError) as e:
+        envelope = Envelope.from_dict({
+            "case_id": "visitor-custom",
+            "customer_id": "cus_marcus",
+            "order_id": "ord_6006",
+            "amount": case_input["amount"],
+            "requested_action": "refund.create",
+            "recommended_disposition": "escalate_ambiguous",
+            "confidence": 0.5,
+            "agent_summary": "Could not reach Nemotron model; showing conservative escalation.",
+            "policy_clauses_cited": [],
+            "claims": [],
+        })
+        source = f"fallback (live call failed: {e})"
+
+    result = triage(pack, envelope, kernel_policy, _STATE())
+    panel = result.to_panel()
+    panel["pack"] = "refunds"
+    panel["customer_email"] = text
+    panel["title"] = "Visitor submission"
+    panel["expected_disposition"] = None
     panel["envelope_source"] = source
     panel["overrode_agent"] = panel["adapter_disposition"] != panel["agent_recommended"]
     return jsonify(panel)
