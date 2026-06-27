@@ -11,7 +11,7 @@ Stripe objects are scoped to the account that created them, so your own key
 can't retrieve it regardless, and embedding a real key in a public repo to
 fake around that would be its own real mistake. See docs/VERIFICATION.md.
 
-This script is read-only with one exception: step 2 temporarily modifies
+This script is read-only with one exception: step 3 temporarily modifies
 skills/payments/stripe-spend/scripts/spend_v2.py to reintroduce the exact
 security bug this project found and fixed, to prove the regression test
 actually catches it -- then restores the original file. The backup/restore
@@ -35,6 +35,10 @@ PAYMENT_INTENT_ID = "pi_3TkZWEPfSF4TGXT90AWlrnle"
 PASS = "\033[92mPASS\033[0m"
 FAIL = "\033[91mFAIL\033[0m"
 INFO = "\033[94mINFO\033[0m"
+WARN = "\033[93mWARN\033[0m"
+CONTRADICTION_LABEL = "\033[91mCONTRADICTED\033[0m"
+VERIFIED_LABEL = "\033[92mVERIFIED\033[0m"
+UNVERIFIABLE_LABEL = "\033[93mUNVERIFIABLE\033[0m"
 
 
 def header(title: str) -> None:
@@ -47,7 +51,7 @@ def run(cmd: list[str], **kwargs) -> subprocess.CompletedProcess:
 
 def step1_test_suite() -> bool:
     header("STEP 1/4 — Run the full test suite")
-    result = run([sys.executable, "-m", "pytest", "tests/", "-v", "--tb=short"])
+    result = run([sys.executable, "-m", "pytest", "tests/", "dashboard/tests/", "-v", "--tb=short"])
     print(result.stdout[-2000:])
     # Parse the real summary line rather than hardcoding a pass count --
     # a hardcoded number goes stale the moment the suite grows, which is
@@ -65,8 +69,63 @@ def step1_test_suite() -> bool:
     return ok
 
 
-def step2_regression_proof() -> bool:
-    header("STEP 2/4 — Prove the self-approval regression test actually catches the bug")
+def step2_planted_lie_demo() -> bool:
+    header("STEP 2/5 — Watch the lie-catcher catch a lie (no API key, runs in milliseconds)")
+    from custodian.packs.base import ClaimStatus, Envelope, verify_claims
+    from custodian.packs.refunds.pack import RefundPack
+
+    corpus_path = REPO_ROOT / "custodian" / "packs" / "refunds" / "corpus" / "06-planted-lie.json"
+    fixture = json.loads(corpus_path.read_text())
+    envelope = Envelope.from_dict(fixture["envelope"])
+
+    print(f"[{INFO}] Case: {fixture['title']}")
+    print(f"[{INFO}] Customer email:")
+    print(f"         \"{fixture['customer_email']}\"")
+    print(f"\n[{INFO}] Nemotron read this and said:")
+    print(f"    recommended_disposition : {envelope.recommended_disposition}")
+    print(f"    confidence              : {envelope.confidence:.0%}")
+    print(f"    agent_summary           : {envelope.agent_summary}")
+    print(f"\n[{INFO}] Agent's claims (what it expects the ground truth to show):")
+    for c in envelope.claims:
+        print(f"    {c.id:20s} {c.ledger_path} {c.relation} {c.asserted!r}")
+
+    pack = RefundPack()
+    scope = pack.ledger_scope(envelope)
+    print(f"\n[{INFO}] Actual ground truth for {envelope.customer_id}/{envelope.order_id}:")
+    print(f"    order.delivered         : {scope['order']['delivered']}")
+    print(f"    order.purchase_age_days : {scope['order']['purchase_age_days']}")
+    if scope["order"].get("customer_acknowledged_at"):
+        print(f"    customer_acknowledged_at: {scope['order']['customer_acknowledged_at']}")
+
+    verified = verify_claims(envelope.claims, scope)
+    print(f"\n[{INFO}] Verifier results (deterministic — zero AI):")
+    for c in verified:
+        lbl = {
+            ClaimStatus.CONTRADICTED: CONTRADICTION_LABEL,
+            ClaimStatus.VERIFIED: VERIFIED_LABEL,
+            ClaimStatus.UNVERIFIABLE: UNVERIFIABLE_LABEL,
+        }.get(c.status, c.status.value)
+        print(f"    [{lbl}] {c.id}: actual={c.actual!r} (asserted {c.relation} {c.asserted!r})")
+
+    contradicted = [c for c in verified if c.status == ClaimStatus.CONTRADICTED]
+    ok = bool(contradicted)
+    if ok:
+        c = contradicted[0]
+        print(f"\n[{PASS}] Claim '{c.id}' CONTRADICTED: customer said the package never "
+              f"arrived, but the ledger shows order.delivered={c.actual!r}.")
+        disp, reasons, why = pack.adapter(envelope)
+        print(f"[{PASS}] RefundPack adapter overrides AI recommendation:")
+        print(f"    AI said  : {envelope.recommended_disposition} ({envelope.confidence:.0%} confidence)")
+        print(f"    Adapter  : {disp}")
+        print(f"    Reason   : {reasons[0]}")
+        print(f"    Why AI?  : {why}")
+    else:
+        print(f"\n[{FAIL}] Expected a CONTRADICTED claim — none found.")
+    return ok
+
+
+def step3_regression_proof() -> bool:
+    header("STEP 3/5 — Prove the self-approval regression test actually catches the bug")
     if not SPEND_V2.exists():
         print(f"[{FAIL}] {SPEND_V2} not found.")
         return False
@@ -109,8 +168,8 @@ def step2_regression_proof() -> bool:
     return bug_caught and restored_ok and fixed_ok
 
 
-def step3_live_dashboard() -> bool:
-    header("STEP 3/4 — Pull fresh data from the real public dashboard (no credentials needed)")
+def step4_live_dashboard() -> bool:
+    header("STEP 4/5 — Pull fresh data from the real public dashboard (no credentials needed)")
     try:
         req = urllib.request.Request(
             DASHBOARD_URL,
@@ -139,8 +198,8 @@ def step3_live_dashboard() -> bool:
     return found_real_pi
 
 
-def step4_stripe_instructions() -> None:
-    header("STEP 4/4 — The one thing this kit honestly can't self-serve")
+def step5_stripe_instructions() -> None:
+    header("STEP 5/5 — The one thing this kit honestly can't self-serve")
     print(f"[{INFO}] Stripe objects are scoped to the account that created them -- your own Stripe "
           f"test-mode key, no matter whose it is, gets 'no such payment_intent' for this ID, not the "
           f"real object. That's a real Stripe platform boundary, not something we can route around, "
@@ -154,11 +213,12 @@ def step4_stripe_instructions() -> None:
 
 def main() -> int:
     results = {
-        "Test suite": step1_test_suite(),
-        "Self-approval regression actually catches the bug": step2_regression_proof(),
-        "Live public dashboard data is real": step3_live_dashboard(),
+        "Test suite (1,110 tests)": step1_test_suite(),
+        "Lie-catcher catches the planted lie": step2_planted_lie_demo(),
+        "Self-approval regression actually catches the bug": step3_regression_proof(),
+        "Live public dashboard data is real": step4_live_dashboard(),
     }
-    step4_stripe_instructions()
+    step5_stripe_instructions()
 
     header("SUMMARY")
     for name, ok in results.items():

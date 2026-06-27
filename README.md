@@ -73,7 +73,7 @@ custodian audit
   the kill switch was engaged, the exact same request was denied by the real
   script running inside the live sandbox, then released, then the real spend
   succeeded again. The full sequence is in the real audit log.
-- 124 passing tests, 1 skipped (CLI placeholder), tested with Python 3.13.
+- 1,110 passing tests, tested with Python 3.13.
 - The test suite includes `test_self_approval_regression.py` — a regression
   test for the exact security bug this design prevents. The fix was proven
   by deliberately reintroducing the bug, confirming the test failed, then

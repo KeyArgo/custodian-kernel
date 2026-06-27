@@ -83,7 +83,7 @@ TOUR = [
     {
         "id": "internals",
         "tier": 5,
-        "headline": "For the truly curious: three independent trust layers and 162 tests.",
+        "headline": "For the truly curious: three independent trust layers and 1,110 tests.",
         "one_liner": (
             "AI judgment → deterministic claim verifier → policy-as-code adapter → authority "
             "kernel. No single layer is load-bearing for trust alone. Every claim above is "
