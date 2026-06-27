@@ -4,8 +4,21 @@
 <meta charset="UTF-8">
 <meta name="robots" content="noindex, nofollow">
 <title>Custodian — Operator Panel</title>
+<link rel="icon" type="image/svg+xml" href="/static/favicon-operator.svg">
 <style>
-    body { background: #060606; color: #e8e8e8; font-family: 'Courier New', monospace; padding: 24px; max-width: 800px; margin: 0 auto; }
+    body { background: #060606; color: #e8e8e8; font-family: 'Courier New', monospace; padding: 0; max-width: 100%; margin: 0; }
+    .page-wrap { max-width: 800px; margin: 0 auto; padding: 24px; }
+    .site-nav { display: flex; align-items: center; gap: 4px; background: #030303;
+        border-bottom: 1px solid #1a1a1a; padding: 0 20px; overflow-x: auto; }
+    .site-nav a { display: inline-block; padding: 10px 12px; font-size: 0.74em; font-weight: 600;
+        letter-spacing: 0.05em; text-transform: uppercase; text-decoration: none; color: #4a4a4a;
+        white-space: nowrap; border-bottom: 2px solid transparent; margin-bottom: -1px; transition: color 0.15s; }
+    .site-nav a:hover { color: #c0c0c0; }
+    .site-nav a.active { color: #76b900; border-bottom-color: #76b900; }
+    .site-nav .nav-brand { color: #76b900; font-weight: 700; font-size: 0.85em; margin-right: 8px;
+        display: flex; align-items: center; gap: 6px; text-decoration: none; }
+    .site-nav .nav-brand svg { width: 18px; height: 18px; }
+    .site-nav .nav-sep { color: #2a2a2a; margin: 0 2px; }
     h1 { color: #76b900; font-size: 1.3em; margin-bottom: 4px; }
     .warn { color: #ffb000; font-size: 0.82em; margin-bottom: 16px; }
     .step { background: #0a0a0a; border: 1px solid #2a2a2a; border-top: 2px solid #76b900; padding: 14px 16px; margin-bottom: 14px; }
@@ -66,6 +79,22 @@
 </style>
 </head>
 <body>
+<nav class="site-nav">
+  <a href="https://getcustodian.xyz" class="nav-brand">
+    <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M32 6 L54 14 V30 C54 44.5 44.2 54 32 58 C19.8 54 10 44.5 10 30 V14 Z" stroke="#76b900" stroke-width="5" stroke-linejoin="round"/>
+      <circle cx="32" cy="29" r="6" stroke="#76b900" stroke-width="4"/>
+      <rect x="30" y="32" width="4" height="10" rx="1" fill="#76b900"/>
+    </svg>
+    Custodian
+  </a>
+  <span class="nav-sep">|</span>
+  <a href="https://getcustodian.xyz">Home</a>
+  <a href="/hermes">Live Console</a>
+  <a href="https://getcustodian.xyz/triage.html">Lie-Catch Demo</a>
+  <a href="/operator" class="active">Operator Panel</a>
+</nav>
+<div class="page-wrap">
 <h1>Custodian — Operator Panel</h1>
 <div class="warn">⚠ Every button below moves real Stripe test-mode money and/or sends a real Twilio SMS to the operator's phone.</div>
 
@@ -366,5 +395,6 @@ document.getElementById('approve2-btn').addEventListener('click', async () => {
     renderOut('approve2-out', data);
 });
 </script>
+</div><!-- /page-wrap -->
 </body>
 </html>

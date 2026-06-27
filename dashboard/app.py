@@ -17,7 +17,7 @@ Deliberately has zero dependency on any other ArgoBox/command-center code —
 this is a hackathon submission artifact, not a feature of that production
 stack.
 """
-from flask import Flask, render_template
+from flask import Flask, render_template, send_from_directory
 
 import sys
 from pathlib import Path as _Path
@@ -70,6 +70,11 @@ def add_cors_headers(response):
     response.headers['X-Content-Type-Options'] = 'nosniff'
     response.headers['X-Frame-Options'] = 'DENY'
     return response
+
+
+@app.route('/favicon.svg')
+def favicon():
+    return send_from_directory(app.static_folder, 'favicon.svg', mimetype='image/svg+xml')
 
 
 @app.route('/')
