@@ -193,6 +193,42 @@
   .pipe-arrow{position:absolute; top:50%; font-size:1.4em; color:var(--dim); z-index:2}
   @media(max-width:820px){.pipe-arrow{display:none}}
 
+  /* ---- full-circle flowchart ---- */
+  .flowchart{max-width:800px; margin:0 auto; padding:0 8px; font-family:'JetBrains Mono',monospace}
+  .fc-row{display:flex; justify-content:center}
+  .fc-row-split{display:flex; justify-content:center; gap:18px}
+  .fc-node{border-radius:12px; padding:14px 18px; text-align:center; width:100%; max-width:400px}
+  .fc-row-split .fc-node{flex:1; max-width:340px}
+  .fc-tag{font-size:0.62em; letter-spacing:0.12em; text-transform:uppercase; margin-bottom:6px; font-weight:700}
+  .fc-label{font-size:0.88em; font-weight:700; color:var(--text); margin-bottom:4px}
+  .fc-sub{font-size:0.72em; color:var(--dim); line-height:1.5}
+  .fc-ai{background:rgba(93,176,255,0.07); border:1px solid rgba(93,176,255,0.25)}
+  .fc-ai .fc-tag{color:#5db0ff}
+  .fc-check{background:rgba(255,176,0,0.06); border:1px solid rgba(255,176,0,0.25)}
+  .fc-check .fc-tag{color:var(--amber)}
+  .fc-kern{background:rgba(118,185,0,0.07); border:1px solid rgba(118,185,0,0.3)}
+  .fc-kern .fc-tag{color:#76b900}
+  .fc-deny{background:rgba(255,60,60,0.07); border:1px solid rgba(255,60,60,0.25)}
+  .fc-deny .fc-tag{color:var(--red)}
+  .fc-auto{background:rgba(46,230,166,0.07); border:1px solid rgba(46,230,166,0.3)}
+  .fc-esc{background:rgba(255,176,0,0.06); border:1px solid rgba(255,176,0,0.3)}
+  .fc-kill{background:rgba(255,60,60,0.07); border:1px solid rgba(255,60,60,0.3)}
+  .fc-audit{background:rgba(255,255,255,0.03); border:1px solid var(--line2); max-width:460px}
+  .fc-audit .fc-tag{color:var(--muted)}
+  .fc-arrow-down{text-align:center; font-size:1.3em; line-height:2; color:var(--dim)}
+  .fc-branch-label-row{display:flex; max-width:400px; margin:0 auto; padding:0 10px; font-size:0.7em; letter-spacing:0.08em}
+  .fc-branch-arrows{text-align:center; font-size:1.6em; color:var(--dim); line-height:1.2; margin:4px 0}
+  .fc-outcomes-wrap{display:flex; gap:14px; margin:8px 0; justify-content:center; flex-wrap:wrap}
+  .fc-outcome{display:flex; flex-direction:column; align-items:center; flex:1; min-width:180px; max-width:240px}
+  .fc-outcome .fc-node{width:100%; max-width:none}
+  .fc-spacer{width:18px; flex-shrink:0}
+  .fc-mini{padding:4px 8px; border-radius:6px; font-size:0.72em; text-align:center}
+  .fc-auto-mini{background:rgba(46,230,166,0.08); border:1px solid rgba(46,230,166,0.2); color:var(--green)}
+  .fc-deny-mini{background:rgba(255,60,60,0.08); border:1px solid rgba(255,60,60,0.2); color:var(--red)}
+  .fc-converge{text-align:center; font-size:0.8em; color:var(--dim); letter-spacing:0.08em; margin:18px 0 10px; text-transform:uppercase}
+  .fc-loop-label{text-align:center; font-size:0.72em; color:var(--dim); letter-spacing:0.08em; margin-top:18px; padding:10px; border-top:1px solid var(--line)}
+  @media(max-width:600px){.fc-outcomes-wrap{flex-direction:column; align-items:center} .fc-outcome{max-width:100%} .fc-row-split{flex-direction:column; align-items:center}}
+
   .liecatch{margin-top:34px; border:1px solid rgba(255,92,92,0.3); background:rgba(255,92,92,0.05);
     border-radius:16px; padding:26px 28px; display:flex; gap:18px; align-items:flex-start}
   .liecatch .badge{font-family:'JetBrains Mono',monospace; font-size:0.7em; letter-spacing:0.1em;
@@ -421,6 +457,96 @@
     <div class="liecatch reveal">
       <span class="badge">THE MOAT</span>
       <p><b>The agent can lie — and money still can't move wrong.</b> When a customer invents a story to get a refund and the AI recommends <em>approve</em>, the verifier catches that the claim is contradicted by the ledger and the kernel overrides the AI. No competitor can demonstrate this, because their model is "agent asks → check the limit," not "agent asks → check if the agent is lying."</p>
+    </div>
+
+    <!-- FULL-CIRCLE DECISION FLOWCHART -->
+    <div class="reveal" style="margin-top:56px">
+      <div class="sec-eyebrow" style="text-align:center">Full decision loop</div>
+      <h3 style="text-align:center;font-size:clamp(1.1em,2vw,1.4em);margin:10px 0 36px;color:var(--muted)">Every path through the kernel — every outcome loops back to the audit trail</h3>
+    </div>
+    <div class="flowchart reveal">
+      <!-- Row 1: Start -->
+      <div class="fc-row">
+        <div class="fc-node fc-ai">
+          <div class="fc-tag">01 · INTELLIGENCE LAYER</div>
+          <div class="fc-label">Nemotron reads request</div>
+          <div class="fc-sub">Extracts claims · assigns confidence · proposes disposition</div>
+        </div>
+      </div>
+      <div class="fc-arrow-down">↓</div>
+      <!-- Row 2: Verifier -->
+      <div class="fc-row">
+        <div class="fc-node fc-check">
+          <div class="fc-tag">02 · VERIFIER</div>
+          <div class="fc-label">Facts checked against ground truth</div>
+          <div class="fc-sub">Each claim: CONFIRMED or CONTRADICTED</div>
+        </div>
+      </div>
+      <div class="fc-branch-label-row">
+        <span class="fc-branch-label" style="color:var(--green)">claim holds</span>
+        <span style="flex:1"></span>
+        <span class="fc-branch-label" style="color:var(--red)">claim contradicted</span>
+      </div>
+      <div class="fc-branch-row">
+        <div class="fc-branch-line"></div>
+        <div class="fc-branch-arrows">↙&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↘</div>
+        <div class="fc-branch-line"></div>
+      </div>
+      <!-- Row 3: kernel check vs override -->
+      <div class="fc-row fc-row-split">
+        <div class="fc-node fc-kern">
+          <div class="fc-tag">03 · KERNEL</div>
+          <div class="fc-label">Band + cap check</div>
+          <div class="fc-sub">Under $250? Kill switch off?</div>
+        </div>
+        <div class="fc-spacer"></div>
+        <div class="fc-node fc-deny">
+          <div class="fc-tag">03b · OVERRIDE</div>
+          <div class="fc-label">Kernel denies</div>
+          <div class="fc-sub">AI recommendation overridden — money can't move</div>
+        </div>
+      </div>
+      <!-- Three outcomes from kernel -->
+      <div class="fc-outcomes-wrap">
+        <div class="fc-outcome">
+          <div class="fc-arrow-down" style="color:var(--green)">↓</div>
+          <div class="fc-node fc-auto">
+            <div class="fc-tag" style="color:var(--green)">AUTONOMOUS</div>
+            <div class="fc-label">Stripe charges directly</div>
+            <div class="fc-sub">Zero humans, real PaymentIntent</div>
+          </div>
+        </div>
+        <div class="fc-outcome">
+          <div class="fc-arrow-down" style="color:var(--amber)">↓</div>
+          <div class="fc-node fc-esc">
+            <div class="fc-tag" style="color:var(--amber)">ESCALATE</div>
+            <div class="fc-label">Twilio SMS to operator's phone</div>
+            <div class="fc-sub">Real out-of-band code · AI cannot see it</div>
+            <div style="margin-top:10px;display:flex;gap:8px;justify-content:center;font-size:0.75em">
+              <div class="fc-mini fc-auto-mini">✓ Human approves → Stripe</div>
+              <div class="fc-mini fc-deny-mini">✗ No code → denied</div>
+            </div>
+          </div>
+        </div>
+        <div class="fc-outcome">
+          <div class="fc-arrow-down" style="color:var(--red)">↓</div>
+          <div class="fc-node fc-kill">
+            <div class="fc-tag" style="color:var(--red)">KILL SWITCH</div>
+            <div class="fc-label">Absolute block</div>
+            <div class="fc-sub">No band, no approval, no exception can override this</div>
+          </div>
+        </div>
+      </div>
+      <!-- Converge back to audit -->
+      <div class="fc-converge">↓ all outcomes ↓</div>
+      <div class="fc-row">
+        <div class="fc-node fc-audit">
+          <div class="fc-tag">OCSF AUDIT LOG</div>
+          <div class="fc-label">Every decision recorded — tamper-evident</div>
+          <div class="fc-sub">Allow · Deny · Escalate · Kill · Refund — all append-only</div>
+        </div>
+      </div>
+      <div class="fc-loop-label">↺ loop continues — next request starts at step 01</div>
     </div>
   </div>
 </section>

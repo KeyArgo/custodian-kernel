@@ -558,13 +558,16 @@
                 transition: margin 0.18s ease;
             }
         }
-        .nemotron-suggest-row { display: flex; flex-direction: column; gap: 6px; align-self: flex-start; max-width: 92%; }
+        .nemotron-suggest-row { display: flex; flex-direction: column; gap: 7px; align-self: flex-start; max-width: 94%; margin-top: 6px; }
+        .nemotron-suggest-label { font-size: 0.7em; letter-spacing: 0.1em; text-transform: uppercase; color: rgba(118,185,0,0.45); margin-bottom: 2px; font-family: 'JetBrains Mono', monospace; }
         .nemotron-suggest-chip {
-            background: rgba(118,185,0,0.06); border: 1px dashed rgba(118,185,0,0.4); color: #9fd968;
-            border-radius: 8px; padding: 7px 10px; font-family: inherit; font-size: 0.88em; text-align: left;
-            cursor: pointer;
+            background: rgba(118,185,0,0.07); border: 1px solid rgba(118,185,0,0.35); color: #9fd968;
+            border-radius: 10px; padding: 9px 13px; font-family: inherit; font-size: 0.88em; text-align: left;
+            cursor: pointer; transition: background 0.15s, border-color 0.15s; line-height: 1.4;
+            display: flex; align-items: flex-start; gap: 8px;
         }
-        .nemotron-suggest-chip:hover { background: rgba(118,185,0,0.16); border-style: solid; }
+        .nemotron-suggest-chip::before { content: '→'; color: rgba(118,185,0,0.5); flex-shrink: 0; }
+        .nemotron-suggest-chip:hover { background: rgba(118,185,0,0.15); border-color: rgba(118,185,0,0.6); color: #c0ff88; }
         .nemotron-bubble {
             display: none;
             position: fixed; bottom: 24px; right: 12px; width: 52px; height: 52px;
@@ -1633,6 +1636,39 @@
             playground: { selector: '#tab-panel-try', tab: 'try' },
         };
 
+        // Branch pool for fallback suggests — rotated so the user always sees
+        // something they haven't covered yet (cheap client-side diversification)
+        const _TOUR_POOL = [
+            "What makes self-approval structurally impossible — not just policy?",
+            "What kinds of lies can the verifier actually catch?",
+            "Who can engage the kill switch, and how fast does it take effect?",
+            "Why kernel-level enforcement instead of a well-coded approval API?",
+            "Why is earning completely unrestricted when spending has all these gates?",
+            "What would it take to swap in a different model — say Gemini or a local one?",
+            "Walk me through step by step what the kernel checks on a $180 request.",
+            "What does the SMS code prove that a software approval can't?",
+            "Can I see what happens when the kill switch proves itself mid-request?",
+            "How does Landlock LSM physically prevent a bad network request?",
+            "What happens to an in-flight request when the kill switch engages?",
+            "What would it take to actually break through the enforcement layer?",
+            "How would this work differently if inference ran locally on a DGX Spark?",
+            "What's the LLMClient Protocol and why doesn't the kernel care which model is plugged in?",
+            "Why do refunds always escalate — even tiny ones?",
+            "What happens if the AI claims something the verifier can't confirm either way?",
+        ];
+        let _tourPoolIdx = 0;
+        function _nextFallbackSuggest(skip) {
+            // Cycle through, skipping any that appear verbatim in the skip set
+            let tries = 0;
+            while (tries < _TOUR_POOL.length) {
+                const q = _TOUR_POOL[_tourPoolIdx % _TOUR_POOL.length];
+                _tourPoolIdx++;
+                tries++;
+                if (!skip.has(q)) return q;
+            }
+            return _TOUR_POOL[0]; // shouldn't happen
+        }
+
 function nemotronRenderAnswer(rawText) {
             // Suggestions live on their own trailing lines -- pull them out first so
             // the main message body only ever contains prose + jump links.
@@ -1675,14 +1711,27 @@ function nemotronRenderAnswer(rawText) {
             div.appendChild(document.createTextNode(text.slice(lastIndex)));
             nemotronBody.appendChild(div);
 
-            if (suggestions.length) {
+            {
+                // Always show at least 2 path chips. If the model returned fewer,
+                // pad from the fallback pool so there's never a dead end.
+                const skipSet = new Set(suggestions);
+                while (suggestions.length < 2) {
+                    suggestions.push(_nextFallbackSuggest(skipSet));
+                    skipSet.add(suggestions[suggestions.length - 1]);
+                }
                 const chipRow = document.createElement('div');
                 chipRow.className = 'nemotron-suggest-row';
+                const label = document.createElement('div');
+                label.className = 'nemotron-suggest-label';
+                label.textContent = 'Explore next →';
+                chipRow.appendChild(label);
                 for (const q of suggestions.slice(0, 3)) {
                     const chip = document.createElement('button');
                     chip.className = 'nemotron-suggest-chip';
                     chip.textContent = q;
                     chip.addEventListener('click', () => {
+                        chip.disabled = true;
+                        chip.style.opacity = '0.45';
                         nemotronInput.value = q;
                         nemotronSend();
                     });
