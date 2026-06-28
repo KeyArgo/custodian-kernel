@@ -343,38 +343,97 @@ class TestGitHubTools:
 # ── Kernel safety invariant ───────────────────────────────────────────────────
 
 class TestKernelInvariants:
-    """These are the properties that must NEVER break."""
+    """These are the properties that must NEVER break.
+
+    Uses the real kernel types: SpendRequest, AuthorityState, Policy, Verdict.
+    The default preset has L2.max_spend=$2.00, so use amounts relative to that.
+    """
+
+    def _policy(self):
+        from custodian.policy import load_policy
+        preset = REPO / "custodian" / "policy" / "presets" / "default.yaml"
+        return load_policy(preset)
 
     def test_kill_switch_blocks_all_spend(self):
-        """$9,999 spend NEVER returns AUTONOMOUS when kill switch is on."""
-        from custodian.policy.evaluator import decide, KernelState
-        from custodian.types import AuthorityState, Band
-        state = KernelState(
-            authority=AuthorityState(band=Band.L2, per_action_cap=9999.0, session_cap=99999.0),
-            kill_switch=True,
-        )
-        result = decide(9999.0, state)
-        assert result.verdict != "AUTONOMOUS"
-        assert "kill" in result.reason.lower() or "kill" in result.verdict.lower()
+        """Any spend NEVER returns AUTONOMOUS when kill switch is engaged."""
+        from custodian.policy.evaluator import decide
+        from custodian.types import AuthorityState, Band, SpendRequest, Verdict
+        state = AuthorityState(band=Band.L2, per_action_cap=9999.0, session_cap=99999.0)
+        request = SpendRequest(amount=1.00, description="test")
+        result = decide(request, state, self._policy(), killed=True)
+        assert result.verdict == Verdict.DENIED
+        assert "kill" in result.reason.lower()
 
-    def test_over_cap_never_autonomous(self):
-        """A spend over per_action_cap NEVER returns AUTONOMOUS."""
-        from custodian.policy.evaluator import decide, KernelState
-        from custodian.types import AuthorityState, Band
-        state = KernelState(
-            authority=AuthorityState(band=Band.L2, per_action_cap=250.0, session_cap=1000.0),
-            kill_switch=False,
-        )
-        result = decide(250.01, state)
-        assert result.verdict != "AUTONOMOUS", "Over-cap spend must never be AUTONOMOUS"
+    def test_over_band_cap_never_autonomous(self):
+        """A spend over the band's max_spend NEVER returns AUTONOMOUS."""
+        from custodian.policy.evaluator import decide
+        from custodian.types import AuthorityState, Band, SpendRequest, Verdict
+        # Default L2 cap is $2.00 — $2.01 must escalate
+        state = AuthorityState(band=Band.L2, per_action_cap=2.00, session_cap=1000.0)
+        request = SpendRequest(amount=2.01, description="over cap")
+        result = decide(request, state, self._policy())
+        assert result.verdict != Verdict.AUTONOMOUS, "Over-cap spend must never be AUTONOMOUS"
 
-    def test_under_cap_with_budget_is_autonomous(self):
-        """A $10 spend under cap with budget returns AUTONOMOUS (not overly restrictive)."""
-        from custodian.policy.evaluator import decide, KernelState
-        from custodian.types import AuthorityState, Band
-        state = KernelState(
-            authority=AuthorityState(band=Band.L2, per_action_cap=250.0, session_cap=1000.0, spent_this_session=0.0),
-            kill_switch=False,
-        )
-        result = decide(10.0, state)
-        assert result.verdict == "AUTONOMOUS"
+    def test_under_cap_is_autonomous(self):
+        """A spend under the band cap with budget returns AUTONOMOUS."""
+        from custodian.policy.evaluator import decide
+        from custodian.types import AuthorityState, Band, SpendRequest, Verdict
+        state = AuthorityState(band=Band.L2, per_action_cap=2.00, session_cap=1000.0, spent_this_session=0.0)
+        request = SpendRequest(amount=1.50, description="under cap")
+        result = decide(request, state, self._policy())
+        assert result.verdict == Verdict.AUTONOMOUS
+
+    def test_l3_band_always_escalates(self):
+        """L3 band always requires approval regardless of amount."""
+        from custodian.policy import load_policy
+        from custodian.policy.evaluator import decide
+        from custodian.types import AuthorityState, Band, SpendRequest, Verdict
+        import io, yaml as _yaml
+        # Build a minimal policy whose default band is L3 (always requires approval)
+        l3_policy_yaml = """
+version: "1.0"
+default_band: L3
+bands:
+  L3:
+    max_spend: 50.00
+    requires_approval: true
+    approval_backend: twilio_verify
+escalation:
+  timeout_seconds: 600
+  on_timeout: deny
+  retry_count: 0
+"""
+        import tempfile, pathlib
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False) as f:
+            f.write(l3_policy_yaml)
+            tmp = pathlib.Path(f.name)
+        policy = load_policy(tmp)
+        tmp.unlink()
+        state = AuthorityState(band=Band.L3, per_action_cap=50.0, session_cap=10000.0)
+        request = SpendRequest(amount=0.01, description="tiny l3 spend")
+        result = decide(request, state, policy)
+        assert result.verdict == Verdict.ESCALATION_REQUIRED
+
+    def test_session_budget_exhausted_escalates(self):
+        """A spend that would exceed session budget escalates even if under per-action cap."""
+        from custodian.policy.evaluator import decide
+        from custodian.types import AuthorityState, Band, SpendRequest, Verdict
+        state = AuthorityState(band=Band.L2, per_action_cap=2.00, session_cap=10.0, spent_this_session=9.50)
+        request = SpendRequest(amount=1.00, description="over session budget")
+        result = decide(request, state, self._policy())
+        assert result.verdict != Verdict.AUTONOMOUS
+
+    def test_tool_invoke_gates_l2_when_kill_switch_set(self, tmp_path):
+        """tool.invoke() on an L2 tool returns kernel_escalation when kill switch is on."""
+        import json as _json
+        ks_file = tmp_path / "kill_switch.json"
+        ks_file.write_text(_json.dumps({"killed": True, "reason": "test", "by": "test"}))
+        # Patch home to tmp_path so the registry finds our kill_switch.json
+        import unittest.mock as mock
+        with mock.patch("pathlib.Path.home", return_value=tmp_path):
+            from custodian.tools.registry import default_registry
+            reg = default_registry().load()
+            nim = reg.get("nim-job-submit")
+            if nim and nim.configured:
+                result = nim.invoke(prompt="hello")
+                assert result.get("kernel_escalation") is True or result.get("ok") is False

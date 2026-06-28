@@ -1,28 +1,23 @@
 #!/usr/bin/env python3
-"""Stub execute script for stripe-invoice-send.
-
-Replace this with a real implementation.
-OpenCode prompt: custodian/opencode-prompts/stripe-tools.md
-"""
-import argparse, json, os, sys
+import argparse, json, os, requests
 
 def main():
     p = argparse.ArgumentParser()
-    p.add_argument("--dry-run", action="store_true")
-    args, rest = p.parse_known_args()
+    p.add_argument("--invoice-id", required=True)
+    a = p.parse_args()
+    key = os.environ.get("STRIPE_SECRET_KEY", "")
+    if not key:
+        print(json.dumps({"ok": False, "stub": True, "tool": "stripe-invoice-send", "message": "Set STRIPE_SECRET_KEY"})); return
+    try:
+        r = requests.post(f"https://api.stripe.com/v1/invoices/{a.invoice_id}/send",
+            auth=(key, ""), timeout=15)
+        d = r.json()
+        if not r.ok:
+            print(json.dumps({"ok": False, "tool": "stripe-invoice-send", "error": d.get("error", {}).get("message", str(d))})); return
+        print(json.dumps({"ok": True, "tool": "stripe-invoice-send",
+            "invoice_id": d.get("id"), "status": d.get("status"),
+            "amount_due": d.get("amount_due"), "customer": d.get("customer")}))
+    except Exception as e:
+        print(json.dumps({"ok": False, "tool": "stripe-invoice-send", "error": str(e)}))
 
-    configured = bool(os.environ.get("STRIPE_INVOICE_SEND_CONFIGURED"))
-    if not configured:
-        print(json.dumps({
-            "ok": False,
-            "stub": True,
-            "tool": "stripe-invoice-send",
-            "message": "Set STRIPE_INVOICE_SEND_CONFIGURED=1 (and required credentials) to enable.",
-        }))
-        sys.exit(0)
-
-    # TODO: real implementation
-    print(json.dumps({"ok": True, "tool": "stripe-invoice-send", "result": "stub"}))
-
-if __name__ == "__main__":
-    main()
+if __name__ == "__main__": main()
