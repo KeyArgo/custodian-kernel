@@ -302,8 +302,6 @@
       <a href="#compare">Compare</a>
       <a href="#video">Demo</a>
       <a href="/triage">Lie-Catch</a>
-      <a href="/operator" target="_blank" rel="noopener">Operator Panel</a>
-      <a href="/tools">Tools</a>
       <a href="/docs">Docs</a>
       <a class="btn btn-primary" href="/hermes">Launch live console →</a>
     </div>
@@ -359,7 +357,7 @@
 <div class="trust">
   <div class="wrap trust-in">
     <span class="trust-label">Built with</span>
-    <a class="trust-logo" href="#nemoclaw"><span class="nv">🛡 NemoClaw</span> · NVIDIA Kernel Sandbox</a>
+    <a class="trust-logo" href="#nemoclaw"><span class="nv">🛡 NemoClaw</span> · NVIDIA OpenShell Kernel Sandbox</a>
     <a class="trust-logo" href="https://www.nvidia.com/" target="_blank" rel="noopener"><span class="nv">◉ NVIDIA</span> Nemotron 3 Super</a>
     <a class="trust-logo" href="https://nousresearch.com/" target="_blank" rel="noopener">◆ Nous Research · Hermes Agent Framework</a>
     <a class="trust-logo" href="https://stripe.com/" target="_blank" rel="noopener"><span class="st">stripe</span></a>
@@ -383,7 +381,7 @@
       <div class="card us reveal">
         <div class="tag">◉ Custodian</div>
         <h3>A constrained kernel</h3>
-        <p>The control lives in <b>Landlock + kernel egress policy</b>. The agent literally <b>cannot open a socket</b> to a payment endpoint the OS hasn't allowed. And a deterministic verifier checks every fact the agent asserts against ground truth — so it can't lie its way to a payout. Non-custodial, rail-agnostic, self-hosted.</p>
+        <p>The control lives in <b>Landlock + kernel egress policy</b>. The agent literally <b>cannot open a socket</b> to a payment endpoint the OS hasn't allowed. A deterministic verifier checks every fact the agent asserts against ground truth, so it can't lie its way to a payout. Non-custodial, rail-agnostic, self-hosted.</p>
       </div>
     </div>
   </div>
@@ -423,8 +421,8 @@
       <div class="pipe-arrow" style="left:66.3%">→</div>
     </div>
     <div class="liecatch reveal">
-      <span class="badge">THE MOAT</span>
-      <p><b>The agent can lie — and money still can't move wrong.</b> When a customer invents a story to get a refund and the AI recommends <em>approve</em>, the verifier catches that the claim is contradicted by the ledger and the kernel overrides the AI. No competitor can demonstrate this, because their model is "agent asks → check the limit," not "agent asks → check if the agent is lying."</p>
+      <span class="badge">CLAIM CHECK</span>
+      <p><b>The agent can lie. Money still can't move wrong.</b> When a customer invents a story to get a refund and the AI recommends <em>approve</em>, the verifier catches that the claim is contradicted by the ledger and the kernel overrides the AI. No competitor can demonstrate this because their model is "agent asks, check the limit" not "agent asks, check if the agent is lying."</p>
     </div>
 
   </div>
@@ -443,19 +441,19 @@
         <span class="nemo-badge">Layer 1</span>
         <div class="nemo-ic">🔒</div>
         <h4>Landlock LSM</h4>
-        <p>Linux Security Module enforcing least-privilege file and network access at the syscall boundary. Even a compromised model cannot open a socket to an un-whitelisted endpoint — the kernel rejects it before user-space sees it.</p>
+        <p>Linux Security Module enforcing least-privilege file and network access at the syscall boundary. Even a compromised model cannot open a socket to an un-whitelisted endpoint. The kernel rejects it before user-space sees it.</p>
       </div>
       <div class="nemo-card reveal">
         <span class="nemo-badge">Layer 2</span>
         <div class="nemo-ic">📋</div>
         <h4>OPA Policy Engine</h4>
-        <p>Open Policy Agent evaluates every action request against the authority band in real time. Per-action caps ($250), rolling session windows ($1,000/2 hr), and escalation thresholds are enforced as Rego rules — not application code that can be patched around.</p>
+        <p>Open Policy Agent evaluates every action request against the authority band in real time. Per-action caps ($250), rolling session windows ($1,000/2 hr), and escalation thresholds are enforced as Rego rules, not application code that can be patched around.</p>
       </div>
       <div class="nemo-card reveal">
         <span class="nemo-badge">Layer 3</span>
         <div class="nemo-ic">📊</div>
         <h4>OCSF Audit Log</h4>
-        <p>Every allow and deny emits an Open Cybersecurity Schema Framework event — tamper-evident, structured, and verifiable by any SIEM. The log below is the live feed from the running sandbox right now.</p>
+        <p>Every allow and deny emits an Open Cybersecurity Schema Framework event: tamper-evident, structured, verifiable by any SIEM. The log below is the live feed from the running sandbox right now.</p>
       </div>
     </div>
     <div class="nemo-log-wrap reveal" style="margin-top:36px">
