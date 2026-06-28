@@ -170,6 +170,13 @@
   .rp-impact-arrow{font-size:1.4em;color:var(--bad);flex-shrink:0;align-self:center}
   .rp-impact-why{font-style:italic;color:#c09898;font-size:0.87em;line-height:1.65;
     border-left:2px solid rgba(255,93,108,0.4);padding-left:10px}
+  .rp-impact-accent{background:rgba(93,176,255,0.06);border-color:rgba(93,176,255,0.25)}
+  .rp-impact-accent .rp-impact-label{color:var(--accent)}
+  .rp-impact-accent .rp-impact-arrow{color:var(--accent)}
+  .rp-impact-warn{background:rgba(255,200,87,0.06);border-color:rgba(255,200,87,0.25)}
+  .rp-impact-warn .rp-impact-label{color:var(--warn)}
+  .rp-impact-warn .rp-impact-arrow{color:var(--warn)}
+  .rp-impact-sub{font-size:0.87em;color:var(--dim);margin-bottom:14px;line-height:1.5}
 
   .rp-no-override{background:var(--panel2);border:1px solid var(--line);border-radius:12px;
     padding:14px 16px;margin:12px 0}
@@ -193,6 +200,19 @@
   .pack-tab.active{border-color:var(--accent);color:var(--ink);background:rgba(93,176,255,0.08)}
   .pack-section{display:none}
   .pack-section.visible{display:block}
+  /* Nemotron thinking animation */
+  .nemo-thinking{text-align:center;padding:28px 0 20px}
+  .nemo-thinking svg{display:block;margin:0 auto 10px}
+  @keyframes blink{0%,90%,100%{opacity:1}95%{opacity:0.1}}
+  @keyframes dot-pulse{0%,80%,100%{opacity:0.25;transform:scale(0.8)}40%{opacity:1;transform:scale(1)}}
+  .nemo-eye{animation:blink 3.5s infinite}
+  .nemo-eye2{animation:blink 3.5s 0.15s infinite}
+  .nemo-dot{animation:dot-pulse 1.2s ease-in-out infinite}
+  .nemo-dot:nth-child(2){animation-delay:0.2s}
+  .nemo-dot:nth-child(3){animation-delay:0.4s}
+  .nemo-label{color:var(--dim);font-size:13px;margin-bottom:6px}
+  .nemo-dots{display:flex;justify-content:center;gap:6px;margin-top:4px}
+  .nemo-dot{width:7px;height:7px;border-radius:50%;background:#76b900}
 </style>
 </head>
 <body>
@@ -327,27 +347,66 @@ function renderPanel(p){
     </div>`).join('')}
   </div>`;
 
-  const decisionBlock = p.overrode_agent ? `<div class="rp-impact">
-    <div class="rp-impact-label">⚡ Ground truth overrode the AI — this is what Custodian is</div>
-    <div class="rp-impact-split">
-      <div class="rp-impact-ai">
-        <div class="rp-impact-role">🤖 AI proposed</div>
-        <div class="rp-impact-verdict rp-ai-color">${VLABEL[p.agent_recommended]||esc(p.agent_recommended)}</div>
+  let decisionBlock;
+  if(p.contradiction_count > 0){
+    decisionBlock = `<div class="rp-impact">
+      <div class="rp-impact-label">⚡ Ground truth overrode the AI — this is what Custodian is</div>
+      <div class="rp-impact-split">
+        <div class="rp-impact-ai">
+          <div class="rp-impact-role">🤖 AI proposed</div>
+          <div class="rp-impact-verdict rp-ai-color">${VLABEL[p.agent_recommended]||esc(p.agent_recommended)}</div>
+        </div>
+        <div class="rp-impact-arrow">→</div>
+        <div class="rp-impact-kernel">
+          <div class="rp-impact-role">🔍 Verifier + ⚡ Kernel decided</div>
+          <div class="rp-impact-verdict rp-kernel-color">${VLABEL[p.adapter_disposition]||esc(p.adapter_disposition)}</div>
+        </div>
       </div>
-      <div class="rp-impact-arrow">→</div>
-      <div class="rp-impact-kernel">
-        <div class="rp-impact-role">🔍 Verifier + ⚡ Kernel decided</div>
-        <div class="rp-impact-verdict rp-kernel-color">${VLABEL[p.adapter_disposition]||esc(p.adapter_disposition)}</div>
+      <div class="rp-impact-why">"${esc(p.why_not_a_script)}"</div>
+      <div style="margin-top:10px">${p.adapter_reasons.map(r=>`<div class="rp-reason">${esc(r)}</div>`).join('')}</div>
+    </div>`;
+  } else if(p.agent_recommended === "escalate_ambiguous" && p.adapter_disposition !== "escalate_ambiguous"){
+    decisionBlock = `<div class="rp-impact rp-impact-accent">
+      <div class="rp-impact-label">🔍 Verifier resolved AI uncertainty</div>
+      <div class="rp-impact-sub">AI was unsure. Verifier confirmed the facts. Adapter applied policy.</div>
+      <div class="rp-impact-split">
+        <div class="rp-impact-ai">
+          <div class="rp-impact-role">🤖 AI proposed</div>
+          <div class="rp-impact-verdict rp-ai-color">${VLABEL[p.agent_recommended]||esc(p.agent_recommended)}</div>
+        </div>
+        <div class="rp-impact-arrow">→</div>
+        <div class="rp-impact-kernel">
+          <div class="rp-impact-role">🔍 Verifier + ⚡ Kernel decided</div>
+          <div class="rp-impact-verdict rp-kernel-color">${VLABEL[p.adapter_disposition]||esc(p.adapter_disposition)}</div>
+        </div>
       </div>
-    </div>
-    <div class="rp-impact-why">"${esc(p.why_not_a_script)}"</div>
-    <div style="margin-top:10px">${p.adapter_reasons.map(r=>`<div class="rp-reason">${esc(r)}</div>`).join('')}</div>
-  </div>` : `<div class="rp-no-override">
-    <div class="rp-block-label">Deterministic verdict (AI and verifier agree)</div>
-    <div style="margin-bottom:6px">${vchip(p.adapter_disposition)}</div>
-    ${p.adapter_reasons.map(r=>`<div class="rp-reason">${esc(r)}</div>`).join('')}
-    <div class="rp-why-script">${esc(p.why_not_a_script)}</div>
-  </div>`;
+      <div style="margin-top:10px">${p.adapter_reasons.map(r=>`<div class="rp-reason">${esc(r)}</div>`).join('')}</div>
+    </div>`;
+  } else if(p.agent_recommended !== p.adapter_disposition){
+    decisionBlock = `<div class="rp-impact rp-impact-warn">
+      <div class="rp-impact-label">📋 Policy adapter overrode AI recommendation</div>
+      <div class="rp-impact-sub">${esc(p.adapter_reasons[0]||'')}</div>
+      <div class="rp-impact-split">
+        <div class="rp-impact-ai">
+          <div class="rp-impact-role">🤖 AI proposed</div>
+          <div class="rp-impact-verdict rp-ai-color">${VLABEL[p.agent_recommended]||esc(p.agent_recommended)}</div>
+        </div>
+        <div class="rp-impact-arrow">→</div>
+        <div class="rp-impact-kernel">
+          <div class="rp-impact-role">🔍 Verifier + ⚡ Kernel decided</div>
+          <div class="rp-impact-verdict rp-kernel-color">${VLABEL[p.adapter_disposition]||esc(p.adapter_disposition)}</div>
+        </div>
+      </div>
+      <div style="margin-top:10px">${p.adapter_reasons.map(r=>`<div class="rp-reason">${esc(r)}</div>`).join('')}</div>
+    </div>`;
+  } else {
+    decisionBlock = `<div class="rp-no-override">
+      <div class="rp-block-label">Deterministic verdict (AI and verifier agree)</div>
+      <div style="margin-bottom:6px">${vchip(p.adapter_disposition)}</div>
+      ${p.adapter_reasons.map(r=>`<div class="rp-reason">${esc(r)}</div>`).join('')}
+      <div class="rp-why-script">${esc(p.why_not_a_script)}</div>
+    </div>`;
+  }
 
   const kernelBox = `<div class="rp-kernel-box">
     <div class="rp-kernel-verdict">Authority: <b>${esc((p.kernel_verdict||'').toUpperCase())}</b> — ${esc(p.kernel_reason)}</div>
@@ -359,7 +418,7 @@ function renderPanel(p){
 }
 
 async function runCase(caseId, mount, live){
-  mount.innerHTML = `<div class="spin">${live?'🔴 calling the real Nemotron model…':'running the real engine…'}</div>`;
+  mount.innerHTML = nemoThinking(live?'Nemotron is reading your case…':'Running the engine…');
   try{
     const url = `${API}/run?case_id=${encodeURIComponent(caseId)}${live?'&live=1':''}`;
     const r = await fetch(url,{method:'POST'});
@@ -498,16 +557,43 @@ async function buildPackCases(pack, mount){
 // extend runCase to accept optional pack param
 const _origRunCase = runCase;
 async function runCase(caseId, mount, live, pack){
-  mount.innerHTML = `<div class="spin">${live?'🔴 calling the real Nemotron model…':'running the real engine…'}</div>`;
+  mount.innerHTML = nemoThinking(live?'Nemotron is reading your case…':'Running the engine…');
   try{
     const packParam = pack ? `&pack=${encodeURIComponent(pack)}` : '';
     const url = `${API}/run?case_id=${encodeURIComponent(caseId)}${live?'&live=1':''}${packParam}`;
     const r = await fetch(url,{method:'POST'});
     const p = await r.json();
     if(p.error){mount.innerHTML = `<div class="spin">${esc(p.error)}</div>`;return;}
-    p.overrode_agent = p.overrode_agent ?? (p.adapter_disposition !== p.agent_recommended);
+    p.overrode_agent = p.overrode_agent ?? (p.contradiction_count > 0);
     mount.innerHTML = renderPanel(p);
   }catch(e){mount.innerHTML = `<div class="spin">error: ${esc(e.message)}</div>`;}
+}
+
+function nemoThinking(label){
+  return `<div class="nemo-thinking">
+    <svg width="72" height="80" viewBox="0 0 72 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <!-- antenna -->
+      <line x1="36" y1="6" x2="36" y2="16" stroke="#76b900" stroke-width="2.5" stroke-linecap="round"/>
+      <circle cx="36" cy="4" r="3.5" fill="#76b900"/>
+      <!-- head -->
+      <rect x="10" y="16" width="52" height="40" rx="8" fill="#0e1a0a" stroke="#76b900" stroke-width="2"/>
+      <!-- eyes -->
+      <circle cx="24" cy="34" r="6" fill="#76b900" opacity="0.15"/>
+      <circle cx="24" cy="34" r="4" fill="#76b900" class="nemo-eye"/>
+      <circle cx="48" cy="34" r="6" fill="#76b900" opacity="0.15"/>
+      <circle cx="48" cy="34" r="4" fill="#76b900" class="nemo-eye2"/>
+      <!-- mouth -->
+      <path d="M24 48 Q36 54 48 48" stroke="#76b900" stroke-width="2" stroke-linecap="round" fill="none"/>
+      <!-- body stub -->
+      <rect x="28" y="56" width="16" height="8" rx="3" fill="#76b900" opacity="0.3"/>
+    </svg>
+    <div class="nemo-label">${label}</div>
+    <div class="nemo-dots">
+      <div class="nemo-dot"></div>
+      <div class="nemo-dot"></div>
+      <div class="nemo-dot"></div>
+    </div>
+  </div>`;
 }
 
 let currentPack = 'refunds';
@@ -566,7 +652,7 @@ async function runCustom() {
   const btn = document.getElementById('custom-btn');
   btn.disabled = true; btn.textContent = 'Analyzing…';
   const result = document.getElementById('custom-result');
-  result.innerHTML = '<div class="spin">Running the engine…</div>';
+  result.innerHTML = nemoThinking('Nemotron is reading your case…');
   const BACKEND = '';
   try {
     const box = CUSTOM_BOX[currentPack];
@@ -586,7 +672,7 @@ async function runCustom() {
       result.innerHTML = `<div class="spin">Error: ${esc(p.error)}</div>`;
       return;
     }
-    p.overrode_agent = p.overrode_agent ?? (p.adapter_disposition !== p.agent_recommended);
+    p.overrode_agent = p.overrode_agent ?? (p.contradiction_count > 0);
     result.innerHTML = renderPanel(p);
   } catch(e) {
     result.innerHTML = `<div class="spin">Could not reach backend: ${esc(e.message)}</div>`;
