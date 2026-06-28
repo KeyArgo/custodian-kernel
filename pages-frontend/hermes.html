@@ -1814,10 +1814,11 @@ function nemotronRenderAnswer(rawText) {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        question: "You just opened for a new visitor. Give them a one-paragraph tour: " +
-                            "who you are, what this dashboard is watching, and point them at the most " +
-                            "important thing to look at first. Use [[jump:]] links so they can click " +
-                            "straight there. End with 2-3 suggested questions to get them started.",
+                        question: "You just opened for a new visitor. In 2-3 sentences: who you are and " +
+                            "what this dashboard watches. Then tell them the MOST IMPORTANT thing is to " +
+                            "try the live demo themselves — include [[jump:operator|the operator panel]] " +
+                            "as a clickable link RIGHT IN THE BODY of your response. Mention the audit " +
+                            "feed as secondary. End with 2-3 [[suggest:...]] chips.",
                         history: nemotronHistory.slice(-4),
                         page: 'hermes'
                     }),
