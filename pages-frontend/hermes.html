@@ -1036,27 +1036,20 @@
             </div>`;
         }
 
-        // Delegated "Why?" click handler — ask Nemotron to explain a specific audit entry
-        document.addEventListener('click', async (e) => {
+        // Delegated "Why?" click handler — open Nemotron chat and ask about this specific entry.
+        // Routing through the chat panel avoids a race with the 3-second poll that replaces
+        // feed.innerHTML: answers that arrive mid-render were getting swallowed silently.
+        document.addEventListener('click', (e) => {
             const btn = e.target.closest('.entry-ask-btn');
             if (!btn) return;
-            btn.disabled = true; btn.textContent = '…';
-            const tsKey = btn.dataset.ts;
             let evData = {};
             try { evData = JSON.parse(btn.dataset.ev || '{}'); } catch (_) {}
-            const q = `Explain this audit entry in one plain-English paragraph (no bullets, under 80 words): event="${evData.event}", amount=${evData.amount != null ? '$'+evData.amount : 'none'}, description="${evData.description||''}", band=${evData.band||'?'}, kernel reason="${evData.reason||'none'}". Be specific about what the kernel decided and why — not generic.`;
-            try {
-                const r = await fetch('/api/v1/nemotron/ask', {
-                    method: 'POST', headers: {'Content-Type':'application/json'},
-                    body: JSON.stringify({ question: q, history: [] }),
-                });
-                const d = await r.json();
-                const answer = (d.answer || '').replace(/\[\[(jump|entry|suggest):[^\]]*\]\]/g,'').trim() || 'No explanation returned.';
-                _entryExplanations.set(tsKey, answer);
-                const el = document.querySelector(`.entry-reason[data-ts="${tsKey}"]`);
-                if (el) { el.textContent = answer; el.style.display = 'block'; }
-                btn.remove();
-            } catch (_) { btn.disabled = false; btn.textContent = 'Why?'; }
+            const eventLabel = (evData.event || 'event').replace(/_/g, ' ');
+            const amtStr = evData.amount != null ? ` of $${evData.amount}` : '';
+            const q = `Why did the "${evData.description || eventLabel}"${amtStr} entry ${evData.event === 'escalation_required' ? 'get escalated' : evData.event === 'executed' ? 'execute autonomously' : 'happen'}? Explain what the kernel decided and why, in plain English.`;
+            nemotronOpen(false);
+            nemotronInput.value = q;
+            nemotronSend();
         });
 
         function renderPolicyLine(line) {
