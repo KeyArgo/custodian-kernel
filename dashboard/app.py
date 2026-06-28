@@ -32,6 +32,8 @@ import api.nemotron_chat as nemotron_chat
 import api.operator as operator
 import api.playground as playground
 import api.stripe_panel as stripe_panel
+import api.stripe_webhook as stripe_webhook
+import api.pnl as pnl
 import api.triage as triage
 import api.triage_live as triage_live
 import api.tools as tools_api
@@ -43,6 +45,8 @@ app.register_blueprint(debug.bp, url_prefix='/api/v1/debug')
 app.register_blueprint(nemotron_chat.bp, url_prefix='/api/v1/nemotron')
 app.register_blueprint(operator.bp, url_prefix='/api/v1/operator')
 app.register_blueprint(stripe_panel.bp, url_prefix='/api/v1/stripe')
+app.register_blueprint(stripe_webhook.bp, url_prefix='/api/v1/stripe')
+app.register_blueprint(pnl.bp, url_prefix='/api/v1/pnl')
 app.register_blueprint(triage.bp, url_prefix='/api/v1/triage')
 app.register_blueprint(triage_live.bp, url_prefix='/api/v1/triage')
 app.register_blueprint(tools_api.tools_bp, url_prefix='/api/v1/tools')

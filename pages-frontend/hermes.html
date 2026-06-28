@@ -341,6 +341,22 @@
           .k-brand span { display: inline; }
         }
 
+        /* ── P&L bar ───────────────────────────────────────────── */
+        .pnl-bar {
+          display: flex; align-items: center; justify-content: center; gap: 20px;
+          padding: 9px 24px; background: var(--bg2);
+          border-bottom: 1px solid rgba(255,176,0,0.08);
+          font-family: var(--mono); font-size: 0.72em; flex-wrap: wrap;
+        }
+        .pnl-stat { display: flex; flex-direction: column; align-items: center; gap: 1px; }
+        .pnl-label { color: var(--dim); font-size: 0.72em; letter-spacing: 0.12em; text-transform: uppercase; }
+        .pnl-val { font-weight: 700; font-size: 1.05em; color: var(--text); }
+        .pnl-earn { color: var(--green); }
+        .pnl-spend { color: var(--red); }
+        .pnl-net-pos { color: var(--green); }
+        .pnl-net-neg { color: var(--red); }
+        .pnl-sep { color: var(--dim); font-size: 1.2em; }
+
         /* ---- tabs ---- */
         .tabs-section { margin-bottom: 28px; }
         .tab-bar { display: flex; border-bottom: 1px solid #2a2a2a; margin-bottom: 18px; }
@@ -679,6 +695,27 @@
         <span>Kernel Live</span>
       </div>
     </nav>
+    <div class="pnl-bar" id="pnl-bar">
+      <div class="pnl-stat">
+        <span class="pnl-label">Earned</span>
+        <span class="pnl-val pnl-earn" id="pnl-earned">$0.00</span>
+      </div>
+      <span class="pnl-sep">·</span>
+      <div class="pnl-stat">
+        <span class="pnl-label">Spent</span>
+        <span class="pnl-val pnl-spend" id="pnl-spent">$0.00</span>
+      </div>
+      <span class="pnl-sep">·</span>
+      <div class="pnl-stat">
+        <span class="pnl-label">Net</span>
+        <span class="pnl-val" id="pnl-net">$0.00</span>
+      </div>
+      <span class="pnl-sep">·</span>
+      <div class="pnl-stat">
+        <span class="pnl-label">Margin</span>
+        <span class="pnl-val pnl-earn" id="pnl-margin">—</span>
+      </div>
+    </div>
     <div class="top-bar">
         <div class="top-bar-brand">
             <div class="top-bar-logo">C</div>
@@ -1428,6 +1465,25 @@
 
         poll();
         setInterval(poll, 3000);
+
+        // ── P&L bar ─────────────────────────────────────────────
+        async function pollPnl() {
+            try {
+                const r = await fetch('/api/v1/pnl/summary');
+                if (!r.ok) return;
+                const d = await r.json();
+                document.getElementById('pnl-earned').textContent = '$' + (d.earned||0).toFixed(2);
+                document.getElementById('pnl-spent').textContent  = '$' + (d.spent||0).toFixed(2);
+                const net = d.net||0;
+                const netEl = document.getElementById('pnl-net');
+                netEl.textContent = (net >= 0 ? '+$' : '-$') + Math.abs(net).toFixed(2);
+                netEl.className = 'pnl-val ' + (net >= 0 ? 'pnl-net-pos' : 'pnl-net-neg');
+                const m = d.margin_pct||0;
+                document.getElementById('pnl-margin').textContent = m > 0 ? m.toFixed(1) + '%' : '—';
+            } catch(_) {}
+        }
+        pollPnl();
+        setInterval(pollPnl, 5000);
 
         document.querySelectorAll('.tab-btn').forEach(btn => {
             btn.addEventListener('click', () => {
