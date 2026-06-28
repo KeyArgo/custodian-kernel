@@ -61,6 +61,49 @@ custodian audit
 - [Verification](docs/VERIFICATION.md) — how to check every claim yourself
 - [Getting Started](docs/GETTING_STARTED.md) — 10-minute walkthrough
 
+## Tool Layer — 61 governed tools
+
+Custodian ships a governed tool library. Every tool is a Hermes-compatible
+skill (SKILL.md frontmatter) that declares a `custodian-band` from L0–L4.
+The ToolRegistry auto-discovers them — no registration code needed.
+
+```
+custodian tools list              # show all 61 tools grouped by band
+custodian tools run http-get --url https://example.com
+custodian tools summary           # JSON band breakdown
+```
+
+**Tool categories:**
+
+| Category | Count | Band | Example |
+|---|---|---|---|
+| Utilities | 8 | L0 | base64, hash-sha256, url-parse, json-transform, timezone, currency-convert |
+| Web | 5 | L0–L1 | http-get, http-post, web-scrape, web-search, news-search |
+| Files | 3 | L0–L1 | file-read, file-list, shell-exec (read-only allowlist) |
+| Memory | 5 | L0 | kv-get/set/delete/list, sqlite-query |
+| Scheduling | 5 | L1 | task-queue-add/list, cron-create/list/delete |
+| Communication | 6 | L1–L2 | email-send, sms-send, slack-message, discord-webhook, webhook-post, push-notification |
+| Docker | 4 | L1–L2 | docker-list, docker-logs, docker-start, docker-stop |
+| GitHub | 3 | L0–L1 | github-file-read, github-issue-create, github-pr-list |
+| NVIDIA NIM | 4 | L2 | nim-model-list, nim-job-submit, nim-job-status, nim-cost-estimate |
+| Stripe (extended) | 8 | L2–L3 | stripe-balance, stripe-customer-lookup, stripe-invoice, stripe-refund |
+| Financial AI | 5 | L2–L3 | modal-run, huggingface-infer, openai-complete, anthropic-complete |
+| Calendar | 5 | L1–L2 | calendar-list, calendar-create, calendar-update |
+
+Tools with missing credentials return `{"ok": false, "stub": true}` — the
+framework works without any env vars configured; stub tools show in the registry
+with their band and description so the capability surface is visible during review.
+
+### Authority bands
+
+| Band | Policy | Use case |
+|---|---|---|
+| L0 | Always autonomous, no spend | Read-only data fetching |
+| L1 | Autonomous, trivial side effects | Creating records, sending low-stakes messages |
+| L2 | Autonomous up to per-action cap | AI inference, Stripe calls under threshold |
+| L3 | Always escalates to operator | Refunds, subscription changes, payouts |
+| L4 | Always escalates, unlimited scope | Reserved for future high-stakes tools |
+
 ## What's real right now
 
 - A real Stripe (test-mode) PaymentIntent is on record:

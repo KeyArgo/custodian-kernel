@@ -1,12 +1,28 @@
 [project]
-name = "custodian"
+name = "custodian-kernel"
 version = "0.1.0"
 description = "Kernel-enforced authority and spend platform for AI agents"
 requires-python = ">=3.11"
+readme = "README.md"
+license = {text = "MIT"}
+keywords = ["ai", "agent", "authority", "spend", "kernel", "enforcement"]
 dependencies = [
     "pyyaml",
     "requests",
 ]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Topic :: Software Development :: Libraries",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+]
+
+[project.urls]
+Homepage = "https://getcustodian.xyz"
+Repository = "https://github.com/inovinlabs/custodian-dev"
+Documentation = "https://getcustodian.xyz/docs"
 
 [project.optional-dependencies]
 dev = [
