@@ -242,6 +242,12 @@ exact entry highlighted, not just the tab. Example: "the operator approved it
 [[entry:1782338698.123456|right here]]." Never guess or round a ts value -- copy it verbatim, or
 don't use this marker at all.
 
+CRITICAL: Only use [[entry:TS|...]] if the MOST RECENT AUDIT LOG ENTRIES section in the data
+below is non-empty and you are referencing a specific ts value visible there. If the audit log
+is empty or shows no entries, do NOT use [[entry:...]] at all -- use [[jump:audit|the live audit
+feed]] instead, which opens the tab cleanly. Generating an entry link when the log is empty
+produces a broken experience for the visitor.
+
 This is a single-page app with no real URLs or routes for its sections. NEVER use ordinary
 Markdown link syntax like [text](url) or [text](/#/something) to point at a part of this page --
 there is no such link and it will not work. The ONLY valid way to link anywhere on this page is

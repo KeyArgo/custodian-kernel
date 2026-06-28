@@ -1759,16 +1759,23 @@
             "What happens if the AI claims something the verifier can't confirm either way?",
         ];
         let _tourPoolIdx = 0;
+        // Tracks every question the visitor has asked OR been shown as a chip,
+        // so we never re-suggest something they already clicked or typed.
+        const _seenQuestions = new Set();
+
+        function _normQ(q) { return q.trim().toLowerCase().replace(/[?.!]+$/, ''); }
+
         function _nextFallbackSuggest(skip) {
             // Cycle through, skipping any that appear verbatim in the skip set
+            // OR that the visitor has already seen/asked this session.
             let tries = 0;
             while (tries < _TOUR_POOL.length) {
                 const q = _TOUR_POOL[_tourPoolIdx % _TOUR_POOL.length];
                 _tourPoolIdx++;
                 tries++;
-                if (!skip.has(q)) return q;
+                if (!skip.has(q) && !_seenQuestions.has(_normQ(q))) return q;
             }
-            return _TOUR_POOL[0]; // shouldn't happen
+            return _TOUR_POOL[(_tourPoolIdx + 1) % _TOUR_POOL.length];
         }
 
 function nemotronRenderAnswer(rawText) {
@@ -1814,26 +1821,33 @@ function nemotronRenderAnswer(rawText) {
             nemotronBody.appendChild(div);
 
             {
-                // Always show at least 2 path chips. If the model returned fewer,
-                // pad from the fallback pool so there's never a dead end.
-                const skipSet = new Set(suggestions);
-                while (suggestions.length < 2) {
-                    suggestions.push(_nextFallbackSuggest(skipSet));
-                    skipSet.add(suggestions[suggestions.length - 1]);
+                // Filter out any suggestions the visitor has already seen or asked.
+                const freshSuggestions = suggestions.filter(q => !_seenQuestions.has(_normQ(q)));
+                // Always show at least 2 path chips. Pad from pool if needed,
+                // skipping anything already seen this session.
+                const skipSet = new Set(freshSuggestions);
+                while (freshSuggestions.length < 2) {
+                    const fb = _nextFallbackSuggest(skipSet);
+                    freshSuggestions.push(fb);
+                    skipSet.add(fb);
                 }
+                // Register all shown chips as seen so they never repeat.
+                freshSuggestions.slice(0, 3).forEach(q => _seenQuestions.add(_normQ(q)));
+
                 const chipRow = document.createElement('div');
                 chipRow.className = 'nemotron-suggest-row';
                 const label = document.createElement('div');
                 label.className = 'nemotron-suggest-label';
                 label.textContent = 'Explore next →';
                 chipRow.appendChild(label);
-                for (const q of suggestions.slice(0, 3)) {
+                for (const q of freshSuggestions.slice(0, 3)) {
                     const chip = document.createElement('button');
                     chip.className = 'nemotron-suggest-chip';
                     chip.textContent = q;
                     chip.addEventListener('click', () => {
                         chip.disabled = true;
                         chip.style.opacity = '0.45';
+                        _seenQuestions.add(_normQ(q));
                         nemotronInput.value = q;
                         nemotronSend();
                     });
@@ -1882,18 +1896,19 @@ function nemotronRenderAnswer(rawText) {
             if (!btn) return;
 
             if (btn.dataset.entryTs) {
+                // Always open the audit tab first.
                 document.querySelector('.tab-btn[data-tab="audit"]').click();
                 const row = document.querySelector(`#feed .event[data-ts="${btn.dataset.entryTs}"]`);
                 if (row) {
                     row.classList.remove('entry-highlight');
-                    // restart the CSS animation even if this entry was just highlighted a moment ago
-                    void row.offsetWidth;
+                    void row.offsetWidth; // restart CSS animation
                     row.classList.add('entry-highlight');
                     row.scrollIntoView({ behavior: 'smooth', block: 'center' });
                     setTimeout(() => row.classList.remove('entry-highlight'), 2700);
-                } else {
-                    nemotronAddMessage("That entry isn't in the most recent rows currently shown -- it may have scrolled further back.", 'bot thinking');
                 }
+                // No error message if the entry isn't found — the audit tab
+                // opened cleanly and the visitor can see the live feed. Showing an
+                // error for a hallucinated or rotated-out timestamp just looks broken.
                 return;
             }
 
@@ -1982,6 +1997,7 @@ function nemotronRenderAnswer(rawText) {
             nemotronInput.value = '';
             nemotronSendBtn.disabled = true;
             nemotronAddMessage(question, 'user');
+            _seenQuestions.add(_normQ(question));
             const thinkingMsg = nemotronAddThinkingMessage();
             try {
                 const res = await fetch('/api/v1/nemotron/ask', {
