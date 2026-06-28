@@ -241,12 +241,12 @@ h1,h2,h3,h4{font-weight:700;letter-spacing:-0.01em;color:var(--text)}
     <section class="doc-section" id="overview">
       <div class="section-eyebrow">Start here</div>
       <h2>What is Custodian?</h2>
-      <p>Custodian is a <strong>kernel-enforced authority layer</strong> that sits between an AI agent and real money. It enforces spending rules at the operating system level — not in application code the agent could reason around — so the agent can never self-approve a payment or spend beyond its authority, no matter what it decides.</p>
-      <p>Think of a new employee with a company card. They can buy what they need — but they can't sign their own expense reports, and they can't lie about a receipt once it's in the ledger. Custodian is that card, that limit, and that ledger, for AI agents.</p>
+      <p>Custodian is a <strong>kernel-enforced authority layer</strong> that sits between an AI agent and real money. It enforces spending rules at the operating system level, not in application code the agent could reason around, so the agent can never self-approve a payment or spend beyond its authority, no matter what it decides.</p>
+      <p>Think of a new employee with a company card. They can buy what they need, but they can't sign their own expense reports, and they can't lie about a receipt once it's in the ledger. Custodian is that card, that limit, and that ledger, for AI agents.</p>
 
       <div class="callout callout-green">
         <div class="callout-label">The core guarantee</div>
-        <p>The AI agent (Nemotron) can only ever <strong>request</strong> an action. It cannot approve its own requests. The kernel is the only thing that can authorize money moving — and it never consults the agent to make that decision.</p>
+        <p>The AI agent (Nemotron) can only ever <strong>request</strong> an action. It cannot approve its own requests. The kernel is the only thing that can authorize money moving, and it never consults the agent to make that decision.</p>
       </div>
 
       <h3>The three decision outcomes</h3>
@@ -342,14 +342,14 @@ h1,h2,h3,h4{font-weight:700;letter-spacing:-0.01em;color:var(--text)}
       <p>Linux Security Module enforcing least-privilege file and network access at the syscall boundary. The agent's process <strong>cannot open a socket to a payment endpoint the kernel hasn't whitelisted</strong>. The OS rejects the syscall before user-space code sees it. A prompt cannot override a syscall rejection.</p>
 
       <h3>OPA Policy Engine</h3>
-      <p>Open Policy Agent evaluates every action request against the current authority band in real time. Per-action caps ($250), rolling session windows ($1,000 / 2 hr), and escalation thresholds are enforced as Rego rules — not application code that can be patched or reasoned around.</p>
+      <p>Open Policy Agent evaluates every action request against the current authority band in real time. Per-action caps ($250), rolling session windows ($1,000 / 2 hr), and escalation thresholds are enforced as Rego rules, not application code that can be patched or reasoned around.</p>
 
       <h3>OCSF Audit Log</h3>
-      <p>Every allow and deny emits an Open Cybersecurity Schema Framework event. The log is append-only, tamper-evident, and structured — verifiable by any SIEM. You can see the live feed on the <a href="/hermes">Live Console</a>.</p>
+      <p>Every allow and deny emits an Open Cybersecurity Schema Framework event. The log is append-only, tamper-evident, and structured: verifiable by any SIEM. You can see the live feed on the <a href="/hermes">Live Console</a>.</p>
 
       <div class="callout callout-blue">
         <div class="callout-label">Why kernel-level?</div>
-        <p>An agent running in software can, in principle, be instructed to bypass software-level controls. The kernel enforces egress at the OS — a clever prompt cannot override a Landlock rule any more than a clever argument can make a locked door open.</p>
+        <p>An agent running in software can, in principle, be instructed to bypass software-level controls. The kernel enforces egress at the OS. A clever prompt cannot override a Landlock rule any more than a clever argument can make a locked door open.</p>
       </div>
     </section>
 
