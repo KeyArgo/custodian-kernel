@@ -1,0 +1,13 @@
+FROM python:3.13-slim
+
+WORKDIR /app
+COPY . /app
+
+RUN pip install --no-cache-dir -e .
+
+EXPOSE 8090
+
+# Run the dashboard (which includes the /api/v1/triage/live endpoint) on port 8090.
+# gunicorn serves multiple concurrent requests; threaded=True in app.py covers the
+# dev path, but this container path uses gunicorn for real traffic during judging.
+CMD ["python", "-m", "gunicorn", "--chdir", "/app/dashboard", "wsgi:app", "--bind", "0.0.0.0:8090", "--workers", "2", "--threads", "4", "--timeout", "60"]
