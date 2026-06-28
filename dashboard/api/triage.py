@@ -17,7 +17,15 @@ from pathlib import Path
 
 from flask import Blueprint, jsonify, request
 
-from custodian.packs.agent import EnvelopeParseError, NvidiaNemotronClient
+from custodian.packs.agent import EnvelopeParseError
+try:
+    from custodian.inference.router import NemoClawRouter
+    def _make_client():
+        return NemoClawRouter(nvidia_api_key_file=_NVIDIA_SECRET)
+except ImportError:
+    from custodian.packs.agent import NvidiaNemotronClient
+    def _make_client():
+        return NvidiaNemotronClient(secret_file=_NVIDIA_SECRET)
 from custodian.packs.base import Envelope
 from custodian.packs.engine import replay_with_policy_change, triage
 from custodian.packs.narration import TOUR
@@ -73,7 +81,7 @@ def _envelope_for(data: dict, live: bool):
     """Return (Envelope, source_label). Falls back to captured if live fails so
     a judge never hits a dead demo, but the label always tells the truth."""
     if live and _NVIDIA_SECRET.exists():
-        client = NvidiaNemotronClient(secret_file=_NVIDIA_SECRET)
+        client = _make_client()
         try:
             return extract_envelope(_case_input(data), client), client.name
         except (EnvelopeParseError, OSError, KeyError) as e:
@@ -164,7 +172,7 @@ def custom():
     if not _NVIDIA_SECRET.exists():
         return jsonify({"error": "NVIDIA API key not configured on this server"}), 503
 
-    client = NvidiaNemotronClient(secret_file=_NVIDIA_SECRET)
+    client = _make_client()
     try:
         envelope = extract_envelope(case_input, client)
         source = client.name

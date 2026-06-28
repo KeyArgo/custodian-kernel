@@ -23,6 +23,12 @@ from flask import Blueprint, jsonify, request
 import api.hermes as hermes
 from custodian.packs.narration import tour_intro_for_model
 
+try:
+    from custodian.inference.router import NemoClawRouter
+    _nemo_client = NemoClawRouter(timeout=25)
+except ImportError:
+    _nemo_client = None
+
 bp = Blueprint('nemotron_chat', __name__)
 
 # The model is told to use [[jump:KEY|label]] but reliably reverts to ordinary
@@ -396,30 +402,45 @@ def ask():
     system_prompt = SYSTEM_PROMPT + "\n\n" + tour_intro_for_model()
     if page_guidance:
         system_prompt += "\n\n" + page_guidance
-    payload = {
-        'model': NVIDIA_MODEL,
-        'messages': [
-            {'role': 'system', 'content': system_prompt},
-            *history_msgs,
-            {'role': 'user', 'content': f"{context_block}\n\nVISITOR'S QUESTION: {question}"},
-        ],
-        'max_tokens': 600,
-        'temperature': 0.7,
-        'chat_template_kwargs': {'thinking': False},
-    }
-    req = urllib.request.Request(
-        NVIDIA_ENDPOINT,
-        data=json.dumps(payload).encode(),
-        headers={'Authorization': f'Bearer {_nvidia_key()}', 'Content-Type': 'application/json'},
-    )
-    try:
-        with urllib.request.urlopen(req, timeout=25) as resp:
-            result = json.loads(resp.read())
-        answer = result['choices'][0]['message']['content']
-    except urllib.error.URLError as e:
-        return jsonify({'error': f'Could not reach Nemotron: {e}'}), 502
-    except (KeyError, IndexError, json.JSONDecodeError):
-        return jsonify({'error': 'Unexpected response shape from Nemotron'}), 502
+    if _nemo_client is not None:
+        try:
+            merged_system = system_prompt
+            for msg in history_msgs:
+                merged_system += f"\n\nPrevious {msg['role']}: {msg['content']}"
+            answer = _nemo_client.complete(
+                merged_system,
+                f"{context_block}\n\nVISITOR'S QUESTION: {question}",
+            )
+        except RuntimeError:
+            answer = None
+    else:
+        answer = None
+
+    if answer is None:
+        payload = {
+            'model': NVIDIA_MODEL,
+            'messages': [
+                {'role': 'system', 'content': system_prompt},
+                *history_msgs,
+                {'role': 'user', 'content': f"{context_block}\n\nVISITOR'S QUESTION: {question}"},
+            ],
+            'max_tokens': 600,
+            'temperature': 0.7,
+            'chat_template_kwargs': {'thinking': False},
+        }
+        req = urllib.request.Request(
+            NVIDIA_ENDPOINT,
+            data=json.dumps(payload).encode(),
+            headers={'Authorization': f'Bearer {_nvidia_key()}', 'Content-Type': 'application/json'},
+        )
+        try:
+            with urllib.request.urlopen(req, timeout=25) as resp:
+                result = json.loads(resp.read())
+            answer = result['choices'][0]['message']['content']
+        except urllib.error.URLError as e:
+            return jsonify({'error': f'Could not reach Nemotron: {e}'}), 502
+        except (KeyError, IndexError, json.JSONDecodeError):
+            return jsonify({'error': 'Unexpected response shape from Nemotron'}), 502
 
     answer = _rewrite_markdown_links_to_jumps(answer)
     return jsonify({'answer': answer})
