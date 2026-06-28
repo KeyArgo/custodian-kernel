@@ -1,6 +1,6 @@
 ---
-name: github-file-read
-description: "Read the content of a file from a GitHub repository"
+name: github-release-create
+description: "Create a GitHub release from a tag with release notes"
 version: 1.0.0
 author: custodian
 license: MIT
@@ -9,11 +9,11 @@ metadata:
   hermes:
     tags: [GitHub, VCS]
   custodian:
-    band: L0
+    band: L2
     cost_usd: 0.00
     configured: false
 ---
 
-# Github File Read
+# Github Release Create
 
-Read the content of a file from a GitHub repository
+Create a GitHub release from a tag with release notes

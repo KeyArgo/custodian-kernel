@@ -62,6 +62,43 @@ _ENV_REQUIREMENTS: dict[str, list[str]] = {
     "calendar-update":           ["GOOGLE_CALENDAR_TOKEN"],
     # Modal
     "modal-run":                 ["MODAL_TOKEN_ID", "MODAL_TOKEN_SECRET"],
+    # Cloud Storage (S3-compatible)
+    "s3-list":                   ["AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY"],
+    "s3-get":                    ["AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY"],
+    "s3-put":                    ["AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY"],
+    "s3-delete":                 ["AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY"],
+    # Database
+    "redis-get":                 ["REDIS_URL"],
+    "redis-set":                 ["REDIS_URL"],
+    "redis-delete":              ["REDIS_URL"],
+    "postgres-query":            ["POSTGRES_URL"],
+    "mysql-query":               ["MYSQL_URL"],
+    "mongodb-find":              ["MONGODB_URL"],
+    # Additional GitHub
+    "github-commit-list":        ["GITHUB_TOKEN"],
+    "github-file-read":          ["GITHUB_TOKEN"],
+    "github-release-list":       ["GITHUB_TOKEN"],
+    "github-release-create":     ["GITHUB_TOKEN"],
+    # AI Inference
+    "openai-chat":               ["OPENAI_API_KEY"],
+    "anthropic-chat":            ["ANTHROPIC_API_KEY"],
+    "cohere-embed":              ["COHERE_API_KEY"],
+    "replicate-run":             ["REPLICATE_API_TOKEN"],
+    "together-infer":            ["TOGETHER_API_KEY"],
+    # Calendar
+    "calendar-list":             ["GOOGLE_CALENDAR_TOKEN"],
+    "calendar-create":           ["GOOGLE_CALENDAR_TOKEN"],
+    "calendar-update":           ["GOOGLE_CALENDAR_TOKEN"],
+    "calendar-delete":           ["GOOGLE_CALENDAR_TOKEN"],
+    # Additional Stripe
+    "stripe-charge-list":        ["STRIPE_SECRET_KEY"],
+    "stripe-customer-create":    ["STRIPE_SECRET_KEY"],
+    "stripe-price-list":         ["STRIPE_SECRET_KEY"],
+    "stripe-refund-list":        ["STRIPE_SECRET_KEY"],
+    # Alerts
+    "pagerduty-alert":           ["PAGERDUTY_API_KEY"],
+    "twilio-voice-call":         ["TWILIO_ACCOUNT_SID", "TWILIO_AUTH_TOKEN"],
+    "telegram-send":             ["TELEGRAM_BOT_TOKEN"],
 }
 
 

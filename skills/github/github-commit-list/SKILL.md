@@ -1,6 +1,6 @@
 ---
-name: github-file-read
-description: "Read the content of a file from a GitHub repository"
+name: github-commit-list
+description: "List recent commits on a branch, with author and message"
 version: 1.0.0
 author: custodian
 license: MIT
@@ -14,6 +14,6 @@ metadata:
     configured: false
 ---
 
-# Github File Read
+# Github Commit List
 
-Read the content of a file from a GitHub repository
+List recent commits on a branch, with author and message

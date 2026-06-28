@@ -1,6 +1,6 @@
 ---
-name: github-file-read
-description: "Read the content of a file from a GitHub repository"
+name: github-release-list
+description: "List GitHub releases (tags, assets, published dates)"
 version: 1.0.0
 author: custodian
 license: MIT
@@ -14,6 +14,6 @@ metadata:
     configured: false
 ---
 
-# Github File Read
+# Github Release List
 
-Read the content of a file from a GitHub repository
+List GitHub releases (tags, assets, published dates)
