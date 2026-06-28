@@ -78,7 +78,7 @@ Release kill switch → same case → **AUTONOMOUS**
 
 > "Three business domains. Same kernel.
 > Refunds, purchasing, cloud provisioning — one enforcement layer.
-> 100 governed tools ship with it. Add one with a YAML line.
+> 53 live tools ship with it. Add one with a YAML line.
 > MSPs, SaaS platforms, anyone running agents with real authority."
 
 ---
