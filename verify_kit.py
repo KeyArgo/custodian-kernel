@@ -213,7 +213,7 @@ def step5_stripe_instructions() -> None:
 
 def main() -> int:
     results = {
-        "Test suite (1,110 tests)": step1_test_suite(),
+        "Test suite (1,176 tests)": step1_test_suite(),
         "Lie-catcher catches the planted lie": step2_planted_lie_demo(),
         "Self-approval regression actually catches the bug": step3_regression_proof(),
         "Live public dashboard data is real": step4_live_dashboard(),

@@ -61,14 +61,14 @@ custodian audit
 - [Verification](docs/VERIFICATION.md) — how to check every claim yourself
 - [Getting Started](docs/GETTING_STARTED.md) — 10-minute walkthrough
 
-## Tool Layer — 61 governed tools
+## Tool Layer — 100 governed tools
 
 Custodian ships a governed tool library. Every tool is a Hermes-compatible
 skill (SKILL.md frontmatter) that declares a `custodian-band` from L0–L4.
 The ToolRegistry auto-discovers them — no registration code needed.
 
 ```
-custodian tools list              # show all 61 tools grouped by band
+custodian tools list              # show all 100 tools grouped by band
 custodian tools run http-get --url https://example.com
 custodian tools summary           # JSON band breakdown
 ```

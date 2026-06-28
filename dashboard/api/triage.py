@@ -96,6 +96,28 @@ def tour():
     return jsonify({"tour": TOUR, "packs": available()})
 
 
+@bp.route("/case/<case_id>", methods=["GET"])
+def case_by_id(case_id: str):
+    """Load and run a single corpus case by ID — used by the try-it-yourself panels."""
+    name = _pack_name()
+    pack, kernel_policy, corpus_dir = _resolve_pack(name)
+    if pack is None:
+        return jsonify({"error": f"unknown pack: {name}", "packs": available()}), 404
+    data = _load_case(corpus_dir, case_id)
+    if not data:
+        return jsonify({"error": f"no such case: {case_id} in pack {name}"}), 404
+    envelope, source = _envelope_for(data, False)
+    result = triage(pack, envelope, kernel_policy, _STATE())
+    panel = result.to_panel()
+    panel["pack"] = name
+    panel["customer_email"] = data.get("customer_email", "")
+    panel["title"] = data.get("title", case_id)
+    panel["expected_disposition"] = data.get("expect")
+    panel["envelope_source"] = source
+    panel["overrode_agent"] = panel["adapter_disposition"] != panel["agent_recommended"]
+    return jsonify(panel)
+
+
 @bp.route("/cases", methods=["GET"])
 def cases():
     name = _pack_name()
