@@ -25,12 +25,12 @@ Real Stripe test-mode PaymentIntents move (and refund) throughout the demo.
 Local dev repo: `/mnt/homes/galileo/argo/Development/hermes-hackathon-2026/`
 
 Git remotes in that repo:
-- `custodian-private` → `https://github.com/inovinlabs/custodian-dev.git`  
-- `custodian-public` → `https://github.com/KeyArgo/custodian.git`  
-- `origin` → Gitea `KeyArgo/hermes-hackathon-2026` (legacy)  
+- `custodian-kernel` → `https://github.com/inovinlabs/custodian-dev.git` (renamed from `custodian-private`)
+- `custodian-public` → `https://github.com/KeyArgo/custodian.git`
+- `origin` → Gitea `KeyArgo/hermes-hackathon-2026` (legacy)
 - `github` → GitHub `KeyArgo/hermes-hackathon-2026` (legacy)
 
-**Workflow:** Push to `custodian-private` always. Push to `custodian-public` only for deliberate judge-facing releases.
+**Workflow:** Push to `custodian-kernel` for ongoing dev. Push to `custodian-public` only for deliberate judge-facing releases.
 
 ---
 
@@ -38,18 +38,19 @@ Git remotes in that repo:
 
 ### Public URL: `getcustodian.xyz`
 
-Served by **Cloudflare Pages** project `rein-custodian`.
+Served by **Cloudflare Pages** project (target name: `custodian-kernel`; currently `rein-custodian` pending CF dashboard rename).
 
-Static assets (`index.html`, `hermes.html`, `operator.html`, `triage.html`, `_worker.js`) live in `pages-frontend/`.
+Static assets (`index.html`, `hermes.html`, `operator.html`, `triage.html`, `tools.html`, `docs.html`, `_worker.js`) live in `pages-frontend/`.
 
 Deploy command:
 ```bash
-CLOUDFLARE_API_TOKEN=$(ARGO_CREDENTIAL_AGENT=claude ARGO_CREDENTIAL_MODE=trusted-local credential-broker get token:cloudflare_pages_token) \
+CLOUDFLARE_API_TOKEN=$(ARGO_CREDENTIAL_AGENT=claude ARGO_CREDENTIAL_MODE=trusted-local credential-broker resolve token:cloudflare_pages_token) \
   /home/argo/.npm-global/bin/wrangler pages deploy pages-frontend \
   --project-name rein-custodian --commit-dirty=true
+# Update --project-name once CF Pages project is renamed to custodian-kernel
 ```
 
-### Flask Backend: `rein-local.argobox.com`
+### Flask Backend: `rein-local.argobox.com` → `api.getcustodian.xyz`
 
 Cloudflare Tunnel → Flask app on **argobox-lite** (10.0.0.199) at port 8094.  
 App lives at `/tmp/hermes-dash-v4/` on argobox-lite.  
@@ -127,8 +128,8 @@ dashboard/
     stripe_panel.py        — /api/v1/stripe/* — Stripe PaymentIntent operations
     triage.py              — triage walkthrough API
   templates/hermes/
-    dashboard.html         — Flask-served live console (rein-local.argobox.com/hermes)
-    operator.html          — Flask-served operator panel (rein-local.argobox.com/operator)
+    dashboard.html         — Flask-served live console (local dev only)
+    operator.html          — Flask-served operator panel (local dev only)
 ```
 
 **IMPORTANT — two versions of each page:**
@@ -202,11 +203,12 @@ cd /mnt/homes/galileo/argo/Development/hermes-hackathon-2026
 CLOUDFLARE_API_TOKEN=$(ARGO_CREDENTIAL_AGENT=claude ARGO_CREDENTIAL_MODE=trusted-local credential-broker get token:cloudflare_pages_token) \
   /home/argo/.npm-global/bin/wrangler pages deploy pages-frontend \
   --project-name rein-custodian --commit-dirty=true
+# Update --project-name to custodian-kernel once CF Pages project is renamed
 ```
 
 **Push to dev repo (normal workflow):**
 ```bash
-git push custodian-private main
+git push custodian-kernel main
 ```
 
 **Release to public judge-facing repo:**

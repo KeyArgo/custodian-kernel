@@ -45,19 +45,15 @@ app.register_blueprint(stripe_panel.bp, url_prefix='/api/v1/stripe')
 app.register_blueprint(triage.bp, url_prefix='/api/v1/triage')
 app.register_blueprint(tools_api.tools_bp, url_prefix='/api/v1/tools')
 
-# Allows the separately-hosted static frontend (Cloudflare Pages) to call
-# this backend's read-only/sandboxed-demo API cross-origin. rein.argobox.com
-# is now a custom domain bound to the Pages project -- a browser visiting it
-# sends that hostname as the real Origin, not rein-custodian.pages.dev, so
-# both need to be allowed. This app itself is reached at rein-local.argobox.com
-# now, not rein.argobox.com -- see commit history for the cutover. Deliberately
-# scoped to only the /api/ routes -- never the root page route -- and to
-# GET/POST, matching what those endpoints actually do.
+# CORS allowlist for the separately-hosted Cloudflare Pages frontend.
+# Scoped to /api/ routes only — never the root page route.
+# rein.argobox.com + rein-custodian.pages.dev kept during CF Pages rename transition.
+# Target: getcustodian.xyz only, once the CF Pages project is renamed.
 ALLOWED_ORIGINS = {
-    'https://rein.argobox.com',           # custom domain bound to the Pages project
-    'https://rein-custodian.pages.dev',   # the underlying Pages domain
     'https://getcustodian.xyz',           # primary public domain
     'https://www.getcustodian.xyz',       # www variant
+    'https://rein.argobox.com',           # legacy — remove after CF Pages rename
+    'https://rein-custodian.pages.dev',   # legacy — remove after CF Pages rename
 }
 
 

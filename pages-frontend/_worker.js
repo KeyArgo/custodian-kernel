@@ -4,11 +4,15 @@
  * /hermes          → hermes.html static asset (public live-console page)
  * /operator        → operator.html static asset (judge demo panel)
  * /triage          → triage.html static asset (lie-catch demo; JS calls API directly)
- * /api/v1/*        → Flask API endpoints (proxied to rein-local.argobox.com)
+ * /api/v1/*        → Flask API endpoints (proxied to Flask backend)
  * everything else  → CF Pages static assets
+ *
+ * BACKEND migration: currently pointing to the argobox internal hostname.
+ * Target hostname is api.getcustodian.xyz — update this constant once DNS
+ * (CNAME api.getcustodian.xyz → argobox host) and Nginx vhost are live.
  */
 
-const BACKEND = 'https://rein-local.argobox.com';
+const BACKEND = 'https://rein-local.argobox.com'; // TODO: migrate to https://api.getcustodian.xyz
 
 // Only API calls proxy to Flask — all page routes are CF Pages static assets
 const PROXY_EXACT = new Set([]);
@@ -39,8 +43,7 @@ export default {
 
     const response = await fetch(proxied);
 
-    // Rewrite the backend's CORS headers so they reflect rein.argobox.com,
-    // not rein-local.argobox.com (same-origin from the browser's perspective).
+    // Strip backend CORS headers — CF Pages re-adds them for getcustodian.xyz.
     const headers = new Headers(response.headers);
     headers.delete('access-control-allow-origin');
     headers.delete('access-control-allow-methods');

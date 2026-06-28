@@ -4,7 +4,7 @@
 Run this with: python3 verify_kit.py
 
 Every step here either runs real code against real data, or fetches live
-data from the real public dashboard (https://hermes-demo.argobox.com) --
+data from the real public dashboard (https://getcustodian.xyz) --
 nothing in this script is staged or pre-recorded. The one thing it
 deliberately does NOT automate is checking the real Stripe PaymentIntent --
 Stripe objects are scoped to the account that created them, so your own key
@@ -29,7 +29,7 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent
 SPEND_V2 = REPO_ROOT / "skills" / "payments" / "stripe-spend" / "scripts" / "spend_v2.py"
-DASHBOARD_URL = "https://rein-local.argobox.com/api/v1/hermes/summary"
+DASHBOARD_URL = "https://getcustodian.xyz/api/v1/hermes/summary"
 PAYMENT_INTENT_ID = "pi_3TkZWEPfSF4TGXT90AWlrnle"
 
 PASS = "\033[92mPASS\033[0m"

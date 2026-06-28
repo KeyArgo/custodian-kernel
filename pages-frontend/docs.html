@@ -486,7 +486,7 @@ class CapturedClient:                # testing / replay
     <section class="doc-section" id="api">
       <div class="section-eyebrow">Reference</div>
       <h2>API reference</h2>
-      <p>All API routes are proxied through Cloudflare Pages to the Flask backend at <code>rein-local.argobox.com</code>. The prefix is <code>/api/v1</code>.</p>
+      <p>All API routes are served at <code>getcustodian.xyz/api/v1/</code>. Cloudflare Pages proxies them to the Flask backend via <code>_worker.js</code>. The target backend will be reachable at <code>api.getcustodian.xyz</code> once DNS is live.</p>
 
       <h3>Status &amp; data</h3>
 
