@@ -33,6 +33,7 @@ import api.operator as operator
 import api.playground as playground
 import api.stripe_panel as stripe_panel
 import api.triage as triage
+import api.tools as tools_api
 
 app = Flask(__name__, template_folder='templates')
 app.register_blueprint(hermes.bp, url_prefix='/api/v1/hermes')
@@ -42,6 +43,7 @@ app.register_blueprint(nemotron_chat.bp, url_prefix='/api/v1/nemotron')
 app.register_blueprint(operator.bp, url_prefix='/api/v1/operator')
 app.register_blueprint(stripe_panel.bp, url_prefix='/api/v1/stripe')
 app.register_blueprint(triage.bp, url_prefix='/api/v1/triage')
+app.register_blueprint(tools_api.tools_bp, url_prefix='/api/v1/tools')
 
 # Allows the separately-hosted static frontend (Cloudflare Pages) to call
 # this backend's read-only/sandboxed-demo API cross-origin. rein.argobox.com

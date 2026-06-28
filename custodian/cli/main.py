@@ -7,6 +7,7 @@ from custodian.cli import (
     cmd_init, cmd_validate, cmd_status, cmd_audit, cmd_request, cmd_approve,
     cmd_deny, cmd_kill, cmd_resume,
 )
+from custodian.cli import cmd_tools
 from custodian.config import CustodianConfig
 
 
@@ -71,6 +72,21 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--by", required=True, help="Name/ID of the operator releasing it")
     p.add_argument("--state-dir", default=str(env_defaults.state_dir), help="State directory")
     p.set_defaults(func=cmd_resume.run)
+
+    # tools subcommand
+    tools_parser = sub.add_parser("tools", help="List and invoke Custodian-governed tools")
+    tools_sub = tools_parser.add_subparsers(dest="tools_command", required=True)
+
+    ts = tools_sub.add_parser("list", help="List all registered tools with authority bands")
+    ts.set_defaults(func=cmd_tools.cmd_tools_list)
+
+    ts = tools_sub.add_parser("run", help="Invoke a governed tool by name")
+    ts.add_argument("tool", help="Tool name (see: custodian tools list)")
+    ts.add_argument("kwargs", nargs=argparse.REMAINDER, help="--key value pairs passed to the tool")
+    ts.set_defaults(func=cmd_tools.cmd_tools_run)
+
+    ts = tools_sub.add_parser("summary", help="Print tool count and band breakdown as JSON")
+    ts.set_defaults(func=cmd_tools.cmd_tools_summary)
 
     args = parser.parse_args(argv)
     try:

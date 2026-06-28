@@ -6,6 +6,10 @@ author: argobox
 license: MIT
 platforms: [linux]
 metadata:
+  custodian:
+    band: L2
+    cost_usd: 0.0
+    configured: true
   hermes:
     tags: [Payments, Stripe, Budget, Authority, Finance]
 ---
