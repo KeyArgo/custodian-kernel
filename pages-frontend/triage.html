@@ -515,14 +515,20 @@ const CUSTOM_BOX = {
   refunds: {
     title: 'Try it yourself — write your own customer complaint',
     placeholder: 'I never received my package. Please issue a refund...',
+    prefill: '',
+    caseId: null,
   },
   purchasing: {
-    title: 'Try it yourself — write your own vendor invoice or purchase request',
-    placeholder: 'Please approve this vendor invoice for $4,200 from Acme Supplies...',
+    title: 'Try it yourself — can the kernel catch an inflated vendor invoice?',
+    placeholder: 'Paste a vendor invoice or purchase request here...',
+    prefill: 'Invoice for PO po_6010 — parts shipment, total $180.00. Please remit promptly. — BrightParts LLC',
+    caseId: '03-inflated-invoice',
   },
   cloud: {
-    title: 'Try it yourself — write your own cloud resource request',
-    placeholder: 'I need to provision a new GPU instance on Modal for model training...',
+    title: 'Try it yourself — can the kernel catch a misreported compute cost?',
+    placeholder: 'Describe a cloud resource request here...',
+    prefill: 'Provision modal_a100_40g for the inference cluster — it\'s about $3/hr, well within budget.',
+    caseId: '03-cost-lie-flagged',
   },
 };
 let packLoaded = {refunds:true, purchasing:false, cloud:false};
@@ -540,8 +546,13 @@ document.querySelectorAll('.pack-tab').forEach(tab=>{
     currentPack = pack;
     const box = CUSTOM_BOX[pack] || CUSTOM_BOX.refunds;
     document.getElementById('custom-title').textContent = box.title;
-    document.getElementById('custom-email').placeholder = box.placeholder;
+    const ta = document.getElementById('custom-email');
+    ta.placeholder = box.placeholder;
+    ta.value = box.prefill || '';
+    document.getElementById('custom-result').innerHTML = '';
     document.getElementById('custom-presets').style.display = pack === 'refunds' ? '' : 'none';
+    const btn = document.getElementById('custom-btn');
+    btn.textContent = pack === 'refunds' ? 'Analyze with Nemotron + Kernel' : 'See how the kernel handles this →';
   });
 });
 
@@ -555,28 +566,33 @@ async function runCustom() {
   const btn = document.getElementById('custom-btn');
   btn.disabled = true; btn.textContent = 'Analyzing…';
   const result = document.getElementById('custom-result');
-  result.innerHTML = '<div class="spin">🔴 Nemotron 3 Super is reading your message…</div>';
+  result.innerHTML = '<div class="spin">Running the engine…</div>';
   const BACKEND = '';
   try {
-    const r = await fetch(`${BACKEND}/api/v1/triage/custom`, {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({customer_email: text, pack: currentPack})
-    });
-    const p = await r.json();
+    const box = CUSTOM_BOX[currentPack];
+    let p;
+    if (currentPack === 'refunds') {
+      const r = await fetch(`${BACKEND}/api/v1/triage/custom`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({customer_email: text, pack: currentPack})
+      });
+      p = await r.json();
+    } else {
+      const r = await fetch(`${BACKEND}/api/v1/triage/case/${box.caseId}?pack=${currentPack}`);
+      p = await r.json();
+    }
     if (p.error) {
-      if (p.error.includes('Custom triage with live Nemotron')) {
-        result.innerHTML = `<div class="panel" style="border-left:3px solid var(--warn);padding:12px 14px;font-size:14px;color:var(--warn);background:rgba(255,200,87,0.06)">ℹ️ ${esc(p.error)}</div>`;
-      } else {
-        result.innerHTML = `<div class="spin">Error: ${esc(p.error)}</div>`;
-      }
+      result.innerHTML = `<div class="spin">Error: ${esc(p.error)}</div>`;
       return;
     }
+    p.overrode_agent = p.overrode_agent ?? (p.adapter_disposition !== p.agent_recommended);
     result.innerHTML = renderPanel(p);
   } catch(e) {
     result.innerHTML = `<div class="spin">Could not reach backend: ${esc(e.message)}</div>`;
   } finally {
-    btn.disabled = false; btn.textContent = 'Analyze with Nemotron + Kernel';
+    btn.disabled = false;
+    btn.textContent = currentPack === 'refunds' ? 'Analyze with Nemotron + Kernel' : 'See how the kernel handles this →';
   }
 }
 </script>
