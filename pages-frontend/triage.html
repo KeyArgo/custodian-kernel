@@ -240,9 +240,9 @@
   </div>
 
   <div class="custom-box">
-    <h3>Try it yourself — write your own refund excuse</h3>
+    <h3 id="custom-title">Try it yourself — write your own customer complaint</h3>
     <p>Nemotron 3 Super reads your message and recommends APPROVE or DENY. Then the kernel checks every factual claim against the real order record. Try lying — say the package never arrived or it was defective. The kernel knows the truth.</p>
-    <div class="cue-bar">
+    <div class="cue-bar" id="custom-presets">
       <button onclick="setCustom('I never received my package. Please refund me immediately.')">Lie: never arrived</button>
       <button onclick="setCustom('The item arrived broken and defective. I have photos. I need a refund.')">Lie: defective</button>
       <button onclick="setCustom('I purchased this 19 days ago and I would like to return it for any reason.')">Honest: within window</button>
@@ -510,6 +510,21 @@ async function runCase(caseId, mount, live, pack){
   }catch(e){mount.innerHTML = `<div class="spin">error: ${esc(e.message)}</div>`;}
 }
 
+let currentPack = 'refunds';
+const CUSTOM_BOX = {
+  refunds: {
+    title: 'Try it yourself — write your own customer complaint',
+    placeholder: 'I never received my package. Please issue a refund...',
+  },
+  purchasing: {
+    title: 'Try it yourself — write your own vendor invoice or purchase request',
+    placeholder: 'Please approve this vendor invoice for $4,200 from Acme Supplies...',
+  },
+  cloud: {
+    title: 'Try it yourself — write your own cloud resource request',
+    placeholder: 'I need to provision a new GPU instance on Modal for model training...',
+  },
+};
 let packLoaded = {refunds:true, purchasing:false, cloud:false};
 document.querySelectorAll('.pack-tab').forEach(tab=>{
   tab.addEventListener('click',()=>{
@@ -522,6 +537,11 @@ document.querySelectorAll('.pack-tab').forEach(tab=>{
       packLoaded[pack]=true;
       buildPackCases(pack, document.getElementById(`${pack}-cases`));
     }
+    currentPack = pack;
+    const box = CUSTOM_BOX[pack] || CUSTOM_BOX.refunds;
+    document.getElementById('custom-title').textContent = box.title;
+    document.getElementById('custom-email').placeholder = box.placeholder;
+    document.getElementById('custom-presets').style.display = pack === 'refunds' ? '' : 'none';
   });
 });
 
@@ -541,10 +561,17 @@ async function runCustom() {
     const r = await fetch(`${BACKEND}/api/v1/triage/custom`, {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({customer_email: text})
+      body: JSON.stringify({customer_email: text, pack: currentPack})
     });
     const p = await r.json();
-    if (p.error) { result.innerHTML = `<div class="spin">Error: ${esc(p.error)}</div>`; return; }
+    if (p.error) {
+      if (p.error.includes('Custom triage with live Nemotron')) {
+        result.innerHTML = `<div class="panel" style="border-left:3px solid var(--warn);padding:12px 14px;font-size:14px;color:var(--warn);background:rgba(255,200,87,0.06)">ℹ️ ${esc(p.error)}</div>`;
+      } else {
+        result.innerHTML = `<div class="spin">Error: ${esc(p.error)}</div>`;
+      }
+      return;
+    }
     result.innerHTML = renderPanel(p);
   } catch(e) {
     result.innerHTML = `<div class="spin">Could not reach backend: ${esc(e.message)}</div>`;

@@ -165,7 +165,11 @@ def custom():
         "customer_email": text,
     }
 
-    pack, kernel_policy, _ = _resolve_pack("refunds")
+    name = payload.get("pack", "refunds")
+    if name != "refunds":
+        return jsonify({"error": "Custom triage with live Nemotron is only available for the Refunds pack. Select a corpus case above to explore Procurement or Cloud Ops."}), 400
+
+    pack, kernel_policy, _ = _resolve_pack(name)
     if pack is None:
         return jsonify({"error": "refunds pack unavailable"}), 500
 
@@ -193,7 +197,7 @@ def custom():
 
     result = triage(pack, envelope, kernel_policy, _STATE())
     panel = result.to_panel()
-    panel["pack"] = "refunds"
+    panel["pack"] = name
     panel["customer_email"] = text
     panel["title"] = "Visitor submission"
     panel["expected_disposition"] = None
