@@ -1,28 +1,20 @@
 #!/usr/bin/env python3
-"""Stub execute script for web-scrape.
-
-Replace this with a real implementation.
-OpenCode prompt: custodian/opencode-prompts/web-tools.md
-"""
-import argparse, json, os, sys
-
+import argparse, json, requests
+from html.parser import HTMLParser
+class TextExtractor(HTMLParser):
+    def __init__(self): super().__init__(); self.text=[]; self._skip=0
+    def handle_starttag(self,tag,attrs):
+        if tag in ("script","style","nav","footer","head"): self._skip+=1
+    def handle_endtag(self,tag):
+        if tag in ("script","style","nav","footer","head"): self._skip=max(0,self._skip-1)
+    def handle_data(self,data):
+        if not self._skip and data.strip(): self.text.append(data.strip())
 def main():
-    p = argparse.ArgumentParser()
-    p.add_argument("--dry-run", action="store_true")
-    args, rest = p.parse_known_args()
-
-    configured = bool(os.environ.get("WEB_SCRAPE_CONFIGURED"))
-    if not configured:
-        print(json.dumps({
-            "ok": False,
-            "stub": True,
-            "tool": "web-scrape",
-            "message": "Set WEB_SCRAPE_CONFIGURED=1 (and required credentials) to enable.",
-        }))
-        sys.exit(0)
-
-    # TODO: real implementation
-    print(json.dumps({"ok": True, "tool": "web-scrape", "result": "stub"}))
-
-if __name__ == "__main__":
-    main()
+    p = argparse.ArgumentParser(); p.add_argument("--url",required=True)
+    a = p.parse_args()
+    try:
+        r = requests.get(a.url, timeout=12, headers={"User-Agent":"Mozilla/5.0"})
+        ex = TextExtractor(); ex.feed(r.text)
+        print(json.dumps({"ok":True,"tool":"web-scrape","url":a.url,"text":" ".join(ex.text)[:3000]}))
+    except Exception as e: print(json.dumps({"ok":False,"tool":"web-scrape","error":str(e)}))
+if __name__=="__main__": main()

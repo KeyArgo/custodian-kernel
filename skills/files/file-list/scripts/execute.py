@@ -1,28 +1,10 @@
 #!/usr/bin/env python3
-"""Stub execute script for file-list.
-
-Replace this with a real implementation.
-OpenCode prompt: custodian/opencode-prompts/files-tools.md
-"""
-import argparse, json, os, sys
-
+import argparse, json, glob, os
 def main():
-    p = argparse.ArgumentParser()
-    p.add_argument("--dry-run", action="store_true")
-    args, rest = p.parse_known_args()
-
-    configured = bool(os.environ.get("FILE_LIST_CONFIGURED"))
-    if not configured:
-        print(json.dumps({
-            "ok": False,
-            "stub": True,
-            "tool": "file-list",
-            "message": "Set FILE_LIST_CONFIGURED=1 (and required credentials) to enable.",
-        }))
-        sys.exit(0)
-
-    # TODO: real implementation
-    print(json.dumps({"ok": True, "tool": "file-list", "result": "stub"}))
-
-if __name__ == "__main__":
-    main()
+    p = argparse.ArgumentParser(); p.add_argument("--path",required=True); p.add_argument("--pattern",default="*")
+    a = p.parse_args()
+    try:
+        files = sorted(glob.glob(os.path.join(a.path, a.pattern)))
+        print(json.dumps({"ok":True,"tool":"file-list","path":a.path,"files":files[:500],"count":len(files)}))
+    except Exception as e: print(json.dumps({"ok":False,"tool":"file-list","error":str(e)}))
+if __name__=="__main__": main()

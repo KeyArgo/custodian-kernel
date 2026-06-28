@@ -1,28 +1,10 @@
 #!/usr/bin/env python3
-"""Stub execute script for docker-stop.
-
-Replace this with a real implementation.
-OpenCode prompt: custodian/opencode-prompts/docker-tools.md
-"""
-import argparse, json, os, sys
-
+import argparse, json, subprocess
 def main():
-    p = argparse.ArgumentParser()
-    p.add_argument("--dry-run", action="store_true")
-    args, rest = p.parse_known_args()
-
-    configured = bool(os.environ.get("DOCKER_STOP_CONFIGURED"))
-    if not configured:
-        print(json.dumps({
-            "ok": False,
-            "stub": True,
-            "tool": "docker-stop",
-            "message": "Set DOCKER_STOP_CONFIGURED=1 (and required credentials) to enable.",
-        }))
-        sys.exit(0)
-
-    # TODO: real implementation
-    print(json.dumps({"ok": True, "tool": "docker-stop", "result": "stub"}))
-
-if __name__ == "__main__":
-    main()
+    p = argparse.ArgumentParser(); p.add_argument("--container",required=True)
+    a = p.parse_args()
+    try:
+        r = subprocess.run(["docker","stop",a.container], capture_output=True, text=True, timeout=30)
+        print(json.dumps({"ok":r.returncode==0,"tool":"docker-stop","container":a.container}))
+    except Exception as e: print(json.dumps({"ok":False,"tool":"docker-stop","error":str(e)}))
+if __name__=="__main__": main()

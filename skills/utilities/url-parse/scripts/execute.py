@@ -1,28 +1,11 @@
 #!/usr/bin/env python3
-"""Stub execute script for url-parse.
-
-Replace this with a real implementation.
-OpenCode prompt: custodian/opencode-prompts/utilities-tools.md
-"""
-import argparse, json, os, sys
-
+import argparse, json
+from urllib.parse import urlparse, parse_qs
 def main():
-    p = argparse.ArgumentParser()
-    p.add_argument("--dry-run", action="store_true")
-    args, rest = p.parse_known_args()
-
-    configured = bool(os.environ.get("URL_PARSE_CONFIGURED"))
-    if not configured:
-        print(json.dumps({
-            "ok": False,
-            "stub": True,
-            "tool": "url-parse",
-            "message": "Set URL_PARSE_CONFIGURED=1 (and required credentials) to enable.",
-        }))
-        sys.exit(0)
-
-    # TODO: real implementation
-    print(json.dumps({"ok": True, "tool": "url-parse", "result": "stub"}))
-
-if __name__ == "__main__":
-    main()
+    p = argparse.ArgumentParser(); p.add_argument("--url",required=True)
+    a = p.parse_args()
+    try:
+        r = urlparse(a.url)
+        print(json.dumps({"ok":True,"tool":"url-parse","scheme":r.scheme,"host":r.netloc,"path":r.path,"query":parse_qs(r.query),"fragment":r.fragment}))
+    except Exception as e: print(json.dumps({"ok":False,"tool":"url-parse","error":str(e)}))
+if __name__=="__main__": main()

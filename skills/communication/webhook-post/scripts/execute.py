@@ -1,28 +1,11 @@
 #!/usr/bin/env python3
-"""Stub execute script for webhook-post.
-
-Replace this with a real implementation.
-OpenCode prompt: custodian/opencode-prompts/communication-tools.md
-"""
-import argparse, json, os, sys
-
+import argparse, json, requests
 def main():
-    p = argparse.ArgumentParser()
-    p.add_argument("--dry-run", action="store_true")
-    args, rest = p.parse_known_args()
-
-    configured = bool(os.environ.get("WEBHOOK_POST_CONFIGURED"))
-    if not configured:
-        print(json.dumps({
-            "ok": False,
-            "stub": True,
-            "tool": "webhook-post",
-            "message": "Set WEBHOOK_POST_CONFIGURED=1 (and required credentials) to enable.",
-        }))
-        sys.exit(0)
-
-    # TODO: real implementation
-    print(json.dumps({"ok": True, "tool": "webhook-post", "result": "stub"}))
-
-if __name__ == "__main__":
-    main()
+    p = argparse.ArgumentParser(); p.add_argument("--url",required=True); p.add_argument("--payload",default="{}"); p.add_argument("--headers",default="{}")
+    a = p.parse_args()
+    try:
+        payload = json.loads(a.payload); headers = json.loads(a.headers) or {"Content-Type":"application/json"}
+        r = requests.post(a.url, json=payload, headers=headers, timeout=10)
+        print(json.dumps({"ok":r.ok,"tool":"webhook-post","status":r.status_code,"body":r.text[:500]}))
+    except Exception as e: print(json.dumps({"ok":False,"tool":"webhook-post","error":str(e)}))
+if __name__=="__main__": main()

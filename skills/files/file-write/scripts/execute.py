@@ -1,28 +1,17 @@
 #!/usr/bin/env python3
-"""Stub execute script for file-write.
-
-Replace this with a real implementation.
-OpenCode prompt: custodian/opencode-prompts/files-tools.md
-"""
-import argparse, json, os, sys
-
+import argparse, json, os
+ALLOWED = os.environ.get("CUSTODIAN_ALLOWED_WRITE_DIR", "/tmp")
 def main():
     p = argparse.ArgumentParser()
-    p.add_argument("--dry-run", action="store_true")
-    args, rest = p.parse_known_args()
-
-    configured = bool(os.environ.get("FILE_WRITE_CONFIGURED"))
-    if not configured:
-        print(json.dumps({
-            "ok": False,
-            "stub": True,
-            "tool": "file-write",
-            "message": "Set FILE_WRITE_CONFIGURED=1 (and required credentials) to enable.",
-        }))
-        sys.exit(0)
-
-    # TODO: real implementation
-    print(json.dumps({"ok": True, "tool": "file-write", "result": "stub"}))
-
-if __name__ == "__main__":
-    main()
+    p.add_argument("--path",required=True); p.add_argument("--content",required=True); p.add_argument("--append",action="store_true")
+    a = p.parse_args()
+    try:
+        real = os.path.realpath(a.path)
+        if not real.startswith(os.path.realpath(ALLOWED)):
+            raise PermissionError(f"Path must be under {ALLOWED}")
+        mode = "a" if a.append else "w"
+        with open(a.path, mode, encoding="utf-8") as f:
+            f.write(a.content)
+        print(json.dumps({"ok":True,"tool":"file-write","path":a.path,"bytes":len(a.content.encode())}))
+    except Exception as e: print(json.dumps({"ok":False,"tool":"file-write","error":str(e)}))
+if __name__=="__main__": main()

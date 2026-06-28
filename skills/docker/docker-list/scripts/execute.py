@@ -1,28 +1,14 @@
 #!/usr/bin/env python3
-"""Stub execute script for docker-list.
-
-Replace this with a real implementation.
-OpenCode prompt: custodian/opencode-prompts/docker-tools.md
-"""
-import argparse, json, os, sys
-
+import argparse, json, subprocess
 def main():
-    p = argparse.ArgumentParser()
-    p.add_argument("--dry-run", action="store_true")
-    args, rest = p.parse_known_args()
-
-    configured = bool(os.environ.get("DOCKER_LIST_CONFIGURED"))
-    if not configured:
-        print(json.dumps({
-            "ok": False,
-            "stub": True,
-            "tool": "docker-list",
-            "message": "Set DOCKER_LIST_CONFIGURED=1 (and required credentials) to enable.",
-        }))
-        sys.exit(0)
-
-    # TODO: real implementation
-    print(json.dumps({"ok": True, "tool": "docker-list", "result": "stub"}))
-
-if __name__ == "__main__":
-    main()
+    p = argparse.ArgumentParser(); p.add_argument("--all",action="store_true")
+    a = p.parse_args()
+    try:
+        cmd = ["docker","ps","--format","{{json .}}"] + (["--all"] if a.all else [])
+        r = subprocess.run(cmd, capture_output=True, text=True, timeout=10)
+        if r.returncode != 0: raise RuntimeError(r.stderr.strip() or "docker error")
+        containers = [json.loads(line) for line in r.stdout.strip().splitlines() if line.strip()]
+        print(json.dumps({"ok":True,"tool":"docker-list","containers":containers,"count":len(containers)}))
+    except FileNotFoundError: print(json.dumps({"ok":False,"tool":"docker-list","error":"docker not in PATH"}))
+    except Exception as e: print(json.dumps({"ok":False,"tool":"docker-list","error":str(e)}))
+if __name__=="__main__": main()

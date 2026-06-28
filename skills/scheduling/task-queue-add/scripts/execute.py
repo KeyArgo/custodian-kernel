@@ -1,28 +1,19 @@
 #!/usr/bin/env python3
-"""Stub execute script for task-queue-add.
-
-Replace this with a real implementation.
-OpenCode prompt: custodian/opencode-prompts/scheduling-tools.md
-"""
-import argparse, json, os, sys
-
+import argparse, json, os, uuid
+from datetime import datetime, timezone
+QUEUE = os.environ.get("CUSTODIAN_QUEUE_PATH", os.path.expanduser("~/.custodian/queue.json"))
+def load():
+    os.makedirs(os.path.dirname(QUEUE), exist_ok=True)
+    try: return json.loads(open(QUEUE).read())
+    except: return []
 def main():
     p = argparse.ArgumentParser()
-    p.add_argument("--dry-run", action="store_true")
-    args, rest = p.parse_known_args()
-
-    configured = bool(os.environ.get("TASK_QUEUE_ADD_CONFIGURED"))
-    if not configured:
-        print(json.dumps({
-            "ok": False,
-            "stub": True,
-            "tool": "task-queue-add",
-            "message": "Set TASK_QUEUE_ADD_CONFIGURED=1 (and required credentials) to enable.",
-        }))
-        sys.exit(0)
-
-    # TODO: real implementation
-    print(json.dumps({"ok": True, "tool": "task-queue-add", "result": "stub"}))
-
-if __name__ == "__main__":
-    main()
+    p.add_argument("--task",required=True); p.add_argument("--run-at"); p.add_argument("--tool")
+    a = p.parse_args()
+    try:
+        q = load()
+        entry = {"id":str(uuid.uuid4())[:8],"task":a.task,"status":"pending","created_at":datetime.now(timezone.utc).isoformat(),"run_at":a.run_at,"tool":a.tool}
+        q.append(entry); open(QUEUE,"w").write(json.dumps(q,indent=2))
+        print(json.dumps({"ok":True,"tool":"task-queue-add","id":entry["id"],"task":a.task}))
+    except Exception as e: print(json.dumps({"ok":False,"tool":"task-queue-add","error":str(e)}))
+if __name__=="__main__": main()

@@ -1,28 +1,18 @@
 #!/usr/bin/env python3
-"""Stub execute script for stripe-customer-lookup.
-
-Replace this with a real implementation.
-OpenCode prompt: custodian/opencode-prompts/stripe-tools.md
-"""
-import argparse, json, os, sys
-
+import argparse, json, os, requests
 def main():
-    p = argparse.ArgumentParser()
-    p.add_argument("--dry-run", action="store_true")
-    args, rest = p.parse_known_args()
-
-    configured = bool(os.environ.get("STRIPE_CUSTOMER_LOOKUP_CONFIGURED"))
-    if not configured:
-        print(json.dumps({
-            "ok": False,
-            "stub": True,
-            "tool": "stripe-customer-lookup",
-            "message": "Set STRIPE_CUSTOMER_LOOKUP_CONFIGURED=1 (and required credentials) to enable.",
-        }))
-        sys.exit(0)
-
-    # TODO: real implementation
-    print(json.dumps({"ok": True, "tool": "stripe-customer-lookup", "result": "stub"}))
-
-if __name__ == "__main__":
-    main()
+    p = argparse.ArgumentParser(); p.add_argument("--email"); p.add_argument("--id")
+    a = p.parse_args()
+    key = os.environ.get("STRIPE_SECRET_KEY","")
+    if not key:
+        print(json.dumps({"ok":False,"stub":True,"tool":"stripe-customer-lookup","message":"Set STRIPE_SECRET_KEY"})); return
+    try:
+        if a.id:
+            r = requests.get(f"https://api.stripe.com/v1/customers/{a.id}", auth=(key,""), timeout=10)
+        else:
+            r = requests.get("https://api.stripe.com/v1/customers", auth=(key,""), params={"email":a.email,"limit":1}, timeout=10)
+        d = r.json()
+        customer = d if a.id else (d.get("data",[{}])[0] if d.get("data") else None)
+        print(json.dumps({"ok":r.ok,"tool":"stripe-customer-lookup","customer":customer}))
+    except Exception as e: print(json.dumps({"ok":False,"tool":"stripe-customer-lookup","error":str(e)}))
+if __name__=="__main__": main()

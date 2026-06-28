@@ -1,28 +1,11 @@
 #!/usr/bin/env python3
-"""Stub execute script for http-post.
-
-Replace this with a real implementation.
-OpenCode prompt: custodian/opencode-prompts/web-tools.md
-"""
-import argparse, json, os, sys
-
+import argparse, json, requests
 def main():
-    p = argparse.ArgumentParser()
-    p.add_argument("--dry-run", action="store_true")
-    args, rest = p.parse_known_args()
-
-    configured = bool(os.environ.get("HTTP_POST_CONFIGURED"))
-    if not configured:
-        print(json.dumps({
-            "ok": False,
-            "stub": True,
-            "tool": "http-post",
-            "message": "Set HTTP_POST_CONFIGURED=1 (and required credentials) to enable.",
-        }))
-        sys.exit(0)
-
-    # TODO: real implementation
-    print(json.dumps({"ok": True, "tool": "http-post", "result": "stub"}))
-
-if __name__ == "__main__":
-    main()
+    p = argparse.ArgumentParser(); p.add_argument("--url",required=True); p.add_argument("--payload",default="{}"); p.add_argument("--timeout",type=int,default=10)
+    a = p.parse_args()
+    try:
+        payload = json.loads(a.payload)
+        r = requests.post(a.url, json=payload, timeout=a.timeout)
+        print(json.dumps({"ok":r.ok,"tool":"http-post","status":r.status_code,"body":r.text[:3000]}))
+    except Exception as e: print(json.dumps({"ok":False,"tool":"http-post","error":str(e)}))
+if __name__=="__main__": main()

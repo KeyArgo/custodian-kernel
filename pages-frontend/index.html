@@ -302,6 +302,8 @@
       <a href="#video">Demo</a>
       <a href="/triage">Lie-Catch</a>
       <a href="/operator" target="_blank" rel="noopener">Operator Panel</a>
+      <a href="/tools">Tools</a>
+      <a href="/docs">Docs</a>
       <a class="btn btn-primary" href="/hermes">Launch live console →</a>
     </div>
   </div>
@@ -346,6 +348,7 @@
       <div class="spec"><div class="k">Authority band</div><div class="v" id="s-band">—</div></div>
       <div class="spec live"><div class="k">Session budget left</div><div class="v" id="s-remaining">—</div></div>
       <div class="spec"><div class="k">Decision modules</div><div class="v" id="s-packs">3</div></div>
+      <div class="spec"><div class="k">Governed tools</div><div class="v">61</div></div>
       <div class="spec"><div class="k">Boundary</div><div class="v enf">ENFORCED AT KERNEL</div></div>
     </div>
   </div>
@@ -432,7 +435,7 @@
     <div class="reveal">
       <div class="sec-eyebrow" style="color:#76b900">NemoClaw · NVIDIA OpenShell Kernel Sandbox</div>
       <h2>The AI cannot spend what the OS won't allow</h2>
-      <p class="sec-sub">This is not a software firewall. It is not a policy check in Python. NemoClaw is a Landlock LSM + OPA enforcement layer baked into the OS itself. The agent literally cannot open a socket to a payment endpoint the kernel hasn't whitelisted — regardless of what the model decides.</p>
+      <p class="sec-sub">NemoClaw is NVIDIA's OpenShell kernel sandbox — a Landlock LSM + OPA enforcement layer baked into the container boundary. Custodian's authority engine runs deterministically inside that sandbox. The agent literally cannot open a socket to a payment endpoint the kernel hasn't whitelisted — regardless of what the model decides.</p>
     </div>
     <div class="nemo-grid">
       <div class="nemo-card reveal">
@@ -475,7 +478,7 @@
     <div class="reveal">
       <div class="sec-eyebrow">Not a mockup</div>
       <h2>Everything here is real, and live right now</h2>
-      <p class="sec-sub">A real Nous Hermes agent, in a real kernel sandbox, paying real Stripe PaymentIntents — protecting ArgoBox, a production homelab. These numbers are pulled live from the running system as you read this.</p>
+      <p class="sec-sub">A real Nous Hermes agent, in a real kernel sandbox, paying real Stripe PaymentIntents — protecting ArgoBox, a production AI infrastructure platform. These numbers are pulled live from the running system as you read this.</p>
     </div>
     <div class="proof">
       <div class="metrics reveal">
@@ -489,7 +492,8 @@
           <li><b>Real kernel sandbox</b> — least-privilege egress enforced via Landlock, verified in raw OCSF allow/deny logs.</li>
           <li><b>Real money rail</b> — Stripe test-mode PaymentIntents you can open on Stripe's own dashboard.</li>
           <li><b>Real human approval</b> — escalations send a genuine Twilio Verify SMS code.</li>
-          <li><b>Rail-agnostic</b> — the same kernel governs refunds, payables, and cloud provisioning (Modal + Azure).</li>
+          <li><b>Rail-agnostic</b> — the same kernel governs refunds, payables, and NVIDIA NIM job provisioning.</li>
+          <li><b>61 governed tools</b> — email, SMS, GitHub, Docker, web search, NVIDIA NIM, Stripe extended, and more — every call kernel-checked.</li>
         </ul>
         <a class="btn btn-primary" href="/hermes" style="margin-top:22px">Open the live console →</a>
       </div>
@@ -562,6 +566,42 @@
       <div style="border-top:1px solid var(--line); padding-top:18px; color:var(--muted); font-size:0.9em; line-height:1.7">
         <b style="color:var(--text)">Why kernel-level?</b> Because an agent running in software can, in principle, be told to bypass software-level controls. The kernel enforces egress at the OS — the agent's process literally cannot open a socket to a payment endpoint the OS hasn't allowed. A prompt can't override that. A clever argument can't override that. The model's own output can't override that.
       </div>
+    </div>
+  </div>
+</section>
+
+<!-- GNU LAYER / TOOLS -->
+<section id="tools" style="padding:60px 0">
+  <div class="wrap">
+    <div class="reveal">
+      <div class="sec-eyebrow" style="color:var(--nvidia)">61 Governed Tools</div>
+      <h2>The kernel for every tool — not just payments</h2>
+      <p class="sec-sub">Every tool call — whether it sends an SMS, submits an NVIDIA NIM inference job, reads a GitHub PR, or posts a Slack message — passes through the same Custodian kernel before executing. One governance layer. Every tool.</p>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin-top:36px">
+      <div class="card reveal" style="padding:20px 22px">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:0.65em;letter-spacing:0.12em;text-transform:uppercase;color:var(--nvidia);margin-bottom:10px">L2 · Autonomous</div>
+        <div style="font-weight:700;margin-bottom:6px">NVIDIA NIM</div>
+        <div style="color:var(--muted);font-size:0.88em">Submit inference jobs to NVIDIA's hosted API. NIM costs are tracked against the session cap like any other spend.</div>
+      </div>
+      <div class="card reveal" style="padding:20px 22px">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:0.65em;letter-spacing:0.12em;text-transform:uppercase;color:var(--amber);margin-bottom:10px">L3 · Escalates</div>
+        <div style="font-weight:700;margin-bottom:6px">Stripe Extended</div>
+        <div style="color:var(--muted);font-size:0.88em">Subscriptions, invoice sending, payouts. Every call kernel-gated — L3 tools always require human approval via SMS.</div>
+      </div>
+      <div class="card reveal" style="padding:20px 22px">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:0.65em;letter-spacing:0.12em;text-transform:uppercase;color:var(--cyan);margin-bottom:10px">L1 · Free</div>
+        <div style="font-weight:700;margin-bottom:6px">Communication</div>
+        <div style="color:var(--muted);font-size:0.88em">Email, SMS (Twilio), Slack, Discord, webhooks. Logged to the OCSF audit trail like every other tool.</div>
+      </div>
+      <div class="card reveal" style="padding:20px 22px">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:0.65em;letter-spacing:0.12em;text-transform:uppercase;color:var(--green);margin-bottom:10px">L0 · Read-only</div>
+        <div style="font-weight:700;margin-bottom:6px">GitHub + Docker + Web</div>
+        <div style="color:var(--muted);font-size:0.88em">Issue creation, PR listing, container logs, web search, HTTP calls — all kernel-registered, all auditable.</div>
+      </div>
+    </div>
+    <div style="text-align:center;margin-top:28px">
+      <a class="btn btn-ghost" href="/tools">Browse all 61 tools →</a>
     </div>
   </div>
 </section>

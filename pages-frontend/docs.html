@@ -191,6 +191,7 @@ h1,h2,h3,h4{font-weight:700;letter-spacing:-0.01em;color:var(--text)}
   <a href="/hermes">Live Console</a>
   <a href="/triage">Lie-Catch</a>
   <a href="/operator" target="_blank" rel="noopener">Operator Panel</a>
+  <a href="/tools">Tools</a>
   <a href="/docs" class="active">Docs</a>
   <div class="topnav-right">
     <span class="topnav-badge">🛡 NemoClaw Kernel</span>
@@ -321,10 +322,16 @@ h1,h2,h3,h4{font-weight:700;letter-spacing:-0.01em;color:var(--text)}
     <section class="doc-section" id="kernel">
       <div class="section-eyebrow">Core concept</div>
       <h2>The kernel (NemoClaw)</h2>
-      <p>NemoClaw is the NVIDIA OpenShell kernel sandbox. It enforces the authority boundary at the operating system level using three components stacked together:</p>
+      <p>NemoClaw is NVIDIA's OpenShell kernel sandbox — a container-level enforcement boundary. Custodian's authority engine runs <em>inside</em> that sandbox: the deterministic Python evaluator, the OCSF audit log, and the Twilio escalation path all execute under Landlock's least-privilege policy. The two layers are complementary, not competing.</p>
+
+      <div class="callout callout-blue">
+        <div class="callout-label">Layering: NVIDIA's boundary + Custodian's engine</div>
+        <p><strong>NemoClaw (NVIDIA):</strong> Landlock LSM + OPA enforce what the container's processes can touch — which sockets, which files. This is the OS-level boundary Custodian runs inside.<br>
+        <strong>Custodian's evaluator:</strong> Deterministic Python authority checks — band logic, per-action cap, session budget, kill switch, verifier. These run as code inside the sandbox, protected by the Landlock boundary above.</p>
+      </div>
 
       <h3>Landlock LSM</h3>
-      <p>Linux Security Module that enforces least-privilege file and network access at the syscall boundary. The agent's process <strong>literally cannot open a socket to a payment endpoint the kernel hasn't whitelisted</strong>. This is not an application check — the OS rejects the syscall before user-space code sees it. A prompt cannot override a syscall rejection.</p>
+      <p>Linux Security Module enforcing least-privilege file and network access at the syscall boundary. The agent's process <strong>cannot open a socket to a payment endpoint the kernel hasn't whitelisted</strong>. The OS rejects the syscall before user-space code sees it. A prompt cannot override a syscall rejection.</p>
 
       <h3>OPA Policy Engine</h3>
       <p>Open Policy Agent evaluates every action request against the current authority band in real time. Per-action caps ($250), rolling session windows ($1,000 / 2 hr), and escalation thresholds are enforced as Rego rules — not application code that can be patched or reasoned around.</p>

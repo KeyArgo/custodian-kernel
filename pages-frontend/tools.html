@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Custodian Tools — 61 Kernel-Governed Tools</title>
+<meta name="description" content="Every tool call — email, NVIDIA NIM, GitHub, Docker, Stripe — passes through the Custodian kernel before executing. Browse all 61 governed tools.">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<meta property="og:title" content="Custodian Tools — 61 Kernel-Governed Tools">
+<meta property="og:url" content="https://getcustodian.xyz/tools">
+<link rel="canonical" href="https://getcustodian.xyz/tools">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#06070b;--bg2:#0a0c13;--panel:rgba(255,255,255,0.025);
+  --line:rgba(255,255,255,0.09);--line2:rgba(255,255,255,0.14);
+  --text:#eceef5;--muted:#8d93a6;--dim:#5d6273;
+  --amber:#ffb000;--amber2:#ffcf57;--green:#2ee6a6;--red:#ff5c5c;
+  --violet:#8b7bff;--cyan:#49d6e8;--nvidia:#76b900;
+}
+html{scroll-behavior:smooth}
+body{font-family:'Space Grotesk',-apple-system,sans-serif;background:var(--bg);color:var(--text);line-height:1.55;-webkit-font-smoothing:antialiased}
+.mono{font-family:'JetBrains Mono',monospace}
+a{color:inherit;text-decoration:none}
+nav{position:sticky;top:0;z-index:50;backdrop-filter:blur(14px);background:rgba(6,7,11,0.82);border-bottom:1px solid var(--line)}
+.nav-in{display:flex;align-items:center;justify-content:space-between;height:60px;max-width:1180px;margin:0 auto;padding:0 28px}
+.brand{display:flex;align-items:center;gap:11px;font-weight:600}
+.brand svg{width:26px;height:26px}
+.brand .nm{font-size:1em;letter-spacing:0.02em}
+.brand .nm b{color:var(--amber)}
+.nav-links{display:flex;align-items:center;gap:24px}
+.nav-links a{color:var(--muted);font-size:0.9em;transition:color .2s}
+.nav-links a:hover,.nav-links a.active{color:var(--text)}
+.btn{display:inline-flex;align-items:center;gap:8px;font-family:inherit;font-size:0.9em;font-weight:600;cursor:pointer;border-radius:10px;padding:9px 16px;border:1px solid transparent;transition:transform .15s,box-shadow .2s}
+.btn-primary{color:#100b00;background:linear-gradient(135deg,var(--amber2),var(--amber));box-shadow:0 6px 20px -6px rgba(255,176,0,0.5)}
+.btn-ghost{color:var(--text);border-color:var(--line2);background:rgba(255,255,255,0.02)}
+.btn-ghost:hover{border-color:var(--amber)}
+
+.wrap{max-width:1180px;margin:0 auto;padding:0 28px}
+
+/* hero */
+.tools-hero{padding:64px 0 40px;text-align:center}
+.eyebrow{display:inline-flex;align-items:center;gap:9px;font-family:'JetBrains Mono',monospace;font-size:0.72em;letter-spacing:0.14em;text-transform:uppercase;color:var(--nvidia);border:1px solid rgba(118,185,0,0.3);background:rgba(118,185,0,0.05);padding:6px 14px;border-radius:100px;margin-bottom:24px}
+h1{font-size:clamp(2em,5vw,3.2em);font-weight:700;line-height:1.1;letter-spacing:-0.02em;margin-bottom:16px}
+.lede{color:var(--muted);font-size:1.06em;max-width:620px;margin:0 auto 32px;line-height:1.65}
+.lede b{color:var(--text)}
+
+/* summary strip */
+.summary-strip{display:flex;gap:0;border:1px solid var(--line2);border-radius:14px;overflow:hidden;background:rgba(255,255,255,0.02);margin:0 auto 48px;max-width:700px}
+.sum-cell{flex:1;padding:16px 20px;text-align:center;border-right:1px solid var(--line)}
+.sum-cell:last-child{border-right:none}
+.sum-v{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:1.6em}
+.sum-l{font-size:0.78em;color:var(--muted);margin-top:4px}
+.c-l0{color:var(--dim)} .c-l1{color:var(--cyan)} .c-l2{color:var(--green)} .c-l3{color:var(--amber)} .c-l4{color:var(--red)}
+
+/* filter bar */
+.filter-bar{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:32px;align-items:center}
+.filter-btn{font-family:'JetBrains Mono',monospace;font-size:0.72em;letter-spacing:0.08em;cursor:pointer;border-radius:8px;padding:6px 13px;border:1px solid var(--line);background:rgba(255,255,255,0.02);color:var(--muted);transition:all .15s}
+.filter-btn:hover{color:var(--text);border-color:var(--line2)}
+.filter-btn.active{color:var(--text);border-color:var(--amber);background:rgba(255,176,0,0.07)}
+.search-input{flex:1;min-width:180px;background:rgba(255,255,255,0.03);border:1px solid var(--line);border-radius:8px;color:var(--text);font:14px/1 inherit;padding:8px 14px;outline:none}
+.search-input:focus{border-color:var(--line2)}
+.search-input::placeholder{color:var(--dim)}
+
+/* tools grid */
+.tools-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px;margin-bottom:60px}
+.tool-card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:20px 22px;transition:border-color .2s,transform .2s;cursor:default}
+.tool-card:hover{border-color:var(--line2);transform:translateY(-2px)}
+.tool-card.configured{border-left:3px solid var(--green)}
+.tool-card.stub{border-left:3px solid var(--dim)}
+.tc-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:10px}
+.tc-name{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:0.92em;color:var(--text)}
+.tc-band{font-family:'JetBrains Mono',monospace;font-size:0.65em;letter-spacing:0.08em;text-transform:uppercase;padding:3px 8px;border-radius:5px;flex-shrink:0}
+.band-L0{color:var(--dim);background:rgba(93,98,115,0.12);border:1px solid rgba(93,98,115,0.2)}
+.band-L1{color:var(--cyan);background:rgba(73,214,232,0.08);border:1px solid rgba(73,214,232,0.2)}
+.band-L2{color:var(--green);background:rgba(46,230,166,0.08);border:1px solid rgba(46,230,166,0.2)}
+.band-L3{color:var(--amber);background:rgba(255,176,0,0.08);border:1px solid rgba(255,176,0,0.2)}
+.band-L4{color:var(--red);background:rgba(255,92,92,0.08);border:1px solid rgba(255,92,92,0.2)}
+.tc-desc{color:var(--muted);font-size:0.88em;line-height:1.55;margin-bottom:10px}
+.tc-foot{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.tc-status{font-family:'JetBrains Mono',monospace;font-size:0.65em;letter-spacing:0.06em}
+.tc-status.configured{color:var(--green)}
+.tc-status.stub{color:var(--dim)}
+.tc-tag{font-size:0.68em;color:var(--dim);background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.07);border-radius:4px;padding:2px 7px}
+
+/* band legend */
+.band-legend{display:flex;gap:18px;flex-wrap:wrap;margin-bottom:28px;font-size:0.82em;color:var(--muted)}
+.bl-item{display:flex;align-items:center;gap:6px}
+.bl-dot{width:8px;height:8px;border-radius:50%}
+
+/* empty state */
+.empty{text-align:center;padding:60px 0;color:var(--dim);font-size:0.95em}
+
+footer{border-top:1px solid var(--line);padding:32px 0;color:var(--dim);font-size:0.84em;text-align:center}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-in">
+    <a class="brand" href="/">
+      <svg viewBox="0 0 64 64" fill="none"><path d="M32 6 L54 14 V30 C54 44.5 44.2 54 32 58 C19.8 54 10 44.5 10 30 V14 Z" stroke="#ffb000" stroke-width="4" stroke-linejoin="round"/><circle cx="32" cy="29" r="6" stroke="#ffb000" stroke-width="4"/><rect x="30" y="32" width="4" height="12" rx="1" fill="#ffb000"/></svg>
+      <span class="nm">CUSTO<b>DIAN</b></span>
+    </a>
+    <div class="nav-links">
+      <a href="/">Home</a>
+      <a href="/hermes">Live Console</a>
+      <a href="/triage">Lie-Catch</a>
+      <a href="/operator" target="_blank" rel="noopener">Operator Panel</a>
+      <a href="/tools" class="active">Tools</a>
+      <a href="/docs">Docs</a>
+      <a class="btn btn-primary" href="/hermes">Launch live console →</a>
+    </div>
+  </div>
+</nav>
+
+<div class="tools-hero">
+  <div class="wrap">
+    <div class="eyebrow">◉ NVIDIA NemoClaw · Governed Tool Registry</div>
+    <h1>61 tools.<br>One kernel. Zero exceptions.</h1>
+    <p class="lede">Every tool call — whether it sends an SMS, submits an NVIDIA NIM inference job, reads a GitHub PR, or queries a database — passes through the <b>same Custodian kernel</b> before executing. Authority band enforced. OCSF-logged. Kill-switch honoured.</p>
+
+    <div class="summary-strip" id="summary-strip">
+      <div class="sum-cell"><div class="sum-v" id="total-count">—</div><div class="sum-l">Total tools</div></div>
+      <div class="sum-cell"><div class="sum-v" id="configured-count" style="color:var(--green)">—</div><div class="sum-l">Configured</div></div>
+      <div class="sum-cell"><div class="sum-v" id="stub-count" style="color:var(--dim)">—</div><div class="sum-l">Stubs</div></div>
+    </div>
+  </div>
+</div>
+
+<div class="wrap">
+
+  <div class="band-legend">
+    <div class="bl-item"><div class="bl-dot" style="background:var(--dim)"></div> L0 · Read-only / free</div>
+    <div class="bl-item"><div class="bl-dot" style="background:var(--cyan)"></div> L1 · Trivial autonomous</div>
+    <div class="bl-item"><div class="bl-dot" style="background:var(--green)"></div> L2 · Autonomous up to cap</div>
+    <div class="bl-item"><div class="bl-dot" style="background:var(--amber)"></div> L3 · Always requires human approval</div>
+    <div class="bl-item"><div class="bl-dot" style="background:var(--red)"></div> L4 · Unlimited — always escalates</div>
+    <div class="bl-item" style="margin-left:auto;color:var(--green)">■ Green border = configured</div>
+    <div class="bl-item" style="color:var(--dim)">■ Grey border = stub (set env vars)</div>
+  </div>
+
+  <div class="filter-bar">
+    <input class="search-input" id="search" type="text" placeholder="Search tools…" oninput="applyFilter()">
+    <button class="filter-btn active" data-band="all" onclick="setBand(this,'all')">All</button>
+    <button class="filter-btn" data-band="L0" onclick="setBand(this,'L0')">L0</button>
+    <button class="filter-btn" data-band="L1" onclick="setBand(this,'L1')">L1</button>
+    <button class="filter-btn" data-band="L2" onclick="setBand(this,'L2')">L2</button>
+    <button class="filter-btn" data-band="L3" onclick="setBand(this,'L3')">L3</button>
+    <button class="filter-btn" data-band="L4" onclick="setBand(this,'L4')">L4</button>
+    <button class="filter-btn" data-band="configured" onclick="setBand(this,'configured')">Configured only</button>
+  </div>
+
+  <div class="tools-grid" id="tools-grid">
+    <div class="empty">Loading tool registry…</div>
+  </div>
+
+</div>
+
+<footer>
+  <div class="wrap">
+    Every tool call is kernel-checked before execution · <a href="/" style="color:var(--muted)">← Custodian home</a> · <a href="/docs" style="color:var(--muted)">Docs</a>
+  </div>
+</footer>
+
+<script>
+let allTools = [];
+let activeBand = 'all';
+
+const BAND_DESC = {
+  L0: 'Read-only / free — always autonomous, no cost',
+  L1: 'Trivial autonomous spend or free side-effect',
+  L2: 'Autonomous up to per-action cap; escalates above threshold',
+  L3: 'Always requires human approval via SMS before executing',
+  L4: 'Unlimited potential — always escalates to human',
+};
+
+function setBand(btn, band) {
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  activeBand = band;
+  applyFilter();
+}
+
+function applyFilter() {
+  const q = (document.getElementById('search').value || '').toLowerCase().trim();
+  const grid = document.getElementById('tools-grid');
+  const filtered = allTools.filter(t => {
+    const matchBand = activeBand === 'all' || activeBand === t.band || (activeBand === 'configured' && t.configured);
+    const matchQ = !q || t.name.toLowerCase().includes(q) || t.description.toLowerCase().includes(q) || (t.tags || []).some(g => g.toLowerCase().includes(q));
+    return matchBand && matchQ;
+  });
+  if (!filtered.length) {
+    grid.innerHTML = '<div class="empty">No tools match this filter.</div>';
+    return;
+  }
+  grid.innerHTML = filtered.map(t => renderCard(t)).join('');
+}
+
+function renderCard(t) {
+  const tags = (t.tags || []).slice(0, 3).map(g => `<span class="tc-tag">${g}</span>`).join('');
+  const cost = t.cost_usd ? `<span class="tc-tag">~$${t.cost_usd.toFixed(2)}/call</span>` : '';
+  return `<div class="tool-card ${t.configured ? 'configured' : 'stub'}">
+    <div class="tc-head">
+      <span class="tc-name">${t.name}</span>
+      <span class="tc-band band-${t.band}">${t.band}</span>
+    </div>
+    <div class="tc-desc">${t.description}</div>
+    <div class="tc-foot">
+      <span class="tc-status ${t.configured ? 'configured' : 'stub'}">${t.configured ? '✓ configured' : '○ stub'}</span>
+      ${tags}${cost}
+    </div>
+  </div>`;
+}
+
+async function loadTools() {
+  try {
+    const r = await fetch('/api/v1/tools/list');
+    if (!r.ok) throw new Error('API error');
+    const data = await r.json();
+    allTools = data.tools || [];
+    document.getElementById('total-count').textContent = data.total || allTools.length;
+    document.getElementById('configured-count').textContent = data.configured || 0;
+    document.getElementById('stub-count').textContent = data.stubs || 0;
+    applyFilter();
+  } catch(e) {
+    // Fallback: show static known count if API unreachable (CF Pages serving static)
+    document.getElementById('total-count').textContent = '61';
+    document.getElementById('configured-count').textContent = '36';
+    document.getElementById('stub-count').textContent = '25';
+    document.getElementById('tools-grid').innerHTML = `<div class="empty">
+      Tool registry API not reachable from static preview.<br>
+      <a href="/hermes" style="color:var(--amber)">Open live console</a> to see the registry live, or run <code>custodian tools list</code> locally.
+    </div>`;
+  }
+}
+
+loadTools();
+</script>
+</body>
+</html>

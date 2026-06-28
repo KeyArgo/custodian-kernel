@@ -1,28 +1,6 @@
 #!/usr/bin/env python3
-"""Stub execute script for cron-list.
-
-Replace this with a real implementation.
-OpenCode prompt: custodian/opencode-prompts/scheduling-tools.md
-"""
-import argparse, json, os, sys
-
-def main():
-    p = argparse.ArgumentParser()
-    p.add_argument("--dry-run", action="store_true")
-    args, rest = p.parse_known_args()
-
-    configured = bool(os.environ.get("CRON_LIST_CONFIGURED"))
-    if not configured:
-        print(json.dumps({
-            "ok": False,
-            "stub": True,
-            "tool": "cron-list",
-            "message": "Set CRON_LIST_CONFIGURED=1 (and required credentials) to enable.",
-        }))
-        sys.exit(0)
-
-    # TODO: real implementation
-    print(json.dumps({"ok": True, "tool": "cron-list", "result": "stub"}))
-
-if __name__ == "__main__":
-    main()
+import json, os
+CRONS = os.environ.get("CUSTODIAN_CRONS_PATH", os.path.expanduser("~/.custodian/crons.json"))
+try: crons = json.loads(open(CRONS).read()) if os.path.exists(CRONS) else []
+except: crons = []
+print(json.dumps({"ok":True,"tool":"cron-list","crons":crons,"count":len(crons)}))

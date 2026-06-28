@@ -1,28 +1,10 @@
 #!/usr/bin/env python3
-"""Stub execute script for base64-encode.
-
-Replace this with a real implementation.
-OpenCode prompt: custodian/opencode-prompts/utilities-tools.md
-"""
-import argparse, json, os, sys
-
+import argparse, base64, json, sys
 def main():
-    p = argparse.ArgumentParser()
-    p.add_argument("--dry-run", action="store_true")
-    args, rest = p.parse_known_args()
-
-    configured = bool(os.environ.get("BASE64_ENCODE_CONFIGURED"))
-    if not configured:
-        print(json.dumps({
-            "ok": False,
-            "stub": True,
-            "tool": "base64-encode",
-            "message": "Set BASE64_ENCODE_CONFIGURED=1 (and required credentials) to enable.",
-        }))
-        sys.exit(0)
-
-    # TODO: real implementation
-    print(json.dumps({"ok": True, "tool": "base64-encode", "result": "stub"}))
-
-if __name__ == "__main__":
-    main()
+    p = argparse.ArgumentParser(); p.add_argument("--input"); p.add_argument("--file")
+    a = p.parse_args()
+    try:
+        data = open(a.file,"rb").read() if a.file else (a.input or "").encode()
+        print(json.dumps({"ok":True,"tool":"base64-encode","encoded":base64.b64encode(data).decode()}))
+    except Exception as e: print(json.dumps({"ok":False,"tool":"base64-encode","error":str(e)}))
+if __name__=="__main__": main()
