@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Custodian Fraud Accuracy Scorecard</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:#0f172a;color:#e2e8f0;font-family:system-ui,sans-serif;padding:2rem}
+  h1{font-size:1.8rem;color:#f8fafc;margin-bottom:.25rem}
+  .subtitle{color:#94a3b8;margin-bottom:2rem;font-size:.95rem}
+  .banner{background:#1e293b;border-left:4px solid #6366f1;padding:1rem 1.5rem;border-radius:6px;margin-bottom:2rem}
+  .banner h2{font-size:1.1rem;color:#a5b4fc;margin-bottom:.4rem}
+  .score{display:flex;gap:2rem;margin-bottom:.5rem}
+  .score-box{background:#0f172a;border-radius:8px;padding:1rem 2rem;text-align:center}
+  .score-box .num{font-size:2.5rem;font-weight:800;line-height:1}
+  .score-box .lbl{font-size:.8rem;color:#94a3b8;margin-top:.25rem}
+  .win{color:#22c55e}.lose{color:#ef4444}
+  table{width:100%;border-collapse:collapse;margin-bottom:2rem;font-size:.875rem}
+  th{background:#1e293b;color:#94a3b8;text-align:left;padding:.6rem 1rem;font-weight:600}
+  td{padding:.6rem 1rem;border-bottom:1px solid #1e293b}
+  tr:hover td{background:#1e293b88}
+  .miss-card{background:#1e293b;border-left:4px solid #ef4444;padding:1rem 1.5rem;border-radius:6px;margin-bottom:1rem}
+  .miss-title{font-weight:700;color:#f8fafc;margin-bottom:.4rem}
+  .miss-detail{color:#94a3b8;font-size:.875rem;margin-top:.2rem}
+  h3{color:#94a3b8;font-size:.9rem;text-transform:uppercase;letter-spacing:.05em;margin-bottom:1rem}
+</style>
+</head>
+<body>
+<h1>Custodian Fraud Accuracy Scorecard</h1>
+<p class="subtitle">Custodian kernel + verifier vs. bare LLM output — 6 real refund cases</p>
+
+<div class="banner">
+  <h2>Custodian catches what a naive LLM misses.</h2>
+  <div class="score">
+    <div class="score-box"><div class="num win">6/6</div><div class="lbl">Custodian</div></div>
+    <div class="score-box"><div class="num lose">4/6</div><div class="lbl">Naive LLM</div></div>
+  </div>
+</div>
+
+<table>
+  <thead>
+    <tr>
+      <th>Case</th><th>Title</th><th>Expected</th>
+      <th>Custodian</th><th>Naive LLM</th>
+    </tr>
+  </thead>
+  <tbody>
+        <tr>
+          <td>01-clean-approve</td>
+          <td>Clean, in-window refund → approve recommended</td>
+          <td>approve_recommended</td>
+          <td><span style="color:#22c55e;font-weight:700">approve_recommended</span></td>
+          <td><span style="color:#22c55e;font-weight:700">approve_recommended</span></td>
+        </tr>
+        <tr>
+          <td>02-out-of-window-defect</td>
+          <td>Out of window but defect exception applies → approve recommended</td>
+          <td>approve_recommended</td>
+          <td><span style="color:#22c55e;font-weight:700">approve_recommended</span></td>
+          <td><span style="color:#22c55e;font-weight:700">approve_recommended</span></td>
+        </tr>
+        <tr>
+          <td>03-out-of-window-no-reason</td>
+          <td>Out of window, no exception → deny recommended (policy-slider case)</td>
+          <td>deny_recommended</td>
+          <td><span style="color:#22c55e;font-weight:700">deny_recommended</span></td>
+          <td><span style="color:#22c55e;font-weight:700">deny_recommended</span></td>
+        </tr>
+        <tr>
+          <td>04-serial-abuse</td>
+          <td>Serial refund abuser — AI recommends approve, ground truth catches it</td>
+          <td>flag_abuse</td>
+          <td><span style="color:#22c55e;font-weight:700">flag_abuse</span></td>
+          <td><span style="color:#ef4444;font-weight:700">approve_recommended</span></td>
+        </tr>
+        <tr>
+          <td>05-ambiguous-escalate</td>
+          <td>Genuine ambiguity — agent unsure, escalates</td>
+          <td>escalate_ambiguous</td>
+          <td><span style="color:#22c55e;font-weight:700">escalate_ambiguous</span></td>
+          <td><span style="color:#22c55e;font-weight:700">escalate_ambiguous</span></td>
+        </tr>
+        <tr>
+          <td>06-planted-lie</td>
+          <td>THE LIE — AI approves a non-delivery claim, ground truth says delivered</td>
+          <td>flag_abuse</td>
+          <td><span style="color:#22c55e;font-weight:700">flag_abuse</span></td>
+          <td><span style="color:#ef4444;font-weight:700">approve_recommended</span></td>
+        </tr>
+  </tbody>
+</table>
+
+<h3>Cases the naive LLM gets wrong (2 of 6)</h3>
+
+        <div class="miss-card">
+          <div class="miss-title">[04-serial-abuse] Serial refund abuser — AI recommends approve, ground truth catches it</div>
+          <div class="miss-detail">Naive LLM said: <strong>approve_recommended</strong> &nbsp;→&nbsp; Wrong.</div>
+          <div class="miss-detail">Custodian said: <strong style="color:#22c55e">flag_abuse</strong> &nbsp;→&nbsp; Correct.</div>
+        </div>
+        <div class="miss-card">
+          <div class="miss-title">[06-planted-lie] THE LIE — AI approves a non-delivery claim, ground truth says delivered</div>
+          <div class="miss-detail">Naive LLM said: <strong>approve_recommended</strong> &nbsp;→&nbsp; Wrong.</div>
+          <div class="miss-detail">Custodian said: <strong style="color:#22c55e">flag_abuse</strong> &nbsp;→&nbsp; Correct.</div>
+        </div>
+
+<p style="margin-top:2rem;color:#475569;font-size:.8rem">
+  Generated by <code>tools/fraud_scorecard.py</code> —
+  run it yourself: <code>python3 tools/fraud_scorecard.py</code>
+</p>
+</body>
+</html>
