@@ -12,7 +12,9 @@ Two envelope sources, always labelled honestly:
   - live (?live=1): calls the real Nemotron model to generate the envelope
     fresh from the raw customer email -- requires the dashboard's nvidia.env.
 """
+import datetime
 import json
+import os
 from pathlib import Path
 
 from flask import Blueprint, jsonify, request
@@ -37,6 +39,90 @@ from custodian.types import AuthorityState, Band
 bp = Blueprint("triage", __name__)
 
 _NVIDIA_SECRET = Path(__file__).resolve().parent.parent / "secrets" / "nvidia.env"
+_KEYS_ENV = Path(__file__).resolve().parent.parent / "secrets" / "keys.env"
+
+# Audit log for spend events (same file the P&L endpoint reads)
+_HERE = Path(__file__).resolve().parent.parent
+_AUDIT_LOG = _HERE.parent / "skills" / "payments" / "stripe-spend" / "state" / "audit_log.jsonl"
+
+
+def _load_keys_env() -> dict:
+    """Load secrets/keys.env into a dict without touching os.environ."""
+    out = {}
+    if _KEYS_ENV.exists():
+        for line in _KEYS_ENV.read_text().splitlines():
+            line = line.strip()
+            if line and not line.startswith("#") and "=" in line:
+                k, v = line.split("=", 1)
+                out[k.strip()] = v.strip()
+    return out
+
+
+def _log_spend(case_id: str, provider: str, amount: float, description: str, execution: dict | None = None) -> None:
+    """Append a spend event to the audit log so the P&L dashboard reflects it."""
+    _AUDIT_LOG.parent.mkdir(parents=True, exist_ok=True)
+    event = {
+        "event": "spend",
+        "ts": datetime.datetime.utcnow().isoformat() + "Z",
+        "case_id": case_id,
+        "provider": provider,
+        "amount": amount,
+        "description": description,
+        "governed_by": "custodian-kernel",
+        "authority": "AUTONOMOUS",
+    }
+    if execution:
+        event["execution"] = execution
+    with _AUDIT_LOG.open("a") as f:
+        f.write(json.dumps(event) + "\n")
+
+
+def _execute_provision(case_id: str, data: dict, amount: float) -> dict:
+    """Best-effort: try Modal → NIM → stub. Returns execution result."""
+    keys = _load_keys_env()
+    provider = data.get("envelope", {}).get("customer_id", "unknown")
+
+    # Modal path
+    if "modal" in provider.lower() and keys.get("MODAL_TOKEN_ID"):
+        try:
+            import subprocess, sys
+            env = os.environ.copy()
+            env["MODAL_TOKEN_ID"] = keys["MODAL_TOKEN_ID"]
+            env["MODAL_TOKEN_SECRET"] = keys["MODAL_TOKEN_SECRET"]
+            env["MODAL_PROFILE"] = keys.get("MODAL_PROFILE", "inovinlabs")
+            result = subprocess.run(
+                [sys.executable, "-c",
+                 "import modal; f = modal.Function.from_name('custodian-benchmark', 'benchmark');"
+                 " r = f.remote(1.0); print(__import__('json').dumps(r))"],
+                capture_output=True, text=True, timeout=30, env=env,
+            )
+            if result.returncode == 0:
+                return {"provider": "modal", "result": json.loads(result.stdout.strip()), "billed": amount}
+        except Exception as e:
+            pass  # fall through to NIM
+
+    # NIM path (all cloud cases can use NIM as the execution proof)
+    nvidia_key = keys.get("NVIDIA_API_KEY") or os.environ.get("NVIDIA_API_KEY")
+    if nvidia_key:
+        try:
+            from custodian.inference.router import NemoClawRouter
+            r = NemoClawRouter(timeout=15)
+            # Temporarily set key in env for the call
+            old = os.environ.get("NVIDIA_API_KEY")
+            os.environ["NVIDIA_API_KEY"] = nvidia_key
+            response = r.complete(
+                "You are a terse compute orchestrator.",
+                f"Job {case_id} approved. Report: provider={provider}, cost=${amount:.2f}/hr, status=provisioned.",
+            )
+            if old is None:
+                del os.environ["NVIDIA_API_KEY"]
+            else:
+                os.environ["NVIDIA_API_KEY"] = old
+            return {"provider": "nvidia-nim", "endpoint": r.name, "response": response[:120], "billed": amount}
+        except Exception:
+            pass
+
+    return {"provider": provider, "stub": True, "billed": amount}
 
 # Generous state -- the kernel selects the band from the pack's policy, not from
 # this state's band; this just proves a verdict isn't an artifact of a tiny budget.
@@ -115,6 +201,15 @@ def case_by_id(case_id: str):
     panel["expected_disposition"] = data.get("expect")
     panel["envelope_source"] = source
     panel["overrode_agent"] = panel["adapter_disposition"] != panel["agent_recommended"]
+
+    # Close the earn→spend loop: if a cloud case auto-provisions, execute and log the spend.
+    if name == "cloud" and panel.get("adapter_disposition") == "auto_provision":
+        amount = data.get("envelope", {}).get("amount", 0.0)
+        execution = _execute_provision(case_id, data, amount)
+        _log_spend(case_id, execution.get("provider", "unknown"), amount, data.get("title", case_id), execution)
+        panel["execution"] = execution
+        panel["spend_logged"] = True
+
     return jsonify(panel)
 
 

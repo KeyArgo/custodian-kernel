@@ -6,6 +6,7 @@ drop-in replacement. Endpoint order: DGX Spark → local NIM → NVIDIA hosted A
 from __future__ import annotations
 
 import json
+import os
 import urllib.error
 import urllib.request
 from dataclasses import dataclass, field
@@ -33,6 +34,8 @@ class NemoClawRouter:
     live: bool = False
 
     def _key(self) -> Optional[str]:
+        if env_key := os.environ.get("NVIDIA_API_KEY"):
+            return env_key
         if self.nvidia_api_key_file and self.nvidia_api_key_file.exists():
             for line in self.nvidia_api_key_file.read_text().splitlines():
                 if line.startswith("NVIDIA_API_KEY="):

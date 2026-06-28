@@ -103,6 +103,8 @@ class TestNemoClawRouter:
             return _ok_response()
 
         monkeypatch.setattr(urllib.request, "urlopen", fake_urlopen)
+        # Clear env var so it doesn't shadow the key file under test
+        monkeypatch.delenv("NVIDIA_API_KEY", raising=False)
         endpoint = f"https://{NVIDIA_HOSTED}/v1/chat/completions"
         router = NemoClawRouter(endpoints=[endpoint], nvidia_api_key_file=key_file)
         router.complete("sys", "user")

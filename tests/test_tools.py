@@ -426,9 +426,12 @@ escalation:
     def test_tool_invoke_gates_l2_when_kill_switch_set(self, tmp_path):
         """tool.invoke() on an L2 tool returns kernel_escalation when kill switch is on."""
         import json as _json
-        ks_file = tmp_path / "kill_switch.json"
+        # File must be in the .custodian/ subdirectory to match Path.home() / ".custodian" / "kill_switch.json"
+        custodian_dir = tmp_path / ".custodian"
+        custodian_dir.mkdir()
+        ks_file = custodian_dir / "kill_switch.json"
         ks_file.write_text(_json.dumps({"killed": True, "reason": "test", "by": "test"}))
-        # Patch home to tmp_path so the registry finds our kill_switch.json
+        # Patch home to tmp_path so the registry finds .custodian/kill_switch.json
         import unittest.mock as mock
         with mock.patch("pathlib.Path.home", return_value=tmp_path):
             from custodian.tools.registry import default_registry

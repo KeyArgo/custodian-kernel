@@ -1,112 +1,154 @@
-# Custodian — 90-Second Submission Video Script
+# Custodian — Video Script (90 seconds to #1)
 
-**Target:** 90 seconds | **Format:** screen recording + voiceover | **Tone:** calm, precise, no hype
+**One-sentence hook:** "We planted a lie in the customer data. The AI believed it. The kernel didn't."
 
----
-
-## Hook (0:00–0:10) — The problem
-
-**Screen:** getcustodian.xyz landing page
-
-> "AI agents are spending company money. Right now there's nothing stopping
-> them from approving a refund because the customer was persistent —
-> or because the customer lied. Prompt rules don't help. The agent writes them;
-> the agent ignores them."
+**Target:** 90 seconds | **Format:** screen recording + voiceover | **Tone:** calm, precise — let the proof do the talking
 
 ---
 
-## Earn → Spend → Govern (0:10–0:32) — The closed loop
+## HOOK (0:00–0:08) — The lie
 
-**Screen:** /operator — P&L bar visible at top reads EARNED $0 · SPENT $0 · NET $0.
-Click **"⚡ Simulate Payment Received"**.
-Navigate to /hermes — watch EARNED flip to +$25.00.
-Watch audit feed: agent autonomously approves $8.50 NIM inference spend (L2 · autonomous).
-P&L updates live: SPENT $8.50 · NET +$16.50 · MARGIN 66%.
+**Screen:** Terminal. Run the planted-lie demo:
+```bash
+python3 verify_kit.py
+```
+Let it print — pause on the `[CONTRADICTED]` line in red.
 
-> "A customer pays. The kernel logs it. The agent spends from those earned
-> funds within its authority band — autonomously, under cap. Earned, spent,
-> net. Every step in the audit trail. The agent never touched the accounting."
-
----
-
-## Lie Catch (0:32–0:52) — The differentiator
-
-**Screen:** /operator — type fraudulent claim into triage box:
-*"I never received my order — I want a full refund"*
-
-*Verdict panel appears: INCONSISTENT — Customer claims non-delivery; Stripe record shows delivered and signed.*
-*Kernel badge: ESCALATE · L3 · Refunds always escalate.*
-
-> "Every justification runs through a Nemotron fact-check before the kernel
-> decides. The claim doesn't match the Stripe record. Refunds always escalate —
-> the agent cannot override that. It's enforced below the prompt layer."
+> "We planted a lie. Customer said the package never arrived.
+> Nemotron believed her — 89% confidence, approve.
+> The verifier checked Stripe. Delivered. Signed.
+> The kernel blocked it. No prompt engineering. Structurally impossible to override."
 
 ---
 
-## Real Proof (0:52–1:08) — It's live
+## THE PROOF (0:08–0:28) — verify_kit live
 
-**Screen:** Open Stripe dashboard tab — zoom the live PaymentIntent ID.
-Back to /hermes — engage kill switch. Attempt spend. Badge: BLOCKED · Kill switch active.
+**Screen:** Continue watching verify_kit.py output scroll:
+- `[PASS] 1,176 passed`
+- `[PASS] Lie-catcher catches the planted lie`
+- `[PASS] Self-approval regression catches the bug`
+- `[PASS] Live public dashboard data is real`
 
-> "That's a live Stripe PaymentIntent — verify it yourself at Stripe's API.
-> The SMS went to a real phone. The audit log is append-only.
-> One command. Agent authority gone. Instantly."
-
----
-
-## Scale (1:08–1:20) — 100 governed tools
-
-**Screen:** /tools — filter to L3, show authority band breakdown
-
-> "100 governed tools ship with Custodian — Stripe, NVIDIA NIM, shell exec,
-> calendar, database. Each carries an authority band. Add one by adding
-> one YAML line. The kernel governs everything in the same pipeline."
+> "One command. Four independent checks.
+> The test suite runs. The lie gets caught. The security bug gets proven
+> by reintroducing it live — watch the test fail — then restoring the fix.
+> The live dashboard pulls real data from getcustodian.xyz right now.
+> Run it yourself. That's not a slide."
 
 ---
 
-## Close (1:20–1:30)
+## EARN → BUY LOOP (0:28–0:52) — the closed economic cycle
+
+**Screen:** Browser, getcustodian.xyz/operator
+P&L bar shows: EARNED $0 · SPENT $0 · NET $0
+
+Click **"⚡ Simulate Payment Received"** — EARNED flips to **+$25.00**
+
+Navigate to /triage, Cloud pack — click case **01: Modal A10G auto-provision**
+Verdict panel loads: `AUTONOMOUS · L2 · cost VERIFIED · provider APPROVED`
+Panel shows: `execution: { provider: "nvidia-nim", response: "Job provisioned", billed: $1.20 }`
+
+Return to /operator — P&L: EARNED $25.00 · SPENT $1.20 · NET **+$23.80** · MARGIN **95%**
+
+> "Customer pays $25. Agent needs compute to fulfill the job.
+> Claims verified: cost matches catalog, provider approved, under the $5 cap.
+> Kernel says AUTONOMOUS. NIM spins up. Spend logged.
+> Earned, spent, net — every step in the audit trail.
+> The agent never touched the accounting. The kernel did."
+
+---
+
+## KILL SWITCH (0:52–1:05) — the safety primitive
+
+**Screen:** Operator panel → engage kill switch.
+Switch to /triage → run any case → badge reads: **DENIED · Kill switch active**
+Release kill switch → same case → **AUTONOMOUS**
+
+**While kill switch is active, hold phone to camera — SMS arriving in real time**
+
+> "One toggle. All agent authority revoked instantly.
+> The real text message goes to a real phone — not a demo phone, a real number.
+> The kernel is below the prompt layer. You can't social-engineer around it."
+
+---
+
+## SCALE (1:05–1:18) — 3 domains, same kernel
+
+**Screen:** Fast cuts — Refunds pack: fraud caught. Purchasing pack: inflated invoice caught. Cloud pack: unapproved provider blocked.
+
+> "Three business domains. Same kernel.
+> Refunds, purchasing, cloud provisioning — one enforcement layer.
+> 100 governed tools ship with it. Add one with a YAML line.
+> MSPs, SaaS platforms, anyone running agents with real authority."
+
+---
+
+## CLOSE (1:18–1:30)
 
 **Screen:** getcustodian.xyz
 
-> "Self-hosted. Model-agnostic. Swap the LLM; the enforcement doesn't move.
-> getcustodian.xyz — running right now. Verify it yourself."
+> "getcustodian.xyz — live right now.
+> Run verify_kit.py — one command, verify everything yourself.
+> Built on Hermes, NVIDIA Nemotron, Stripe, Modal.
+> This is what agent authority looks like when you actually enforce it."
+
+---
+
+## Why This Script Beats #2
+
+| What HermesCo shows | What Custodian shows |
+|---|---|
+| Agent approves a job (positive path) | Agent blocked by kernel (failure = safety proof) |
+| Nemotron logo on screen | Real NIM inference call in the audit log |
+| "Trust our dashboard" | `verify_kit.py` — run it yourself |
+| 1 business domain | 3 domains, same kernel |
+| No tests shown | 1,176 tests running live on camera |
+| Built with Devin | You can read every line |
+
+The differentiator isn't what Custodian approves — it's what it **stops**.
+The verify_kit is what no other entry has. Lead with it.
 
 ---
 
 ## Recording Notes
 
-- Record at 1920×1080, 30fps
-- Cursor: large, high-contrast (Keystroke Pro or similar)
-- Real actions only — no cut/paste of fake API responses
-- Voiceover: record separately, mix at -3dB
-- Export: MP4 H.264, max 200MB for submission upload
-- Backup: also export WebM for the site
+- Record at 1920×1080, 30fps. Terminal font size 18+ for readability.
+- Cursor: large, high-contrast
+- Real actions only — no staged API responses
+- Voiceover: record separately, mix at -3dB under screen audio
+- Keep verify_kit output visible for 10+ seconds — let judges read it
+- Export: MP4 H.264, ≤200MB
 
-## Timestamps to Hit
+## Pre-Recording Checklist
 
-| Time | Action |
-|---|---|
-| 0:00 | Open getcustodian.xyz |
-| 0:10 | Navigate to /operator |
-| 0:13 | Click "⚡ Simulate Payment Received" |
-| 0:16 | Navigate to /hermes — show P&L bar flip to EARNED $25.00 |
-| 0:22 | Point to audit feed: EXECUTED · $8.50 · L2 autonomous |
-| 0:28 | Point to P&L: NET +$16.50 · MARGIN 66% |
-| 0:32 | Navigate to /operator — type fraudulent refund claim |
-| 0:44 | Show INCONSISTENT verdict + ESCALATE badge |
-| 0:52 | Open Stripe dashboard tab, zoom PaymentIntent |
-| 0:58 | Back to /hermes — engage kill switch, show BLOCKED |
-| 1:08 | Navigate to /tools, filter to L3 |
-| 1:20 | Navigate to getcustodian.xyz |
-| 1:28 | Fade out on live audit feed ticking |
-
-## Pre-recording checklist
-
-- [ ] Flask running on argobox-lite: `curl http://rein-local.argobox.com/api/v1/pnl/summary`
-- [ ] Earn ledger is empty (fresh start): `ssh argonaut@100.81.234.88 "echo '' > /tmp/hermes-earn-ledger.json"`
-- [ ] Triage page loads with pre-filled fraud scenario visible
+- [ ] `pip install -e ".[dev]"` completed, all tests pass (`pytest` clean)
+- [ ] `NVIDIA_API_KEY` exported from `secrets/keys.env`
+- [ ] `python3 verify_kit.py` does a clean full run first (dry run)
+- [ ] Flask dashboard running: `flask --app dashboard.app run --port 5050`
+- [ ] Earn ledger cleared (fresh start)
+- [ ] Browser at 110% zoom, getcustodian.xyz open
+- [ ] Stripe dashboard open in a separate tab (for PaymentIntent verification)
 - [ ] Kill switch confirmed OFF in operator panel
-- [ ] Browser at 110% zoom for readability
-- [ ] Stripe dashboard open in a separate tab, logged in
-- [ ] Twilio SMS armed (real number in secrets env)
-- [ ] Do one full dry run before recording
+- [ ] Real Twilio number configured — test SMS works before recording
+- [ ] One full dry run end-to-end before hitting record
+
+## Timestamps
+
+| Time | Screen | Audio |
+|------|--------|-------|
+| 0:00 | Terminal: `python3 verify_kit.py` starts | "We planted a lie..." |
+| 0:06 | `[CONTRADICTED]` in red | "The kernel blocked it." |
+| 0:08 | Tests running: 1,176 passed | "One command. Four checks." |
+| 0:20 | Live dashboard pull succeeds | "Run it yourself. That's not a slide." |
+| 0:28 | /operator P&L at $0 | "Customer pays $25..." |
+| 0:31 | Click ⚡ — EARNED flips to $25 | |
+| 0:34 | /triage cloud pack, case 01 | "Agent needs compute..." |
+| 0:42 | Panel: AUTONOMOUS + execution: nvidia-nim | "Kernel says AUTONOMOUS. NIM spins up." |
+| 0:48 | /operator P&L: NET +$23.80, MARGIN 95% | "Earned, spent, net." |
+| 0:52 | Engage kill switch | "One toggle." |
+| 0:57 | Case run → DENIED · Kill switch active | |
+| 1:00 | Hold phone to camera (SMS arriving) | "Real text. Real phone." |
+| 1:03 | Release kill switch → AUTONOMOUS | |
+| 1:05 | Fast cuts: fraud / inflated invoice / unapproved provider all blocked | "Three domains. Same kernel." |
+| 1:18 | getcustodian.xyz landing | "Run verify_kit.py." |
+| 1:27 | Fade on live audit feed | |

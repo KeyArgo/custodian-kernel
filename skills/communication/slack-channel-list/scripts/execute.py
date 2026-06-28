@@ -1,28 +1,16 @@
 #!/usr/bin/env python3
-"""Stub execute script for slack-channel-list.
-
-Replace this with a real implementation.
-OpenCode prompt: custodian/opencode-prompts/communication-tools.md
-"""
-import argparse, json, os, sys
-
+import argparse, json, os, sys, requests
 def main():
-    p = argparse.ArgumentParser()
-    p.add_argument("--dry-run", action="store_true")
-    args, rest = p.parse_known_args()
-
-    configured = bool(os.environ.get("SLACK_CHANNEL_LIST_CONFIGURED"))
-    if not configured:
-        print(json.dumps({
-            "ok": False,
-            "stub": True,
-            "tool": "slack-channel-list",
-            "message": "Set SLACK_CHANNEL_LIST_CONFIGURED=1 (and required credentials) to enable.",
-        }))
-        sys.exit(0)
-
-    # TODO: real implementation
-    print(json.dumps({"ok": True, "tool": "slack-channel-list", "result": "stub"}))
-
-if __name__ == "__main__":
-    main()
+    p = argparse.ArgumentParser(); p.add_argument("--limit", type=int, default=100)
+    a = p.parse_args()
+    token = os.environ.get("SLACK_BOT_TOKEN")
+    if not token:
+        print(json.dumps({"ok": False, "stub": True, "tool": "slack-channel-list", "message": "Set SLACK_BOT_TOKEN to enable."})); return
+    try:
+        headers = {"Authorization": f"Bearer {token}"}
+        r = requests.get("https://slack.com/api/conversations.list", headers=headers, params={"limit": a.limit}, timeout=10)
+        d = r.json()
+        channels = [{"id": c["id"], "name": c["name"]} for c in d.get("channels", [])]
+        print(json.dumps({"ok": d.get("ok", False), "tool": "slack-channel-list", "channels": channels}))
+    except Exception as e: print(json.dumps({"ok": False, "tool": "slack-channel-list", "error": str(e)}))
+if __name__ == "__main__": main()

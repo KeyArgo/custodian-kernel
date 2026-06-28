@@ -1,28 +1,17 @@
 #!/usr/bin/env python3
-"""Stub execute script for slack-message.
-
-Replace this with a real implementation.
-OpenCode prompt: custodian/opencode-prompts/communication-tools.md
-"""
-import argparse, json, os, sys
-
+import argparse, json, os, sys, requests
 def main():
-    p = argparse.ArgumentParser()
-    p.add_argument("--dry-run", action="store_true")
-    args, rest = p.parse_known_args()
-
-    configured = bool(os.environ.get("SLACK_MESSAGE_CONFIGURED"))
-    if not configured:
-        print(json.dumps({
-            "ok": False,
-            "stub": True,
-            "tool": "slack-message",
-            "message": "Set SLACK_MESSAGE_CONFIGURED=1 (and required credentials) to enable.",
-        }))
-        sys.exit(0)
-
-    # TODO: real implementation
-    print(json.dumps({"ok": True, "tool": "slack-message", "result": "stub"}))
-
-if __name__ == "__main__":
-    main()
+    p = argparse.ArgumentParser(); p.add_argument("--channel", required=True); p.add_argument("--text", required=True); p.add_argument("--blocks")
+    a = p.parse_args()
+    token = os.environ.get("SLACK_BOT_TOKEN")
+    if not token:
+        print(json.dumps({"ok": False, "stub": True, "tool": "slack-message", "message": "Set SLACK_BOT_TOKEN to enable."})); return
+    try:
+        payload = {"channel": a.channel, "text": a.text}
+        if a.blocks: payload["blocks"] = json.loads(a.blocks)
+        headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
+        r = requests.post("https://slack.com/api/chat.postMessage", json=payload, headers=headers, timeout=10)
+        d = r.json()
+        print(json.dumps({"ok": d.get("ok", False), "tool": "slack-message", "ts": d.get("ts"), "channel": d.get("channel")}))
+    except Exception as e: print(json.dumps({"ok": False, "tool": "slack-message", "error": str(e)}))
+if __name__ == "__main__": main()
