@@ -50,7 +50,7 @@ def run(cmd: list[str], **kwargs) -> subprocess.CompletedProcess:
 
 
 def step1_test_suite() -> bool:
-    header("STEP 1/4 — Run the full test suite")
+    header("STEP 1/5 — Run the full test suite")
     result = run([sys.executable, "-m", "pytest", "tests/", "dashboard/tests/", "-v", "--tb=short"])
     print(result.stdout[-2000:])
     # Parse the real summary line rather than hardcoding a pass count --
