@@ -416,6 +416,11 @@
         .pnl-value.pnl-positive, #pnl-value.pnl-positive { color: var(--green); }
         .pnl-value.pnl-negative, #pnl-value.pnl-negative { color: var(--red); }
         .badge.execution_failed { background: rgba(255,59,59,0.1); color: var(--red); }
+        .event.reasoning-event { opacity: 0.72; background: rgba(255,255,255,0.015); }
+        .badge.reasoning { background: rgba(90,90,130,0.15); color: #8a8ab0; border-color: #3a3a5a; }
+        .reasoning-text { flex: 1; color: #666; font-size: 0.82em; font-family: monospace; white-space: pre-wrap; word-break: break-word; min-width: 200px; }
+        .reasoning-toggle { all: unset; cursor: pointer; font-size: 0.7em; color: #444; margin-left: 4px; padding: 1px 5px; border: 1px solid #2a2a2a; border-radius: 3px; white-space: nowrap; }
+        .reasoning-toggle:hover { color: #8a8ab0; border-color: #5a5a8a; }
         @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.5; } }
         .event .desc { flex: 1; color: #aaa; min-width: 200px; }
         .event .who { font-size: 0.78em; color: #6a6a6a; margin-top: 2px; }
@@ -1101,6 +1106,23 @@
         const _entryExplanations = new Map();
 
         function renderEvent(ev) {
+            const tsKey = String(ev.ts);
+
+            // Reasoning trace events — show agent stdout as collapsible trace
+            if (ev.event === 'reasoning') {
+                const script = escapeHtml(ev.script || 'agent');
+                const text = escapeHtml(ev.text || '');
+                const uid = 'r' + tsKey.replace('.', '_');
+                return `<div class="event reasoning-event" data-ts="${escapeHtml(tsKey)}">
+                    <div class="ts">${escapeHtml(fmtTime(ev.iso))}</div>
+                    <div class="badge reasoning">agent trace</div>
+                    <div class="reasoning-text" id="${uid}" style="display:none">${text}</div>
+                    <div style="flex:1;color:#555;font-size:0.8em">${script} output
+                        <button class="reasoning-toggle" onclick="const d=document.getElementById('${uid}');d.style.display=d.style.display==='none'?'block':'none';this.textContent=d.style.display==='none'?'expand':'collapse'">expand</button>
+                    </div>
+                </div>`;
+            }
+
             const badgeClass = ev.event || 'unknown';
             const label = (ev.event || 'unknown').replace(/_/g, ' ');
             const who = ev.approved_by
@@ -1109,7 +1131,6 @@
                     ? `denied by ${ev.denied_by}`
                     : '';
             const whoHtml = who ? `<div class="who">${escapeHtml(who)}</div>` : '';
-            const tsKey = String(ev.ts);
             const cached = _entryExplanations.get(tsKey);
             const evMini = JSON.stringify({event:ev.event,amount:ev.amount,description:ev.description,band:ev.band,reason:ev.reason,iso:ev.iso});
             const reasonHtml = cached

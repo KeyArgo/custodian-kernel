@@ -107,6 +107,7 @@ def earn():
     amount = str(data.get('amount', ''))
     description = str(data.get('description', ''))[:200]
     result = _run_script('earn.py', '--amount', amount, '--description', description)
+    _write_reasoning('earn.py', result)
     return jsonify(result)
 
 
@@ -117,6 +118,7 @@ def spend():
     amount = str(data.get('amount', ''))
     description = str(data.get('description', ''))[:200]
     result = _run_script('spend.py', '--amount', amount, '--description', description)
+    _write_reasoning('spend.py', result)
     return jsonify(result)
 
 
@@ -129,6 +131,7 @@ def refund():
     description = str(data.get('description', ''))[:200]
     result = _run_script('refund.py', '--payment-intent-id', pi_id,
                           '--amount', amount, '--description', description)
+    _write_reasoning('refund.py', result)
     return jsonify(result)
 
 
@@ -139,6 +142,7 @@ def approve():
     code = str(data.get('code', ''))[:32]
     approved_by = str(data.get('approved_by', 'Operator'))[:100]
     result = _run_script('approve.py', code, '--approved-by', approved_by)
+    _write_reasoning('approve.py', result)
     return jsonify(result)
 
 
@@ -152,6 +156,7 @@ def kill():
     if reason:
         args += ['--reason', reason]
     result = _run_script('kill_toggle.py', 'engage', *args)
+    _write_reasoning('kill_toggle.py', result)
     return jsonify(result)
 
 
@@ -161,6 +166,7 @@ def resume():
     data = request.get_json(force=True, silent=True) or {}
     by = str(data.get('by', 'Operator'))[:100]
     result = _run_script('kill_toggle.py', 'release', '--by', by)
+    _write_reasoning('kill_toggle.py', result)
     return jsonify(result)
 
 
@@ -182,9 +188,69 @@ def pending_code():
     return jsonify({'code': data.get('code'), 'expires_at': data.get('expires_at')})
 
 
+@bp.route('/forward_code', methods=['POST'])
+@require_operator
+def forward_code():
+    """Forward the pending SMS code to a visitor-supplied phone number via Twilio."""
+    import urllib.request, urllib.parse, base64
+    data = request.get_json(force=True, silent=True) or {}
+    phone = str(data.get('phone', '') or '').strip()[:20]
+    code = str(data.get('code', '') or '').strip()[:10]
+    if not phone or not code:
+        return jsonify({'error': 'phone and code required'}), 400
+
+    # Twilio credentials come from the same operator.env secrets file
+    def _tw(name):
+        return _secret(name) if SECRET_FILE.exists() and any(
+            l.startswith(name + '=') for l in SECRET_FILE.read_text().splitlines()
+        ) else os.environ.get(name, '')
+
+    account_sid = _tw('TWILIO_ACCOUNT_SID')
+    auth_token  = _tw('TWILIO_AUTH_TOKEN')
+    from_number = _tw('TWILIO_FROM_NUMBER')
+    if not all([account_sid, auth_token, from_number]):
+        return jsonify({'error': 'Twilio not configured — add TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_FROM_NUMBER to operator.env'}), 503
+
+    body = f'Your Custodian demo approval code is: {code}\nExpires in 10 min. Enter it in Step 3 on the operator panel.'
+    url = f'https://api.twilio.com/2010-04-01/Accounts/{account_sid}/Messages.json'
+    payload = urllib.parse.urlencode({'To': phone, 'From': from_number, 'Body': body}).encode()
+    creds = base64.b64encode(f'{account_sid}:{auth_token}'.encode()).decode()
+    req = urllib.request.Request(url, data=payload,
+                                 headers={'Authorization': f'Basic {creds}',
+                                          'Content-Type': 'application/x-www-form-urlencoded'})
+    try:
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            result = _json.loads(resp.read())
+        return jsonify({'ok': True, 'sid': result.get('sid'), 'to': phone})
+    except Exception as e:
+        return jsonify({'ok': False, 'error': str(e)}), 502
+
+
 _STATE_DIR = Path('/tmp/hermes-mount/sandbox/.hermes/skills/payments/stripe-spend/state')
 _AUDIT_LOG_PATH = _STATE_DIR / 'audit_log.jsonl'
 _AUTHORITY_PATH = _STATE_DIR / 'authority.json'
+_REASONING_LOG_PATH = _STATE_DIR / 'reasoning_log.jsonl'
+
+
+def _write_reasoning(script: str, result: dict):
+    """Append a reasoning event to the companion reasoning log so it surfaces in the audit feed."""
+    text = (result.get('stdout') or '').strip()
+    if not text:
+        text = (result.get('stderr') or '').strip()
+    if not text:
+        return
+    event = {
+        'ts': time.time(),
+        'event': 'reasoning',
+        'script': script.replace('.py', ''),
+        'text': text[:600],
+        'iso': __import__('datetime').datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ'),
+    }
+    try:
+        with open(_REASONING_LOG_PATH, 'a') as f:
+            f.write(_json.dumps(event) + '\n')
+    except Exception:
+        pass
 
 
 @bp.route('/reset', methods=['POST'])

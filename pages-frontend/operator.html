@@ -261,6 +261,16 @@
         <div class="out" id="step1-out"></div>
     </div>
 
+    <div class="step" style="border-left-color:#3a4a5a;">
+        <h2 style="color:#8ab0d0;">Your phone — receive the SMS code yourself (optional)</h2>
+        <p style="color:#7a8a9a;">Enter your number and we'll forward the approval code to your phone the moment it arrives — so you experience the out-of-band approval firsthand, not just as a description.</p>
+        <div class="row">
+            <input type="tel" id="visitor-phone" placeholder="+1 555 000 0000" style="width:180px;" autocomplete="tel">
+            <button id="visitor-phone-btn" style="background:#1a2a3a;border-color:#3a5a7a;color:#8ab0d0;">Set my number</button>
+        </div>
+        <div id="visitor-phone-note" style="display:none;font-size:0.75em;color:#6a9ab0;margin-top:4px;"></div>
+    </div>
+
     <div class="step">
         <h2>Step 2 — Over-budget escalation (real SMS incoming)</h2>
         <p>$3,500.00 exceeds the per-action cap. The kernel cannot approve this — it escalates and sends a real SMS code to the operator's phone. The code appears in the mockup and auto-fills Step 3.</p>
@@ -457,9 +467,26 @@ function smsNow() {
     return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 }
 
+// Visitor phone — optional forwarding of the SMS code to the visitor's own phone
+let _visitorPhone = '';
+document.getElementById('visitor-phone-btn').addEventListener('click', () => {
+    const v = document.getElementById('visitor-phone').value.trim();
+    const note = document.getElementById('visitor-phone-note');
+    if (!v) { note.style.display = 'none'; _visitorPhone = ''; return; }
+    _visitorPhone = v;
+    note.textContent = `✓ Code will also be forwarded to ${v} when Step 2 escalates`;
+    note.style.display = 'block';
+});
+document.getElementById('visitor-phone').addEventListener('keydown', e => {
+    if (e.key === 'Enter') document.getElementById('visitor-phone-btn').click();
+});
+
 let _codePoller = null;
+let _codeFwdDone = false; // forward only once per escalation cycle
+
 function startCodePoll(codeElId, approveInputId, noteId) {
     if (_codePoller) clearInterval(_codePoller);
+    _codeFwdDone = false;
     _codePoller = setInterval(async () => {
         try {
             const res = await fetch(API + '/pending_code', {});
@@ -471,6 +498,25 @@ function startCodePoll(codeElId, approveInputId, noteId) {
                 if (noteId) {
                     const n = document.getElementById(noteId);
                     if (n) { n.style.display = 'block'; }
+                }
+                // Forward to visitor phone once if configured
+                if (_visitorPhone && !_codeFwdDone) {
+                    _codeFwdDone = true;
+                    fetch(API + '/forward_code', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({phone: _visitorPhone, code: d.code})
+                    }).then(r => r.json()).then(fwd => {
+                        const note = document.getElementById('visitor-phone-note');
+                        if (fwd.ok) {
+                            note.textContent = `✓ Code forwarded to ${_visitorPhone} — check your messages`;
+                            note.style.color = '#76b900';
+                        } else {
+                            note.textContent = `⚠ Forward failed: ${fwd.error || 'unknown error'}`;
+                            note.style.color = '#ff6a4a';
+                        }
+                        note.style.display = 'block';
+                    }).catch(() => {});
                 }
                 if (_codePoller) { clearInterval(_codePoller); _codePoller = null; }
             }
