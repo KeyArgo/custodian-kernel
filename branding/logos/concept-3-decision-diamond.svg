@@ -1,0 +1,9 @@
+<svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Input arrow entering from left -->
+  <line x1="4" y1="32" x2="13" y2="32" stroke="#ffb000" stroke-width="2" stroke-linecap="round"/>
+  <polyline points="10,28.5 14,32 10,35.5" stroke="#ffb000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Decision diamond — the decide() function made visual -->
+  <polygon points="32,9 55,32 32,55 9,32" stroke="#ffb000" stroke-width="2.5" stroke-linejoin="round"/>
+  <!-- Y / N indicators (tiny, inside) -->
+  <text x="32" y="36" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="9" fill="#ffb000" opacity="0.6">?</text>
+</svg>

@@ -1,0 +1,18 @@
+<svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Left bar with forked tip -->
+  <line x1="16" y1="10" x2="16" y2="46" stroke="#ffb000" stroke-width="2.5" stroke-linecap="round"/>
+  <line x1="16" y1="46" x2="13" y2="54" stroke="#ffb000" stroke-width="2.5" stroke-linecap="round"/>
+  <line x1="16" y1="46" x2="19" y2="54" stroke="#ffb000" stroke-width="2.5" stroke-linecap="round"/>
+  <!-- Center bar with forked tip -->
+  <line x1="32" y1="10" x2="32" y2="46" stroke="#ffb000" stroke-width="2.5" stroke-linecap="round"/>
+  <line x1="32" y1="46" x2="29" y2="54" stroke="#ffb000" stroke-width="2.5" stroke-linecap="round"/>
+  <line x1="32" y1="46" x2="35" y2="54" stroke="#ffb000" stroke-width="2.5" stroke-linecap="round"/>
+  <!-- Right bar with forked tip -->
+  <line x1="48" y1="10" x2="48" y2="46" stroke="#ffb000" stroke-width="2.5" stroke-linecap="round"/>
+  <line x1="48" y1="46" x2="45" y2="54" stroke="#ffb000" stroke-width="2.5" stroke-linecap="round"/>
+  <line x1="48" y1="46" x2="51" y2="54" stroke="#ffb000" stroke-width="2.5" stroke-linecap="round"/>
+  <!-- Upper crossbar -->
+  <line x1="10" y1="22" x2="54" y2="22" stroke="#ffb000" stroke-width="2.5" stroke-linecap="round"/>
+  <!-- Lower crossbar -->
+  <line x1="10" y1="36" x2="54" y2="36" stroke="#ffb000" stroke-width="2.5" stroke-linecap="round"/>
+</svg>

@@ -1,0 +1,10 @@
+<svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Agent layer — narrow, dim -->
+  <rect x="20" y="14" width="24" height="9" rx="4.5" stroke="#ffb000" stroke-width="2" opacity="0.3"/>
+  <!-- Kernel layer — wide, full brightness, slightly filled -->
+  <rect x="6" y="27.5" width="52" height="9" rx="4.5" fill="rgba(255,176,0,0.08)" stroke="#ffb000" stroke-width="2.5"/>
+  <!-- Infrastructure layer — narrow, dim -->
+  <rect x="20" y="41" width="24" height="9" rx="4.5" stroke="#ffb000" stroke-width="2" opacity="0.3"/>
+  <!-- Center dot on kernel bar — marks it as the authority layer -->
+  <circle cx="32" cy="32" r="2" fill="#ffb000"/>
+</svg>

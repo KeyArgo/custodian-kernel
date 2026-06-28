@@ -1,0 +1,12 @@
+<svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Left conductor -->
+  <line x1="8" y1="34" x2="24" y2="34" stroke="#ffb000" stroke-width="2.5" stroke-linecap="round"/>
+  <!-- Right conductor -->
+  <line x1="40" y1="34" x2="56" y2="34" stroke="#ffb000" stroke-width="2.5" stroke-linecap="round"/>
+  <!-- Lever arm — perfect 45° -->
+  <line x1="24" y1="34" x2="38" y2="20" stroke="#ffb000" stroke-width="2.5" stroke-linecap="round"/>
+  <!-- Closed contact pivot -->
+  <circle cx="24" cy="34" r="3.5" fill="#ffb000"/>
+  <!-- Open contact ring -->
+  <circle cx="40" cy="34" r="3.5" fill="#06070b" stroke="#ffb000" stroke-width="2.5"/>
+</svg>

@@ -1,0 +1,11 @@
+<svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- 300° ring, gap at top with terminal dots -->
+  <path d="M 42,14.68 A 20,20 0 1,1 22,14.68" stroke="#ffb000" stroke-width="2.5" stroke-linecap="round"/>
+  <!-- Terminal contact dots at gap edges -->
+  <circle cx="42" cy="14.68" r="1.5" fill="#ffb000"/>
+  <circle cx="22" cy="14.68" r="1.5" fill="#ffb000"/>
+  <!-- Switch stem -->
+  <line x1="32" y1="4" x2="32" y2="13" stroke="#ffb000" stroke-width="2.5" stroke-linecap="round"/>
+  <!-- Switch handle -->
+  <line x1="24" y1="4" x2="40" y2="4" stroke="#ffb000" stroke-width="2.5" stroke-linecap="round"/>
+</svg>

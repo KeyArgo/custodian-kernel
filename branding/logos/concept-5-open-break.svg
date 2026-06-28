@@ -1,0 +1,13 @@
+<svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Arc: 270° ring, gap at top (missing ~60° between the two endpoints) -->
+  <!-- Circle center: 32,32  radius: 22 -->
+  <!-- Gap spans 30° each side of top. Points at ±30° from top: -->
+  <!-- Right gap edge (30° CW from top = 60° from east): x=32+22*cos(300°)=32+11=43, y=32+22*sin(300°)=32-19=13 -->
+  <!-- Left gap edge (30° CCW from top = 120° from east): x=32+22*cos(240°)=32-11=21, y=32+22*sin(240°)=32-19=13 -->
+  <!-- Large arc from (43,13) clockwise to (21,13) -->
+  <path d="M 43,13 A 22,22 0 1,1 21,13" stroke="#ffb000" stroke-width="2.5" stroke-linecap="round"/>
+  <!-- Authority switch — vertical line hovering in the gap (not touching the arc) -->
+  <line x1="32" y1="4" x2="32" y2="10" stroke="#ffb000" stroke-width="2.5" stroke-linecap="round"/>
+  <!-- Small horizontal tick at top of switch — the handle -->
+  <line x1="28" y1="4" x2="36" y2="4" stroke="#ffb000" stroke-width="2" stroke-linecap="round"/>
+</svg>

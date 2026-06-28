@@ -1,0 +1,14 @@
+<svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Crossbars -->
+  <line x1="12" y1="20" x2="52" y2="20" stroke="#ffb000" stroke-width="2.5" stroke-linecap="round"/>
+  <line x1="12" y1="34" x2="52" y2="34" stroke="#ffb000" stroke-width="2.5" stroke-linecap="round"/>
+  <!-- Left Bar with sharp polyline tip -->
+  <line x1="18" y1="10" x2="18" y2="46" stroke="#ffb000" stroke-width="2.5" stroke-linecap="round"/>
+  <polyline points="14,48 18,54 22,48" stroke="#ffb000" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Center Bar -->
+  <line x1="32" y1="10" x2="32" y2="46" stroke="#ffb000" stroke-width="2.5" stroke-linecap="round"/>
+  <polyline points="28,48 32,54 36,48" stroke="#ffb000" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Right Bar -->
+  <line x1="46" y1="10" x2="46" y2="46" stroke="#ffb000" stroke-width="2.5" stroke-linecap="round"/>
+  <polyline points="42,48 46,54 50,48" stroke="#ffb000" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

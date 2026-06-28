@@ -1,0 +1,8 @@
+<svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Perfect octagon at mathematical 45° vertices -->
+  <polygon points="22,8 42,8 56,22 56,42 42,56 22,56 8,42 8,22" stroke="#ffb000" stroke-width="2.5" stroke-linejoin="round"/>
+  <!-- Inner C-arc — thick brand lettermark -->
+  <path d="M 38,22 A 14,14 0 1,0 38,42" stroke="#ffb000" stroke-width="3" stroke-linecap="round"/>
+  <!-- Verification dot — authority marker -->
+  <circle cx="30" cy="32" r="3.5" fill="#ffb000"/>
+</svg>
