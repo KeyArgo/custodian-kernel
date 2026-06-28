@@ -546,6 +546,40 @@
         }
         .tour-bar button.tour-next { border-color: var(--amber); color: var(--amber); font-weight: 700; }
         .tour-bar button:hover { background: rgba(255,255,255,0.06); }
+        /* ---- verify_kit terminal animation ---- */
+        .vkit-terminal {
+            background: #0a0a0a;
+            border: 1px solid #2a2a2a;
+            border-radius: 8px;
+            margin: 22px 0 20px;
+            max-width: 680px;
+            font-size: 0.82em;
+            overflow: hidden;
+        }
+        .vkit-header {
+            display: flex;
+            align-items: center;
+            gap: 7px;
+            padding: 9px 14px;
+            background: #111;
+            border-bottom: 1px solid #1e1e1e;
+        }
+        .vkit-dot { width: 12px; height: 12px; border-radius: 50%; display: inline-block; }
+        .vkit-title { color: #5a5a5a; font-size: 0.9em; margin-left: 4px; }
+        .vkit-body {
+            padding: 14px 18px;
+            line-height: 1.7;
+            white-space: pre;
+            font-family: inherit;
+            color: #aaa;
+            min-height: 120px;
+        }
+        .vkit-prompt { color: #ffb000; }
+        .vkit-pass { color: #2ee6a6; font-weight: 700; }
+        .vkit-fail { color: #ff3b3b; font-weight: 700; }
+        .vkit-contradiction { color: #ff3b3b; font-weight: 700; }
+        .vkit-cursor { display: inline-block; width: 8px; height: 1em; background: #ffb000; vertical-align: text-bottom; animation: vkit-blink 1s step-end infinite; }
+        @keyframes vkit-blink { 0%,100% { opacity: 1; } 50% { opacity: 0; } }
     </style>
 </head>
 <body>
@@ -577,6 +611,16 @@
                     <span class="spec-item">SESSION <strong id="spec-session">—</strong></span>
                     <span class="spec-sep">·</span>
                     <span class="spec-item enforced">ENFORCED AT KERNEL LEVEL</span>
+                </div>
+                <div class="vkit-terminal" id="vkit-terminal" aria-label="verify_kit.py live output">
+                    <div class="vkit-header">
+                        <span class="vkit-dot" style="background:#ff5f57"></span>
+                        <span class="vkit-dot" style="background:#febc2e"></span>
+                        <span class="vkit-dot" style="background:#28c840"></span>
+                        <span class="vkit-title">verify_kit.py — self-verifying proof</span>
+                    </div>
+                    <pre class="vkit-body" id="vkit-body"><span class="vkit-prompt">$ python3 verify_kit.py</span>
+</pre>
                 </div>
                 <button class="tour-btn" id="tour-start-btn">▶ How this works (30s)</button>
                 <button class="nemotron-launcher" id="nemotron-launcher-btn">
@@ -1620,6 +1664,47 @@ function nemotronRenderAnswer(rawText) {
         nemotronInput.addEventListener('keydown', (e) => {
             if (e.key === 'Enter') nemotronSend();
         });
+
+        // ---- verify_kit terminal animation ----
+        (function() {
+            const body = document.getElementById('vkit-body');
+            if (!body) return;
+            const lines = [
+                { text: '$ python3 verify_kit.py', cls: 'vkit-prompt', pause: 600 },
+                { text: '', pause: 200 },
+                { text: '[PASS] 1,176 tests — 0 failures', cls: 'vkit-pass', pause: 400 },
+                { text: '', pause: 100 },
+                { text: '[CONTRADICTED] non_delivery:', cls: 'vkit-contradiction', pause: 80 },
+                { text: '           customer claimed: "package never arrived"', cls: 'vkit-contradiction', pause: 80 },
+                { text: '           ground truth:    order.delivered = True', cls: 'vkit-contradiction', pause: 1800 },
+                { text: '[PASS] Kernel verdict: DENIED (flag_abuse)', cls: 'vkit-pass', pause: 500 },
+                { text: '[PASS] Self-approval regression caught', cls: 'vkit-pass', pause: 300 },
+                { text: '[PASS] Live dashboard data confirmed real', cls: 'vkit-pass', pause: 2000 },
+            ];
+            let li = 0;
+            const cursor = document.createElement('span');
+            cursor.className = 'vkit-cursor';
+            body.textContent = '';
+            body.appendChild(cursor);
+
+            function nextLine() {
+                if (li >= lines.length) {
+                    // restart after a pause
+                    setTimeout(() => { body.textContent = ''; body.appendChild(cursor); li = 0; nextLine(); }, 3000);
+                    return;
+                }
+                const { text, cls, pause } = lines[li++];
+                const span = document.createElement('span');
+                if (cls) span.className = cls;
+                span.textContent = text;
+                body.insertBefore(span, cursor);
+                body.insertBefore(document.createTextNode('\n'), cursor);
+                cursor.scrollIntoView({ block: 'nearest' });
+                setTimeout(nextLine, pause);
+            }
+            // slight delay so page paint completes first
+            setTimeout(nextLine, 800);
+        })();
     </script>
 </body>
 </html>

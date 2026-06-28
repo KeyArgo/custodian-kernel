@@ -58,8 +58,8 @@ def _use_rest(tid, tsec, app_name, func_name, payload):
 
 def main():
     p = argparse.ArgumentParser()
-    p.add_argument("--function-name", required=True)
-    p.add_argument("--app-name", default=None)
+    p.add_argument("--function-name", default="benchmark")
+    p.add_argument("--app-name", default="custodian-benchmark")
     p.add_argument("--payload", default=None)
     a = p.parse_args()
 

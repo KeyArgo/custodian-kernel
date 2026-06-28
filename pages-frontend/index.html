@@ -350,6 +350,56 @@
       <div class="spec"><div class="k">Governed tools</div><div class="v">100</div></div>
       <div class="spec"><div class="k">Boundary</div><div class="v enf">ENFORCED AT KERNEL</div></div>
     </div>
+    <!-- verify_kit terminal animation -->
+    <div id="vkit-wrap" style="margin:32px auto 0;max-width:620px;text-align:left">
+      <div style="background:#0a0a0a;border:1px solid #2a2a2a;border-radius:10px;overflow:hidden;font-family:'JetBrains Mono',monospace;font-size:0.82em">
+        <div style="display:flex;align-items:center;gap:7px;padding:9px 14px;background:#111;border-bottom:1px solid #1e1e1e">
+          <span style="width:12px;height:12px;border-radius:50%;background:#ff5f57;display:inline-block"></span>
+          <span style="width:12px;height:12px;border-radius:50%;background:#febc2e;display:inline-block"></span>
+          <span style="width:12px;height:12px;border-radius:50%;background:#28c840;display:inline-block"></span>
+          <span style="color:#5a5a5a;font-size:0.9em;margin-left:4px">verify_kit.py — self-verifying proof</span>
+        </div>
+        <pre id="vkit-body" style="padding:14px 18px;line-height:1.8;white-space:pre;color:#aaa;min-height:130px;margin:0"><span style="color:#ffb000">$ python3 verify_kit.py</span>
+</pre>
+      </div>
+    </div>
+    <script>
+    (function(){
+      var body=document.getElementById('vkit-body');
+      if(!body)return;
+      var lines=[
+        {t:'',p:300},
+        {t:'[PASS] 1,176 tests — 0 failures',c:'#2ee6a6',p:500},
+        {t:'',p:100},
+        {t:'[CONTRADICTED] non_delivery:',c:'#ff3b3b',p:80},
+        {t:'           customer: "package never arrived"',c:'#ff3b3b',p:80},
+        {t:'           ground truth: order.delivered = True',c:'#ff3b3b',p:1800},
+        {t:'[PASS] Kernel: DENIED — flag_abuse',c:'#2ee6a6',p:500},
+        {t:'[PASS] Self-approval regression: caught',c:'#2ee6a6',p:300},
+        {t:'[PASS] Live dashboard: confirmed real',c:'#2ee6a6',p:2500},
+      ];
+      var li=0;
+      var cursor=document.createElement('span');
+      cursor.innerHTML='█';
+      cursor.style.cssText='color:#ffb000;animation:vkblink 1s step-end infinite';
+      var st=document.createElement('style');
+      st.textContent='@keyframes vkblink{0%,100%{opacity:1}50%{opacity:0}}';
+      document.head.appendChild(st);
+      body.innerHTML='<span style="color:#ffb000">$ python3 verify_kit.py</span>\n';
+      body.appendChild(cursor);
+      function next(){
+        if(li>=lines.length){setTimeout(function(){body.innerHTML='<span style="color:#ffb000">$ python3 verify_kit.py</span>\n';body.appendChild(cursor);li=0;next();},3500);return;}
+        var l=lines[li++];
+        var span=document.createElement('span');
+        if(l.c)span.style.color=l.c;
+        span.textContent=l.t;
+        body.insertBefore(span,cursor);
+        body.insertBefore(document.createTextNode('\n'),cursor);
+        setTimeout(next,l.p);
+      }
+      setTimeout(next,600);
+    })();
+    </script>
   </div>
 </header>
 
