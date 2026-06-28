@@ -4,32 +4,38 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
 <title>Custodian Docs — How kernel-enforced AI authority works</title>
 <meta name="description" content="Documentation for Custodian: architecture, kernel enforcement, Nemotron intelligence layer, kill switch, lie-catch, API reference, and FAQ.">
 <style>
 :root {
-  --bg:       #080b10;
-  --panel:    #0e131c;
-  --panel2:   #0a0e16;
-  --sidebar:  #090c14;
-  --line:     #1c2535;
-  --line2:    #232d3f;
-  --text:     #dde6f0;
-  --muted:    #8a97ad;
-  --dim:      #4a5568;
-  --green:    #2ee6a6;
-  --amber:    #ffb000;
-  --amber2:   #ffc857;
-  --red:      #ff4d4d;
-  --blue:     #5db0ff;
-  --nv:       #76b900;
-  --mono:     'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace;
+  --bg:     #06070b;
+  --bg2:    #0a0c13;
+  --panel:  #0e1018;
+  --panel2: #0a0e16;
+  --sidebar:#090c14;
+  --line:   rgba(255,176,0,0.10);
+  --line2:  #232d3f;
+  --text:   #eceef5;
+  --muted:  #8d93a6;
+  --dim:    #5d6273;
+  --amber:  #ffb000;
+  --amber2: #ffd060;
+  --green:  #2ee6a6;
+  --red:    #ff5c5c;
+  --nvidia: #76b900;
+  --mono:   'JetBrains Mono', 'Fira Code', monospace;
+  /* docs-specific aliases kept for existing styles */
+  --blue:   #5db0ff;
+  --nv:     #76b900;
 }
 *{box-sizing:border-box;margin:0;padding:0}
 html{scroll-behavior:smooth}
 body{
   background:var(--bg);color:var(--text);
-  font:15px/1.7 ui-sans-serif,system-ui,-apple-system,'Segoe UI',Roboto,Helvetica,Arial;
+  font:15px/1.7 var(--mono);
   display:flex;flex-direction:column;min-height:100vh;
 }
 a{color:var(--blue);text-decoration:none}
@@ -42,24 +48,29 @@ pre code{background:none;padding:0;color:inherit;font-size:1em}
 strong{color:var(--text);font-weight:600}
 h1,h2,h3,h4{font-weight:700;letter-spacing:-0.01em;color:var(--text)}
 
-/* ── top nav ──────────────────────────────────────────────────── */
-.topnav{
-  position:sticky;top:0;z-index:200;
-  background:rgba(8,11,16,0.92);backdrop-filter:blur(12px);
-  border-bottom:1px solid var(--line);
-  display:flex;align-items:center;gap:0;padding:0 24px;height:52px;flex-shrink:0;
-}
-.topnav-brand{display:flex;align-items:center;gap:8px;font-weight:700;font-size:0.9em;
-  color:var(--nv);text-decoration:none;margin-right:24px;flex-shrink:0}
-.topnav-brand svg{width:20px;height:20px}
-.topnav a{font-size:0.78em;font-weight:600;letter-spacing:0.04em;text-transform:uppercase;
-  color:var(--muted);padding:0 12px;height:52px;display:flex;align-items:center;
-  border-bottom:2px solid transparent;margin-bottom:-1px;transition:color .15s;text-decoration:none;white-space:nowrap}
-.topnav a:hover{color:var(--text)}
-.topnav a.active{color:var(--nv);border-bottom-color:var(--nv)}
-.topnav-right{margin-left:auto;display:flex;align-items:center;gap:8px}
-.topnav-badge{font-family:var(--mono);font-size:0.68em;letter-spacing:0.06em;
-  border:1px solid rgba(118,185,0,0.35);color:var(--nv);padding:4px 10px;border-radius:6px}
+/* ── kernel nav ─────────────────────────────────────────── */
+.k-nav{position:sticky;top:0;z-index:200;display:flex;align-items:center;
+  height:52px;padding:0 24px;background:rgba(6,7,11,0.95);
+  border-bottom:1px solid rgba(255,176,0,0.12);backdrop-filter:blur(14px);
+  font-family:var(--mono);gap:0;flex-shrink:0}
+.k-brand{display:flex;align-items:center;gap:8px;color:var(--amber);text-decoration:none;
+  font-size:0.8em;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;
+  margin-right:20px;flex-shrink:0}
+.k-brand svg{width:20px;height:20px}
+.k-links{display:flex;align-items:center;gap:2px;flex:1}
+.k-links a{color:var(--muted);text-decoration:none;font-size:0.72em;font-weight:600;
+  letter-spacing:0.1em;text-transform:uppercase;padding:6px 12px;
+  border-bottom:2px solid transparent;transition:color 0.15s,border-color 0.15s}
+.k-links a:hover{color:var(--text)}
+.k-links a.active{color:var(--amber);border-bottom-color:var(--amber)}
+.k-status{display:flex;align-items:center;gap:6px;font-size:0.65em;
+  letter-spacing:0.12em;text-transform:uppercase;color:var(--green);
+  border:1px solid rgba(46,230,166,0.25);padding:4px 10px;border-radius:4px;flex-shrink:0}
+.k-dot{width:6px;height:6px;border-radius:50%;background:var(--green);
+  animation:k-pulse 2s infinite;flex-shrink:0}
+@keyframes k-pulse{0%,100%{opacity:1}50%{opacity:0.3}}
+@media(max-width:720px){.k-links a{font-size:0.65em;padding:6px 8px}.k-brand span{display:none}}
+@media(max-width:480px){.k-links a:not(.active){display:none}.k-brand span{display:inline}}
 
 /* ── layout ───────────────────────────────────────────────────── */
 .layout{display:flex;flex:1;min-height:0}
@@ -166,35 +177,31 @@ h1,h2,h3,h4{font-weight:700;letter-spacing:-0.01em;color:var(--text)}
     z-index:100;border-right:1px solid var(--line2)}
   .sidebar.open{display:block}
   .content{padding:28px 18px 60px}
-  .mob-menu-btn{display:flex}
 }
-.mob-menu-btn{display:none;align-items:center;justify-content:center;
-  width:32px;height:32px;background:none;border:1px solid var(--line);
-  border-radius:6px;cursor:pointer;color:var(--muted);font-size:1.1em;margin-right:8px}
 </style>
 </head>
 <body>
 
 <!-- TOP NAV -->
-<nav class="topnav">
-  <button class="mob-menu-btn" id="mob-menu-btn" aria-label="Menu">☰</button>
-  <a href="/" class="topnav-brand">
+<nav class="k-nav">
+  <a href="/" class="k-brand">
     <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <path d="M32 6 L54 14 V30 C54 44.5 44.2 54 32 58 C19.8 54 10 44.5 10 30 V14 Z"
-            stroke="#76b900" stroke-width="5" stroke-linejoin="round"/>
-      <circle cx="32" cy="29" r="6" stroke="#76b900" stroke-width="4"/>
-      <rect x="30" y="32" width="4" height="10" rx="1" fill="#76b900"/>
+      <path d="M32 6 L54 14 V30 C54 44.5 44.2 54 32 58 C19.8 54 10 44.5 10 30 V14 Z" stroke="#ffb000" stroke-width="5" stroke-linejoin="round"/>
+      <circle cx="32" cy="29" r="6" stroke="#ffb000" stroke-width="4"/>
+      <rect x="30" y="32" width="4" height="10" rx="1" fill="#ffb000"/>
     </svg>
-    Custodian
+    <span>CUSTODIAN</span>
   </a>
-  <a href="/">Home</a>
-  <a href="/hermes">Live Console</a>
-  <a href="/triage">Lie-Catch</a>
-  <a href="/operator" target="_blank" rel="noopener">Operator Panel</a>
-  <a href="/tools">Tools</a>
-  <a href="/docs" class="active">Docs</a>
-  <div class="topnav-right">
-    <span class="topnav-badge">🛡 NemoClaw Kernel</span>
+  <div class="k-links">
+    <a href="/hermes">Console</a>
+    <a href="/operator">Operator</a>
+    <a href="/triage">Triage</a>
+    <a href="/tools">Tools</a>
+    <a href="/docs" class="active">Docs</a>
+  </div>
+  <div class="k-status">
+    <span class="k-dot"></span>
+    <span>Kernel Live</span>
   </div>
 </nav>
 
@@ -684,10 +691,7 @@ document.querySelectorAll('.faq-q').forEach(btn => {
     });
 });
 
-// Mobile sidebar toggle
-document.getElementById('mob-menu-btn').addEventListener('click', () => {
-    document.getElementById('sidebar').classList.toggle('open');
-});
+// Mobile sidebar: sidebar hidden on small screens via CSS
 </script>
 </body>
 </html>

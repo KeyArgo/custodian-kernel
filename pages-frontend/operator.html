@@ -5,23 +5,78 @@
 <meta name="robots" content="noindex, nofollow">
 <title>Custodian — Operator Panel</title>
 <link rel="icon" type="image/svg+xml" href="/favicon-operator.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
 <style>
-    body { background: #060606; color: #e8e8e8; font-family: 'Courier New', monospace; padding: 0; max-width: 100%; margin: 0; }
+    :root {
+      --bg:     #06070b;
+      --bg2:    #0a0c13;
+      --panel:  #0e1018;
+      --line:   rgba(255,176,0,0.10);
+      --text:   #eceef5;
+      --muted:  #8d93a6;
+      --dim:    #5d6273;
+      --amber:  #ffb000;
+      --amber2: #ffd060;
+      --green:  #2ee6a6;
+      --red:    #ff5c5c;
+      --nvidia: #76b900;
+      --mono:   'JetBrains Mono', 'Fira Code', monospace;
+    }
+    body { background: var(--bg); color: #e8e8e8; font-family: var(--mono); padding: 0; max-width: 100%; margin: 0; }
     .page-wrap { max-width: 860px; margin: 0 auto; padding: 24px 24px 40px; }
-    .site-nav { display: flex; align-items: center; gap: 4px; background: #030303;
-        border-bottom: 1px solid #1a1a1a; padding: 0 20px; overflow-x: auto; }
-    .site-nav a { display: inline-block; padding: 10px 12px; font-size: 0.74em; font-weight: 600;
-        letter-spacing: 0.05em; text-transform: uppercase; text-decoration: none; color: #4a4a4a;
-        white-space: nowrap; border-bottom: 2px solid transparent; margin-bottom: -1px; transition: color 0.15s; }
-    .site-nav a:hover { color: #c0c0c0; }
-    .site-nav a.active { color: #76b900; border-bottom-color: #76b900; }
-    .site-nav .nav-brand { color: #76b900; font-weight: 700; font-size: 0.85em; margin-right: 8px;
-        display: flex; align-items: center; gap: 6px; text-decoration: none; }
-    .site-nav .nav-brand svg { width: 18px; height: 18px; }
-    .site-nav .nav-sep { color: #2a2a2a; margin: 0 2px; }
-    .site-nav .nav-nemoclaw { margin-left: auto; color: #76b900; border: 1px solid rgba(118,185,0,0.3);
-        border-radius: 6px; padding: 6px 12px; margin-top: 4px; margin-bottom: 4px; font-size: 0.78em; }
-    .site-nav .nav-nemoclaw:hover { background: rgba(118,185,0,0.1); }
+    /* ── kernel nav ─────────────────────────────────────────── */
+    .k-nav {
+      position: sticky; top: 0; z-index: 100;
+      display: flex; align-items: center;
+      height: 52px; padding: 0 24px;
+      background: rgba(6,7,11,0.95);
+      border-bottom: 1px solid rgba(255,176,0,0.12);
+      backdrop-filter: blur(14px);
+      font-family: var(--mono);
+      gap: 0;
+    }
+    .k-brand {
+      display: flex; align-items: center; gap: 8px;
+      color: var(--amber); text-decoration: none;
+      font-size: 0.8em; font-weight: 700;
+      letter-spacing: 0.1em; text-transform: uppercase;
+      margin-right: 20px; flex-shrink: 0;
+    }
+    .k-brand svg { width: 20px; height: 20px; }
+    .k-links { display: flex; align-items: center; gap: 2px; flex: 1; }
+    .k-links a {
+      color: var(--muted); text-decoration: none;
+      font-size: 0.72em; font-weight: 600;
+      letter-spacing: 0.1em; text-transform: uppercase;
+      padding: 6px 12px;
+      border-bottom: 2px solid transparent;
+      transition: color 0.15s, border-color 0.15s;
+    }
+    .k-links a:hover { color: var(--text); }
+    .k-links a.active { color: var(--amber); border-bottom-color: var(--amber); }
+    .k-status {
+      display: flex; align-items: center; gap: 6px;
+      font-size: 0.65em; letter-spacing: 0.12em; text-transform: uppercase;
+      color: var(--green);
+      border: 1px solid rgba(46,230,166,0.25);
+      padding: 4px 10px; border-radius: 4px; flex-shrink: 0;
+    }
+    .k-dot {
+      width: 6px; height: 6px; border-radius: 50%;
+      background: var(--green);
+      animation: k-pulse 2s infinite; flex-shrink: 0;
+    }
+    @keyframes k-pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+    @media(max-width:720px){
+      .k-links a { font-size: 0.65em; padding: 6px 8px; }
+      .k-brand span { display: none; }
+    }
+    @media(max-width:480px){
+      .k-links a:not(.active) { display: none; }
+      .k-brand span { display: inline; }
+    }
     h1 { color: #76b900; font-size: 1.3em; margin-bottom: 4px; }
     .warn { color: #ffb000; font-size: 0.82em; margin-bottom: 16px; }
     .step { background: #0a0a0a; border: 1px solid #2a2a2a; border-top: 2px solid #76b900; padding: 14px 16px; margin-bottom: 14px; }
@@ -60,7 +115,7 @@
     .notif-sender { font-size: 13px; color: #e8e8e8; font-weight: 600; margin-bottom: 4px; }
     .notif-body { font-size: 13px; color: #c8c8c8; line-height: 1.4; }
     .notif-code { color: #2cc64f; font-weight: 700; letter-spacing: 0.12em; font-size: 15px; }
-    .sms-note { margin-top: 10px; font-size: 0.78em; color: #76b900; font-family: 'Courier New', monospace;
+    .sms-note { margin-top: 10px; font-size: 0.78em; color: #76b900; font-family: var(--mono);
         padding: 6px 10px; border: 1px solid #1a2a10; border-radius: 6px; background: #050d00; }
 
     /* ---- instructions panel ---- */
@@ -109,7 +164,7 @@
     .op-np-hdr { display: flex; align-items: center; gap: 10px; padding: 13px 16px; border-bottom: 1px solid #1a2a10; background: rgba(118,185,0,0.04); }
     .op-np-body { flex: 1; overflow-y: auto; padding: 14px 14px; display: flex; flex-direction: column; gap: 10px; max-height: 320px; font-size: 0.82em; line-height: 1.6; }
     .op-np-foot { border-top: 1px solid #1a2a10; padding: 10px 12px; display: flex; gap: 8px; }
-    .op-np-input { flex: 1; background: #111; border: 1px solid #2a3a1a; border-radius: 8px; color: #ccc; font-size: 0.85em; padding: 8px 12px; outline: none; font-family: 'Courier New', monospace; }
+    .op-np-input { flex: 1; background: #111; border: 1px solid #2a3a1a; border-radius: 8px; color: #ccc; font-size: 0.85em; padding: 8px 12px; outline: none; font-family: var(--mono); }
     .op-np-send { background: rgba(118,185,0,0.15); border: 1px solid #76b900; color: #76b900; border-radius: 8px; padding: 8px 14px; cursor: pointer; font-family: inherit; }
     .op-np-send:hover { background: rgba(118,185,0,0.28); }
     .op-msg-user { align-self: flex-end; background: rgba(118,185,0,0.12); border: 1px solid rgba(118,185,0,0.25); border-radius: 12px 12px 3px 12px; padding: 8px 12px; max-width: 86%; word-break: break-word; }
@@ -117,21 +172,26 @@
 </style>
 </head>
 <body>
-<nav class="site-nav">
-  <a href="/" class="nav-brand">
+<nav class="k-nav">
+  <a href="/" class="k-brand">
     <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <path d="M32 6 L54 14 V30 C54 44.5 44.2 54 32 58 C19.8 54 10 44.5 10 30 V14 Z" stroke="#76b900" stroke-width="5" stroke-linejoin="round"/>
-      <circle cx="32" cy="29" r="6" stroke="#76b900" stroke-width="4"/>
-      <rect x="30" y="32" width="4" height="10" rx="1" fill="#76b900"/>
+      <path d="M32 6 L54 14 V30 C54 44.5 44.2 54 32 58 C19.8 54 10 44.5 10 30 V14 Z" stroke="#ffb000" stroke-width="5" stroke-linejoin="round"/>
+      <circle cx="32" cy="29" r="6" stroke="#ffb000" stroke-width="4"/>
+      <rect x="30" y="32" width="4" height="10" rx="1" fill="#ffb000"/>
     </svg>
-    Custodian
+    <span>CUSTODIAN</span>
   </a>
-  <span class="nav-sep">|</span>
-  <a href="/">Home</a>
-  <a href="/hermes">Live Console</a>
-  <a href="/triage">Lie-Catch Demo</a>
-  <a href="/operator" class="active">Operator Panel</a>
-  <a href="/#nemoclaw" class="nav-nemoclaw">🛡 NemoClaw Kernel</a>
+  <div class="k-links">
+    <a href="/hermes">Console</a>
+    <a href="/operator" class="active">Operator</a>
+    <a href="/triage">Triage</a>
+    <a href="/tools">Tools</a>
+    <a href="/docs">Docs</a>
+  </div>
+  <div class="k-status">
+    <span class="k-dot"></span>
+    <span>Kernel Live</span>
+  </div>
 </nav>
 <div class="page-wrap">
 <h1>Custodian — Operator Panel</h1>

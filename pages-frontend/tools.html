@@ -16,26 +16,37 @@
   --bg:#06070b;--bg2:#0a0c13;--panel:rgba(255,255,255,0.025);
   --line:rgba(255,255,255,0.09);--line2:rgba(255,255,255,0.14);
   --text:#eceef5;--muted:#8d93a6;--dim:#5d6273;
-  --amber:#ffb000;--amber2:#ffcf57;--green:#2ee6a6;--red:#ff5c5c;
+  --amber:#ffb000;--amber2:#ffd060;--green:#2ee6a6;--red:#ff5c5c;
   --violet:#8b7bff;--cyan:#49d6e8;--nvidia:#76b900;
+  --mono:'JetBrains Mono','Fira Code',monospace;
 }
 html{scroll-behavior:smooth}
-body{font-family:'Space Grotesk',-apple-system,sans-serif;background:var(--bg);color:var(--text);line-height:1.55;-webkit-font-smoothing:antialiased}
+body{font-family:var(--mono);background:var(--bg);color:var(--text);line-height:1.55;-webkit-font-smoothing:antialiased}
 .mono{font-family:'JetBrains Mono',monospace}
 a{color:inherit;text-decoration:none}
-nav{position:sticky;top:0;z-index:50;backdrop-filter:blur(14px);background:rgba(6,7,11,0.82);border-bottom:1px solid var(--line)}
-.nav-in{display:flex;align-items:center;justify-content:space-between;height:60px;max-width:1180px;margin:0 auto;padding:0 28px}
-.brand{display:flex;align-items:center;gap:11px;font-weight:600}
-.brand svg{width:26px;height:26px}
-.brand .nm{font-size:1em;letter-spacing:0.02em}
-.brand .nm b{color:var(--amber)}
-.nav-links{display:flex;align-items:center;gap:24px}
-.nav-links a{color:var(--muted);font-size:0.9em;transition:color .2s}
-.nav-links a:hover,.nav-links a.active{color:var(--text)}
-.btn{display:inline-flex;align-items:center;gap:8px;font-family:inherit;font-size:0.9em;font-weight:600;cursor:pointer;border-radius:10px;padding:9px 16px;border:1px solid transparent;transition:transform .15s,box-shadow .2s}
-.btn-primary{color:#100b00;background:linear-gradient(135deg,var(--amber2),var(--amber));box-shadow:0 6px 20px -6px rgba(255,176,0,0.5)}
-.btn-ghost{color:var(--text);border-color:var(--line2);background:rgba(255,255,255,0.02)}
-.btn-ghost:hover{border-color:var(--amber)}
+/* ── kernel nav ─────────────────────────────────────────── */
+.k-nav{position:sticky;top:0;z-index:100;display:flex;align-items:center;
+  height:52px;padding:0 24px;background:rgba(6,7,11,0.95);
+  border-bottom:1px solid rgba(255,176,0,0.12);backdrop-filter:blur(14px);
+  font-family:var(--mono);gap:0}
+.k-brand{display:flex;align-items:center;gap:8px;color:var(--amber);text-decoration:none;
+  font-size:0.8em;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;
+  margin-right:20px;flex-shrink:0}
+.k-brand svg{width:20px;height:20px}
+.k-links{display:flex;align-items:center;gap:2px;flex:1}
+.k-links a{color:var(--muted);text-decoration:none;font-size:0.72em;font-weight:600;
+  letter-spacing:0.1em;text-transform:uppercase;padding:6px 12px;
+  border-bottom:2px solid transparent;transition:color 0.15s,border-color 0.15s}
+.k-links a:hover{color:var(--text)}
+.k-links a.active{color:var(--amber);border-bottom-color:var(--amber)}
+.k-status{display:flex;align-items:center;gap:6px;font-size:0.65em;
+  letter-spacing:0.12em;text-transform:uppercase;color:var(--green);
+  border:1px solid rgba(46,230,166,0.25);padding:4px 10px;border-radius:4px;flex-shrink:0}
+.k-dot{width:6px;height:6px;border-radius:50%;background:var(--green);
+  animation:k-pulse 2s infinite;flex-shrink:0}
+@keyframes k-pulse{0%,100%{opacity:1}50%{opacity:0.3}}
+@media(max-width:720px){.k-links a{font-size:0.65em;padding:6px 8px}.k-brand span{display:none}}
+@media(max-width:480px){.k-links a:not(.active){display:none}.k-brand span{display:inline}}
 
 .wrap{max-width:1180px;margin:0 auto;padding:0 28px}
 
@@ -97,21 +108,25 @@ footer{border-top:1px solid var(--line);padding:32px 0;color:var(--dim);font-siz
 </head>
 <body>
 
-<nav>
-  <div class="nav-in">
-    <a class="brand" href="/">
-      <svg viewBox="0 0 64 64" fill="none"><path d="M32 6 L54 14 V30 C54 44.5 44.2 54 32 58 C19.8 54 10 44.5 10 30 V14 Z" stroke="#ffb000" stroke-width="4" stroke-linejoin="round"/><circle cx="32" cy="29" r="6" stroke="#ffb000" stroke-width="4"/><rect x="30" y="32" width="4" height="12" rx="1" fill="#ffb000"/></svg>
-      <span class="nm">CUSTO<b>DIAN</b></span>
-    </a>
-    <div class="nav-links">
-      <a href="/">Home</a>
-      <a href="/hermes">Live Console</a>
-      <a href="/triage">Lie-Catch</a>
-      <a href="/operator" target="_blank" rel="noopener">Operator Panel</a>
-      <a href="/tools" class="active">Tools</a>
-      <a href="/docs">Docs</a>
-      <a class="btn btn-primary" href="/hermes">Launch live console →</a>
-    </div>
+<nav class="k-nav">
+  <a href="/" class="k-brand">
+    <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M32 6 L54 14 V30 C54 44.5 44.2 54 32 58 C19.8 54 10 44.5 10 30 V14 Z" stroke="#ffb000" stroke-width="5" stroke-linejoin="round"/>
+      <circle cx="32" cy="29" r="6" stroke="#ffb000" stroke-width="4"/>
+      <rect x="30" y="32" width="4" height="10" rx="1" fill="#ffb000"/>
+    </svg>
+    <span>CUSTODIAN</span>
+  </a>
+  <div class="k-links">
+    <a href="/hermes">Console</a>
+    <a href="/operator">Operator</a>
+    <a href="/triage">Triage</a>
+    <a href="/tools" class="active">Tools</a>
+    <a href="/docs">Docs</a>
+  </div>
+  <div class="k-status">
+    <span class="k-dot"></span>
+    <span>Kernel Live</span>
   </div>
 </nav>
 

@@ -4,16 +4,26 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
 <title>Custodian — Refund Triage Walkthrough</title>
 <style>
   :root{
-    --bg:#0b0e14; --panel:#121722; --panel2:#0e131c; --line:#222c3d;
-    --ink:#e6edf6; --dim:#8a97ad; --accent:#5db0ff; --good:#39d98a;
-    --bad:#ff5d6c; --warn:#ffc857; --chip:#1b2433;
+    --bg:     #06070b; --bg2:    #0a0c13; --panel:  #0e1018;
+    --line:   rgba(255,176,0,0.10);
+    --text:   #eceef5; --muted:  #8d93a6; --dim:    #5d6273;
+    --amber:  #ffb000; --amber2: #ffd060;
+    --green:  #2ee6a6; --red:    #ff5c5c; --nvidia: #76b900;
+    --mono:   'JetBrains Mono', 'Fira Code', monospace;
+    /* triage-specific aliases */
+    --panel2: #0e1018; --line2: #1a2030;
+    --ink: #eceef5; --accent:#5db0ff; --good:#2ee6a6;
+    --bad:#ff5c5c; --warn:#ffb000; --chip:#0e1018;
   }
   *{box-sizing:border-box}
   body{margin:0;background:var(--bg);color:var(--ink);
-    font:15px/1.55 ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial}
+    font:15px/1.55 var(--mono)}
   a{color:var(--accent)}
   .wrap{max-width:920px;margin:0 auto;padding:28px 20px 80px}
   header{margin-bottom:20px}
@@ -84,19 +94,29 @@
     user-select:none}
   .live-toggle input{cursor:pointer}
   footer{color:var(--dim);font-size:12px;margin-top:24px;text-align:center}
-  .site-nav{display:flex;align-items:center;gap:4px;background:#060606;
-    border-bottom:1px solid #1a1a1a;padding:0 20px;overflow-x:auto;margin-bottom:0}
-  .site-nav a{display:inline-block;padding:10px 12px;font-size:0.74em;font-weight:600;
-    letter-spacing:0.05em;text-transform:uppercase;text-decoration:none;color:#4a4a4a;
-    white-space:nowrap;border-bottom:2px solid transparent;margin-bottom:-1px;transition:color 0.15s}
-  .site-nav a:hover{color:#c0c0c0}
-  .site-nav a.active{color:#e8e8e8;border-bottom-color:#5db0ff}
-  .site-nav a.console-link{margin-left:auto;color:#5db0ff;border:1px solid rgba(93,176,255,0.3);
-    border-radius:6px;padding:6px 12px;margin-top:4px;margin-bottom:4px}
-  .site-nav a.console-link:hover{background:rgba(93,176,255,0.08)}
-  .site-nav a.nav-nemoclaw{color:#76b900;border:1px solid rgba(118,185,0,0.3);
-    border-radius:6px;padding:6px 12px;margin-top:4px;margin-bottom:4px;font-size:0.78em}
-  .site-nav a.nav-nemoclaw:hover{background:rgba(118,185,0,0.1)}
+  /* ── kernel nav ─────────────────────────────────────────── */
+  .k-nav{position:sticky;top:0;z-index:100;display:flex;align-items:center;
+    height:52px;padding:0 24px;background:rgba(6,7,11,0.95);
+    border-bottom:1px solid rgba(255,176,0,0.12);backdrop-filter:blur(14px);
+    font-family:var(--mono);gap:0}
+  .k-brand{display:flex;align-items:center;gap:8px;color:var(--amber);text-decoration:none;
+    font-size:0.8em;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;
+    margin-right:20px;flex-shrink:0}
+  .k-brand svg{width:20px;height:20px}
+  .k-links{display:flex;align-items:center;gap:2px;flex:1}
+  .k-links a{color:var(--muted);text-decoration:none;font-size:0.72em;font-weight:600;
+    letter-spacing:0.1em;text-transform:uppercase;padding:6px 12px;
+    border-bottom:2px solid transparent;transition:color 0.15s,border-color 0.15s}
+  .k-links a:hover{color:var(--text)}
+  .k-links a.active{color:var(--amber);border-bottom-color:var(--amber)}
+  .k-status{display:flex;align-items:center;gap:6px;font-size:0.65em;
+    letter-spacing:0.12em;text-transform:uppercase;color:var(--green);
+    border:1px solid rgba(46,230,166,0.25);padding:4px 10px;border-radius:4px;flex-shrink:0}
+  .k-dot{width:6px;height:6px;border-radius:50%;background:var(--green);
+    animation:k-pulse 2s infinite;flex-shrink:0}
+  @keyframes k-pulse{0%,100%{opacity:1}50%{opacity:0.3}}
+  @media(max-width:720px){.k-links a{font-size:0.65em;padding:6px 8px}.k-brand span{display:none}}
+  @media(max-width:480px){.k-links a:not(.active){display:none}.k-brand span{display:inline}}
   .custom-box{background:var(--panel);border:1px solid var(--line);border-radius:14px;
     padding:20px;margin:24px 0}
   .custom-box h3{margin:0 0 6px;font-size:16px}
@@ -216,12 +236,26 @@
 </style>
 </head>
 <body>
-<nav class="site-nav">
-  <a href="/">Home</a>
-  <a href="/hermes">Live Console</a>
-  <a href="/triage" class="active">Lie-Catch Demo</a>
-  <a href="/operator" class="console-link" target="_blank" rel="noopener">⚡ Operator Panel</a>
-  <a href="/#nemoclaw" class="nav-nemoclaw">🛡 NemoClaw Kernel</a>
+<nav class="k-nav">
+  <a href="/" class="k-brand">
+    <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M32 6 L54 14 V30 C54 44.5 44.2 54 32 58 C19.8 54 10 44.5 10 30 V14 Z" stroke="#ffb000" stroke-width="5" stroke-linejoin="round"/>
+      <circle cx="32" cy="29" r="6" stroke="#ffb000" stroke-width="4"/>
+      <rect x="30" y="32" width="4" height="10" rx="1" fill="#ffb000"/>
+    </svg>
+    <span>CUSTODIAN</span>
+  </a>
+  <div class="k-links">
+    <a href="/hermes">Console</a>
+    <a href="/operator">Operator</a>
+    <a href="/triage" class="active">Triage</a>
+    <a href="/tools">Tools</a>
+    <a href="/docs">Docs</a>
+  </div>
+  <div class="k-status">
+    <span class="k-dot"></span>
+    <span>Kernel Live</span>
+  </div>
 </nav>
 <div class="wrap">
   <header>

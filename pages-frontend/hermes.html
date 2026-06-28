@@ -5,12 +5,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Custodian — Autonomous Spend Authority</title>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
 
         body {
-            font-family: 'JetBrains Mono', 'SF Mono', 'Cascadia Code', Consolas, monospace;
-            background: #000;
+            font-family: var(--mono);
+            background: var(--bg);
             color: #d4d4d4;
             min-height: 100vh;
             padding: 0;
@@ -18,10 +21,21 @@
 
         /* ---- semantic colors: amber = active/in-progress, green = pass/connected/verified, red = blocked/escalated/error ---- */
         :root {
-            --amber: #ffb000;
-            --green: #2ee6a6;
+            --bg:     #06070b;
+            --bg2:    #0a0c13;
+            --panel:  #0e1018;
+            --line:   rgba(255,176,0,0.10);
+            --text:   #eceef5;
+            --muted:  #8d93a6;
+            --dim:    #5d6273;
+            --amber:  #ffb000;
+            --amber2: #ffd060;
+            --green:  #2ee6a6;
+            --red:    #ff5c5c;
+            --nvidia: #76b900;
+            --mono:   'JetBrains Mono', 'Fira Code', monospace;
+            /* legacy aliases kept for existing JS/CSS refs */
             --nvidia-green: #76b900;
-            --red: #ff3b3b;
             --gray: #5a5a5a;
         }
 
@@ -275,33 +289,57 @@
         .conn-dot.live { background: var(--green); box-shadow: 0 0 6px var(--green); }
         .conn-dot.down { background: var(--red); box-shadow: 0 0 6px var(--red); }
 
-        .site-nav {
-            display: flex; align-items: center; gap: 4px;
-            border-bottom: 1px solid #1e1e1e;
-            background: #080808;
-            padding: 0 24px;
-            overflow-x: auto;
+        /* ── kernel nav ─────────────────────────────────────────── */
+        .k-nav {
+          position: sticky; top: 0; z-index: 100;
+          display: flex; align-items: center;
+          height: 52px; padding: 0 24px;
+          background: rgba(6,7,11,0.95);
+          border-bottom: 1px solid rgba(255,176,0,0.12);
+          backdrop-filter: blur(14px);
+          font-family: var(--mono);
+          gap: 0;
         }
-        .site-nav a {
-            display: inline-block; padding: 10px 14px;
-            font-size: 0.76em; font-weight: 600; letter-spacing: 0.05em;
-            text-transform: uppercase; text-decoration: none;
-            color: #5a5a5a; white-space: nowrap;
-            border-bottom: 2px solid transparent; margin-bottom: -1px;
-            transition: color 0.15s, border-color 0.15s;
+        .k-brand {
+          display: flex; align-items: center; gap: 8px;
+          color: var(--amber); text-decoration: none;
+          font-size: 0.8em; font-weight: 700;
+          letter-spacing: 0.1em; text-transform: uppercase;
+          margin-right: 20px; flex-shrink: 0;
         }
-        .site-nav a:hover { color: #c8c8c8; }
-        .site-nav a.active { color: #f2f2f2; border-bottom-color: var(--nvidia-green); }
-        .site-nav a.console-link {
-            margin-left: auto; color: var(--nvidia-green);
-            border: 1px solid rgba(118,185,0,0.3); border-radius: 6px;
-            padding: 6px 12px; margin-top: 4px; margin-bottom: 4px;
+        .k-brand svg { width: 20px; height: 20px; }
+        .k-links { display: flex; align-items: center; gap: 2px; flex: 1; }
+        .k-links a {
+          color: var(--muted); text-decoration: none;
+          font-size: 0.72em; font-weight: 600;
+          letter-spacing: 0.1em; text-transform: uppercase;
+          padding: 6px 12px;
+          border-bottom: 2px solid transparent;
+          transition: color 0.15s, border-color 0.15s;
         }
-        .site-nav a.console-link:hover { background: rgba(118,185,0,0.1); border-color: var(--nvidia-green); }
-        .site-nav a.nav-nemoclaw { margin-left: auto; color: var(--nvidia-green); border: 1px solid rgba(118,185,0,0.3);
-            border-radius: 6px; padding: 6px 12px; margin-top: 4px; margin-bottom: 4px; font-size: 0.78em; }
-        .site-nav a.nav-nemoclaw:hover { background: rgba(118,185,0,0.1); }
-        .nav-links, .nav-link { display: none; }
+        .k-links a:hover { color: var(--text); }
+        .k-links a.active { color: var(--amber); border-bottom-color: var(--amber); }
+        .k-status {
+          display: flex; align-items: center; gap: 6px;
+          font-size: 0.65em; letter-spacing: 0.12em; text-transform: uppercase;
+          color: var(--green);
+          border: 1px solid rgba(46,230,166,0.25);
+          padding: 4px 10px; border-radius: 4px; flex-shrink: 0;
+        }
+        .k-dot {
+          width: 6px; height: 6px; border-radius: 50%;
+          background: var(--green);
+          animation: k-pulse 2s infinite; flex-shrink: 0;
+        }
+        @keyframes k-pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+        @media(max-width:720px){
+          .k-links a { font-size: 0.65em; padding: 6px 8px; }
+          .k-brand span { display: none; }
+        }
+        @media(max-width:480px){
+          .k-links a:not(.active) { display: none; }
+          .k-brand span { display: inline; }
+        }
 
         /* ---- tabs ---- */
         .tabs-section { margin-bottom: 28px; }
@@ -620,12 +658,26 @@
     </style>
 </head>
 <body>
-    <nav class="site-nav">
-        <a href="/">Home</a>
-        <a href="/hermes" class="active">Live Console</a>
-        <a href="/triage">Lie-Catch Demo</a>
-        <a href="/operator" class="console-link" target="_blank" rel="noopener">⚡ Operator Panel</a>
-        <a href="/#nemoclaw" class="nav-nemoclaw">🛡 NemoClaw Kernel</a>
+    <nav class="k-nav">
+      <a href="/" class="k-brand">
+        <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M32 6 L54 14 V30 C54 44.5 44.2 54 32 58 C19.8 54 10 44.5 10 30 V14 Z" stroke="#ffb000" stroke-width="5" stroke-linejoin="round"/>
+          <circle cx="32" cy="29" r="6" stroke="#ffb000" stroke-width="4"/>
+          <rect x="30" y="32" width="4" height="10" rx="1" fill="#ffb000"/>
+        </svg>
+        <span>CUSTODIAN</span>
+      </a>
+      <div class="k-links">
+        <a href="/hermes" class="active">Console</a>
+        <a href="/operator">Operator</a>
+        <a href="/triage">Triage</a>
+        <a href="/tools">Tools</a>
+        <a href="/docs">Docs</a>
+      </div>
+      <div class="k-status">
+        <span class="k-dot"></span>
+        <span>Kernel Live</span>
+      </div>
     </nav>
     <div class="top-bar">
         <div class="top-bar-brand">
