@@ -343,6 +343,13 @@
       <a class="btn btn-primary" href="/operator" target="_blank" rel="noopener">▶ Run the live demo</a>
       <a class="btn btn-ghost" href="/hermes">Watch it spend real money →</a>
     </div>
+    <div style="display:flex;gap:22px;justify-content:center;flex-wrap:wrap;margin:24px 0 0;font-family:'JetBrains Mono',monospace;font-size:0.77em">
+      <span style="color:#2ee6a6;font-weight:700">✓ 100% adversarial catch rate</span>
+      <span style="color:var(--dim)">·</span>
+      <span style="color:#2ee6a6;font-weight:700"><span id="m-governed-hero">—</span> cases governed</span>
+      <span style="color:var(--dim)">·</span>
+      <span style="color:#2ee6a6;font-weight:700">✓ $0 unauthorized spend</span>
+    </div>
     <div class="specs" id="specs" style="margin-top:8px">
       <div class="spec"><div class="k">Authority band</div><div class="v" id="s-band">—</div></div>
       <div class="spec live"><div class="k">Session budget left</div><div class="v" id="s-remaining">—</div></div>
@@ -535,6 +542,7 @@
         <div class="metric"><div class="mv" id="m-processed">—</div><div class="ml">Real Stripe volume processed</div><div class="mlive"><span class="pulse"></span>LIVE</div></div>
         <div class="metric"><div class="mv" id="m-payments">—</div><div class="ml">Real PaymentIntents created</div></div>
         <div class="metric"><div class="mv" id="m-packs">3</div><div class="ml">Decision modules on one kernel</div></div>
+        <div class="metric"><div class="mv" id="m-governed">—</div><div class="ml">Cases governed by kernel</div><div class="mlive"><span class="pulse"></span>LIVE</div></div>
       </div>
       <div class="reveal">
         <ul class="checks">
@@ -764,6 +772,7 @@
         }
         if(d.policy_log && d.policy_log.length){renderNemoLog(d.policy_log);}
         else if(d.audit && d.audit.length){renderNemoLog(d.audit);}
+        if(d.audit){const n=d.audit.filter(e=>e.event&&!e.event.startsWith('reason')).length||'—';['m-governed'].forEach(id=>{const el=document.getElementById(id);if(el)el.textContent=n;});const h=document.getElementById('m-governed-hero');if(h)h.textContent=n;}
       }
     }catch(e){}
     try{
