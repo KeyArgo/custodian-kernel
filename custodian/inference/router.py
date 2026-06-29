@@ -16,9 +16,7 @@ from typing import Optional
 DEFAULT_ENDPOINTS = [
     # 1. DGX Spark — local inference, air-gapped, primary
     "http://192.168.50.56:11434/v1/chat/completions",
-    # 2. argobox-lite — same LAN fallback if Spark unreachable
-    "http://10.0.0.199:11434/v1/chat/completions",
-    # 3. NVIDIA hosted API — always available, requires key
+    # 2. NVIDIA hosted API — always available, requires key
     "https://integrate.api.nvidia.com/v1/chat/completions",
 ]
 NVIDIA_HOSTED = "integrate.api.nvidia.com"

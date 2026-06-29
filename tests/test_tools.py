@@ -302,6 +302,7 @@ class TestCronRegistry:
 
 # ── Web / HTTP ────────────────────────────────────────────────────────────────
 
+@pytest.mark.network
 class TestHttpTools:
     def test_http_get(self):
         r = run_tool("skills/web/http-get/scripts/execute.py", "--url", "https://httpbin.org/get")

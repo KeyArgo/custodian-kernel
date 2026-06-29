@@ -90,7 +90,7 @@ def _try_spark(
                 'band': state.band.value,
                 'per_action_cap': state.per_action_cap,
                 'session_cap': state.session_cap,
-                'session_spent': state.session_spent,
+                'session_spent': state.spent_this_session,
             },
             'killed': killed,
             'skill': skill,

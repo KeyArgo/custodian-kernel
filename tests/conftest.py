@@ -84,3 +84,5 @@ def partial_authority() -> AuthorityState:
 @pytest.fixture
 def tmp_db(tmp_path: Path) -> SqliteStorage:
     return SqliteStorage(tmp_path / "test.db")
+
+

@@ -7,7 +7,7 @@ from custodian.cli import (
     cmd_init, cmd_validate, cmd_status, cmd_audit, cmd_request, cmd_approve,
     cmd_deny, cmd_kill, cmd_resume,
 )
-from custodian.cli import cmd_tools
+from custodian.cli import cmd_tools, cmd_demo_verify
 from custodian.config import CustodianConfig
 
 
@@ -72,6 +72,9 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--by", required=True, help="Name/ID of the operator releasing it")
     p.add_argument("--state-dir", default=str(env_defaults.state_dir), help="State directory")
     p.set_defaults(func=cmd_resume.run)
+
+    p = sub.add_parser("demo-verify", help="Run 4 hardcoded claim-verification scenarios (no credentials needed)")
+    p.set_defaults(func=cmd_demo_verify.run)
 
     # tools subcommand
     tools_parser = sub.add_parser("tools", help="List and invoke Custodian-governed tools")

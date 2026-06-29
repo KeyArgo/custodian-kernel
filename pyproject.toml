@@ -45,3 +45,9 @@ include = ["custodian*"]
 
 [tool.setuptools.package-data]
 "custodian" = ["bundled_skills/**/*", "bundled_skills/**"]
+
+[tool.pytest.ini_options]
+addopts = "-m 'not network'"
+markers = [
+    "network: marks tests that require real network access (deselected by default; run with -m network to include)",
+]
