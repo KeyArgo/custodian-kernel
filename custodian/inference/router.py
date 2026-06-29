@@ -14,7 +14,9 @@ from pathlib import Path
 from typing import Optional
 
 DEFAULT_ENDPOINTS = [
-    "http://dgx-spark-01:8000/v1/chat/completions",
+    # 1. DGX Spark — local inference, air-gapped, primary
+    "http://192.168.50.56:11434/v1/chat/completions",
+    # 2. NVIDIA hosted API — always available, requires key
     "https://integrate.api.nvidia.com/v1/chat/completions",
 ]
 NVIDIA_HOSTED = "integrate.api.nvidia.com"
@@ -41,18 +43,14 @@ class NemoClawRouter:
                     return line.split("=", 1)[1].strip()
         return None
 
-    def complete(self, system: str, user: str) -> str:
-        payload = json.dumps({
-            "model": self.model,
-            "messages": [
-                {"role": "system", "content": system},
-                {"role": "user", "content": user},
-            ],
-            "max_tokens": 1200,
-            "temperature": 0.2,
-            "chat_template_kwargs": {"thinking": False},
-        }).encode()
+    def _model_for(self, endpoint: str) -> str:
+        """Local Ollama endpoints use a different model identifier than the cloud API."""
+        if "11434" in endpoint:
+            # Ollama model name — must match what's pulled on that host
+            return os.environ.get("LOCAL_MODEL", "llama3.3:latest")
+        return self.model
 
+    def complete(self, system: str, user: str) -> str:
         last_error: Exception = RuntimeError("no endpoints configured")
         for endpoint in self.endpoints:
             headers = {"Content-Type": "application/json"}
@@ -60,6 +58,17 @@ class NemoClawRouter:
                 key = self._key()
                 if key:
                     headers["Authorization"] = f"Bearer {key}"
+            payload = json.dumps({
+                "model": self._model_for(endpoint),
+                "messages": [
+                    {"role": "system", "content": system},
+                    {"role": "user", "content": user},
+                ],
+                "max_tokens": 1200,
+                "temperature": 0.2,
+                **({"chat_template_kwargs": {"thinking": False}}
+                   if NVIDIA_HOSTED in endpoint else {}),
+            }).encode()
             try:
                 req = urllib.request.Request(endpoint, data=payload, headers=headers)
                 with urllib.request.urlopen(req, timeout=self.timeout) as resp:

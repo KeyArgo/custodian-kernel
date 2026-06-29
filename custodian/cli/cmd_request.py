@@ -39,6 +39,13 @@ def run(args) -> None:
     state_dir = Path(args.state_dir).resolve()
     policy_path = Path(args.policy).resolve()
 
+    # If the specified policy doesn't exist, look in the workspace directory
+    if not policy_path.exists():
+        for candidate in [state_dir / "policy.yaml", state_dir.parent / "policy.yaml"]:
+            if candidate.exists():
+                policy_path = candidate
+                break
+
     try:
         policy = load_policy(policy_path)
     except PolicyNotFoundError as e:

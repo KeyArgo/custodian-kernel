@@ -331,10 +331,22 @@ class ToolRegistry:
 
 
 def default_registry() -> ToolRegistry:
-    """Return registry pointed at the canonical skills/ directory."""
+    """Return registry pointed at the canonical skills/ directory.
+
+    Search order:
+    1. Walk up from this file looking for skills/ (works in dev/cloned repo)
+    2. Fall back to bundled_skills/ inside the installed package
+    3. Fall back to cwd skills/ (legacy)
+    """
     here = Path(__file__).resolve()
     for parent in here.parents:
         candidate = parent / "skills"
         if candidate.is_dir():
             return ToolRegistry(candidate)
+    # Installed via pip — use bundled skills shipped with the package
+    # __file__ = .../site-packages/custodian/tools/registry.py
+    # parent.parent = .../site-packages/custodian/
+    bundled = Path(__file__).resolve().parent.parent / "bundled_skills"
+    if bundled.is_dir():
+        return ToolRegistry(bundled)
     return ToolRegistry(Path("skills"))

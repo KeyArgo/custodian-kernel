@@ -1,6 +1,6 @@
 [project]
 name = "custodian-kernel"
-version = "0.1.1"
+version = "0.1.2"
 description = "Kernel-enforced authority and spend platform for AI agents"
 requires-python = ">=3.11"
 readme = "README.md"
@@ -24,7 +24,7 @@ classifiers = [
 
 [project.urls]
 Homepage = "https://getcustodian.xyz"
-Repository = "https://github.com/inovinlabs/custodian-dev"
+Repository = "https://github.com/KeyArgo/custodian-kernel"
 Documentation = "https://getcustodian.xyz/docs"
 
 [project.optional-dependencies]
@@ -42,3 +42,12 @@ build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]
 include = ["custodian*"]
+
+[tool.setuptools.package-data]
+"custodian" = ["bundled_skills/**/*", "bundled_skills/**"]
+
+[tool.pytest.ini_options]
+addopts = "-m 'not network'"
+markers = [
+    "network: marks tests that require real network access (deselected by default; run with -m network to include)",
+]
