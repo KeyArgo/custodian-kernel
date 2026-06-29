@@ -322,8 +322,8 @@
       <span style="display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.15);border-radius:8px;padding:5px 12px;font-size:0.78em;font-weight:700;color:var(--text);font-family:'JetBrains Mono',monospace">◆ Hermes</span>
       <span style="display:inline-flex;align-items:center;gap:6px;background:rgba(99,91,255,0.1);border:1px solid rgba(99,91,255,0.3);border-radius:8px;padding:5px 12px;font-size:0.78em;font-weight:700;color:#a78bfa;font-family:'JetBrains Mono',monospace">stripe</span>
     </div>
-    <h1>Your AI agent can approve its own refunds.<br><span class="grad">Custodian stops it — provably.</span></h1>
-    <p class="lede">Set a spend cap. The kernel enforces it — not a prompt, not a policy API, a real OS-level boundary. The agent literally cannot exceed it, lie about it, or approve its own escalation. <b>This is proven, not promised.</b> A <b>Nous Hermes agent</b> on <b>NVIDIA Nemotron Super 120B</b> runs inside a <b>NemoClaw kernel sandbox</b> on a <b>DGX Spark GB10</b> — and the same enforcement ships as a pip package you can run anywhere.</p>
+    <h1>Let AI handle refunds, spend, and purchasing.<br><span class="grad">Without the risk.</span></h1>
+    <p class="lede">Most businesses won't deploy AI near money because there's no way to verify it actually followed the rules. Custodian is the enforcement kernel that changes that — set limits in a YAML file, the OS enforces them, the agent cannot exceed them, lie about them, or approve its own escalation. <b>This is proven, not promised.</b> A <b>Nous Hermes agent</b> on <b>NVIDIA Nemotron Super 120B</b> runs inside a <b>NemoClaw kernel sandbox</b> on a <b>DGX Spark GB10</b> — and the same enforcement ships as a pip package you can run anywhere.</p>
 
     <!-- employee + company card visual -->
     <div class="card-metaphor">
@@ -366,6 +366,7 @@
     <div class="specs" id="specs" style="margin-top:8px">
       <div class="spec"><div class="k">Authority band</div><div class="v" id="s-band">—</div></div>
       <div class="spec live"><div class="k">Session budget left</div><div class="v" id="s-remaining">—</div></div>
+      <div class="spec"><div class="k">AI brain</div><div class="v">Nous Hermes (Nemotron)</div></div>
       <div class="spec"><div class="k">Decision modules</div><div class="v" id="s-packs">3</div></div>
       <div class="spec"><div class="k">Live tools</div><div class="v">102</div></div>
       <div class="spec"><div class="k">Boundary</div><div class="v enf">ENFORCED AT KERNEL</div></div>
@@ -433,42 +434,53 @@
 <!-- BUSINESS OWNERS -->
 <section id="for-business" style="padding:70px 0;background:rgba(0,0,0,0.2)">
   <div class="wrap">
-    <div class="reveal" style="text-align:center;max-width:760px;margin:0 auto 40px">
-      <div class="sec-eyebrow">Why this exists</div>
-      <h2>AI agents that can't be told what to do are a liability</h2>
-      <p class="sec-sub">Every company deploying AI agents has the same hidden risk: the agent operates in a trust gap — it can claim it followed your rules, but you have no way to verify it. Custodian closes that gap with a kernel-level enforcement layer that runs outside the agent's own process.</p>
+    <div class="reveal" style="text-align:center;max-width:760px;margin:0 auto">
+      <div class="sec-eyebrow" style="color:var(--green)">What this unlocks</div>
+      <h2>AI that handles money. Finally.</h2>
+      <p class="sec-sub">You've been holding back on AI because you can't trust it with refunds, spend, or purchasing decisions. Custodian is the missing piece — a kernel-level enforcement layer that makes deploying AI near money actually viable. Set your rules. The kernel enforces them. Ship.</p>
     </div>
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px" class="reveal">
-      <div class="card" style="padding:24px 26px;border-color:rgba(239,68,68,0.35)">
-        <div style="font-family:'JetBrains Mono',monospace;font-size:0.65em;letter-spacing:0.12em;text-transform:uppercase;color:#ef4444;margin-bottom:12px">E-commerce · Refund fraud</div>
-        <div style="font-weight:700;font-size:1.05em;margin-bottom:10px">AI issues a refund to a lying customer</div>
-        <p style="color:var(--muted);font-size:0.88em;line-height:1.6;margin:0 0 16px">Customer claims package never arrived. AI believes it, issues $200 refund. Ledger shows package delivered. Custodian's claim verifier catches the contradiction before the refund executes — deterministically, without re-asking the AI.</p>
-        <div style="display:inline-block;background:rgba(239,68,68,0.12);border:1px solid rgba(239,68,68,0.3);border-radius:6px;padding:4px 10px;font-family:'JetBrains Mono',monospace;font-size:0.7em;color:#ef4444;font-weight:700">CONTRADICTED · refund blocked</div>
+
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(270px,1fr));gap:18px;margin-top:40px">
+
+      <div class="card reveal" style="padding:26px 24px;border-color:rgba(46,230,166,0.2)">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:0.65em;letter-spacing:0.12em;text-transform:uppercase;color:var(--green);margin-bottom:12px">E-commerce · Refund automation</div>
+        <h3 style="font-size:1.05em;margin:0 0 10px;line-height:1.35">Handle refund requests 24/7 — without the fraud risk</h3>
+        <p style="color:var(--muted);font-size:0.88em;line-height:1.6;margin:0 0 16px">Your AI reviews every refund request. Custodian's claim verifier checks the customer's story against your actual order data — if they're lying, it's CONTRADICTED before the refund executes. You only see the genuine edge cases.</p>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:0.75em;padding:8px 12px;background:rgba(46,230,166,0.08);border-radius:6px;color:var(--green)">✓ 3 planted lies caught · 0 false positives</div>
       </div>
-      <div class="card" style="padding:24px 26px;border-color:rgba(255,176,0,0.35)">
-        <div style="font-family:'JetBrains Mono',monospace;font-size:0.65em;letter-spacing:0.12em;text-transform:uppercase;color:var(--amber);margin-bottom:12px">SaaS · Runaway spend</div>
-        <div style="font-weight:700;font-size:1.05em;margin-bottom:10px">AI agent burns $2,000 in API credits overnight</div>
-        <p style="color:var(--muted);font-size:0.88em;line-height:1.6;margin:0 0 16px">No spend cap. No approval gate. AI runs an inference loop and your cloud bill explodes before anyone wakes up. Custodian enforces a per-action cap and session budget. The agent hits the limit, escalates to you via SMS, and stops.</p>
-        <div style="display:inline-block;background:rgba(255,176,0,0.12);border:1px solid rgba(255,176,0,0.3);border-radius:6px;padding:4px 10px;font-family:'JetBrains Mono',monospace;font-size:0.7em;color:var(--amber);font-weight:700">ESCALATED · operator notified via SMS</div>
+
+      <div class="card reveal" style="padding:26px 24px;border-color:rgba(255,176,0,0.2)">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:0.65em;letter-spacing:0.12em;text-transform:uppercase;color:var(--amber);margin-bottom:12px">SaaS · Autonomous spend</div>
+        <h3 style="font-size:1.05em;margin:0 0 10px;line-height:1.35">Let AI spend autonomously — within the limits you set</h3>
+        <p style="color:var(--muted);font-size:0.88em;line-height:1.6;margin:0 0 16px">Set a $2 per-action cap and $50 session budget. Your agent runs inference jobs, makes API calls, spins up resources — fully autonomously. The moment it hits the limit, it escalates to you via SMS and stops. No surprise bills.</p>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:0.75em;padding:8px 12px;background:rgba(255,176,0,0.08);border-radius:6px;color:var(--amber)">✓ Kill switch: one command halts the agent instantly</div>
       </div>
-      <div class="card" style="padding:24px 26px;border-color:rgba(139,123,255,0.35)">
-        <div style="font-family:'JetBrains Mono',monospace;font-size:0.65em;letter-spacing:0.12em;text-transform:uppercase;color:#a78bfa;margin-bottom:12px">Operations · Self-approval</div>
-        <div style="font-weight:700;font-size:1.05em;margin-bottom:10px">AI approves its own purchase order</div>
-        <p style="color:var(--muted);font-size:0.88em;line-height:1.6;margin:0 0 16px">The agent submits a $5,000 vendor payment and marks it approved. No human ever saw it. Custodian's authority kernel structurally prevents self-approval — the agent never holds both sides of that decision.</p>
-        <div style="display:inline-block;background:rgba(139,123,255,0.12);border:1px solid rgba(139,123,255,0.3);border-radius:6px;padding:4px 10px;font-family:'JetBrains Mono',monospace;font-size:0.7em;color:#a78bfa;font-weight:700">BLOCKED · self-approval is impossible</div>
+
+      <div class="card reveal" style="padding:26px 24px;border-color:rgba(163,159,255,0.2)">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:0.65em;letter-spacing:0.12em;text-transform:uppercase;color:#a39fff;margin-bottom:12px">Operations · Purchasing</div>
+        <h3 style="font-size:1.05em;margin:0 0 10px;line-height:1.35">Automate purchasing your finance team can actually approve</h3>
+        <p style="color:var(--muted);font-size:0.88em;line-height:1.6;margin:0 0 16px">The self-approval problem is why finance won't sign off on AI purchasing. Custodian makes self-approval structurally impossible — the agent submits, the kernel decides, humans approve anything above the cap. The agent never holds both sides of the decision.</p>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:0.75em;padding:8px 12px;background:rgba(163,159,255,0.08);border-radius:6px;color:#a39fff">✓ L3 band: all payments above threshold require human sign-off</div>
       </div>
+
     </div>
-    <div class="reveal" style="margin-top:36px;max-width:560px;margin-left:auto;margin-right:auto">
-      <div style="background:#0a0a0a;border:1px solid var(--line);border-radius:10px;overflow:hidden;font-family:'JetBrains Mono',monospace;font-size:0.82em">
-        <div style="padding:8px 16px;background:#111;border-bottom:1px solid #1e1e1e;color:var(--dim);font-size:0.85em">policy.yaml — your rules, kernel-enforced</div>
-        <pre style="padding:14px 18px;margin:0;color:#c8ccd8;line-height:1.8"><span style="color:var(--dim)"># One file. Your limits. Cannot be overridden.</span>
-default_band: L2        <span style="color:var(--dim)"># autonomous up to $2.00</span>
-per_action_cap: 2.00
-session_cap: 50.00      <span style="color:var(--dim)"># $50 max per session, then SMS</span></pre>
+
+    <div style="margin-top:40px;display:grid;grid-template-columns:1fr 1fr;gap:24px;max-width:860px;margin-left:auto;margin-right:auto" class="reveal">
+      <div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:0.7em;color:var(--dim);margin-bottom:10px">Your rules. One file.</div>
+        <pre style="background:#0a0c12;border:1px solid var(--line);border-radius:8px;padding:16px 18px;font-size:0.8em;line-height:1.8;color:#c8ccd8;margin:0"><span style="color:var(--dim)"># policy.yaml — kernel-enforced</span>
+<span style="color:var(--green)">default_band</span>: L2      <span style="color:var(--dim)"># autonomous to $2/action</span>
+<span style="color:var(--green)">per_action_cap</span>: 2.00
+<span style="color:var(--green)">session_cap</span>: 50.00    <span style="color:var(--dim)"># SMS you at $50, then stops</span>
+<span style="color:var(--green)">bands</span>:
+  <span style="color:var(--green)">L3</span>:
+    <span style="color:var(--green)">approval_backend</span>: twilio_verify</pre>
       </div>
-      <div style="text-align:center;margin-top:24px">
-        <a class="btn btn-primary" href="/operator" target="_blank" rel="noopener">Try the live demo →</a>
-        <p style="color:var(--dim);font-size:0.84em;margin-top:12px">No install needed for the demo. Clone the repo and run <code style="color:var(--amber)">python3 verify_kit.py</code> to prove it yourself.</p>
+      <div style="display:flex;flex-direction:column;justify-content:center;gap:14px">
+        <a class="btn btn-primary" href="/operator" target="_blank" rel="noopener" style="text-align:center">▶ Try the live demo — no install needed</a>
+        <div style="text-align:center;font-family:'JetBrains Mono',monospace;font-size:0.75em;color:var(--dim)">or</div>
+        <code style="display:block;text-align:center;font-size:0.78em;color:var(--amber);background:rgba(255,176,0,0.06);border:1px solid rgba(255,176,0,0.15);border-radius:6px;padding:10px">curl -fsSL https://getcustodian.xyz/install.sh | bash</code>
+        <div style="text-align:center;font-size:0.82em;color:var(--dim)">or clone and run <code style="color:var(--amber)">python3 verify_kit.py</code> — proves the security guarantee in 90 seconds</div>
       </div>
     </div>
   </div>
@@ -817,7 +829,7 @@ result <span style="color:var(--dim)">=</span> decide(
     <div class="reveal">
       <div class="sec-eyebrow">Competitive landscape</div>
       <h2>Honest comparison</h2>
-      <p class="sec-sub">Payman, Skyfire, Rain, Ramp, Catena — these are real B2B fintech companies, not hackathon projects. They have card issuance, stablecoin rails, and compliance frameworks we don't. What they don't have is the bottom three rows.</p>
+      <p class="sec-sub">Payman, Skyfire, Rain, Ramp, Catena — real fintech companies with card issuance, stablecoin rails, and compliance teams. They serve businesses that need payment infrastructure. Custodian serves a different problem: businesses that want to deploy AI agents that touch money but need to prove those agents can't go rogue. The bottom three rows are why we exist.</p>
     </div>
     <div class="table-wrap reveal">
       <table>
