@@ -23,6 +23,7 @@ password.
 """
 from __future__ import annotations
 
+import collections
 import hashlib
 import hmac
 import os
@@ -188,11 +189,29 @@ def pending_code():
     return jsonify({'code': data.get('code'), 'expires_at': data.get('expires_at')})
 
 
+_sms_rate: dict = collections.defaultdict(list)  # ip -> [timestamp, ...]
+_SMS_LIMIT = 3
+_SMS_WINDOW = 600  # 10 minutes
+
+
+def _sms_allowed(ip: str) -> bool:
+    now = time.time()
+    timestamps = [t for t in _sms_rate[ip] if now - t < _SMS_WINDOW]
+    _sms_rate[ip] = timestamps
+    if len(timestamps) >= _SMS_LIMIT:
+        return False
+    _sms_rate[ip].append(now)
+    return True
+
+
 @bp.route('/forward_code', methods=['POST'])
 @require_operator
 def forward_code():
     """Forward the pending SMS code to a visitor-supplied phone number via Twilio."""
     import urllib.request, urllib.parse, base64
+    ip = request.headers.get('X-Forwarded-For', request.remote_addr or '').split(',')[0].strip()
+    if not _sms_allowed(ip):
+        return jsonify({'ok': False, 'error': f'Rate limit: max {_SMS_LIMIT} SMS per 10 minutes per IP'}), 429
     data = request.get_json(force=True, silent=True) or {}
     raw_phone = str(data.get('phone', '') or '').strip()
     code = str(data.get('code', '') or '').strip()[:10]
@@ -233,8 +252,16 @@ def forward_code():
         with urllib.request.urlopen(req, timeout=10) as resp:
             result = _json.loads(resp.read())
         return jsonify({'ok': True, 'sid': result.get('sid'), 'to': phone})
+    except urllib.error.HTTPError as e:
+        body = e.read().decode('utf-8', errors='replace')
+        try:
+            detail = _json.loads(body)
+            msg = detail.get('message', body)
+        except Exception:
+            msg = body[:200]
+        return jsonify({'ok': False, 'error': msg, 'twilio_code': _json.loads(body).get('code') if body.startswith('{') else None, 'to': phone}), 502
     except Exception as e:
-        return jsonify({'ok': False, 'error': str(e)}), 502
+        return jsonify({'ok': False, 'error': str(e), 'to': phone}), 502
 
 
 _STATE_DIR = Path('/tmp/hermes-mount/sandbox/.hermes/skills/payments/stripe-spend/state')
