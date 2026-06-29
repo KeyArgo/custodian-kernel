@@ -1,0 +1,22 @@
+{
+  "title": "Out of window but defect exception applies → approve recommended",
+  "expect": "approve_recommended",
+  "customer_email": "I ordered ord_2002 about six weeks ago and it arrived with a cracked casing. I filed a defect report right away but only now have time to follow up. Please process my refund. — Diego",
+  "envelope": {
+    "case_id": "02-out-of-window-defect",
+    "customer_id": "cus_diego",
+    "order_id": "ord_2002",
+    "amount": 72.0,
+    "requested_action": "refund.create",
+    "recommended_disposition": "approve_recommended",
+    "confidence": 0.88,
+    "agent_summary": "Out of window (41 days) but a defect exception applies with a report on file. Approve recommended.",
+    "policy_clauses_cited": [
+      {"source": "policy", "quote": "Defect exceptions can override the 30-day window when a report is on file.", "locator": "refund-policy.md:exceptions.defect"}
+    ],
+    "claims": [
+      {"id": "defect", "statement": "A defect report is on file for this order", "customer_quote": "filed a defect report right away", "ledger_path": "order.defect_report_on_file", "relation": "eq", "asserted": true},
+      {"id": "purchase_age", "statement": "Order is outside the standard window", "customer_quote": "about six weeks ago", "ledger_path": "order.purchase_age_days", "relation": "gt", "asserted": 30}
+    ]
+  }
+}

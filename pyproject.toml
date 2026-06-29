@@ -1,0 +1,44 @@
+[project]
+name = "custodian-kernel"
+version = "0.1.1"
+description = "Kernel-enforced authority and spend platform for AI agents"
+requires-python = ">=3.11"
+readme = "README.md"
+license = {file = "LICENSE"}
+authors = [
+    {name = "InovinLabs", email = "hello@inovinlabs.com"},
+]
+keywords = ["ai", "agent", "authority", "spend", "kernel", "enforcement"]
+dependencies = [
+    "pyyaml",
+    "requests",
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Topic :: Software Development :: Libraries",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+]
+
+[project.urls]
+Homepage = "https://getcustodian.xyz"
+Repository = "https://github.com/inovinlabs/custodian-dev"
+Documentation = "https://getcustodian.xyz/docs"
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "pytest-cov",
+]
+
+[project.scripts]
+custodian = "custodian.cli.main:main"
+
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["custodian*"]

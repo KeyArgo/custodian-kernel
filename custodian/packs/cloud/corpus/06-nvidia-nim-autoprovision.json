@@ -1,0 +1,23 @@
+{
+  "title": "NVIDIA NIM inference → provisions autonomously (sponsor rail)",
+  "expect": "auto_provision",
+  "customer_email": "Spin up a Nemotron-3-Super-120B NIM inference endpoint — $1.20/hr, used for the hackathon demo.",
+  "envelope": {
+    "case_id": "06-nvidia-nim-autoprovision",
+    "customer_id": "nvidia_nim",
+    "order_id": "nim_nemotron_super",
+    "amount": 1.20,
+    "requested_action": "compute.provision",
+    "recommended_disposition": "auto_provision",
+    "confidence": 0.97,
+    "agent_summary": "NVIDIA NIM Nemotron-3-Super at $1.20/hr. Approved sponsor provider + instance, well under cap.",
+    "policy_clauses_cited": [
+      {"source": "policy", "quote": "Routine compute jobs on approved instances provision autonomously up to $5/hr.", "locator": "cloud_rules.yaml:auto_provision_max"}
+    ],
+    "claims": [
+      {"id": "cost_accurate", "statement": "NIM inference cost matches the catalog price", "customer_quote": "$1.20/hr", "ledger_path": "instance.cost_per_hour", "relation": "eq", "asserted": 1.20},
+      {"id": "provider_approved", "statement": "NVIDIA NIM is an approved provider", "customer_quote": "NVIDIA NIM", "ledger_path": "provider.approved", "relation": "eq", "asserted": true},
+      {"id": "instance_approved", "statement": "Nemotron-3-Super is an approved NIM endpoint", "customer_quote": "Nemotron-3-Super-120B", "ledger_path": "instance.approved", "relation": "eq", "asserted": true}
+    ]
+  }
+}

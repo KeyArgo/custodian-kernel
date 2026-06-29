@@ -1,0 +1,12 @@
+# Refund pack DOMAIN policy -- separate from the kernel band policy.
+# This is the "policy-as-code" surface a non-engineer owns. Changing a value
+# here re-resolves every pending refund decision (see policy-diff replay),
+# with no model retrain and no code change.
+window_days: 30
+valid_exception_codes:
+  - defect
+  - non_delivery
+  - billing_error
+serial_abuse_threshold: 3      # >= this many refunds in the trailing window = flag
+serial_abuse_window_days: 90
+low_confidence_threshold: 0.55 # agent confidence below this => escalate as ambiguous

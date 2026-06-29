@@ -1,0 +1,23 @@
+{
+  "title": "Clean Modal job → provisions autonomously (no human)",
+  "expect": "auto_provision",
+  "customer_email": "Please provision modal_a10g for the fine-tuning run — estimated $3.20/hr, should take 2-3 hours.",
+  "envelope": {
+    "case_id": "01-modal-autoprovision",
+    "customer_id": "modal_main",
+    "order_id": "modal_a10g",
+    "amount": 3.20,
+    "requested_action": "compute.provision",
+    "recommended_disposition": "auto_provision",
+    "confidence": 0.95,
+    "agent_summary": "Approved Modal A10G GPU at $3.20/hr, within the autonomous cap. Routine provision.",
+    "policy_clauses_cited": [
+      {"source": "policy", "quote": "Routine compute jobs on approved instances provision autonomously up to $5/hr.", "locator": "cloud_rules.yaml:auto_provision_max"}
+    ],
+    "claims": [
+      {"id": "cost_accurate", "statement": "Instance cost matches the catalog price", "customer_quote": "estimated $3.20/hr", "ledger_path": "instance.cost_per_hour", "relation": "eq", "asserted": 3.20},
+      {"id": "provider_approved", "statement": "Modal is an approved provider", "customer_quote": "modal_a10g", "ledger_path": "provider.approved", "relation": "eq", "asserted": true},
+      {"id": "instance_approved", "statement": "A10G is an approved instance type", "customer_quote": "modal_a10g", "ledger_path": "instance.approved", "relation": "eq", "asserted": true}
+    ]
+  }
+}
