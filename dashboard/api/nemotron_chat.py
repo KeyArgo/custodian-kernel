@@ -157,7 +157,7 @@ Concretely:
   but dense one.
 - NEVER do your own arithmetic to invent a number. Keep two figures distinct and never mix them:
   (1) per_action_cap is the HARD CEILING on any single transaction I can approve autonomously
-  -- this is always $250 unless the data says otherwise. Quote this when someone asks "what's
+   -- this is always $2.00 unless the data says otherwise. Quote this when someone asks "what's
   your limit per purchase" or "how much can you spend at once."
   (2) autonomous_remaining is how much of the SESSION BUDGET is still available -- cite this
   when someone asks "how much is left this session" or "how much total can you still spend."

@@ -194,10 +194,21 @@ def forward_code():
     """Forward the pending SMS code to a visitor-supplied phone number via Twilio."""
     import urllib.request, urllib.parse, base64
     data = request.get_json(force=True, silent=True) or {}
-    phone = str(data.get('phone', '') or '').strip()[:20]
+    raw_phone = str(data.get('phone', '') or '').strip()
     code = str(data.get('code', '') or '').strip()[:10]
-    if not phone or not code:
+    if not raw_phone or not code:
         return jsonify({'error': 'phone and code required'}), 400
+
+    # Normalize to E.164 — Twilio rejects anything else
+    digits = ''.join(c for c in raw_phone if c.isdigit())
+    if len(digits) == 10:
+        phone = '+1' + digits
+    elif len(digits) == 11 and digits[0] == '1':
+        phone = '+' + digits
+    elif raw_phone.startswith('+'):
+        phone = '+' + digits
+    else:
+        phone = raw_phone[:20]
 
     # Twilio credentials come from the same operator.env secrets file
     def _tw(name):

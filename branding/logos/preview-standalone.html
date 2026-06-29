@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Custodian Logos</title>
+<style>
+  body { background: #06070b; color: #eceef5; font-family: 'JetBrains Mono', monospace; padding: 40px; margin: 0; }
+  h1 { color: #ffb000; font-size: 0.85em; letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 8px; }
+  h2 { color: #5d6273; font-size: 0.68em; letter-spacing: 0.1em; text-transform: uppercase; margin: 36px 0 18px; border-top: 1px solid rgba(255,255,255,0.06); padding-top: 18px; }
+  .grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 20px; max-width: 950px; }
+  .card { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.07); border-radius: 12px; padding: 22px 14px 14px; text-align: center; }
+  .card .icon { width: 80px; height: 80px; display: block; margin: 0 auto 12px; }
+  .card h3 { font-size: 0.6em; letter-spacing: 0.08em; color: #ffb000; margin-bottom: 4px; text-transform: uppercase; }
+  .card p { font-size: 0.56em; color: #8d93a6; line-height: 1.4; }
+  .rec { border-color: rgba(255,176,0,0.35); background: rgba(255,176,0,0.04); }
+  .gemini h3 { color: #2ee6a6; }
+  .gemini { border-color: rgba(46,230,166,0.2); }
+</style>
+</head>
+<body>
+<h1>CUSTODIAN / LOGO CONCEPTS</h1>
+<h2>Originals</h2>
+<div class="grid">
+<div class="card rec"><div class="icon"><svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Left conductor line -->
+  <line x1="6" y1="32" x2="22" y2="32" stroke="#ffb000" stroke-width="2.5" stroke-linecap="round"/>
+  <!-- Right conductor line -->
+  <line x1="42" y1="32" x2="58" y2="32" stroke="#ffb000" stroke-width="2.5" stroke-linecap="round"/>
+  <!-- Lever arm — pivots from closed contact, swings open -->
+  <line x1="22" y1="32" x2="39" y2="15" stroke="#ffb000" stroke-width="2.5" stroke-linecap="round"/>
+  <!-- Closed contact (pivot) — filled -->
+  <circle cx="22" cy="32" r="3" fill="#ffb000"/>
+  <!-- Open contact — hollow ring -->
+  <circle cx="42" cy="32" r="3.5" fill="#06070b" stroke="#ffb000" stroke-width="2"/>
+</svg></div><h3>circuit breaker</h3></div>
+<div class="card rec"><div class="icon"><svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Left bar with forked tip -->
+  <line x1="16" y1="10" x2="16" y2="46" stroke="#ffb000" stroke-width="2.5" stroke-linecap="round"/>
+  <line x1="16" y1="46" x2="13" y2="54" stroke="#ffb000" stroke-width="2.5" stroke-linecap="round"/>
+  <line x1="16" y1="46" x2="19" y2="54" stroke="#ffb000" stroke-width="2.5" stroke-linecap="round"/>
+  <!-- Center bar with forked tip -->
+  <line x1="32" y1="10" x2="32" y2="46" stroke="#ffb000" stroke-width="2.5" stroke-linecap="round"/>
+  <line x1="32" y1="46" x2="29" y2="54" stroke="#ffb000" stroke-width="2.5" stroke-linecap="round"/>
+  <line x1="32" y1="46" x2="35" y2="54" stroke="#ffb000" stroke-width="2.5" stroke-linecap="round"/>
+  <!-- Right bar with forked tip -->
+  <line x1="48" y1="10" x2="48" y2="46" stroke="#ffb000" stroke-width="2.5" stroke-linecap="round"/>
+  <line x1="48" y1="46" x2="45" y2="54" stroke="#ffb000" stroke-width="2.5" stroke-linecap="round"/>
+  <line x1="48" y1="46" x2="51" y2="54" stroke="#ffb000" stroke-width="2.5" stroke-linecap="round"/>
+  <!-- Upper crossbar -->
+  <line x1="10" y1="22" x2="54" y2="22" stroke="#ffb000" stroke-width="2.5" stroke-linecap="round"/>
+  <!-- Lower crossbar -->
+  <line x1="10" y1="36" x2="54" y2="36" stroke="#ffb000" stroke-width="2.5" stroke-linecap="round"/>
+</svg></div><h3>portcullis</h3></div>
+<div class="card "><div class="icon"><svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Input arrow entering from left -->
+  <line x1="4" y1="32" x2="13" y2="32" stroke="#ffb000" stroke-width="2" stroke-linecap="round"/>
+  <polyline points="10,28.5 14,32 10,35.5" stroke="#ffb000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Decision diamond — the decide() function made visual -->
+  <polygon points="32,9 55,32 32,55 9,32" stroke="#ffb000" stroke-width="2.5" stroke-linejoin="round"/>
+  <!-- Y / N indicators (tiny, inside) -->
+  <text x="32" y="36" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="9" fill="#ffb000" opacity="0.6">?</text>
+</svg></div><h3>decision diamond</h3></div>
+<div class="card "><div class="icon"><svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Agent layer — narrow, dim -->
+  <rect x="20" y="14" width="24" height="9" rx="4.5" stroke="#ffb000" stroke-width="2" opacity="0.3"/>
+  <!-- Kernel layer — wide, full brightness, slightly filled -->
+  <rect x="6" y="27.5" width="52" height="9" rx="4.5" fill="rgba(255,176,0,0.08)" stroke="#ffb000" stroke-width="2.5"/>
+  <!-- Infrastructure layer — narrow, dim -->
+  <rect x="20" y="41" width="24" height="9" rx="4.5" stroke="#ffb000" stroke-width="2" opacity="0.3"/>
+  <!-- Center dot on kernel bar — marks it as the authority layer -->
+  <circle cx="32" cy="32" r="2" fill="#ffb000"/>
+</svg></div><h3>authority stack</h3></div>
+<div class="card "><div class="icon"><svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Arc: 270° ring, gap at top (missing ~60° between the two endpoints) -->
+  <!-- Circle center: 32,32  radius: 22 -->
+  <!-- Gap spans 30° each side of top. Points at ±30° from top: -->
+  <!-- Right gap edge (30° CW from top = 60° from east): x=32+22*cos(300°)=32+11=43, y=32+22*sin(300°)=32-19=13 -->
+  <!-- Left gap edge (30° CCW from top = 120° from east): x=32+22*cos(240°)=32-11=21, y=32+22*sin(240°)=32-19=13 -->
+  <!-- Large arc from (43,13) clockwise to (21,13) -->
+  <path d="M 43,13 A 22,22 0 1,1 21,13" stroke="#ffb000" stroke-width="2.5" stroke-linecap="round"/>
+  <!-- Authority switch — vertical line hovering in the gap (not touching the arc) -->
+  <line x1="32" y1="4" x2="32" y2="10" stroke="#ffb000" stroke-width="2.5" stroke-linecap="round"/>
+  <!-- Small horizontal tick at top of switch — the handle -->
+  <line x1="28" y1="4" x2="36" y2="4" stroke="#ffb000" stroke-width="2" stroke-linecap="round"/>
+</svg></div><h3>open break</h3></div>
+<div class="card "><div class="icon"><svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Input line -->
+  <line x1="4" y1="32" x2="14" y2="32" stroke="#ffb000" stroke-width="2.5" stroke-linecap="round"/>
+  <!-- Buffer/enable gate triangle — input left vertex, output right vertex -->
+  <path d="M 14,14 L 14,50 L 48,32 Z" stroke="#ffb000" stroke-width="2.5" stroke-linejoin="round"/>
+  <!-- Gating dot on output — the controlled exit -->
+  <circle cx="51.5" cy="32" r="3.5" fill="#06070b" stroke="#ffb000" stroke-width="2"/>
+  <!-- Output line from dot -->
+  <line x1="55" y1="32" x2="62" y2="32" stroke="#ffb000" stroke-width="2.5" stroke-linecap="round"/>
+</svg></div><h3>enable gate</h3></div>
+<div class="card "><div class="icon"><svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Outer ring — complete, very dim (agent space) -->
+  <circle cx="32" cy="32" r="28" stroke="#ffb000" stroke-width="1.5" opacity="0.25"/>
+  <!-- Middle ring — arc with gap at top (policy boundary) -->
+  <!-- Gap ±30° from top. Radius 19. Gap points: -->
+  <!-- Right: 32+19*cos(300°)=32+9.5=41.5, 32+19*sin(300°)=32-16.5=15.5 -->
+  <!-- Left:  32+19*cos(240°)=32-9.5=22.5, 32-16.5=15.5 -->
+  <path d="M 41.5,15.5 A 19,19 0 1,1 22.5,15.5" stroke="#ffb000" stroke-width="2" stroke-linecap="round" opacity="0.65"/>
+  <!-- Inner solid circle — the kernel core -->
+  <circle cx="32" cy="32" r="9" fill="#ffb000"/>
+  <!-- C cutout hint in inner circle — optional small notch -->
+  <circle cx="32" cy="32" r="5" fill="#06070b"/>
+  <circle cx="34" cy="32" r="5" fill="#ffb000"/>
+</svg></div><h3>nested rings</h3></div>
+<div class="card "><div class="icon"><svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Octagon — authority seal shape -->
+  <!-- Vertices at radius 26 from center 32,32, starting at 22.5° -->
+  <polygon
+    points="56,42 42,56 22,56 8,42 8,22 22,8 42,8 56,22"
+    stroke="#ffb000" stroke-width="2.5" stroke-linejoin="round"/>
+  <!-- Stylized C / open bracket inside — authority mark -->
+  <!-- Arc: radius 12 centered at 32,32, gap opens right -->
+  <!-- Right-opening C: from (32+12*cos(315°), 32+12*sin(315°)) = (40.5, 23.5) -->
+  <!--                   to (32+12*cos(45°), 32+12*sin(45°)) = (40.5, 40.5) -->
+  <!-- Large arc, counter-clockwise sweep=0 -->
+  <path d="M 40.5,23.5 A 12,12 0 1,0 40.5,40.5" stroke="#ffb000" stroke-width="2.5" stroke-linecap="round"/>
+</svg></div><h3>signet</h3></div>
+</div>
+<h2>Refined (Gemini)</h2>
+<div class="grid">
+<div class="card rec"><div class="icon"><svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Left conductor -->
+  <line x1="8" y1="34" x2="24" y2="34" stroke="#ffb000" stroke-width="2.5" stroke-linecap="round"/>
+  <!-- Right conductor -->
+  <line x1="40" y1="34" x2="56" y2="34" stroke="#ffb000" stroke-width="2.5" stroke-linecap="round"/>
+  <!-- Lever arm — perfect 45° -->
+  <line x1="24" y1="34" x2="38" y2="20" stroke="#ffb000" stroke-width="2.5" stroke-linecap="round"/>
+  <!-- Closed contact pivot -->
+  <circle cx="24" cy="34" r="3.5" fill="#ffb000"/>
+  <!-- Open contact ring -->
+  <circle cx="40" cy="34" r="3.5" fill="#06070b" stroke="#ffb000" stroke-width="2.5"/>
+</svg></div><h3>circuit breaker ✦</h3></div>
+<div class="card rec"><div class="icon"><svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Crossbars -->
+  <line x1="12" y1="20" x2="52" y2="20" stroke="#ffb000" stroke-width="2.5" stroke-linecap="round"/>
+  <line x1="12" y1="34" x2="52" y2="34" stroke="#ffb000" stroke-width="2.5" stroke-linecap="round"/>
+  <!-- Left Bar with sharp polyline tip -->
+  <line x1="18" y1="10" x2="18" y2="46" stroke="#ffb000" stroke-width="2.5" stroke-linecap="round"/>
+  <polyline points="14,48 18,54 22,48" stroke="#ffb000" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Center Bar -->
+  <line x1="32" y1="10" x2="32" y2="46" stroke="#ffb000" stroke-width="2.5" stroke-linecap="round"/>
+  <polyline points="28,48 32,54 36,48" stroke="#ffb000" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Right Bar -->
+  <line x1="46" y1="10" x2="46" y2="46" stroke="#ffb000" stroke-width="2.5" stroke-linecap="round"/>
+  <polyline points="42,48 46,54 50,48" stroke="#ffb000" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+</svg></div><h3>portcullis ✦</h3></div>
+<div class="card "><div class="icon"><svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Input arrow -->
+  <line x1="6" y1="32" x2="16" y2="32" stroke="#ffb000" stroke-width="2.5" stroke-linecap="round"/>
+  <polyline points="12,28 16,32 12,36" stroke="#ffb000" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Decision Diamond -->
+  <polygon points="32,12 52,32 32,52 12,32" stroke="#ffb000" stroke-width="2.5" stroke-linejoin="round"/>
+  <!-- Kernel dot replacing text -->
+  <circle cx="32" cy="32" r="4" fill="#ffb000"/>
+  <!-- Faint rejected-path exit (down) -->
+  <line x1="32" y1="52" x2="32" y2="58" stroke="#ffb000" stroke-width="2.5" stroke-linecap="round" opacity="0.3"/>
+</svg></div><h3>decision diamond ✦</h3></div>
+<div class="card "><div class="icon"><svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Agent layer — narrow, dim -->
+  <rect x="18" y="12" width="28" height="10" rx="3" stroke="#ffb000" stroke-width="2" opacity="0.3"/>
+  <!-- Kernel layer — dominant, slightly filled -->
+  <rect x="8" y="27" width="48" height="10" rx="3" fill="rgba(255,176,0,0.12)" stroke="#ffb000" stroke-width="2.5"/>
+  <!-- Infrastructure layer — narrow, dim -->
+  <rect x="18" y="42" width="28" height="10" rx="3" stroke="#ffb000" stroke-width="2" opacity="0.3"/>
+  <!-- Kernel authority node -->
+  <circle cx="32" cy="32" r="2.5" fill="#ffb000"/>
+</svg></div><h3>authority stack ✦</h3></div>
+<div class="card "><div class="icon"><svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- 300° ring, gap at top with terminal dots -->
+  <path d="M 42,14.68 A 20,20 0 1,1 22,14.68" stroke="#ffb000" stroke-width="2.5" stroke-linecap="round"/>
+  <!-- Terminal contact dots at gap edges -->
+  <circle cx="42" cy="14.68" r="1.5" fill="#ffb000"/>
+  <circle cx="22" cy="14.68" r="1.5" fill="#ffb000"/>
+  <!-- Switch stem -->
+  <line x1="32" y1="4" x2="32" y2="13" stroke="#ffb000" stroke-width="2.5" stroke-linecap="round"/>
+  <!-- Switch handle -->
+  <line x1="24" y1="4" x2="40" y2="4" stroke="#ffb000" stroke-width="2.5" stroke-linecap="round"/>
+</svg></div><h3>open break ✦</h3></div>
+<div class="card "><div class="icon"><svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Input -->
+  <line x1="6" y1="32" x2="16" y2="32" stroke="#ffb000" stroke-width="2.5" stroke-linecap="round"/>
+  <!-- Gate Triangle -->
+  <polygon points="16,14 16,50 44,32" stroke="#ffb000" stroke-width="2.5" stroke-linejoin="round"/>
+  <!-- Gating dot — separated from tip -->
+  <circle cx="48" cy="32" r="4" fill="#06070b" stroke="#ffb000" stroke-width="2.5"/>
+  <!-- Output -->
+  <line x1="52" y1="32" x2="58" y2="32" stroke="#ffb000" stroke-width="2.5" stroke-linecap="round"/>
+</svg></div><h3>enable gate ✦</h3></div>
+<div class="card "><div class="icon"><svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Outer agent ring — dim, complete -->
+  <circle cx="32" cy="32" r="26" stroke="#ffb000" stroke-width="2" opacity="0.2"/>
+  <!-- Middle policy ring — semi-dim, gapped at top -->
+  <path d="M 40.5,17 A 17,17 0 1,1 23.5,17" stroke="#ffb000" stroke-width="2" stroke-linecap="round" opacity="0.6"/>
+  <!-- Inner kernel C — thick, opens right -->
+  <path d="M 38,26 A 10,10 0 1,0 38,38" stroke="#ffb000" stroke-width="3.5" stroke-linecap="round"/>
+  <!-- Kernel core dot -->
+  <circle cx="32" cy="32" r="3" fill="#ffb000"/>
+</svg></div><h3>nested rings ✦</h3></div>
+<div class="card "><div class="icon"><svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Perfect octagon at mathematical 45° vertices -->
+  <polygon points="22,8 42,8 56,22 56,42 42,56 22,56 8,42 8,22" stroke="#ffb000" stroke-width="2.5" stroke-linejoin="round"/>
+  <!-- Inner C-arc — thick brand lettermark -->
+  <path d="M 38,22 A 14,14 0 1,0 38,42" stroke="#ffb000" stroke-width="3" stroke-linecap="round"/>
+  <!-- Verification dot — authority marker -->
+  <circle cx="30" cy="32" r="3.5" fill="#ffb000"/>
+</svg></div><h3>signet ✦</h3></div>
+</div>
+<h2>New (Gemini original)</h2>
+<div class="grid">
+<div class="card gemini"><div class="icon"><svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Scattered input lines (agent chaos) — fanned from left -->
+  <line x1="4" y1="18" x2="28" y2="32" stroke="#ffb000" stroke-width="1.5" stroke-linecap="round" opacity="0.4"/>
+  <line x1="4" y1="26" x2="28" y2="32" stroke="#ffb000" stroke-width="1.5" stroke-linecap="round" opacity="0.55"/>
+  <line x1="4" y1="32" x2="28" y2="32" stroke="#ffb000" stroke-width="1.5" stroke-linecap="round" opacity="0.7"/>
+  <line x1="4" y1="38" x2="28" y2="32" stroke="#ffb000" stroke-width="1.5" stroke-linecap="round" opacity="0.55"/>
+  <line x1="4" y1="46" x2="28" y2="32" stroke="#ffb000" stroke-width="1.5" stroke-linecap="round" opacity="0.4"/>
+  <!-- Kernel focal point -->
+  <circle cx="32" cy="32" r="5" fill="#ffb000"/>
+  <!-- Single controlled output line -->
+  <line x1="37" y1="32" x2="60" y2="32" stroke="#ffb000" stroke-width="2.5" stroke-linecap="round"/>
+  <!-- Output arrowhead -->
+  <polyline points="56,28 60,32 56,36" stroke="#ffb000" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+</svg></div><h3>prism focal point</h3><p>Gemini concept: chaos → kernel → single output</p></div>
+</div></body></html>

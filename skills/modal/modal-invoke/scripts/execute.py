@@ -77,14 +77,15 @@ def main():
         except json.JSONDecodeError:
             payload = a.payload
 
-    app_name = a.app_name or a.function_name  # guess if not given
+    app_name = a.app_name or "custodian-benchmark"
+    func_name = a.function_name or "benchmark"
 
     try:
         try:
-            result, call_id = _use_sdk(app_name, a.function_name, payload)
+            result, call_id = _use_sdk(app_name, func_name, payload)
         except Exception:
-            result, call_id = _use_rest(tid, tsec, app_name, a.function_name, payload)
-        out = {"ok": True, "tool": TOOL, "function": a.function_name, "result": result}
+            result, call_id = _use_rest(tid, tsec, app_name, func_name, payload)
+        out = {"ok": True, "tool": TOOL, "function": func_name, "result": result}
         if call_id:
             out["call_id"] = call_id
         print(json.dumps(out))

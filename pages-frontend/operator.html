@@ -469,12 +469,19 @@ function smsNow() {
 
 // Visitor phone — optional forwarding of the SMS code to the visitor's own phone
 let _visitorPhone = '';
+function _normalizePhone(raw) {
+    const digits = raw.replace(/\D/g, '');
+    if (digits.length === 10) return '+1' + digits;
+    if (digits.length === 11 && digits[0] === '1') return '+' + digits;
+    if (raw.trim().startsWith('+')) return '+' + digits;
+    return raw.trim();
+}
 document.getElementById('visitor-phone-btn').addEventListener('click', () => {
-    const v = document.getElementById('visitor-phone').value.trim();
+    const raw = document.getElementById('visitor-phone').value.trim();
     const note = document.getElementById('visitor-phone-note');
-    if (!v) { note.style.display = 'none'; _visitorPhone = ''; return; }
-    _visitorPhone = v;
-    note.textContent = `✓ Code will also be forwarded to ${v} when Step 2 escalates`;
+    if (!raw) { note.style.display = 'none'; _visitorPhone = ''; return; }
+    _visitorPhone = _normalizePhone(raw);
+    note.textContent = `✓ Code will be forwarded to ${_visitorPhone} when Step 2 escalates`;
     note.style.display = 'block';
 });
 document.getElementById('visitor-phone').addEventListener('keydown', e => {
