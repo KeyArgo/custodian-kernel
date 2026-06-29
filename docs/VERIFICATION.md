@@ -1,5 +1,7 @@
 # Verification
 
+_Last updated: 2026-06-29_
+
 This document explains exactly how a skeptical third party can verify every
 real claim about Custodian — without needing to trust the author's word.
 
@@ -38,14 +40,12 @@ created it.
 
 ## 2. Public git history
 
-The repository is at `git.argobox.com/KeyArgo/hermes-hackathon-2026` with
-real commit timestamps showing the development history.
-
-If you have access to the remote, you can:
+The kernel is at `github.com/KeyArgo/custodian-kernel` with real commit
+timestamps showing the development history.
 
 ```bash
-git clone git@git.argobox.com:KeyArgo/hermes-hackathon-2026.git
-cd hermes-hackathon-2026
+git clone https://github.com/KeyArgo/custodian-kernel
+cd custodian-kernel
 git log --oneline
 ```
 
@@ -54,17 +54,23 @@ backdated or squashed commits.
 
 ## 3. Run the test suite yourself
 
+The quickest path (no cloning needed):
+
 ```bash
+pip install custodian-kernel[dev]
+pytest tests/
+```
+
+Or from source:
+
+```bash
+git clone https://github.com/KeyArgo/custodian-kernel
+cd custodian-kernel
 pip install -e ".[dev]"
 pytest tests/ -v
 ```
 
-Expected result: **117 passed, 1 skipped**.
-
-The skipped test is `tests/test_cli.py::test_cli_placeholder`, which is
-intentionally skipped because it was a placeholder written before the CLI
-module existed. It remains skipped because the placeholder has not been
-converted to real tests yet.
+Expected result: **1,163 passed** (4 network-dependent tests skipped by default).
 
 ## 4. The self-approval regression test
 

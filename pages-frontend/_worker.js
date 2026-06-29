@@ -7,43 +7,79 @@
  * /api/v1/*        → Flask API endpoints (proxied to Flask backend)
  * everything else  → CF Pages static assets
  *
- * BACKEND migration: currently pointing to the argobox internal hostname.
- * Target hostname is api.getcustodian.xyz — update this constant once DNS
- * (CNAME api.getcustodian.xyz → argobox host) and Nginx vhost are live.
+ * Failover: tries PRIMARY first with a 4s timeout, falls back to SECONDARY.
+ * Primary: argobox-lite (full functionality — NemoClaw sandbox lives here)
+ * Secondary: titan (read endpoints + degraded operator — no sandbox)
  */
 
-const BACKEND = 'https://rein-local.argobox.com'; // TODO: migrate to https://api.getcustodian.xyz
+const PRIMARY   = 'https://rein-local.argobox.com';
+const SECONDARY = 'http://100.68.107.42:8094';
+const TIMEOUT_MS = 4000;
+// Triage/custom does live Nemotron inference — allow 25s before falling back
+const TIMEOUT_SLOW_MS = 25000;
 
-// Only API calls proxy to Flask — all page routes are CF Pages static assets
-const PROXY_EXACT = new Set([]);
-// Prefix-match routes
 const PROXY_PREFIX = '/api/v1/';
+
+async function tryFetch(url, init, timeoutMs) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const res = await fetch(url, { ...init, signal: controller.signal });
+    clearTimeout(timer);
+    // Treat 5xx as backend failure — fall through to secondary
+    if (res.status >= 500) return null;
+    return res;
+  } catch (_) {
+    clearTimeout(timer);
+    return null;
+  }
+}
 
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
     const path = url.pathname;
 
-    const shouldProxy =
-      PROXY_EXACT.has(path) || path.startsWith(PROXY_PREFIX);
-
-    if (!shouldProxy) {
-      // /hermes falls here — CF Pages ASSETS serves hermes.html at /hermes automatically
+    if (!path.startsWith(PROXY_PREFIX)) {
       return env.ASSETS.fetch(request);
     }
 
-    // Transparent proxy to Flask — keep path, query string, method, headers, body.
-    const upstream = new URL(path + url.search, BACKEND);
-    const proxied = new Request(upstream.toString(), {
-      method: request.method,
-      headers: request.headers,
-      body: request.body,
-      redirect: 'follow',
-    });
+    const upstreamPath = path + url.search;
 
-    const response = await fetch(proxied);
+    // Buffer the body so it can be replayed on failover — ReadableStream is single-use.
+    const bodyBuf = request.method !== 'GET' && request.method !== 'HEAD'
+      ? await request.arrayBuffer()
+      : null;
 
-    // Strip backend CORS headers — CF Pages re-adds them for getcustodian.xyz.
+    function makeInit() {
+      return {
+        method:  request.method,
+        headers: request.headers,
+        body:    bodyBuf,
+        redirect: 'follow',
+      };
+    }
+
+    // Slow paths: live Nemotron inference can take 10-20s — give them full budget
+    const isSlow = path.startsWith('/api/v1/triage/custom') || path.startsWith('/api/v1/nemotron/');
+    const primaryTimeout  = isSlow ? TIMEOUT_SLOW_MS : TIMEOUT_MS;
+    const secondaryTimeout = isSlow ? TIMEOUT_SLOW_MS : TIMEOUT_MS * 2;
+
+    // Try primary
+    let response = await tryFetch(new URL(upstreamPath, PRIMARY).toString(), makeInit(), primaryTimeout);
+
+    // Fall back to secondary
+    if (!response) {
+      response = await tryFetch(new URL(upstreamPath, SECONDARY).toString(), makeInit(), secondaryTimeout);
+    }
+
+    if (!response) {
+      return new Response(JSON.stringify({ error: 'Backend unavailable — both nodes unreachable' }), {
+        status: 503,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
     const headers = new Headers(response.headers);
     headers.delete('access-control-allow-origin');
     headers.delete('access-control-allow-methods');

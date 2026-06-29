@@ -133,10 +133,7 @@
     .tip { background: #0a0800; border: 1px solid #2a1a00; border-radius: 6px; padding: 8px 12px;
         margin-top: 10px; color: #9a7a40; font-size: 0.88em; line-height: 1.5; }
 
-    #panel { display: none; }
-    #login-gate { max-width: 400px; margin: 60px auto; padding: 28px; background: #0a0a0a; border: 1px solid #333; border-top: 2px solid #76b900; }
-    #login-gate h2 { color: #76b900; font-size: 1em; margin: 0 0 12px 0; }
-    #login-gate p { font-size: 0.8em; color: #888; margin: 0 0 14px 0; }
+    #panel { display: block; }
     #login-err { color: #ff5c5c; font-size: 0.82em; margin-top: 8px; display: none; }
 
     /* ---- mini audit feed ---- */
@@ -247,55 +244,6 @@
   </div>
 </div>
 
-<div id="login-gate">
-  <h2>Operator Authentication</h2>
-  <p>Enter the operator panel password to run the live demo arc.</p>
-  <div style="display:flex;gap:8px;flex-wrap:wrap">
-    <input type="password" id="login-pw" placeholder="Panel password" style="flex:1;background:#111;border:1px solid #333;color:#e8e8e8;padding:6px 8px;font-family:inherit;font-size:0.85em;" autocomplete="current-password">
-    <button id="login-btn">Unlock</button>
-  </div>
-  <div id="login-err">Wrong password — try again.</div>
-</div>
-
-<script>
-(function () {
-  const stored = sessionStorage.getItem('operator_token');
-  if (stored) {
-    document.getElementById('login-gate').style.display = 'none';
-    document.getElementById('panel').style.display = 'block';
-  }
-  document.addEventListener('DOMContentLoaded', function() {
-    document.getElementById('login-btn').addEventListener('click', async () => {
-      const pw = document.getElementById('login-pw').value;
-      const err = document.getElementById('login-err');
-      err.style.display = 'none';
-      try {
-        const res = await fetch('/api/v1/operator/login', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ password: pw }),
-        });
-        const data = await res.json();
-        if (res.ok && data.token) {
-          sessionStorage.setItem('operator_token', data.token);
-          document.getElementById('login-gate').style.display = 'none';
-          document.getElementById('panel').style.display = 'block';
-        } else {
-          err.textContent = data.error || 'Login failed.';
-          err.style.display = 'block';
-        }
-      } catch (e) {
-        err.textContent = 'Network error: ' + e.message;
-        err.style.display = 'block';
-      }
-    });
-    document.getElementById('login-pw').addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') document.getElementById('login-btn').click();
-    });
-  });
-})();
-</script>
-
 <div id="panel">
     <div class="step">
         <h2>Step 0 — Real revenue in (no cap)</h2>
@@ -312,16 +260,6 @@
             <button class="btn-copy" id="copy-pi-btn">📋 Copy PaymentIntent ID for Step 7</button>
         </div>
         <div class="out" id="step1-out"></div>
-    </div>
-
-    <div class="step" style="border-left-color:#3a4a5a;">
-        <h2 style="color:#8ab0d0;">Your phone — receive the SMS code yourself (optional)</h2>
-        <p style="color:#7a8a9a;">Enter your number and we'll forward the approval code to your phone the moment it arrives — so you experience the out-of-band approval firsthand, not just as a description.</p>
-        <div class="row">
-            <input type="tel" id="visitor-phone" placeholder="+1 555 000 0000" style="width:180px;" autocomplete="tel">
-            <button id="visitor-phone-btn" style="background:#1a2a3a;border-color:#3a5a7a;color:#8ab0d0;">Set my number</button>
-        </div>
-        <div id="visitor-phone-note" style="display:none;font-size:0.75em;color:#6a9ab0;margin-top:4px;"></div>
     </div>
 
     <div class="step">
@@ -469,10 +407,9 @@ let spendPI = '';
 document.addEventListener('DOMContentLoaded', function () {
 
 async function call(path, body) {
-    const token = sessionStorage.getItem('operator_token') || '';
     const res = await fetch(API + path, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-Operator-Token': token },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body || {}),
     });
     const data = await res.json();
@@ -521,37 +458,15 @@ function smsNow() {
     return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 }
 
-// Visitor phone — optional forwarding of the SMS code to the visitor's own phone
-let _visitorPhone = '';
-function _normalizePhone(raw) {
-    const digits = raw.replace(/\D/g, '');
-    if (digits.length === 10) return '+1' + digits;
-    if (digits.length === 11 && digits[0] === '1') return '+' + digits;
-    if (raw.trim().startsWith('+')) return '+' + digits;
-    return raw.trim();
-}
-document.getElementById('visitor-phone-btn').addEventListener('click', () => {
-    const raw = document.getElementById('visitor-phone').value.trim();
-    const note = document.getElementById('visitor-phone-note');
-    if (!raw) { note.style.display = 'none'; _visitorPhone = ''; return; }
-    _visitorPhone = _normalizePhone(raw);
-    note.textContent = `✓ Code will be forwarded to ${_visitorPhone} when Step 2 escalates`;
-    note.style.display = 'block';
-});
-document.getElementById('visitor-phone').addEventListener('keydown', e => {
-    if (e.key === 'Enter') document.getElementById('visitor-phone-btn').click();
-});
 
 let _codePoller = null;
-let _codeFwdDone = false; // forward only once per escalation cycle
 
 function startCodePoll(codeElId, approveInputId, noteId) {
     if (_codePoller) clearInterval(_codePoller);
     _codeFwdDone = false;
     _codePoller = setInterval(async () => {
         try {
-            const token = sessionStorage.getItem('operator_token') || '';
-            const res = await fetch(API + '/pending_code', { headers: { 'X-Operator-Token': token } });
+            const res = await fetch(API + '/pending_code');
             if (!res.ok) return;
             const d = await res.json();
             if (d.code) {
@@ -560,25 +475,6 @@ function startCodePoll(codeElId, approveInputId, noteId) {
                 if (noteId) {
                     const n = document.getElementById(noteId);
                     if (n) { n.style.display = 'block'; }
-                }
-                // Forward to visitor phone once if configured
-                if (_visitorPhone && !_codeFwdDone) {
-                    _codeFwdDone = true;
-                    fetch(API + '/forward_code', {
-                        method: 'POST',
-                        headers: {'Content-Type': 'application/json'},
-                        body: JSON.stringify({phone: _visitorPhone, code: d.code})
-                    }).then(r => r.json()).then(fwd => {
-                        const note = document.getElementById('visitor-phone-note');
-                        if (fwd.ok) {
-                            note.textContent = `✓ Code forwarded to ${_visitorPhone} — check your messages`;
-                            note.style.color = '#76b900';
-                        } else {
-                            note.textContent = `⚠ Forward failed: ${fwd.error || 'unknown error'}`;
-                            note.style.color = '#ff6a4a';
-                        }
-                        note.style.display = 'block';
-                    }).catch(() => {});
                 }
                 if (_codePoller) { clearInterval(_codePoller); _codePoller = null; }
             }
@@ -687,10 +583,10 @@ setInterval(refreshOpFeed, 3000);
 // ---- Nemotron operator widget ----
 const NEMO_HISTORY_KEY = 'custodian_nemotron_history';
 function nemoLoadHistory() {
-    try { return JSON.parse(sessionStorage.getItem(NEMO_HISTORY_KEY) || '[]'); } catch { return []; }
+    try { return JSON.parse(localStorage.getItem(NEMO_HISTORY_KEY) || '[]'); } catch { return []; }
 }
 function nemoSaveHistory(h) {
-    try { sessionStorage.setItem(NEMO_HISTORY_KEY, JSON.stringify(h.slice(-16))); } catch {}
+    try { localStorage.setItem(NEMO_HISTORY_KEY, JSON.stringify(h.slice(-16))); } catch {}
 }
 
 const opNemoHistory = nemoLoadHistory();
@@ -741,6 +637,11 @@ opNemoCloseBtn.addEventListener('click', () => {
     opNemoPanel.style.display = 'none';
     opNemoBubble.style.display = 'flex';
 });
+
+// Auto-open the chat if the user arrived from the console jump link (has history)
+if (opNemoHistory.length > 0) {
+    setTimeout(opNemoOpen, 600);
+}
 
 async function opNemoSend() {
     const q = opNemoInput.value.trim();

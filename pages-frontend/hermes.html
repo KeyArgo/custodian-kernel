@@ -768,7 +768,7 @@
             </div>
 
             <div style="background:#080a06;border:1px solid #1a2a10;border-radius:10px;padding:14px 16px;margin-bottom:18px;font-size:0.82em;color:#8a9a80;line-height:1.6;">
-                <b style="color:#76b900;">How the kernel actually stops the AI:</b> Nemotron 3 Super has no direct access to Stripe or any payment API. The only way money moves is through <code style="color:#b0d080;">spend.py</code> — a script the kernel controls. Before touching Stripe, <code style="color:#b0d080;">spend.py</code> checks: Is the amount within the band? Is the kill switch off? Is the session cap intact? If any check fails, it returns DENIED and exits. The AI can think about spending $10,000 all it wants — without passing those checks, nothing happens. The door is the only path, and the door checks the rules before opening.
+                <b style="color:#76b900;">How the kernel actually stops the AI:</b> Nemotron Super 120B has no direct access to Stripe or any payment API. The only way money moves is through <code style="color:#b0d080;">spend.py</code> — a script the kernel controls. Before touching Stripe, <code style="color:#b0d080;">spend.py</code> checks: Is the amount within the band? Is the kill switch off? Is the session cap intact? If any check fails, it returns DENIED and exits. The AI can think about spending $10,000 all it wants — without passing those checks, nothing happens. The door is the only path, and the door checks the rules before opening.
             </div>
             <div class="flow-diagram">
                 <div class="flow-box">
@@ -1034,7 +1034,7 @@
                         <circle cx="38" cy="49" r="5" fill="#0d0f0a"/>
                         <circle cx="62" cy="49" r="5" fill="#0d0f0a"/>
                         <path d="M 34 65 Q 50 76 66 65" stroke="currentColor" stroke-width="5" fill="none" stroke-linecap="round"/>
-                    </svg> Nemotron 3 Super — live</div>
+                    </svg> Nemotron Super 120B — live</div>
             <button class="nemotron-close-btn" id="nemotron-close-btn">✕</button>
         </div>
         <div class="nemotron-chat-body" id="nemotron-chat-body"></div>
@@ -1613,7 +1613,12 @@
             const target = document.querySelector(step.selector);
             if (target) {
                 target.classList.add('tour-highlight');
-                target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                // pipeline-rail is a sticky sidebar — scroll to page top so it's fully visible
+                if (step.selector === '.pipeline-rail') {
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                } else {
+                    target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
                 tourPrevHighlight = target;
             }
             document.getElementById('tour-step-label').textContent = `STEP ${i + 1}/${TOUR_STEPS.length}`;
@@ -1757,6 +1762,7 @@
             audit: { selector: '#tab-panel-audit', tab: 'audit' },
             policy: { selector: '#tab-panel-policy', tab: 'policy' },
             playground: { selector: '#tab-panel-try', tab: 'try' },
+            operator: { url: '/operator' },
         };
 
         // Branch pool for fallback suggests — rotated so the user always sees
@@ -1935,6 +1941,7 @@ function nemotronRenderAnswer(rawText) {
 
             const target = NEMOTRON_JUMP_TARGETS[btn.dataset.jumpKey];
             if (!target) return;
+            if (target.url) { window.open(target.url, '_blank', 'noopener'); return; }
             if (target.tab) document.querySelector(`.tab-btn[data-tab="${target.tab}"]`).click();
             const el = document.querySelector(target.selector);
             if (el) {
@@ -1971,11 +1978,11 @@ function nemotronRenderAnswer(rawText) {
                 }).then(r => r.json()).then(data => {
                     thinkingMsg.remove();
                     if (data.answer) { nemotronRenderAnswer(data.answer); }
-                    else { nemotronAddMessage(data.error || "I'm Nemotron 3 Super — ask me anything about what you're seeing.", 'bot'); }
+                    else { nemotronAddMessage(data.error || "I'm Nemotron Super 120B — ask me anything about what you're seeing.", 'bot'); }
                 }).catch(() => {
                     thinkingMsg.remove();
                     nemotronAddMessage(
-                        "I'm Nemotron 3 Super — the intelligence layer that reads customer requests and proposes " +
+                        "I'm Nemotron Super 120B — the intelligence layer that reads customer requests and proposes " +
                         "dispositions. Ask me what just happened, why something escalated, or what the kernel did.",
                         'bot'
                     );
@@ -2009,7 +2016,7 @@ function nemotronRenderAnswer(rawText) {
 
         const NEMO_HISTORY_KEY = 'custodian_nemotron_history';
         const nemotronHistory = (() => {
-            try { return JSON.parse(sessionStorage.getItem(NEMO_HISTORY_KEY) || '[]'); } catch { return []; }
+            try { return JSON.parse(localStorage.getItem(NEMO_HISTORY_KEY) || '[]'); } catch { return []; }
         })();
 
         async function nemotronSend() {
@@ -2035,7 +2042,16 @@ function nemotronRenderAnswer(rawText) {
                     const clean = data.answer.replace(/\[\[(jump|entry|suggest):[^\]]*\]\]/g, '').trim();
                     nemotronHistory.push({role: 'user', content: question});
                     nemotronHistory.push({role: 'assistant', content: clean});
-                    try { sessionStorage.setItem(NEMO_HISTORY_KEY, JSON.stringify(nemotronHistory.slice(-16))); } catch {}
+                    try { localStorage.setItem(NEMO_HISTORY_KEY, JSON.stringify(nemotronHistory.slice(-16))); } catch {}
+                    // After 2 full exchanges (4 history entries), nudge to operator panel
+                    if (nemotronHistory.length === 4 && !sessionStorage.getItem('_op_nudge_sent')) {
+                        sessionStorage.setItem('_op_nudge_sent', '1');
+                        setTimeout(() => {
+                            nemotronRenderAnswer(
+                                "You've seen the theory. The most powerful thing you can do right now is watch the kernel act in real time — earn revenue, trigger a spend that exceeds the limit, receive the SMS escalation, and either approve or kill it. Everything I've described plays out live in about 90 seconds.\n\n[[jump:operator|⚡ Open the Operator Panel →]]"
+                            );
+                        }, 800);
+                    }
                 }
             } catch (e) {
                 thinkingMsg.remove();

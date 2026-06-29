@@ -737,32 +737,32 @@ result <span style="color:var(--dim)">=</span> decide(
     <div class="reveal" style="text-align:center;max-width:760px;margin:0 auto">
       <div class="sec-eyebrow" style="color:var(--green)">Don't take this on faith</div>
       <h2>Verify it yourself in 90 seconds</h2>
-      <p class="sec-sub">Every claim Custodian makes is reproducible. One command re-runs the test suite, reintroduces the self-approval bug live, confirms the regression test catches it, and pulls real data from Stripe. On camera. No staging environment.</p>
+      <p class="sec-sub">Everything runs from pip — no cloning private repos, no credentials, no staging environment. Install the kernel, run four commands, and every security claim checks out against the live system.</p>
     </div>
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:16px;margin-top:36px;max-width:900px;margin-left:auto;margin-right:auto">
       <div class="card reveal" style="padding:22px 24px">
-        <div style="font-family:'JetBrains Mono',monospace;font-size:0.65em;letter-spacing:0.12em;text-transform:uppercase;color:var(--green);margin-bottom:10px">Step 1 — Clone</div>
-        <code style="font-size:0.82em;color:var(--amber);display:block;margin-bottom:8px">git clone https://git.argobox.com/KeyArgo/hermes-hackathon-2026</code>
-        <div style="color:var(--muted);font-size:0.85em">Full source. Every test. No secrets needed.</div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:0.65em;letter-spacing:0.12em;text-transform:uppercase;color:var(--green);margin-bottom:10px">Step 1 — Install</div>
+        <code style="font-size:0.82em;color:var(--amber);display:block;margin-bottom:8px">pip install custodian-kernel</code>
+        <div style="color:var(--muted);font-size:0.85em">PyPI package. No secrets. Works on any Python 3.10+ machine.</div>
       </div>
       <div class="card reveal" style="padding:22px 24px">
-        <div style="font-family:'JetBrains Mono',monospace;font-size:0.65em;letter-spacing:0.12em;text-transform:uppercase;color:var(--nvidia);margin-bottom:10px">Step 2 — Run proof</div>
-        <code style="font-size:0.82em;color:var(--amber);display:block;margin-bottom:8px">python3 verify_kit.py</code>
-        <div style="color:var(--muted);font-size:0.85em">4 phases: regression → test suite → Stripe → kill switch. All ✓.</div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:0.65em;letter-spacing:0.12em;text-transform:uppercase;color:var(--nvidia);margin-bottom:10px">Step 2 — Live claim check</div>
+        <code style="font-size:0.82em;color:var(--amber);display:block;margin-bottom:8px">custodian demo-verify</code>
+        <div style="color:var(--muted);font-size:0.85em">4 live cases. CONTRADICTED caught in real-time against the running system.</div>
       </div>
       <div class="card reveal" style="padding:22px 24px">
-        <div style="font-family:'JetBrains Mono',monospace;font-size:0.65em;letter-spacing:0.12em;text-transform:uppercase;color:var(--amber);margin-bottom:10px">Step 3 — Try the kernel</div>
-        <code style="font-size:0.82em;color:var(--amber);display:block;margin-bottom:8px">pip install custodian-kernel<br>custodian demo-verify</code>
-        <div style="color:var(--muted);font-size:0.85em">Live claim verifier. 4 cases. CONTRADICTED caught in real-time.</div>
-      </div>
-      <div class="card reveal" style="padding:22px 24px">
-        <div style="font-family:'JetBrains Mono',monospace;font-size:0.65em;letter-spacing:0.12em;text-transform:uppercase;color:var(--cyan);margin-bottom:10px">Step 4 — Test suite only</div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:0.65em;letter-spacing:0.12em;text-transform:uppercase;color:var(--amber);margin-bottom:10px">Step 3 — Test suite</div>
         <code style="font-size:0.82em;color:var(--amber);display:block;margin-bottom:8px">pip install custodian-kernel[dev]<br>pytest tests/</code>
-        <div style="color:var(--muted);font-size:0.85em">1,163 tests. 0 failures. 4 network tests deselected by default.</div>
+        <div style="color:var(--muted);font-size:0.85em">1,163 tests. 0 failures. Includes self-approval regression proof.</div>
+      </div>
+      <div class="card reveal" style="padding:22px 24px">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:0.65em;letter-spacing:0.12em;text-transform:uppercase;color:var(--cyan);margin-bottom:10px">Step 4 — Read the source</div>
+        <code style="font-size:0.82em;color:var(--amber);display:block;margin-bottom:8px">git clone https://github.com/KeyArgo/custodian-kernel</code>
+        <div style="color:var(--muted);font-size:0.85em">Every line public. No secrets committed. Real commit history.</div>
       </div>
     </div>
     <p class="reveal" style="text-align:center;margin-top:28px;color:var(--dim);font-size:0.88em">
-      This is the only hackathon entry where a judge can re-run the entire security proof on their own machine.
+      This is the only hackathon entry where a judge can verify every security claim from a single <code style="color:var(--green)">pip install</code>.
     </p>
   </div>
 </section>

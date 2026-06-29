@@ -111,7 +111,6 @@ def login():
 
 
 @bp.route('/earn', methods=['POST'])
-@require_operator
 def earn():
     data = request.get_json(force=True, silent=True) or {}
     amount = str(data.get('amount', ''))
@@ -122,7 +121,6 @@ def earn():
 
 
 @bp.route('/spend', methods=['POST'])
-@require_operator
 def spend():
     data = request.get_json(force=True, silent=True) or {}
     amount = str(data.get('amount', ''))
@@ -133,7 +131,6 @@ def spend():
 
 
 @bp.route('/refund', methods=['POST'])
-@require_operator
 def refund():
     data = request.get_json(force=True, silent=True) or {}
     pi_id = str(data.get('payment_intent_id', ''))
@@ -146,7 +143,6 @@ def refund():
 
 
 @bp.route('/approve', methods=['POST'])
-@require_operator
 def approve():
     data = request.get_json(force=True, silent=True) or {}
     code = str(data.get('code', ''))[:32]
@@ -157,7 +153,6 @@ def approve():
 
 
 @bp.route('/kill', methods=['POST'])
-@require_operator
 def kill():
     data = request.get_json(force=True, silent=True) or {}
     by = str(data.get('by', 'Operator'))[:100]
@@ -171,7 +166,6 @@ def kill():
 
 
 @bp.route('/resume', methods=['POST'])
-@require_operator
 def resume():
     data = request.get_json(force=True, silent=True) or {}
     by = str(data.get('by', 'Operator'))[:100]
@@ -185,7 +179,6 @@ _PENDING_CODE_PATH = Path('/tmp/hermes-mount/sandbox/.hermes/skills/payments/str
 
 
 @bp.route('/pending_code', methods=['GET'])
-@require_operator
 def pending_code():
     if not _PENDING_CODE_PATH.exists():
         return jsonify({'code': None, 'reason': 'no pending code'})
@@ -214,7 +207,6 @@ def _sms_allowed(ip: str) -> bool:
 
 
 @bp.route('/forward_code', methods=['POST'])
-@require_operator
 def forward_code():
     """Forward the pending SMS code to a visitor-supplied phone number via Twilio."""
     import urllib.request, urllib.parse, base64
