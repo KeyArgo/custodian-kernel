@@ -15,7 +15,6 @@ from typing import Optional
 
 DEFAULT_ENDPOINTS = [
     "http://dgx-spark-01:8000/v1/chat/completions",
-    "http://10.0.0.199:8000/v1/chat/completions",
     "https://integrate.api.nvidia.com/v1/chat/completions",
 ]
 NVIDIA_HOSTED = "integrate.api.nvidia.com"
