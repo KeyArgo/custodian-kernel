@@ -379,6 +379,53 @@ document.getElementById('approve2-btn').addEventListener('click', async () => {
 
 }); // DOMContentLoaded
 </script>
+
+<!-- SPARK MANAGEMENT PANEL -->
+<div class="step" style="margin-top:48px; border-color:#76b900; background:rgba(118,185,0,0.04)">
+  <h2 style="color:#76b900">⬡ DGX Spark Enforcement Node</h2>
+  <p>The Spark (192.168.50.56) is the primary enforcement trust anchor. argobox-lite enforces locally if Spark is unreachable. Use these controls to manage the Spark's role without touching code or restarting anything.</p>
+  <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px">
+    <button id="spark-status-btn" style="background:#76b900;color:#000">Check Spark health</button>
+    <button id="spark-enable-btn" style="background:#2a3a1a;border-color:#76b900;color:#76b900">Enable Spark routing</button>
+    <button id="spark-disable-btn" style="background:#3a1a1a;border-color:#ff5c5c;color:#ff5c5c">Disable Spark (use local only)</button>
+  </div>
+  <div class="out" id="spark-out"></div>
+  <p style="font-size:0.82em;color:#8d93a6;margin-top:12px">
+    Disabling is instant and non-destructive — enforcement continues locally. Re-enabling reconnects to Spark on the next request.
+    Changes survive until Flask restarts. After the hackathon, remove the Spark permanently via <code>DEPLOYMENT.md</code>.
+  </p>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  const token = sessionStorage.getItem('operator_token') || '';
+  const sparkHeaders = { 'Content-Type': 'application/json', 'X-Operator-Token': token };
+
+  async function sparkCall(path, method = 'GET') {
+    try {
+      const r = await fetch(`/api/v1/operator${path}`, { method, headers: sparkHeaders });
+      return await r.json();
+    } catch(e) { return { error: e.message }; }
+  }
+
+  function renderSpark(data) {
+    const el = document.getElementById('spark-out');
+    el.classList.add('show');
+    el.classList.toggle('err', !!(data.error || data.reachable === false));
+    el.textContent = JSON.stringify(data, null, 2);
+  }
+
+  document.getElementById('spark-status-btn').addEventListener('click', async () => {
+    renderSpark(await sparkCall('/spark/status'));
+  });
+  document.getElementById('spark-enable-btn').addEventListener('click', async () => {
+    renderSpark(await sparkCall('/spark/enable', 'POST'));
+  });
+  document.getElementById('spark-disable-btn').addEventListener('click', async () => {
+    renderSpark(await sparkCall('/spark/disable', 'POST'));
+  });
+});
+</script>
 </div><!-- /page-wrap -->
 </body>
 </html>

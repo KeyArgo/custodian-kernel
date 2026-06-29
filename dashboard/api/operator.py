@@ -73,8 +73,17 @@ def _token_valid(token: str) -> bool:
 
 
 def require_operator(f):
-    """No-op in demo mode — panel is public so judges can run the full arc solo."""
-    return f
+    """Verify the X-Operator-Token header against the signed token from /login."""
+    @wraps(f)
+    def wrapper(*args, **kwargs):
+        token = request.headers.get('X-Operator-Token', '')
+        try:
+            if not _token_valid(token):
+                return jsonify({'error': 'unauthorized'}), 401
+        except Exception:
+            return jsonify({'error': 'unauthorized'}), 401
+        return f(*args, **kwargs)
+    return wrapper
 
 
 def _run_script(script: str, *script_args: str, timeout: int = 30):
@@ -332,3 +341,37 @@ def reset_demo():
         return jsonify({'ok': True, 'steps': steps})
     except Exception as e:
         return jsonify({'error': str(e), 'steps': steps}), 500
+
+
+# ── Spark enforcement node management ─────────────────────────────────────────
+
+@bp.route('/spark/status', methods=['GET'])
+@require_operator
+def spark_status():
+    try:
+        from custodian.policy.enforcer import spark_health
+        return jsonify(spark_health())
+    except ImportError:
+        return jsonify({'enabled': False, 'reachable': False, 'reason': 'local-only mode'})
+
+
+@bp.route('/spark/disable', methods=['POST'])
+@require_operator
+def spark_disable_route():
+    try:
+        from custodian.policy.enforcer import spark_disable, spark_health
+        spark_disable()
+        return jsonify({'ok': True, 'action': 'disabled', 'status': spark_health()})
+    except ImportError:
+        return jsonify({'ok': False, 'error': 'enforcer not loaded'})
+
+
+@bp.route('/spark/enable', methods=['POST'])
+@require_operator
+def spark_enable_route():
+    try:
+        from custodian.policy.enforcer import spark_enable, spark_health
+        spark_enable()
+        return jsonify({'ok': True, 'action': 'enabled', 'status': spark_health()})
+    except ImportError:
+        return jsonify({'ok': False, 'error': 'enforcer not loaded'})
