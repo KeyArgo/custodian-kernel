@@ -24,7 +24,7 @@ classifiers = [
 
 [project.urls]
 Homepage = "https://getcustodian.xyz"
-Repository = "https://github.com/inovinlabs/custodian-dev"
+Repository = "https://github.com/KeyArgo/custodian-kernel"
 Documentation = "https://getcustodian.xyz/docs"
 
 [project.optional-dependencies]

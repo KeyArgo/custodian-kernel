@@ -129,8 +129,8 @@ class TestNemoClawRouter:
         router.complete("sys", "user")
         assert "Authorization" not in seen_headers
 
-    def test_default_endpoints_are_three(self):
-        assert len(DEFAULT_ENDPOINTS) == 3
+    def test_default_endpoints_are_two(self):
+        assert len(DEFAULT_ENDPOINTS) == 2
 
     def test_conforms_to_llm_client_protocol(self):
         router = NemoClawRouter()

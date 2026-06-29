@@ -344,9 +344,9 @@ def default_registry() -> ToolRegistry:
         if candidate.is_dir():
             return ToolRegistry(candidate)
     # Installed via pip — use bundled skills shipped with the package
-    bundled = Path(__file__).resolve().parent.parent / "custodian" / "bundled_skills"
-    if not bundled.is_dir():
-        bundled = Path(__file__).resolve().parent / "bundled_skills"
+    # __file__ = .../site-packages/custodian/tools/registry.py
+    # parent.parent = .../site-packages/custodian/
+    bundled = Path(__file__).resolve().parent.parent / "bundled_skills"
     if bundled.is_dir():
         return ToolRegistry(bundled)
     return ToolRegistry(Path("skills"))
