@@ -1,7 +1,10 @@
 """NemoClaw inference router — tries endpoints in priority order with fallback.
 
 Implements the same LLMClient protocol as NvidiaNemotronClient so it is a
-drop-in replacement. Endpoint order: DGX Spark → NVIDIA NIM → OpenRouter.
+drop-in replacement. Endpoint order: NVIDIA NIM → OpenRouter.
+
+Note: DGX Spark runs the enforcement kernel only (:8095/decide). Inference
+always goes to a cloud endpoint — NIM first, OpenRouter as fallback.
 """
 from __future__ import annotations
 
@@ -14,11 +17,9 @@ from pathlib import Path
 from typing import Optional
 
 DEFAULT_ENDPOINTS = [
-    # 1. DGX Spark — local Ollama inference, primary
-    "http://192.168.50.20:11434/v1/chat/completions",
-    # 2. NVIDIA NIM hosted API — cloud primary, requires NVIDIA key
+    # 1. NVIDIA NIM hosted API — primary, requires NVIDIA key
     "https://integrate.api.nvidia.com/v1/chat/completions",
-    # 3. OpenRouter — final fallback, requires OpenRouter key
+    # 2. OpenRouter — fallback, requires OpenRouter key
     "https://openrouter.ai/api/v1/chat/completions",
 ]
 NVIDIA_HOSTED = "integrate.api.nvidia.com"
@@ -62,9 +63,6 @@ class NemoClawRouter:
         return None
 
     def _model_for(self, endpoint: str) -> str:
-        if "11434" in endpoint:
-            # Local Ollama — model name must match what's pulled on that host
-            return os.environ.get("LOCAL_MODEL", "llama3.3:latest")
         if OPENROUTER_HOSTED in endpoint:
             return OPENROUTER_FALLBACK_MODEL
         return self.model
