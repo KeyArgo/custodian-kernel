@@ -14,7 +14,7 @@ SPARK_HOST="bogart@192.168.50.56"
 SPARK_DIR="/home/bogart/custodian-kernel"
 SPARK_VENV="/home/bogart/custodian-venv"
 LITE_HOST="argonaut@10.0.0.199"
-LITE_APP_DIR="/opt/hermes-hackathon"
+LITE_APP_DIR="/tmp/hermes-dash-v4"
 
 GREEN='\033[0;32m'; YELLOW='\033[1;33m'; RED='\033[0;31m'; NC='\033[0m'
 ok()   { echo -e "${GREEN}✓ $*${NC}"; }
