@@ -16,7 +16,7 @@ from custodian.packs.base import (
 )
 from custodian.policy.schema import Policy
 from custodian.types import AuthorityState, SpendRequest
-from custodian.policy.evaluator import decide
+from custodian.policy.enforcer import decide
 
 
 def triage(
