@@ -22,10 +22,10 @@ pattern applied to five concrete, named business shapes, not just the one shown 
 ## Installation
 
 ```bash
-pip install -e .
+pip install custodian-kernel
 ```
 
-For tests:
+For development (clone first):
 
 ```bash
 pip install -e ".[dev]"
