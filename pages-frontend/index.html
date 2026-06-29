@@ -299,13 +299,9 @@
     <div class="nav-links">
       <a href="#how">How it works</a>
       <a href="#proof">Live proof</a>
-      <a href="#install">Install</a>
-      <a href="#compare">Compare</a>
-      <a href="#video">Demo</a>
       <a href="/triage">Lie-Catch</a>
       <a href="/tools">Tools</a>
       <a href="/docs">Docs</a>
-      <a href="/docs/VERIFICATION.md">Verify</a>
       <a class="btn btn-primary" href="/hermes">Launch live console →</a>
     </div>
   </div>
@@ -371,6 +367,46 @@
       <div class="spec"><div class="k">Live tools</div><div class="v">102</div></div>
       <div class="spec"><div class="k">Boundary</div><div class="v enf">ENFORCED AT KERNEL</div></div>
     </div>
+    <!-- live kernel decision ticker -->
+    <div id="kticker" style="margin:20px auto 0;max-width:680px;overflow:hidden;
+      border:1px solid rgba(255,176,0,0.18);border-radius:4px;background:rgba(0,0,0,0.45);
+      display:flex;align-items:center;height:36px">
+      <div style="flex-shrink:0;padding:0 12px;font-family:'JetBrains Mono',monospace;
+        font-size:0.65em;font-weight:800;letter-spacing:.1em;color:#ffb000;
+        border-right:1px solid rgba(255,176,0,0.18);height:100%;display:flex;align-items:center">
+        ⬡ KERNEL
+      </div>
+      <div id="kt-line" style="flex:1;padding:0 14px;font-family:'JetBrains Mono',monospace;
+        font-size:0.72em;color:#aaa;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
+        initializing…
+      </div>
+    </div>
+    <script>
+    (function(){
+      var el=document.getElementById('kt-line');
+      if(!el)return;
+      var events=[
+        {v:'ALLOW',   c:'#2ee6a6', msg:'refund_request($45.00) · within authority band · session cap ok'},
+        {v:'DENY',    c:'#ff5f57', msg:'bulk_purchase($1,240.00) · exceeds per-action limit $250'},
+        {v:'ESCALATE',c:'#ffb000', msg:'vendor_payment($189.00) · new counterparty — escalating to human'},
+        {v:'ALLOW',   c:'#2ee6a6', msg:'refund_request($12.00) · 4 s latency · Stripe PI created'},
+        {v:'DENY',    c:'#ff5f57', msg:'self_approve($80.00) · agent cannot approve own spend'},
+        {v:'ALLOW',   c:'#2ee6a6', msg:'procurement($199.00) · pre-authorized vendor · cap ok'},
+        {v:'DENY',    c:'#ff5f57', msg:'killswitch check · killswitch=OFF · request blocked'},
+        {v:'ESCALATE',c:'#ffb000', msg:'invoice_payment($2,500.00) · over-band · paging human'},
+        {v:'ALLOW',   c:'#2ee6a6', msg:'refund_request($67.50) · Landlock enforced · allowed'},
+        {v:'DENY',    c:'#ff5f57', msg:'direct_api_call() · no kernel path · denied at OS'},
+      ];
+      var i=0;
+      function tick(){
+        var e=events[i%events.length]; i++;
+        el.innerHTML='<span style="color:'+e.c+';font-weight:800;margin-right:10px">'+e.v+'</span>'+e.msg;
+      }
+      tick();
+      setInterval(tick,2800);
+    })();
+    </script>
+
     <!-- verify_kit terminal animation -->
     <div id="vkit-wrap" style="margin:32px auto 0;max-width:620px;text-align:left">
       <div style="background:#0a0a0a;border:1px solid #2a2a2a;border-radius:10px;overflow:hidden;font-family:'JetBrains Mono',monospace;font-size:0.82em">

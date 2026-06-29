@@ -86,8 +86,19 @@ def require_operator(f):
     return wrapper
 
 
+import shutil as _shutil
+
+def _nemohermes_bin() -> str:
+    # nemohermes may not be on the PATH when Flask starts from a venv;
+    # fall back to the known install location.
+    return (
+        _shutil.which('nemohermes')
+        or '/home/argonaut/.local/bin/nemohermes'
+    )
+
+
 def _run_script(script: str, *script_args: str, timeout: int = 30):
-    cmd = ['nemohermes', SANDBOX_NAME, 'exec', '--', 'python3',
+    cmd = [_nemohermes_bin(), SANDBOX_NAME, 'exec', '--', 'python3',
            f'{SCRIPTS_DIR}/{script}', *script_args]
     try:
         proc = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)

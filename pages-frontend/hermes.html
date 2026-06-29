@@ -320,12 +320,13 @@
         }
         .k-links a:hover { color: var(--text); }
         .k-links a.active { color: var(--amber); border-bottom-color: var(--amber); }
-        .k-status {
-          display: flex; align-items: center; gap: 6px;
-          font-size: 0.65em; letter-spacing: 0.12em; text-transform: uppercase;
-          color: var(--green);
-          border: 1px solid rgba(46,230,166,0.25);
-          padding: 4px 10px; border-radius: 4px; flex-shrink: 0;
+        .k-badges {
+          display: flex; align-items: center; gap: 10px; flex-shrink: 0; margin-left: 8px;
+        }
+        .k-badge-dot {
+          display: flex; align-items: center; gap: 5px;
+          font-size: 0.62em; letter-spacing: 0.1em; text-transform: uppercase;
+          color: var(--muted);
         }
         .k-dot {
           width: 6px; height: 6px; border-radius: 50%;
@@ -697,9 +698,10 @@
         <a href="/tools">Tools</a>
         <a href="/docs">Docs</a>
       </div>
-      <div class="k-status">
-        <span class="k-dot"></span>
-        <span>Kernel Live</span>
+      <div class="k-badges">
+        <span class="k-badge-dot"><span class="dot" id="badge-dot-nemoclaw"></span>NemoClaw</span>
+        <span class="k-badge-dot"><span class="dot" id="badge-dot-hermes"></span>Hermes</span>
+        <span class="k-badge-dot"><span class="dot" id="badge-dot-stripe"></span>Stripe</span>
       </div>
     </nav>
     <div class="pnl-bar" id="pnl-bar">
@@ -723,21 +725,6 @@
         <span class="pnl-val pnl-earn" id="pnl-margin">—</span>
       </div>
     </div>
-    <div class="top-bar">
-        <div class="top-bar-brand">
-            <div class="top-bar-logo">C</div>
-            <div>
-                <div class="top-bar-name">CUSTODIAN</div>
-                <div class="top-bar-tag">Autonomous Spend Authority</div>
-            </div>
-        </div>
-        <div class="top-bar-badges">
-            <div class="top-bar-badge"><span class="dot" id="badge-dot-nemoclaw"></span> NemoClaw <span class="sub">kernel sandbox</span></div>
-            <div class="top-bar-badge"><span class="dot" id="badge-dot-hermes"></span> Nous Hermes Agent</div>
-            <div class="top-bar-badge"><span class="dot" id="badge-dot-stripe"></span> Stripe <span class="sub">real PaymentIntents</span></div>
-        </div>
-    </div>
-
     <div class="page-grid">
         <main class="content-col">
             <div class="hero">
