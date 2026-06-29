@@ -10,6 +10,7 @@ https://integrate.api.nvidia.com/v1 directly. Same model, same provider,
 different credential -- the sandbox's key is deliberately not reusable here.
 """
 import json
+import os
 import re
 import time
 import urllib.error
@@ -23,9 +24,20 @@ from flask import Blueprint, jsonify, request
 import api.hermes as hermes
 from custodian.packs.narration import tour_intro_for_model
 
+NVIDIA_SECRET_FILE = Path(__file__).resolve().parent.parent / 'secrets' / 'nvidia.env'
+OPENROUTER_SECRET_FILE = Path(__file__).resolve().parent.parent / 'secrets' / 'openrouter.env'
+NVIDIA_ENDPOINT = 'https://integrate.api.nvidia.com/v1/chat/completions'
+OPENROUTER_ENDPOINT = 'https://openrouter.ai/api/v1/chat/completions'
+NVIDIA_MODEL = 'nvidia/nemotron-3-super-120b-a12b'
+OPENROUTER_MODEL = os.environ.get('OPENROUTER_FALLBACK_MODEL', 'nvidia/llama-3.3-nemotron-super-49b-v1')
+
 try:
     from custodian.inference.router import NemoClawRouter
-    _nemo_client = NemoClawRouter(timeout=25)
+    _nemo_client = NemoClawRouter(
+        timeout=25,
+        nvidia_api_key_file=NVIDIA_SECRET_FILE,
+        openrouter_key_file=OPENROUTER_SECRET_FILE,
+    )
 except ImportError:
     _nemo_client = None
 
@@ -59,10 +71,6 @@ def _rewrite_markdown_links_to_jumps(text):
         return label
     return _MD_LINK_RE.sub(repl, text)
 
-NVIDIA_SECRET_FILE = Path(__file__).resolve().parent.parent / 'secrets' / 'nvidia.env'
-NVIDIA_ENDPOINT = 'https://integrate.api.nvidia.com/v1/chat/completions'
-NVIDIA_MODEL = 'nvidia/nemotron-3-super-120b-a12b'
-
 # Independent rate-limit bucket from the playground's -- a flood on one
 # endpoint shouldn't silently starve the other's budget for the same visitor.
 _RATE_LIMIT_WINDOW_SECONDS = 60
@@ -93,6 +101,49 @@ def _nvidia_key():
         if line.startswith('NVIDIA_API_KEY='):
             return line.split('=', 1)[1].strip()
     raise RuntimeError('NVIDIA_API_KEY not found in secrets file')
+
+
+def _openrouter_key() -> str | None:
+    """Returns OpenRouter key or None if not configured."""
+    env_key = os.environ.get('OPENROUTER_API_KEY')
+    if env_key:
+        return env_key
+    try:
+        for line in OPENROUTER_SECRET_FILE.read_text().splitlines():
+            if line.startswith('OPENROUTER_API_KEY='):
+                return line.split('=', 1)[1].strip()
+    except (FileNotFoundError, OSError):
+        pass
+    return None
+
+
+def _call_openrouter(messages: list[dict]) -> str | None:
+    """Attempt inference via OpenRouter. Returns answer string or None on failure."""
+    key = _openrouter_key()
+    if not key:
+        return None
+    payload = {
+        'model': OPENROUTER_MODEL,
+        'messages': messages,
+        'max_tokens': 600,
+        'temperature': 0.7,
+    }
+    req = urllib.request.Request(
+        OPENROUTER_ENDPOINT,
+        data=json.dumps(payload).encode(),
+        headers={
+            'Authorization': f'Bearer {key}',
+            'Content-Type': 'application/json',
+            'HTTP-Referer': 'https://getcustodian.xyz',
+            'X-Title': 'Custodian',
+        },
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=25) as resp:
+            result = json.loads(resp.read())
+        return result['choices'][0]['message']['content']
+    except (urllib.error.URLError, OSError, KeyError, IndexError, json.JSONDecodeError):
+        return None
 
 
 SYSTEM_PROMPT = """You are Nemotron 3 Super, NVIDIA's reasoning model. In this system you play
@@ -435,31 +486,43 @@ def ask():
     else:
         answer = None
 
+    # Shared message list for cloud fallback paths
+    cloud_messages = [
+        {'role': 'system', 'content': system_prompt},
+        *history_msgs,
+        {'role': 'user', 'content': f"{context_block}\n\nVISITOR'S QUESTION: {question}"},
+    ]
+
     if answer is None:
-        payload = {
-            'model': NVIDIA_MODEL,
-            'messages': [
-                {'role': 'system', 'content': system_prompt},
-                *history_msgs,
-                {'role': 'user', 'content': f"{context_block}\n\nVISITOR'S QUESTION: {question}"},
-            ],
-            'max_tokens': 600,
-            'temperature': 0.7,
-            'chat_template_kwargs': {'thinking': False},
-        }
-        req = urllib.request.Request(
-            NVIDIA_ENDPOINT,
-            data=json.dumps(payload).encode(),
-            headers={'Authorization': f'Bearer {_nvidia_key()}', 'Content-Type': 'application/json'},
-        )
+        # Path 2: NVIDIA NIM direct
+        nim_error = None
         try:
+            payload = {
+                'model': NVIDIA_MODEL,
+                'messages': cloud_messages,
+                'max_tokens': 600,
+                'temperature': 0.7,
+                'chat_template_kwargs': {'thinking': False},
+            }
+            req = urllib.request.Request(
+                NVIDIA_ENDPOINT,
+                data=json.dumps(payload).encode(),
+                headers={'Authorization': f'Bearer {_nvidia_key()}', 'Content-Type': 'application/json'},
+            )
             with urllib.request.urlopen(req, timeout=25) as resp:
                 result = json.loads(resp.read())
             answer = result['choices'][0]['message']['content']
-        except urllib.error.URLError as e:
-            return jsonify({'error': f'Could not reach Nemotron: {e}'}), 502
+        except (urllib.error.URLError, OSError, RuntimeError) as e:
+            nim_error = str(e)
         except (KeyError, IndexError, json.JSONDecodeError):
-            return jsonify({'error': 'Unexpected response shape from Nemotron'}), 502
+            nim_error = 'unexpected response shape from NVIDIA NIM'
+
+    if answer is None:
+        # Path 3: OpenRouter fallback
+        answer = _call_openrouter(cloud_messages)
+
+    if answer is None:
+        return jsonify({'error': f'All Nemotron endpoints failed. NIM: {nim_error}'}), 502
 
     answer = _rewrite_markdown_links_to_jumps(answer)
     return jsonify({'answer': answer})
