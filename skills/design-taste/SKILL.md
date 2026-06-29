@@ -1,6 +1,14 @@
 ---
-name: design-taste-frontend
+name: design-taste
 description: Stops AI from generating boring, generic UI. Use when building new interfaces, reviewing generated UI, or fixing the flat / generic look that AI tools default to. Anti-slop design principles for premium frontends.
+version: 1.0.0
+metadata:
+  hermes:
+    tags: [Design, Frontend, Audit]
+  custodian:
+    band: L0
+    cost_usd: 0.00
+    configured: true
 ---
 
 # Taste Skill
