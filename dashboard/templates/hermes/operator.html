@@ -74,7 +74,11 @@
     .tip { background: #0a0800; border: 1px solid #2a1a00; border-radius: 6px; padding: 8px 12px;
         margin-top: 10px; color: #9a7a40; font-size: 0.88em; line-height: 1.5; }
 
-    #panel { display: block; max-width: 860px; margin: 0 auto; padding: 0 24px 40px; }
+    #panel { display: none; max-width: 860px; margin: 0 auto; padding: 0 24px 40px; }
+    #login-gate { max-width: 400px; margin: 60px auto; padding: 28px; background: #0a0a0a; border: 1px solid #333; border-top: 2px solid #76b900; }
+    #login-gate h2 { color: #76b900; font-size: 1em; margin: 0 0 12px 0; }
+    #login-gate p { font-size: 0.8em; color: #888; margin: 0 0 14px 0; }
+    #login-err { color: #ff5c5c; font-size: 0.82em; margin-top: 8px; display: none; }
 </style>
 </head>
 <body>
@@ -114,6 +118,53 @@
 </details>
 
 </div>
+
+<div id="login-gate">
+  <h2>Operator Authentication</h2>
+  <p>Enter the operator panel password to run the live demo arc.</p>
+  <div class="row">
+    <input type="password" id="login-pw" placeholder="Panel password" style="flex:1; width:100%;" autocomplete="current-password">
+    <button id="login-btn">Unlock</button>
+  </div>
+  <div id="login-err">Wrong password — try again.</div>
+</div>
+
+<script>
+(function () {
+  const stored = sessionStorage.getItem('operator_token');
+  if (stored) {
+    document.getElementById('login-gate').style.display = 'none';
+    document.getElementById('panel').style.display = 'block';
+  }
+  document.getElementById('login-btn').addEventListener('click', async () => {
+    const pw = document.getElementById('login-pw').value;
+    const err = document.getElementById('login-err');
+    err.style.display = 'none';
+    try {
+      const res = await fetch('/api/v1/operator/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: pw }),
+      });
+      const data = await res.json();
+      if (res.ok && data.token) {
+        sessionStorage.setItem('operator_token', data.token);
+        document.getElementById('login-gate').style.display = 'none';
+        document.getElementById('panel').style.display = 'block';
+      } else {
+        err.textContent = data.error || 'Login failed.';
+        err.style.display = 'block';
+      }
+    } catch (e) {
+      err.textContent = 'Network error: ' + e.message;
+      err.style.display = 'block';
+    }
+  });
+  document.getElementById('login-pw').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') document.getElementById('login-btn').click();
+  });
+})();
+</script>
 
 <div id="panel">
     <div class="step">
@@ -250,9 +301,10 @@ let spendPI = '';
 document.addEventListener('DOMContentLoaded', function () {
 
 async function call(path, body) {
+    const token = sessionStorage.getItem('operator_token') || '';
     const res = await fetch(API + path, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'X-Operator-Token': token },
         body: JSON.stringify(body || {}),
     });
     const data = await res.json();
@@ -306,7 +358,8 @@ function startCodePoll(codeElId, approveInputId, noteId) {
     if (_codePoller) clearInterval(_codePoller);
     _codePoller = setInterval(async () => {
         try {
-            const res = await fetch(API + '/pending_code', {});
+            const token = sessionStorage.getItem('operator_token') || '';
+            const res = await fetch(API + '/pending_code', { headers: { 'X-Operator-Token': token } });
             if (!res.ok) return;
             const d = await res.json();
             if (d.code) {
