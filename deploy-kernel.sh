@@ -10,9 +10,9 @@
 set -euo pipefail
 
 REPO="$(cd "$(dirname "$0")" && pwd)"
-SPARK_HOST="bogart@192.168.50.20"
-SPARK_DIR="/home/bogart/custodian-kernel"
-SPARK_VENV="/home/bogart/custodian-venv"
+SPARK_HOST="argo@192.168.50.56"
+SPARK_DIR="/home/argo/custodian-kernel"
+SPARK_VENV="/home/argo/custodian-venv"
 LITE_HOST="argonaut@10.0.0.199"
 LITE_APP_DIR="/tmp/hermes-dash-v4"
 
