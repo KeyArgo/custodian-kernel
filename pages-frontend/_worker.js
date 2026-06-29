@@ -40,6 +40,14 @@ export default {
     const url = new URL(request.url);
     const path = url.pathname;
 
+    // Serve install.sh with correct Content-Type so curl | bash works
+    if (path === '/install.sh') {
+      const res = await env.ASSETS.fetch(request);
+      const headers = new Headers(res.headers);
+      headers.set('Content-Type', 'text/plain; charset=utf-8');
+      return new Response(res.body, { status: res.status, headers });
+    }
+
     if (!path.startsWith(PROXY_PREFIX)) {
       return env.ASSETS.fetch(request);
     }
