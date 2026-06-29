@@ -299,6 +299,7 @@
     <div class="nav-links">
       <a href="#how">How it works</a>
       <a href="#proof">Live proof</a>
+      <a href="#install">Install</a>
       <a href="#compare">Compare</a>
       <a href="#video">Demo</a>
       <a href="/triage">Lie-Catch</a>
@@ -315,19 +316,19 @@
     <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-bottom:22px">
       <span style="display:inline-flex;align-items:center;gap:6px;background:rgba(118,185,0,0.15);border:1px solid rgba(118,185,0,0.4);border-radius:8px;padding:5px 12px;font-size:0.78em;font-weight:700;color:#76b900;font-family:'JetBrains Mono',monospace">⬡ DGX Spark GB10</span>
       <span style="display:inline-flex;align-items:center;gap:6px;background:rgba(118,185,0,0.1);border:1px solid rgba(118,185,0,0.3);border-radius:8px;padding:5px 12px;font-size:0.78em;font-weight:700;color:#76b900;font-family:'JetBrains Mono',monospace">🛡 NemoClaw</span>
-      <span style="display:inline-flex;align-items:center;gap:6px;background:rgba(118,185,0,0.1);border:1px solid rgba(118,185,0,0.3);border-radius:8px;padding:5px 12px;font-size:0.78em;font-weight:700;color:#76b900;font-family:'JetBrains Mono',monospace">◉ Nemotron 3 Super</span>
+      <span style="display:inline-flex;align-items:center;gap:6px;background:rgba(118,185,0,0.1);border:1px solid rgba(118,185,0,0.3);border-radius:8px;padding:5px 12px;font-size:0.78em;font-weight:700;color:#76b900;font-family:'JetBrains Mono',monospace">◉ Nemotron Super 49B</span>
       <span style="display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.15);border-radius:8px;padding:5px 12px;font-size:0.78em;font-weight:700;color:var(--text);font-family:'JetBrains Mono',monospace">◆ Hermes</span>
       <span style="display:inline-flex;align-items:center;gap:6px;background:rgba(99,91,255,0.1);border:1px solid rgba(99,91,255,0.3);border-radius:8px;padding:5px 12px;font-size:0.78em;font-weight:700;color:#a78bfa;font-family:'JetBrains Mono',monospace">stripe</span>
     </div>
     <h1>Give your AI a company card.<br><span class="grad">With a kernel that actually enforces it.</span></h1>
-    <p class="lede">A <b>Nous Hermes agent</b> running on <b>NVIDIA Nemotron 3 Super</b> gets a company card with a spending limit — inside a <b>NemoClaw kernel sandbox</b>. It can buy what it needs. But it can't approve its own expense reports, and can't lie about a receipt once it's in the ledger. <b>Custodian is that card, that limit, and that ledger.</b> Enforcement decisions route through a <b>DGX Spark GB10</b> — on NVIDIA hardware, not promised in a prompt.</p>
+    <p class="lede">A <b>Nous Hermes agent</b> running on <b>NVIDIA Nemotron Super 49B</b> gets a company card with a spending limit — inside a <b>NemoClaw kernel sandbox</b>. It can buy what it needs. But it can't approve its own expense reports, and can't lie about a receipt once it's in the ledger. <b>Custodian is that card, that limit, and that ledger.</b> This deployment runs enforcement on a <b>DGX Spark GB10</b> — the same kernel ships as a pip package you can run anywhere.</p>
 
     <!-- employee + company card visual -->
     <div class="card-metaphor">
       <div class="cc cc-employee">
         <div class="chip"></div>
         <div class="name">HERMES AGENT</div>
-        <div class="val">Nemotron 3 Super</div>
+        <div class="val">Nemotron Super 49B</div>
         <div class="limit-row">
           <span class="limit-key">ROLE</span>
           <span class="limit-val">REQUESTS ONLY</span>
@@ -349,6 +350,7 @@
     <div class="hero-cta" style="margin-top:28px">
       <a class="btn btn-primary" href="/operator" target="_blank" rel="noopener">▶ Run the live demo</a>
       <a class="btn btn-ghost" href="/hermes">Watch it spend real money →</a>
+      <a class="btn btn-ghost" href="https://buy.stripe.com/test_4gMeVffdb4dSgTB8Ht2B200" target="_blank" rel="noopener" style="border-color:#635bff;color:#a39fff">💳 Buy a Safety Review — $25</a>
     </div>
     <div style="display:flex;gap:22px;justify-content:center;flex-wrap:wrap;margin:24px 0 0;font-family:'JetBrains Mono',monospace;font-size:0.77em">
       <span style="color:#2ee6a6;font-weight:700">✓ 100% adversarial catch rate</span>
@@ -356,6 +358,8 @@
       <span style="color:#2ee6a6;font-weight:700"><span id="m-governed-hero">—</span> cases governed</span>
       <span style="color:var(--dim)">·</span>
       <span style="color:#2ee6a6;font-weight:700">✓ $0 unauthorized spend</span>
+      <span style="color:var(--dim)">·</span>
+      <span style="color:#635bff;font-weight:700">$<span id="m-earned-hero">—</span> processed through kernel (Stripe test mode)</span>
     </div>
     <div class="specs" id="specs" style="margin-top:8px">
       <div class="spec"><div class="k">Authority band</div><div class="v" id="s-band">—</div></div>
@@ -383,14 +387,21 @@
       if(!body)return;
       var lines=[
         {t:'',p:300},
-        {t:'[PASS] 1,176 tests — 0 failures',c:'#2ee6a6',p:500},
-        {t:'',p:100},
-        {t:'[CONTRADICTED] non_delivery:',c:'#ff3b3b',p:80},
-        {t:'           customer: "package never arrived"',c:'#ff3b3b',p:80},
-        {t:'           ground truth: order.delivered = True',c:'#ff3b3b',p:1800},
-        {t:'[PASS] Kernel: DENIED — flag_abuse',c:'#2ee6a6',p:500},
-        {t:'[PASS] Self-approval regression: caught',c:'#2ee6a6',p:300},
-        {t:'[PASS] Live dashboard: confirmed real',c:'#2ee6a6',p:2500},
+        {t:'[1/4] REGRESSION TEST — agent cannot approve its own spend',c:'#888',p:400},
+        {t:'  Re-introducing the self-approval bug...',c:'#555',p:600},
+        {t:'  Result: REGRESSION TEST CAUGHT IT  ✓',c:'#2ee6a6',p:700},
+        {t:'',p:200},
+        {t:'[2/4] TEST SUITE — tests pass (network tests excluded)',c:'#888',p:400},
+        {t:'  Result: ALL TESTS PASS (1,163 passed, 4 deselected)  ✓',c:'#2ee6a6',p:800},
+        {t:'',p:200},
+        {t:'[3/4] LIVE STRIPE — real PaymentIntent on record',c:'#888',p:400},
+        {t:'  Result: STRIPE CONFIRMED  ✓',c:'#2ee6a6',p:700},
+        {t:'',p:200},
+        {t:'[4/4] KILL SWITCH — operator can stop the agent instantly',c:'#888',p:400},
+        {t:'  Result: KILL SWITCH VERIFIED  ✓',c:'#2ee6a6',p:1800},
+        {t:'',p:200},
+        {t:'CUSTODIAN PROVEN',c:'#2ee6a6',p:300},
+        {t:'The agent cannot approve its own spend.',c:'#2ee6a6',p:2500},
       ];
       var li=0;
       var cursor=document.createElement('span');
@@ -423,7 +434,7 @@
     <span class="trust-label">Built with</span>
     <a class="trust-logo" href="#architecture"><span class="nv">⬡ NVIDIA DGX Spark</span> · GB10 Grace Blackwell</a>
     <a class="trust-logo" href="#nemoclaw"><span class="nv">🛡 NemoClaw</span> · NVIDIA OpenShell Kernel Sandbox</a>
-    <a class="trust-logo" href="https://www.nvidia.com/" target="_blank" rel="noopener"><span class="nv">◉ NVIDIA</span> Nemotron 3 Super</a>
+    <a class="trust-logo" href="https://www.nvidia.com/" target="_blank" rel="noopener"><span class="nv">◉ NVIDIA</span> Nemotron Super 49B</a>
     <a class="trust-logo" href="https://nousresearch.com/" target="_blank" rel="noopener">◆ Nous Research · Hermes Agent Framework</a>
     <a class="trust-logo" href="https://stripe.com/" target="_blank" rel="noopener"><span class="st">stripe</span></a>
   </div>
@@ -547,7 +558,7 @@
     <div class="proof">
       <div class="metrics reveal">
         <div class="metric"><div class="mv g" id="m-remaining">—</div><div class="ml">Autonomous budget remaining</div><div class="mlive"><span class="pulse"></span>LIVE</div></div>
-        <div class="metric"><div class="mv" id="m-processed">—</div><div class="ml">Real Stripe volume processed</div><div class="mlive"><span class="pulse"></span>LIVE</div></div>
+        <div class="metric"><div class="mv" id="m-processed">—</div><div class="ml">Stripe test-mode volume through kernel</div><div class="mlive"><span class="pulse"></span>LIVE</div></div>
         <div class="metric"><div class="mv" id="m-payments">—</div><div class="ml">Real PaymentIntents created</div></div>
         <div class="metric"><div class="mv" id="m-packs">3</div><div class="ml">Decision modules on one kernel</div></div>
         <div class="metric"><div class="mv" id="m-governed">—</div><div class="ml">Cases governed by kernel</div><div class="mlive"><span class="pulse"></span>LIVE</div></div>
@@ -671,6 +682,89 @@
   </div>
 </section>
 
+<!-- INSTALL / QUICKSTART -->
+<section id="install" style="background:var(--bg2);border-top:1px solid var(--line);border-bottom:1px solid var(--line)">
+  <div class="wrap">
+    <div class="reveal" style="text-align:center;margin-bottom:32px">
+      <div class="sec-eyebrow" style="color:var(--green)">Open Source · MIT Licensed</div>
+      <h2>Add the kernel to your agent in 60 seconds</h2>
+      <p class="sec-sub">One pip install. Drop <code style="color:var(--green)">decide()</code> in front of any consequential action. The rest is policy.</p>
+    </div>
+    <div class="reveal" style="display:grid;grid-template-columns:1fr 1fr;gap:24px;max-width:900px;margin:0 auto">
+      <div style="background:#080a10;border:1px solid var(--line2);border-radius:12px;padding:24px">
+        <div style="color:var(--muted);font-size:0.75em;letter-spacing:0.1em;margin-bottom:12px">INSTALL</div>
+        <pre style="margin:0;font-size:0.9em;color:var(--green);line-height:1.8">pip install custodian-kernel</pre>
+        <div style="margin-top:16px;color:var(--muted);font-size:0.75em;letter-spacing:0.1em;margin-bottom:8px">OR FROM SOURCE</div>
+        <pre style="margin:0;font-size:0.82em;color:var(--dim);line-height:1.7">git clone https://github.com/KeyArgo/custodian-kernel
+cd custodian-kernel &amp;&amp; pip install -e .</pre>
+        <div style="margin-top:16px;display:flex;gap:10px;flex-wrap:wrap">
+          <a href="https://pypi.org/project/custodian-kernel/" target="_blank" rel="noopener" style="color:var(--green);font-size:0.8em;text-decoration:none;border:1px solid rgba(46,230,166,0.3);padding:4px 10px;border-radius:6px">PyPI ↗</a>
+          <a href="https://github.com/KeyArgo/custodian-kernel" target="_blank" rel="noopener" style="color:var(--muted);font-size:0.8em;text-decoration:none;border:1px solid var(--line2);padding:4px 10px;border-radius:6px">GitHub ↗</a>
+        </div>
+      </div>
+      <div style="background:#080a10;border:1px solid var(--line2);border-radius:12px;padding:24px">
+        <div style="color:var(--muted);font-size:0.75em;letter-spacing:0.1em;margin-bottom:12px">USAGE — 3 LINES</div>
+        <pre style="margin:0;font-size:0.82em;line-height:1.9;color:#c8ccd8"><span style="color:var(--dim)">from</span> custodian <span style="color:var(--dim)">import</span> decide
+
+result <span style="color:var(--dim)">=</span> decide(
+    request<span style="color:var(--dim)">=</span><span style="color:#ffb060">"refund $200 to customer"</span>,
+    state<span style="color:var(--dim)">=</span>session_state,
+    policy<span style="color:var(--dim)">=</span>policy_config,
+)
+<span style="color:var(--dim)">if</span> result.band <span style="color:var(--dim)">==</span> <span style="color:#ffb060">"L0"</span>: run()
+<span style="color:var(--dim)">elif</span> result.band <span style="color:var(--dim)">==</span> <span style="color:#ffb060">"L2"</span>: ask_human()</pre>
+      </div>
+    </div>
+    <div class="reveal" style="max-width:900px;margin:20px auto 0;display:flex;gap:16px;flex-wrap:wrap;justify-content:center">
+      <div style="background:#080a10;border:1px solid var(--line);border-radius:8px;padding:12px 18px;font-size:0.82em;color:var(--muted)">
+        <span style="color:var(--green);font-weight:700">1,163</span> tests · <span style="color:var(--green);font-weight:700">0</span> failures · <span style="color:var(--green);font-weight:700">102</span> bundled skills
+      </div>
+      <div style="background:#080a10;border:1px solid var(--line);border-radius:8px;padding:12px 18px;font-size:0.82em;color:var(--muted)">
+        Run <code style="color:var(--amber)">python3 verify_kit.py</code> to prove it yourself — 90 seconds, no credentials
+      </div>
+      <div style="background:#080a10;border:1px solid var(--line);border-radius:8px;padding:12px 18px;font-size:0.82em;color:var(--muted)">
+        Or try: <code style="color:var(--amber)">pip install custodian-kernel &amp;&amp; custodian demo-verify</code>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- VERIFY IT YOURSELF -->
+<section id="verify" style="padding:60px 0;background:rgba(0,0,0,0.3)">
+  <div class="wrap">
+    <div class="reveal" style="text-align:center;max-width:760px;margin:0 auto">
+      <div class="sec-eyebrow" style="color:var(--green)">Don't take this on faith</div>
+      <h2>Verify it yourself in 90 seconds</h2>
+      <p class="sec-sub">Every claim Custodian makes is reproducible. One command re-runs the test suite, reintroduces the self-approval bug live, confirms the regression test catches it, and pulls real data from Stripe. On camera. No staging environment.</p>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:16px;margin-top:36px;max-width:900px;margin-left:auto;margin-right:auto">
+      <div class="card reveal" style="padding:22px 24px">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:0.65em;letter-spacing:0.12em;text-transform:uppercase;color:var(--green);margin-bottom:10px">Step 1 — Clone</div>
+        <code style="font-size:0.82em;color:var(--amber);display:block;margin-bottom:8px">git clone https://git.argobox.com/KeyArgo/hermes-hackathon-2026</code>
+        <div style="color:var(--muted);font-size:0.85em">Full source. Every test. No secrets needed.</div>
+      </div>
+      <div class="card reveal" style="padding:22px 24px">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:0.65em;letter-spacing:0.12em;text-transform:uppercase;color:var(--nvidia);margin-bottom:10px">Step 2 — Run proof</div>
+        <code style="font-size:0.82em;color:var(--amber);display:block;margin-bottom:8px">python3 verify_kit.py</code>
+        <div style="color:var(--muted);font-size:0.85em">4 phases: regression → test suite → Stripe → kill switch. All ✓.</div>
+      </div>
+      <div class="card reveal" style="padding:22px 24px">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:0.65em;letter-spacing:0.12em;text-transform:uppercase;color:var(--amber);margin-bottom:10px">Step 3 — Try the kernel</div>
+        <code style="font-size:0.82em;color:var(--amber);display:block;margin-bottom:8px">pip install custodian-kernel<br>custodian demo-verify</code>
+        <div style="color:var(--muted);font-size:0.85em">Live claim verifier. 4 cases. CONTRADICTED caught in real-time.</div>
+      </div>
+      <div class="card reveal" style="padding:22px 24px">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:0.65em;letter-spacing:0.12em;text-transform:uppercase;color:var(--cyan);margin-bottom:10px">Step 4 — Test suite only</div>
+        <code style="font-size:0.82em;color:var(--amber);display:block;margin-bottom:8px">pip install custodian-kernel[dev]<br>pytest tests/</code>
+        <div style="color:var(--muted);font-size:0.85em">1,163 tests. 0 failures. 4 network tests deselected by default.</div>
+      </div>
+    </div>
+    <p class="reveal" style="text-align:center;margin-top:28px;color:var(--dim);font-size:0.88em">
+      This is the only hackathon entry where a judge can re-run the entire security proof on their own machine.
+    </p>
+  </div>
+</section>
+
 <!-- COMPARE -->
 <section id="compare">
   <div class="wrap">
@@ -708,15 +802,15 @@
     <div class="reveal">
       <div class="sec-eyebrow" style="color:#76b900">Hardware Architecture · Powered by NVIDIA</div>
       <h2>The agent thinks in the cloud. The law runs on NVIDIA hardware.</h2>
-      <p class="sec-sub">Custodian physically separates inference from enforcement. Every approve/block/escalate decision is made by a kernel process running on a DGX Spark GB10 — not a cloud API, not a prompt, not a filter. The agent has no network path to the enforcement layer. Even if the inference API is compromised, the kernel holds.</p>
+      <p class="sec-sub">Custodian physically separates inference from enforcement. The inference model thinks. The enforcement kernel decides. Those two processes run on separate machines — the agent has no network path to the enforcement layer. The Custodian deployment here runs its enforcement kernel on a DGX Spark GB10 as proof-of-concept; the kernel itself is hardware-agnostic and ships as <code style="color:var(--green)">pip install custodian-kernel</code>.</p>
     </div>
     <div class="reveal" style="margin-top:48px; display:grid; grid-template-columns:1fr auto 1fr; gap:0; align-items:center; max-width:860px; margin-left:auto; margin-right:auto">
 
       <!-- INFERENCE -->
       <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.09); border-radius:16px; padding:32px 28px">
         <div style="font-size:0.72em; letter-spacing:0.12em; color:#76b900; text-transform:uppercase; font-weight:600; margin-bottom:16px">Inference Layer</div>
-        <div style="font-size:1.25em; font-weight:700; margin-bottom:8px">Nemotron 3 Super 120B</div>
-        <div style="font-size:0.82em; color:#8d93a6; line-height:1.7; margin-bottom:20px">Reasoning model · 1M context<br>Best available agentic intelligence<br>NVIDIA cloud API</div>
+        <div style="font-size:1.25em; font-weight:700; margin-bottom:8px">Nemotron Super 49B 49B</div>
+        <div style="font-size:0.82em; color:#8d93a6; line-height:1.7; margin-bottom:20px">Reasoning model · 1M context<br>Fast enough to run at agent speed<br>Smart enough to catch lies · NVIDIA cloud API</div>
         <div style="font-size:0.75em; font-family:var(--mono); color:#5d6273; border-top:1px solid rgba(255,255,255,0.07); padding-top:14px">
           <div style="color:#76b900; margin-bottom:4px">● Model makes recommendations</div>
           <div>Agent calls here</div>
@@ -812,8 +906,8 @@
       </div>
       <div style="width:1px;height:40px;background:rgba(118,185,0,0.2)"></div>
       <div style="text-align:center">
-        <div style="font-size:1.05em;font-weight:700;color:#76b900">Nemotron 3 Super 120B</div>
-        <div style="font-size:0.75em;color:#8d93a6;margin-top:2px">MoE reasoning · 1M context window<br>Adversarial claim extraction</div>
+        <div style="font-size:1.05em;font-weight:700;color:#76b900">Nemotron Super 49B</div>
+        <div style="font-size:0.75em;color:#8d93a6;margin-top:2px">49B · 1M context · agentic reasoning<br>Fast enough for real-time decisions</div>
       </div>
     </div>
     <div style="margin-top:18px;font-size:0.78em;color:#5d6273;font-style:italic">Three layers of NVIDIA technology. One enforcement boundary the agent cannot cross.</div>
@@ -829,6 +923,7 @@
       <div class="hero-cta" style="margin-bottom:0">
         <a class="btn btn-primary" href="/operator" target="_blank" rel="noopener">▶ Run the demo yourself</a>
         <a class="btn btn-ghost" href="/hermes">Open the live console →</a>
+        <a class="btn btn-ghost" href="https://buy.stripe.com/test_4gMeVffdb4dSgTB8Ht2B200" target="_blank" rel="noopener" style="border-color:#635bff;color:#a39fff">💳 Buy a Safety Review — $25</a>
       </div>
     </div>
   </div>
@@ -843,7 +938,7 @@
     <span><strong style="color:var(--text)">Tech stack</strong></span>
     <span>⬡ <span style="color:#76b900;font-weight:600">NVIDIA DGX Spark</span> — GB10 Grace Blackwell · primary enforcement node</span>
     <span>🛡 <span style="color:#76b900;font-weight:600">NemoClaw</span> — NVIDIA OpenShell kernel sandbox (Landlock LSM + OPA)</span>
-    <span>◉ <span style="color:#76b900;font-weight:600">NVIDIA Nemotron 3 Super 120B</span> — agent reasoning &amp; claim extraction · 1M context</span>
+    <span>◉ <span style="color:#76b900;font-weight:600">NVIDIA Nemotron Super 49B</span> — agent reasoning &amp; claim extraction · 1M context</span>
     <span>◆ <span style="color:var(--text);font-weight:600">Nous Research Hermes</span> — agent framework &amp; skill protocol</span>
     <span>💳 <span style="color:var(--text);font-weight:600">Stripe</span> — payment rails (test-mode PaymentIntents)</span>
     <span>📦 <code style="background:var(--panel);padding:2px 6px;border-radius:4px;color:var(--green)">pip install custodian-kernel</code></span>
@@ -885,6 +980,7 @@
         const d=await r.json(); const s=d.stats||{};
         if(s.total_processed!=null){const el=document.getElementById('m-processed'); if(el)el.textContent=money(s.total_processed);}
         if(s.success_count!=null){const el=document.getElementById('m-payments'); if(el)el.textContent=s.success_count;}
+        if(s.total_processed!=null){const eh=document.getElementById('m-earned-hero'); if(eh)eh.textContent=s.total_processed.toFixed(2);}
       }
     }catch(e){}
   }
@@ -941,7 +1037,7 @@
       <span style="color:var(--amber)">⚡ Kernel</span>
     </div>`;
     html+=`<div style="background:rgba(93,176,255,0.04);border:1px solid rgba(93,176,255,0.12);border-radius:10px;padding:12px 14px;margin-bottom:10px">
-      <div style="font-size:0.72em;letter-spacing:.08em;text-transform:uppercase;color:var(--dim);margin-bottom:6px;font-family:monospace">🤖 Nemotron 3 Super proposed</div>
+      <div style="font-size:0.72em;letter-spacing:.08em;text-transform:uppercase;color:var(--dim);margin-bottom:6px;font-family:monospace">🤖 Nemotron Super 49B proposed</div>
       <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:6px">
         ${idxVchip(p.agent_recommended)}
         <span style="font-size:0.8em;font-family:monospace;color:${confColor}">${conf}% confidence</span>
@@ -992,7 +1088,7 @@
     const btn=document.getElementById('idx-btn');
     const out=document.getElementById('idx-result');
     btn.disabled=true; btn.textContent='Analyzing…';
-    out.innerHTML=`<div style="color:var(--muted);font-size:0.9em;padding:12px 0">🔴 Nemotron 3 Super is reading your message…</div>`;
+    out.innerHTML=`<div style="color:var(--muted);font-size:0.9em;padding:12px 0">🔴 Nemotron Super 49B is reading your message…</div>`;
     try{
       const r=await fetch('/api/v1/triage/custom',{method:'POST',
         headers:{'Content-Type':'application/json'},

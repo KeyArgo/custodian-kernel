@@ -1,9 +1,26 @@
 # Custodian
 
-Custodian is a kernel-enforced authority and spend platform for AI agents. An
-agent cannot exceed its band or approve its own escalation because the boundary
-is enforced outside the agent's own process and outside its own code path —
-not by the agent's good behavior.
+Don't take this on faith. Run one command.
+
+```bash
+$ python3 verify_kit.py
+```
+
+This 90-second script is the proof. It re-introduces the self-approval bug,
+confirms the regression test catches it, restores the fix, pulls fresh data
+from the live dashboard with a real Stripe PaymentIntent on record, and runs
+the full test suite.
+
+This is the only hackathon entry with a single command that proves its
+security guarantee on camera.
+
+## What Custodian is
+
+Custodian is a kernel-enforced authority and spend platform for AI agents.
+
+An agent cannot exceed its band or approve its own escalation because the
+boundary is enforced outside the agent's own process and outside its own code
+path — not by the agent's good behavior.
 
 The agent submits a spend request. The policy engine decides: autonomous
 (within your configured band, no human needed) or escalation (over the cap,
