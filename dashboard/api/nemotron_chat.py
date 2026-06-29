@@ -494,7 +494,11 @@ def ask():
     ]
 
     if answer is None:
-        # Path 2: NVIDIA NIM direct
+        # Path 2: OpenRouter (primary cloud — faster failover than NIM direct)
+        answer = _call_openrouter(cloud_messages)
+
+    if answer is None:
+        # Path 3: NVIDIA NIM direct (secondary)
         nim_error = None
         try:
             payload = {
@@ -516,10 +520,6 @@ def ask():
             nim_error = str(e)
         except (KeyError, IndexError, json.JSONDecodeError):
             nim_error = 'unexpected response shape from NVIDIA NIM'
-
-    if answer is None:
-        # Path 3: OpenRouter fallback
-        answer = _call_openrouter(cloud_messages)
 
     if answer is None:
         return jsonify({'error': f'All Nemotron endpoints failed. NIM: {nim_error}'}), 502
