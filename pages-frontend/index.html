@@ -700,6 +700,77 @@
   </div>
 </section>
 
+<!-- ARCHITECTURE -->
+<section id="architecture" style="padding:70px 0; background:linear-gradient(180deg,rgba(118,185,0,0.04),transparent 80%)">
+  <div class="wrap">
+    <div class="reveal">
+      <div class="sec-eyebrow" style="color:#76b900">Hardware Architecture</div>
+      <h2>The agent thinks in the cloud. The law runs on-device.</h2>
+      <p class="sec-sub">Custodian physically separates inference from enforcement. The agent has no network path to its own guardrails. Even if the inference API is compromised, the kernel holds.</p>
+    </div>
+    <div class="reveal" style="margin-top:48px; display:grid; grid-template-columns:1fr auto 1fr; gap:0; align-items:center; max-width:860px; margin-left:auto; margin-right:auto">
+
+      <!-- INFERENCE -->
+      <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.09); border-radius:16px; padding:32px 28px">
+        <div style="font-size:0.72em; letter-spacing:0.12em; color:#76b900; text-transform:uppercase; font-weight:600; margin-bottom:16px">Inference Layer</div>
+        <div style="font-size:1.25em; font-weight:700; margin-bottom:8px">Nemotron 3 Super 120B</div>
+        <div style="font-size:0.82em; color:#8d93a6; line-height:1.7; margin-bottom:20px">Reasoning model · 1M context<br>Best available agentic intelligence<br>NVIDIA cloud API</div>
+        <div style="font-size:0.75em; font-family:var(--mono); color:#5d6273; border-top:1px solid rgba(255,255,255,0.07); padding-top:14px">
+          <div style="color:#76b900; margin-bottom:4px">● Model makes recommendations</div>
+          <div>Agent calls here</div>
+        </div>
+      </div>
+
+      <!-- ARROW -->
+      <div style="text-align:center; padding:0 20px">
+        <div style="font-size:0.7em; color:#5d6273; letter-spacing:0.08em; text-transform:uppercase; margin-bottom:8px">Tailscale</div>
+        <div style="font-size:1.6em; color:#3a4050">⟶</div>
+        <div style="font-size:0.65em; color:#ff5c5c; margin-top:8px; letter-spacing:0.06em">one-way</div>
+      </div>
+
+      <!-- ENFORCEMENT -->
+      <div style="background:rgba(118,185,0,0.06); border:1px solid rgba(118,185,0,0.25); border-radius:16px; padding:32px 28px; position:relative">
+        <div style="position:absolute; top:-12px; right:16px; background:#76b900; color:#000; font-size:0.65em; font-weight:700; letter-spacing:0.1em; padding:3px 10px; border-radius:20px; text-transform:uppercase">On-Device</div>
+        <div style="font-size:0.72em; letter-spacing:0.12em; color:#76b900; text-transform:uppercase; font-weight:600; margin-bottom:16px">Enforcement Layer</div>
+        <div style="font-size:1.25em; font-weight:700; margin-bottom:8px">NemoClaw · DGX Spark</div>
+        <div style="font-size:0.82em; color:#8d93a6; line-height:1.7; margin-bottom:20px">Linux Landlock kernel sandbox<br>OS-level enforcement<br>Local network · air-gapped</div>
+        <div style="font-size:0.75em; font-family:var(--mono); color:#5d6273; border-top:1px solid rgba(118,185,0,0.15); padding-top:14px">
+          <div style="color:#ff5c5c; margin-bottom:4px">● Agent cannot reach this layer</div>
+          <div>Kernel enforces here</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- REDUNDANCY BAR -->
+    <div class="reveal" style="margin-top:28px; max-width:860px; margin-left:auto; margin-right:auto; background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.07); border-radius:12px; padding:18px 24px; display:flex; align-items:center; gap:16px">
+      <span style="font-size:1.1em">🔄</span>
+      <div>
+        <span style="font-size:0.82em; color:#eceef5; font-weight:600">Enforcement redundancy — </span>
+        <span style="font-size:0.82em; color:#8d93a6">DGX Spark is primary. If the local network is unreachable, enforcement fails over to argobox-lite automatically. The kernel never goes dark.</span>
+      </div>
+    </div>
+
+    <div class="reveal" style="margin-top:40px; display:flex; gap:24px; justify-content:center; flex-wrap:wrap">
+      <div style="text-align:center; padding:16px 24px; background:rgba(255,255,255,0.025); border:1px solid rgba(255,255,255,0.08); border-radius:12px">
+        <div style="font-size:1.5em; font-weight:700; color:#76b900">128 GB</div>
+        <div style="font-size:0.75em; color:#8d93a6; margin-top:4px">DGX Spark unified memory</div>
+      </div>
+      <div style="text-align:center; padding:16px 24px; background:rgba(255,255,255,0.025); border:1px solid rgba(255,255,255,0.08); border-radius:12px">
+        <div style="font-size:1.5em; font-weight:700; color:#76b900">1M</div>
+        <div style="font-size:0.75em; color:#8d93a6; margin-top:4px">Nemotron context window</div>
+      </div>
+      <div style="text-align:center; padding:16px 24px; background:rgba(255,255,255,0.025); border:1px solid rgba(255,255,255,0.08); border-radius:12px">
+        <div style="font-size:1.5em; font-weight:700; color:#ff5c5c">0</div>
+        <div style="font-size:0.75em; color:#8d93a6; margin-top:4px">network paths from agent to kernel</div>
+      </div>
+      <div style="text-align:center; padding:16px 24px; background:rgba(255,255,255,0.025); border:1px solid rgba(255,255,255,0.08); border-radius:12px">
+        <div style="font-size:1.5em; font-weight:700; color:#76b900">2-layer</div>
+        <div style="font-size:0.75em; color:#8d93a6; margin-top:4px">enforcement redundancy</div>
+      </div>
+    </div>
+  </div>
+</section>
+
 <!-- VIDEO -->
 <section id="video">
   <div class="wrap">
