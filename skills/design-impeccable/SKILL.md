@@ -1,6 +1,6 @@
 ---
 name: design-impeccable
-description: Anti-pattern detector and design rules for AI coding agents. Catches the specific mistakes AI makes when generating UI: gray text on color, nested cards, broken buttons, missing states. Use before shipping any frontend.
+description: "Anti-pattern detector and design rules for AI coding agents. Catches the specific mistakes AI makes when generating UI: gray text on color, nested cards, broken buttons, missing states. Use before shipping any frontend."
 version: 1.0.0
 metadata:
   hermes:

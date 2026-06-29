@@ -21,10 +21,51 @@ from custodian.types import AuthorityState, Band, Decision, SpendRequest, Verdic
 SPARK_ENFORCE_URL = os.environ.get(
     'SPARK_ENFORCE_URL', 'http://192.168.50.56:8095/decide'
 )
-SPARK_TIMEOUT = float(os.environ.get('SPARK_TIMEOUT', '2'))
+SPARK_TIMEOUT = float(os.environ.get('SPARK_TIMEOUT', '1'))
 
-# Set SPARK_ENFORCE_URL='' to disable remote and always use local.
+# Runtime toggle — can be flipped by the admin panel without a restart.
+# Also honoured: SPARK_ENFORCE_URL='' env var (disables at startup).
+_DISABLE_FLAG = '/tmp/spark-enforcement-disabled'
 _remote_enabled = bool(SPARK_ENFORCE_URL)
+
+
+def spark_enabled() -> bool:
+    """True if Spark enforcement is active. Checks the runtime flag file."""
+    return _remote_enabled and not os.path.exists(_DISABLE_FLAG)
+
+
+def spark_disable() -> None:
+    """Disable Spark enforcement at runtime. Survives until spark_enable() or restart."""
+    open(_DISABLE_FLAG, 'w').close()
+
+
+def spark_enable() -> None:
+    """Re-enable Spark enforcement at runtime."""
+    try:
+        os.remove(_DISABLE_FLAG)
+    except FileNotFoundError:
+        pass
+
+
+def spark_health() -> dict:
+    """Quick health probe. Returns status dict for the admin panel."""
+    if not _remote_enabled:
+        return {'enabled': False, 'reachable': False, 'reason': 'SPARK_ENFORCE_URL not set'}
+    if not spark_enabled():
+        return {'enabled': False, 'reachable': None, 'reason': 'disabled by operator'}
+    import time
+    try:
+        req = urllib.request.Request(
+            SPARK_ENFORCE_URL.replace('/decide', '/health'),
+            headers={'Content-Type': 'application/json'},
+        )
+        t0 = time.monotonic()
+        with urllib.request.urlopen(req, timeout=2) as resp:
+            data = json.loads(resp.read())
+        ms = round((time.monotonic() - t0) * 1000)
+        return {'enabled': True, 'reachable': True, 'latency_ms': ms, 'node': data.get('node')}
+    except Exception as exc:
+        return {'enabled': True, 'reachable': False, 'reason': str(exc)}
 
 
 def _try_spark(
@@ -37,7 +78,7 @@ def _try_spark(
     killed: bool,
 ) -> Optional[Decision]:
     """Returns a Decision from the Spark node, or None if unreachable."""
-    if not _remote_enabled:
+    if not spark_enabled():
         return None
     try:
         payload = json.dumps({

@@ -2,13 +2,13 @@
 import argparse, json, re
 PATTERNS = {
     "aws_key": r"AKIA[0-9A-Z]{16}",
-    "stripe_secret": r"sk_(live|test)_[a-zA-Z0-9]{24,}",
-    "stripe_publishable": r"pk_(live|test)_[a-zA-Z0-9]{24,}",
-    "github_token": r"gh[pousr]_[A-Za-z0-9]{36,}",
-    "openai_key": r"sk-[a-zA-Z0-9]{32,}",
+    "stripe_secret": r"sk_(live|test)_[a-zA-Z0-9_]{20,}",
+    "stripe_publishable": r"pk_(live|test)_[a-zA-Z0-9_]{20,}",
+    "github_token": r"gh[pousr]_[A-Za-z0-9_]{36,}",
+    "openai_key": r"sk-[a-zA-Z0-9_-]{32,}",
     "private_key": r"-----BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY-----",
-    "password_assign": r"(?i)(password|passwd|pwd)\s*[:=]\s*['\"]?[^\s'\"]{8,}",
-    "generic_secret": r"(?i)(secret|api[_-]?key|token)\s*[:=]\s*['\"]?[a-zA-Z0-9+/]{16,}",
+    "password_assign": r"(?i)(password|passwd|pwd)\s*[:=]\s*['\"]?[^\s'\"]{6,}",
+    "generic_secret": r"(?i)(secret|api[_-]?key|token)\s*[:=]\s*['\"]?[a-zA-Z0-9+/_-]{12,}",
 }
 p = argparse.ArgumentParser()
 p.add_argument("--text", required=True)

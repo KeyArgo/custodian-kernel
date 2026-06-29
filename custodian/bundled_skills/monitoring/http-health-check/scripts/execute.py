@@ -6,7 +6,8 @@ p.add_argument("--timeout", type=int, default=10)
 a = p.parse_args()
 try:
     t0 = time.monotonic()
-    with urllib.request.urlopen(a.url, timeout=a.timeout) as resp:
+    req = urllib.request.Request(a.url, headers={"User-Agent": "custodian-health-check/1.0"})
+    with urllib.request.urlopen(req, timeout=a.timeout) as resp:
         ms = round((time.monotonic() - t0) * 1000, 1)
         print(json.dumps({"ok": True, "tool": "http-health-check", "url": a.url,
             "status": resp.status, "latency_ms": ms}))
