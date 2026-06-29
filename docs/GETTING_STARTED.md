@@ -1,16 +1,26 @@
 # Getting Started
 
+_Last updated: 2026-06-29_
+
 This walkthrough takes approximately 10 minutes. It uses only commands
 that exist in the Custodian CLI. Before starting, verify the test suite
 passes:
 
 ```bash
-cd /tmp/hermes-hackathon-2026
-pip install -e ".[dev]" 2>&1 | tail -3
-pytest tests/ -v --tb=short 2>&1 | tail -5
+pip install custodian-kernel[dev]
+pytest tests/ --tb=short 2>&1 | tail -3
 ```
 
-You should see `117 passed, 1 skipped`.
+Or from source:
+
+```bash
+git clone https://github.com/KeyArgo/custodian-kernel
+cd custodian-kernel
+pip install -e ".[dev]"
+pytest tests/ --tb=short 2>&1 | tail -3
+```
+
+You should see `1239 passed, 4 deselected`.
 
 ## Step 1: Create a workspace
 
@@ -247,3 +257,12 @@ rm -rf /tmp/custodian-demo
 | `custodian audit` | Shows audit log entries |
 | `custodian kill --by NAME` | Engages the kill switch -- denies everything until released |
 | `custodian resume --by NAME` | Releases the kill switch |
+| `custodian demo-verify` | Runs 4 live claim-verification scenarios (no credentials needed) |
+| `custodian earn-and-buy` | Closes the full earn→spend→net cycle on camera (test mode) |
+| `custodian status-banner` | Shows kernel state in a one-screen banner with last 5 entries |
+| `custodian poison-tests` | Runs 5 planted-bad-claim tests through the verifier |
+| `custodian beancount --since DATE` | Exports audit ledger to Beancount v2 format |
+| `custodian confirm REQUEST_ID` | Confirms a request-id within the 60s deadline |
+| `custodian tools list` | Lists all 102 registered tools grouped by band |
+| `custodian tools run TOOL [--key value]` | Invokes a governed tool by name |
+| `custodian tools summary` | Prints tool count and band breakdown as JSON |

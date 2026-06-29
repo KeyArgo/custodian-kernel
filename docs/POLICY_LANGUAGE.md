@@ -1,5 +1,7 @@
 # Policy Language Reference
 
+_Last updated: 2026-06-29_
+
 Policies are YAML files. A policy defines authority bands, rules for
 assigning requests to bands, and escalation behavior. Match conditions are
 a fixed, small vocabulary — not a general-purpose expression language.

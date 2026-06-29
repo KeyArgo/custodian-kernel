@@ -1,5 +1,7 @@
 # Security Model
 
+_Last updated: 2026-06-29_
+
 ## Core principle
 
 The agent cannot approve its own escape because the authority boundary is

@@ -1,5 +1,7 @@
 # What This Unlocks — Beyond One Homelab
 
+_Last updated: 2026-06-29_
+
 Custodian is the engine. The ops-officer demo (real ArgoBox infrastructure, real
 judgment, real spend) is one instance of a pattern, not the product itself. The pattern
 is: **bounded authority + structural enforcement + human escalation** — and it

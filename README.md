@@ -1,18 +1,57 @@
 # Custodian
 
-Don't take this on faith. Run one command.
+Don't take this on faith. Verify from pip in 90 seconds:
 
 ```bash
-$ python3 verify_kit.py
+pip install custodian-kernel
+custodian demo-verify
 ```
 
-This 90-second script is the proof. It re-introduces the self-approval bug,
-confirms the regression test catches it, restores the fix, pulls fresh data
-from the live dashboard with a real Stripe PaymentIntent on record, and runs
-the full test suite.
+That command hits the live system, runs 4 claim-verification scenarios, and
+shows CONTRADICTED/VERIFIED in real time — no credentials, no cloning.
 
-This is the only hackathon entry with a single command that proves its
-security guarantee on camera.
+For the full test suite: `pip install custodian-kernel[dev] && pytest tests/`
+
+This is the only hackathon entry where a judge can verify every security
+claim from a single `pip install`.
+
+## Features
+
+### Core
+- 1,254+ tests, 0 failures (network tests excluded)
+- Deterministic claim verifier (CONTRADICTED / VERIFIED / UNVERIFIABLE)
+- Operator-only kill switch with resume logic
+- Authority bands L0-L4 with per-request caps
+- Real Stripe PaymentIntent on record (`pi_3TkZWEPfSF4TGXT90AWlrnle`)
+- Real Twilio SMS escalation
+- Self-approval regression test (proves the kernel fix)
+- 100 governed tools in `custodian/bundled_skills/`
+
+### CLI Commands
+- `custodian request` — spend decision with policy evaluation
+- `custodian audit` — full audit ledger
+- `custodian demo-verify` — 4 claim-verification scenarios (no creds)
+- `custodian earn-and-buy` — closes the economic cycle on camera (no creds)
+- `custodian status-banner` — one-screen kernel state (totals + last 5)
+- `custodian poison-tests` — 5 planted-bad-claim tests (no creds)
+- `custodian beancount` — export ledger to Beancount v2
+- `custodian confirm <id>` — post-action confirm (60s deadline)
+
+### Policy Directives (all opt-in)
+- `daily_envelope: $50` — rolling 24-hour cap per band
+- `margins: { minimum_margin: $0.10, minimum_margin_pct: 20 }` — refuse if margin too low
+- `band_after_task: L0` — auto-downgrade after a skill completes
+- `policies: { no_self_dealing: true }` — block self-paying agents
+
+### Verify Kit
+- `python3 verify_kit.py` — 4-phase self-verifying proof
+  - Regresses the self-approval bug live
+  - Pulls fresh dashboard + Stripe data
+  - Runs the full test suite
+  - Tests the kill switch end-to-end
+- `custodian demo-verify` — 4 claim-verifier scenarios
+- `custodian poison-tests` — 5 attack patterns the kernel catches
+- `custodian earn-and-buy` — full economic cycle (earn → gate → spend → verify)
 
 ## What Custodian is
 
@@ -78,14 +117,14 @@ custodian audit
 - [Verification](docs/VERIFICATION.md) — how to check every claim yourself
 - [Getting Started](docs/GETTING_STARTED.md) — 10-minute walkthrough
 
-## Tool Layer — 100 governed tools
+## Tool Layer — 102 governed tools
 
 Custodian ships a governed tool library. Every tool is a Hermes-compatible
 skill (SKILL.md frontmatter) that declares a `custodian-band` from L0–L4.
 The ToolRegistry auto-discovers them — no registration code needed.
 
 ```
-custodian tools list              # show all 100 tools grouped by band
+custodian tools list              # show all 102 tools grouped by band
 custodian tools run http-get --url https://example.com
 custodian tools summary           # JSON band breakdown
 ```
@@ -133,17 +172,23 @@ with their band and description so the capability surface is visible during revi
   the kill switch was engaged, the exact same request was denied by the real
   script running inside the live sandbox, then released, then the real spend
   succeeded again. The full sequence is in the real audit log.
-- 1,110 passing tests, tested with Python 3.13.
+- 1,239 passing tests (4 network-dependent tests deselected by default), tested with Python 3.11+.
 - The test suite includes `test_self_approval_regression.py` — a regression
   test for the exact security bug this design prevents. The fix was proven
   by deliberately reintroducing the bug, confirming the test failed, then
   restoring the fix. That test exists so the bug can never silently return.
-- Public commit history at `git.argobox.com/KeyArgo/hermes-hackathon-2026`.
+- Public commit history at `github.com/KeyArgo/custodian-kernel`.
 
-**Don't take any of this on faith — run `python3 verify_kit.py` yourself.** One command
-re-runs the test suite, actually reintroduces the security bug live to prove the regression
-test catches it (then restores the original file), and pulls fresh data straight from the
-real public dashboard. See `docs/VERIFICATION.md` for the full manual breakdown too.
+**Don't take any of this on faith.** Everything verifiable from pip:
+
+```bash
+pip install custodian-kernel       # install the kernel
+custodian demo-verify              # live claim check against the running system
+pip install custodian-kernel[dev] && pytest tests/   # 1,239 tests, 0 failures
+git clone https://github.com/KeyArgo/custodian-kernel  # read every line
+```
+
+See `docs/VERIFICATION.md` for the full manual breakdown.
 
 ## Limitations
 

@@ -1,5 +1,7 @@
 # NemoClaw
 
+_Last updated: 2026-06-29_
+
 > Inference routing layer for Custodian. Not a separate product — a drop-in
 > replacement for `NvidiaNemotronClient`.
 
@@ -7,61 +9,46 @@
 
 NemoClaw is the router in `custodian/inference/router.py`. It sends every
 LLM call to a chain of OpenAI-compatible `/v1/chat/completions` endpoints
-in order, falling back to the next hop on a 2-second timeout or
-connection error. The first endpoint to respond wins; `name` and `live`
-reflect which one served the call. It implements the same `LLMClient`
-protocol as `NvidiaNemotronClient` (`name: str`, `live: bool`,
-`complete(system, user) -> str`), so any caller accepting the protocol can
-swap one for the other with no other changes.
+in order, falling back to the next hop on timeout or connection error. The
+first endpoint to respond wins; `name` and `live` reflect which one served
+the call. It implements the same `LLMClient` protocol as `NvidiaNemotronClient`
+(`name: str`, `live: bool`, `complete(system, user) -> str`), so any caller
+accepting the protocol can swap one for the other with no other changes.
 
 ## Endpoint priority chain
 
-Default order in `NemoClawRouter.endpoints`:
+Default order in `NemoClawRouter.DEFAULT_ENDPOINTS` (defined in `router.py`):
 
-1. `http://dgx-spark-01:8000/v1/chat/completions` — own DGX Spark (NIM)
-2. `http://10.0.0.199:8000/v1/chat/completions` — argobox-lite local NIM
-3. `https://integrate.api.nvidia.com/v1/chat/completions` — NVIDIA hosted (billed)
+1. `https://integrate.api.nvidia.com/v1/chat/completions` — NVIDIA NIM hosted API (primary)
+2. `https://openrouter.ai/api/v1/chat/completions` — OpenRouter (fallback)
 
-Own hardware first (free, no egress), local NIM as fallback, billed
-hosted endpoint last. Local endpoints need no API key; the hosted
-endpoint reads `NVIDIA_API_KEY=` from the configured key file.
+**Important:** DGX Spark handles kernel enforcement only (`:8095/decide`). It
+does not run inference. All Nemotron inference is cloud-side — NIM first,
+OpenRouter as fallback.
+
+Cloud endpoints are skipped silently if their key is not configured. The
+router only attaches a `Bearer` header when it has a key; otherwise it skips
+that hop and moves to the next.
 
 ## Configuration
 
-`NEMOCLAW_ENDPOINTS` env var (comma-separated URLs) or the constructor
-argument `NemoClawRouter(endpoints=[...], model=..., timeout=2,
-nvidia_api_key_file=Path("..."))`. Defaults: DGX Spark → argobox-lite →
-NVIDIA hosted, model `nvidia/nemotron-3-super-120b-a12b`, 2-second per-hop
-timeout.
+Pass key files to the constructor:
 
-## DGX Spark integration (arriving Monday)
-
-The two DGX Spark units arrive Monday. Each runs an NVIDIA NIM container
-exposing the same `/v1/chat/completions` shape as the hosted API. Point
-NemoClaw at a local NIM instead of the hosted service by replacing the
-third hop in the env var — no code change:
-
-```bash
-export NEMOCLAW_ENDPOINTS="http://dgx-spark-01:8000/v1/chat/completions,http://10.0.0.199:8000/v1/chat/completions,http://dgx-spark-02:8000/v1/chat/completions"
+```python
+NemoClawRouter(
+    nvidia_api_key_file=Path("secrets/nvidia.env"),      # NVIDIA_API_KEY=...
+    openrouter_key_file=Path("secrets/openrouter.env"),  # OPENROUTER_API_KEY=...
+    timeout=25,
+)
 ```
 
-`NVIDIA_API_KEY` is no longer required when both local endpoints respond;
-the router only attaches a `Bearer` header when the URL contains
-`integrate.api.nvidia.com`.
+Or via environment variables: `NVIDIA_API_KEY` and `OPENROUTER_API_KEY`.
 
-## Custodian governance of inference spend
+The OpenRouter fallback model defaults to `nvidia/llama-3.3-nemotron-super-49b-v1`
+and can be overridden with `OPENROUTER_FALLBACK_MODEL=<model-id>`.
 
-NemoClaw is the transport; Custodian governs the spend around it. The
-kernel applies the same band/cap/audit logic to inference calls that it
-applies to Stripe payments:
-
-- `skills/nvidia/openai-complete` — `custodian-band: L1` ($0.50 per-action cap).
-- `skills/modal/modal-invoke` — `custodian-band: L2` ($2.00 per-action, $10.00 session, Twilio Verify on escalation). Same band that authorizes the demo's PaymentIntents.
-
-Every model call goes through the engine: authority band lookup, per-action
-and per-session spend check, OCSF audit log entry. If a call's declared
-`cost_usd` exceeds the band cap, the kernel escalates to a human the same
-way it would for a refund — there is no second path.
+The default model for NIM is `nvidia/nemotron-3-super-120b-a12b` (120B parameters,
+12B active via Mixture of Experts).
 
 ## Drop-in code example
 
@@ -70,11 +57,27 @@ from pathlib import Path
 from custodian.inference.router import NemoClawRouter
 
 client = NemoClawRouter(
-    nvidia_api_key_file=Path("secrets/nvidia.env"),  # only used for the hosted hop
-    timeout=2,
+    nvidia_api_key_file=Path("secrets/nvidia.env"),
+    openrouter_key_file=Path("secrets/openrouter.env"),
+    timeout=25,
 )
 text = client.complete(system="...", user="...")
-print(client.name)  # e.g. "nemoclaw-router → http://dgx-spark-01:8000/..."
+print(client.name)  # e.g. "nemoclaw-router → https://integrate.api.nvidia.com/..."
 ```
 
-`NemoClawRouter` satisfies `LLMClient`; the pack pipeline (`parse_envelope`, verifier, kernel) works unchanged against it.
+`NemoClawRouter` satisfies `LLMClient`; the pack pipeline (`parse_envelope`,
+verifier, kernel) works unchanged against it.
+
+## Custodian governance of inference spend
+
+NemoClaw is the transport; Custodian governs the spend around it. The kernel
+applies the same band/cap/audit logic to inference calls that it applies to
+Stripe payments:
+
+- `skills/nvidia/openai-complete` — `custodian-band: L1` (trivial per-action cap).
+- `skills/modal/modal-invoke` — `custodian-band: L2` (Twilio Verify on escalation).
+
+Every model call goes through the engine: authority band lookup, per-action and
+per-session spend check, OCSF audit log entry. If a call's declared `cost_usd`
+exceeds the band cap, the kernel escalates to a human exactly as it would for
+a payment — there is no second path.

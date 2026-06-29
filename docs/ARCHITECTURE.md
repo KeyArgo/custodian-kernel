@@ -1,6 +1,6 @@
 # Custodian — Architecture Reference
 
-> Last updated: 2026-06-27  
+> Last updated: 2026-06-29  
 > Use this doc to orient any new session. If something feels wrong, re-read this first.
 
 ## What Custodian Is
@@ -25,12 +25,14 @@ Real Stripe test-mode PaymentIntents move (and refund) throughout the demo.
 Local dev repo: `/mnt/homes/galileo/argo/Development/hermes-hackathon-2026/`
 
 Git remotes in that repo:
-- `custodian-kernel` → `https://github.com/inovinlabs/custodian-dev.git` (renamed from `custodian-private`)
-- `custodian-public` → `https://github.com/KeyArgo/custodian.git`
-- `origin` → Gitea `KeyArgo/hermes-hackathon-2026` (legacy)
-- `github` → GitHub `KeyArgo/hermes-hackathon-2026` (legacy)
+- `custodian-kernel` → `https://github.com/inovinlabs/custodian-dev.git` (dev; ongoing work)
+- `gitea-custodian-public` → `https://git.argobox.com/KeyArgo/custodian.git` (internal mirror)
+- `origin` → `https://git.argobox.com/KeyArgo/hermes-hackathon-2026.git` (primary Gitea)
+- `github` → `https://github.com/KeyArgo/hermes-hackathon-2026.git` (GitHub mirror)
 
-**Workflow:** Push to `custodian-kernel` for ongoing dev. Push to `custodian-public` only for deliberate judge-facing releases.
+Judge-facing public kernel repo: `https://github.com/KeyArgo/custodian-kernel`
+
+**Workflow:** Push to `origin` for primary dev. Push to `custodian-kernel` remote for judge-facing kernel releases.
 
 ---
 
@@ -50,20 +52,22 @@ CLOUDFLARE_API_TOKEN=$(ARGO_CREDENTIAL_AGENT=claude ARGO_CREDENTIAL_MODE=trusted
 # Update --project-name once CF Pages project is renamed to custodian-kernel
 ```
 
-### Flask Backend: `rein-local.argobox.com` → `api.getcustodian.xyz`
+### Flask Backend — Primary and Secondary
 
-Cloudflare Tunnel → Flask app on **argobox-lite** (10.0.0.199) at port 8094.  
-App lives at `/tmp/hermes-dash-v4/` on argobox-lite.  
-PID file: `/tmp/hermes-dash-v4.pid`
+**Primary:** argobox-lite (10.0.0.199:8094) — full functionality (NemoClaw sandbox lives here).  
+Reached via Cloudflare Tunnel at `rein-local.argobox.com`.  
+App lives at `/tmp/hermes-dash-v4/dashboard/` on argobox-lite.
 
-Flask restart (NEVER use pkill -f on this):
+**Secondary (Titan):** 100.68.107.42:8094 — read endpoints + degraded operator; no NemoClaw sandbox.  
+App lives at `/opt/custodian-dash/dashboard/` on Titan.
+
+The CF Worker (`_worker.js`) tries primary first with a 4s timeout, falls back to Titan with an 8s timeout. Inference-heavy paths (`/api/v1/nemotron/*`, `/api/v1/triage/custom`) use a 25s timeout on both.
+
+Sync both nodes after any backend change:
 ```bash
-ARGO_CREDENTIAL_AGENT=claude ARGO_CREDENTIAL_MODE=trusted-local abx-ssh argobox-lite -- bash -lc '
-  kill -TERM $(cat /tmp/hermes-dash-v4.pid) && sleep 2
-  cd /tmp/hermes-dash-v4/dashboard
-  nohup /tmp/hermes-dash-venv/bin/python app.py > /tmp/hermes-dash-v4.out 2>&1 &
-  echo $! > /tmp/hermes-dash-v4.pid
-'
+cd /mnt/homes/galileo/argo/Development/hermes-hackathon-2026
+bash deploy-kernel.sh           # syncs custodian/ + dashboard/ to both nodes, restarts Flask
+SKIP_SPARK=1 bash deploy-kernel.sh   # argobox-lite only (if Spark is down)
 ```
 
 ### Request Routing (`_worker.js`)
@@ -72,13 +76,42 @@ ARGO_CREDENTIAL_AGENT=claude ARGO_CREDENTIAL_MODE=trusted-local abx-ssh argobox-
 getcustodian.xyz/              → index.html (CF Pages static)
 getcustodian.xyz/hermes        → hermes.html (CF Pages static)
 getcustodian.xyz/operator      → operator.html (CF Pages static)
-getcustodian.xyz/triage        → Flask (proxied via _worker.js)
-getcustodian.xyz/api/v1/*      → Flask (proxied via _worker.js)
+getcustodian.xyz/triage        → triage.html (CF Pages static)
+getcustodian.xyz/api/v1/*      → Flask (proxied via _worker.js, with failover)
 ```
 
-**CRITICAL:** `/operator` must NOT be in `PROXY_EXACT` in `_worker.js`. It was previously proxied to Flask, which meant static edits to `pages-frontend/operator.html` had no effect. It is now correctly a CF Pages static asset.
+**CRITICAL:** `/operator` and `/triage` are CF Pages static assets, NOT proxied. Static edits
+to `pages-frontend/operator.html` or `triage.html` take effect on next `deploy.sh` run.
 
 All JS in the frontend uses relative URLs (`/api/v1/...`). No hardcoded `rein-local.argobox.com` should appear in browser-facing code.
+
+### Kernel Enforcement — DGX Spark primary, argobox-lite fallback
+
+`custodian/custodian/policy/enforcer.py` wraps `decide()` with a remote-first pattern:
+
+1. **DGX Spark** (`http://192.168.50.20:8095/decide`) — airgapped enforcement node, primary.
+   Runs `spark-enforcement/enforce_server.py` on the Spark host.
+2. **argobox-lite local** (`custodian.policy.evaluator.decide()`) — silent automatic fallback
+   if Spark is unreachable (network blip, reboot, timeout of 1s).
+
+DGX Spark runs enforcement **only**. It does NOT run inference. All Nemotron inference is
+cloud-side — see Nemotron Inference below.
+
+Runtime toggle: `SPARK_ENFORCE_URL=''` env var or `/tmp/spark-enforcement-disabled` flag file
+disables Spark and forces local-only enforcement without a restart.
+
+### Nemotron Inference — NVIDIA NIM primary, OpenRouter fallback
+
+`custodian/inference/router.py` (`NemoClawRouter`) tries endpoints in order:
+
+1. **NVIDIA NIM** (`https://integrate.api.nvidia.com/v1/chat/completions`) — primary, billed.
+   Key: `NVIDIA_API_KEY` or `dashboard/secrets/nvidia.env`.
+2. **OpenRouter** (`https://openrouter.ai/api/v1/chat/completions`) — fallback.
+   Key: `OPENROUTER_API_KEY` or `dashboard/secrets/openrouter.env`.
+   Default fallback model: `nvidia/llama-3.3-nemotron-super-49b-v1` (override with `OPENROUTER_FALLBACK_MODEL`).
+
+Cloud endpoints with no key configured are skipped silently. If all endpoints fail, the
+dashboard returns HTTP 502.
 
 ---
 
