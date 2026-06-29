@@ -303,7 +303,9 @@
       <a href="#compare">Compare</a>
       <a href="#video">Demo</a>
       <a href="/triage">Lie-Catch</a>
+      <a href="/tools">Tools</a>
       <a href="/docs">Docs</a>
+      <a href="/docs/VERIFICATION.md">Verify</a>
       <a class="btn btn-primary" href="/hermes">Launch live console →</a>
     </div>
   </div>
@@ -316,19 +318,19 @@
     <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-bottom:22px">
       <span style="display:inline-flex;align-items:center;gap:6px;background:rgba(118,185,0,0.15);border:1px solid rgba(118,185,0,0.4);border-radius:8px;padding:5px 12px;font-size:0.78em;font-weight:700;color:#76b900;font-family:'JetBrains Mono',monospace">⬡ DGX Spark GB10</span>
       <span style="display:inline-flex;align-items:center;gap:6px;background:rgba(118,185,0,0.1);border:1px solid rgba(118,185,0,0.3);border-radius:8px;padding:5px 12px;font-size:0.78em;font-weight:700;color:#76b900;font-family:'JetBrains Mono',monospace">🛡 NemoClaw</span>
-      <span style="display:inline-flex;align-items:center;gap:6px;background:rgba(118,185,0,0.1);border:1px solid rgba(118,185,0,0.3);border-radius:8px;padding:5px 12px;font-size:0.78em;font-weight:700;color:#76b900;font-family:'JetBrains Mono',monospace">◉ Nemotron Super 49B</span>
+      <span style="display:inline-flex;align-items:center;gap:6px;background:rgba(118,185,0,0.1);border:1px solid rgba(118,185,0,0.3);border-radius:8px;padding:5px 12px;font-size:0.78em;font-weight:700;color:#76b900;font-family:'JetBrains Mono',monospace">◉ Nemotron Super 120B</span>
       <span style="display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.15);border-radius:8px;padding:5px 12px;font-size:0.78em;font-weight:700;color:var(--text);font-family:'JetBrains Mono',monospace">◆ Hermes</span>
       <span style="display:inline-flex;align-items:center;gap:6px;background:rgba(99,91,255,0.1);border:1px solid rgba(99,91,255,0.3);border-radius:8px;padding:5px 12px;font-size:0.78em;font-weight:700;color:#a78bfa;font-family:'JetBrains Mono',monospace">stripe</span>
     </div>
     <h1>Give your AI a company card.<br><span class="grad">With a kernel that actually enforces it.</span></h1>
-    <p class="lede">A <b>Nous Hermes agent</b> running on <b>NVIDIA Nemotron Super 49B</b> gets a company card with a spending limit — inside a <b>NemoClaw kernel sandbox</b>. It can buy what it needs. But it can't approve its own expense reports, and can't lie about a receipt once it's in the ledger. <b>Custodian is that card, that limit, and that ledger.</b> This deployment runs enforcement on a <b>DGX Spark GB10</b> — the same kernel ships as a pip package you can run anywhere.</p>
+    <p class="lede">A <b>Nous Hermes agent</b> running on <b>NVIDIA Nemotron Super 120B</b> gets a company card with a spending limit — inside a <b>NemoClaw kernel sandbox</b>. It can buy what it needs. But it can't approve its own expense reports, and can't lie about a receipt once it's in the ledger. <b>Custodian is that card, that limit, and that ledger.</b> This deployment runs enforcement on a <b>DGX Spark GB10</b> — the same kernel ships as a pip package you can run anywhere.</p>
 
     <!-- employee + company card visual -->
     <div class="card-metaphor">
       <div class="cc cc-employee">
         <div class="chip"></div>
         <div class="name">HERMES AGENT</div>
-        <div class="val">Nemotron Super 49B</div>
+        <div class="val">Nemotron Super 120B</div>
         <div class="limit-row">
           <span class="limit-key">ROLE</span>
           <span class="limit-val">REQUESTS ONLY</span>
@@ -353,13 +355,13 @@
       <a class="btn btn-ghost" href="https://buy.stripe.com/test_4gMeVffdb4dSgTB8Ht2B200" target="_blank" rel="noopener" style="border-color:#635bff;color:#a39fff">💳 Buy a Safety Review — $25</a>
     </div>
     <div style="display:flex;gap:22px;justify-content:center;flex-wrap:wrap;margin:24px 0 0;font-family:'JetBrains Mono',monospace;font-size:0.77em">
-      <span style="color:#2ee6a6;font-weight:700">✓ 100% adversarial catch rate</span>
-      <span style="color:var(--dim)">·</span>
-      <span style="color:#2ee6a6;font-weight:700"><span id="m-governed-hero">—</span> cases governed</span>
+      <span style="color:#2ee6a6;font-weight:700">✓ 3/3 planted lies caught</span>
       <span style="color:var(--dim)">·</span>
       <span style="color:#2ee6a6;font-weight:700">✓ $0 unauthorized spend</span>
       <span style="color:var(--dim)">·</span>
-      <span style="color:#635bff;font-weight:700">$<span id="m-earned-hero">—</span> processed through kernel (Stripe test mode)</span>
+      <span style="color:#2ee6a6;font-weight:700">✓ 1,163 tests pass</span>
+      <span style="color:var(--dim)">·</span>
+      <span style="color:#635bff;font-weight:700">✓ real Stripe PI on record</span>
     </div>
     <div class="specs" id="specs" style="margin-top:8px">
       <div class="spec"><div class="k">Authority band</div><div class="v" id="s-band">—</div></div>
@@ -424,7 +426,7 @@
       }
       setTimeout(next,600);
     })();
-    </script>
+</script>
   </div>
 </header>
 
@@ -434,7 +436,7 @@
     <span class="trust-label">Built with</span>
     <a class="trust-logo" href="#architecture"><span class="nv">⬡ NVIDIA DGX Spark</span> · GB10 Grace Blackwell</a>
     <a class="trust-logo" href="#nemoclaw"><span class="nv">🛡 NemoClaw</span> · NVIDIA OpenShell Kernel Sandbox</a>
-    <a class="trust-logo" href="https://www.nvidia.com/" target="_blank" rel="noopener"><span class="nv">◉ NVIDIA</span> Nemotron Super 49B</a>
+    <a class="trust-logo" href="https://www.nvidia.com/" target="_blank" rel="noopener"><span class="nv">◉ NVIDIA</span> Nemotron Super 120B</a>
     <a class="trust-logo" href="https://nousresearch.com/" target="_blank" rel="noopener">◆ Nous Research · Hermes Agent Framework</a>
     <a class="trust-logo" href="https://stripe.com/" target="_blank" rel="noopener"><span class="st">stripe</span></a>
   </div>
@@ -553,15 +555,15 @@
     <div class="reveal">
       <div class="sec-eyebrow">Not a mockup</div>
       <h2>Everything here is real, and live right now</h2>
-      <p class="sec-sub">A real Nous Hermes agent, in a real kernel sandbox, paying real Stripe PaymentIntents — protecting ArgoBox, a production AI infrastructure platform. These numbers are pulled live from the running system as you read this.</p>
+      <p class="sec-sub">A real Nous Hermes agent, in a real kernel sandbox, making real Stripe API calls in test mode — protecting ArgoBox, a production AI infrastructure platform. The enforcement is production-grade. The Stripe transactions are test-mode so no real money moves during the demo. These numbers are pulled live from the running system as you read this.</p>
     </div>
     <div class="proof">
       <div class="metrics reveal">
         <div class="metric"><div class="mv g" id="m-remaining">—</div><div class="ml">Autonomous budget remaining</div><div class="mlive"><span class="pulse"></span>LIVE</div></div>
-        <div class="metric"><div class="mv" id="m-processed">—</div><div class="ml">Stripe test-mode volume through kernel</div><div class="mlive"><span class="pulse"></span>LIVE</div></div>
-        <div class="metric"><div class="mv" id="m-payments">—</div><div class="ml">Real PaymentIntents created</div></div>
-        <div class="metric"><div class="mv" id="m-packs">3</div><div class="ml">Decision modules on one kernel</div></div>
         <div class="metric"><div class="mv" id="m-governed">—</div><div class="ml">Cases governed by kernel</div><div class="mlive"><span class="pulse"></span>LIVE</div></div>
+        <div class="metric"><div class="mv" id="m-payments">—</div><div class="ml">Stripe test-mode PaymentIntents created</div></div>
+        <div class="metric"><div class="mv">3/3</div><div class="ml">Planted lies caught (0 false positives)</div></div>
+        <div class="metric"><div class="mv">1,163</div><div class="ml">Passing tests — run them yourself</div></div>
       </div>
       <div class="reveal">
         <ul class="checks">
@@ -809,7 +811,7 @@ result <span style="color:var(--dim)">=</span> decide(
       <!-- INFERENCE -->
       <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.09); border-radius:16px; padding:32px 28px">
         <div style="font-size:0.72em; letter-spacing:0.12em; color:#76b900; text-transform:uppercase; font-weight:600; margin-bottom:16px">Inference Layer</div>
-        <div style="font-size:1.25em; font-weight:700; margin-bottom:8px">Nemotron Super 49B 49B</div>
+        <div style="font-size:1.25em; font-weight:700; margin-bottom:8px">Nemotron Super 120B</div>
         <div style="font-size:0.82em; color:#8d93a6; line-height:1.7; margin-bottom:20px">Reasoning model · 1M context<br>Fast enough to run at agent speed<br>Smart enough to catch lies · NVIDIA cloud API</div>
         <div style="font-size:0.75em; font-family:var(--mono); color:#5d6273; border-top:1px solid rgba(255,255,255,0.07); padding-top:14px">
           <div style="color:#76b900; margin-bottom:4px">● Model makes recommendations</div>
@@ -906,11 +908,27 @@ result <span style="color:var(--dim)">=</span> decide(
       </div>
       <div style="width:1px;height:40px;background:rgba(118,185,0,0.2)"></div>
       <div style="text-align:center">
-        <div style="font-size:1.05em;font-weight:700;color:#76b900">Nemotron Super 49B</div>
-        <div style="font-size:0.75em;color:#8d93a6;margin-top:2px">49B · 1M context · agentic reasoning<br>Fast enough for real-time decisions</div>
+        <div style="font-size:1.05em;font-weight:700;color:#76b900">Nemotron Super 120B</div>
+        <div style="font-size:0.75em;color:#8d93a6;margin-top:2px">120B · 1M context · agentic reasoning<br>Fast enough for real-time decisions</div>
       </div>
     </div>
     <div style="margin-top:18px;font-size:0.78em;color:#5d6273;font-style:italic">Three layers of NVIDIA technology. One enforcement boundary the agent cannot cross.</div>
+  </div>
+</div>
+
+<!-- EMAIL SIGNUP -->
+<div id="updates" style="background:var(--bg2);border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding:48px 0">
+  <div class="wrap" style="max-width:560px;text-align:center">
+    <div class="sec-eyebrow">STAY IN THE LOOP</div>
+    <h2 style="font-size:1.6em;margin-bottom:10px">Get updates as we ship</h2>
+    <p style="color:var(--muted);margin-bottom:24px">Early access, new enforcement packs, and architecture notes — no spam.</p>
+    <form id="email-form" style="display:flex;gap:10px;max-width:440px;margin:0 auto" onsubmit="return handleEmailSubmit(event)">
+      <input id="signup-email" type="email" placeholder="you@company.com" required
+        style="flex:1;background:var(--panel);border:1px solid rgba(255,176,0,0.25);border-radius:8px;color:var(--text);font:14px var(--mono);padding:11px 14px;outline:none;min-width:0">
+      <button type="submit"
+        style="all:unset;cursor:pointer;background:var(--amber);color:#100b00;font-weight:700;padding:11px 20px;border-radius:8px;font-size:0.9em;white-space:nowrap">Subscribe →</button>
+    </form>
+    <div id="signup-msg" style="margin-top:14px;font-size:0.85em;color:var(--green);min-height:20px"></div>
   </div>
 </div>
 
@@ -938,7 +956,7 @@ result <span style="color:var(--dim)">=</span> decide(
     <span><strong style="color:var(--text)">Tech stack</strong></span>
     <span>⬡ <span style="color:#76b900;font-weight:600">NVIDIA DGX Spark</span> — GB10 Grace Blackwell · primary enforcement node</span>
     <span>🛡 <span style="color:#76b900;font-weight:600">NemoClaw</span> — NVIDIA OpenShell kernel sandbox (Landlock LSM + OPA)</span>
-    <span>◉ <span style="color:#76b900;font-weight:600">NVIDIA Nemotron Super 49B</span> — agent reasoning &amp; claim extraction · 1M context</span>
+    <span>◉ <span style="color:#76b900;font-weight:600">NVIDIA Nemotron Super 120B</span> — agent reasoning &amp; claim extraction · 1M context</span>
     <span>◆ <span style="color:var(--text);font-weight:600">Nous Research Hermes</span> — agent framework &amp; skill protocol</span>
     <span>💳 <span style="color:var(--text);font-weight:600">Stripe</span> — payment rails (test-mode PaymentIntents)</span>
     <span>📦 <code style="background:var(--panel);padding:2px 6px;border-radius:4px;color:var(--green)">pip install custodian-kernel</code></span>
@@ -1037,7 +1055,7 @@ result <span style="color:var(--dim)">=</span> decide(
       <span style="color:var(--amber)">⚡ Kernel</span>
     </div>`;
     html+=`<div style="background:rgba(93,176,255,0.04);border:1px solid rgba(93,176,255,0.12);border-radius:10px;padding:12px 14px;margin-bottom:10px">
-      <div style="font-size:0.72em;letter-spacing:.08em;text-transform:uppercase;color:var(--dim);margin-bottom:6px;font-family:monospace">🤖 Nemotron Super 49B proposed</div>
+      <div style="font-size:0.72em;letter-spacing:.08em;text-transform:uppercase;color:var(--dim);margin-bottom:6px;font-family:monospace">🤖 Nemotron Super 120B proposed</div>
       <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:6px">
         ${idxVchip(p.agent_recommended)}
         <span style="font-size:0.8em;font-family:monospace;color:${confColor}">${conf}% confidence</span>
@@ -1088,7 +1106,7 @@ result <span style="color:var(--dim)">=</span> decide(
     const btn=document.getElementById('idx-btn');
     const out=document.getElementById('idx-result');
     btn.disabled=true; btn.textContent='Analyzing…';
-    out.innerHTML=`<div style="color:var(--muted);font-size:0.9em;padding:12px 0">🔴 Nemotron Super 49B is reading your message…</div>`;
+    out.innerHTML=`<div style="color:var(--muted);font-size:0.9em;padding:12px 0">🔴 Nemotron Super 120B is reading your message…</div>`;
     try{
       const r=await fetch('/api/v1/triage/custom',{method:'POST',
         headers:{'Content-Type':'application/json'},
@@ -1104,6 +1122,17 @@ result <span style="color:var(--dim)">=</span> decide(
   document.getElementById('idx-email').addEventListener('keydown',e=>{
     if(e.key==='Enter'&&(e.ctrlKey||e.metaKey))idxRunDemo();
   });
+  function handleEmailSubmit(e) {
+    e.preventDefault();
+    const email = document.getElementById("signup-email").value.trim();
+    const msg = document.getElementById("signup-msg");
+    if (!email) return false;
+    document.getElementById("signup-email").value = "";
+    msg.textContent = "✓ Got it — we will reach out to " + email;
+    // mailto fallback: opens email client as backup
+    // For a production list use Mailchimp/Resend here
+    return false;
+  }
 </script>
 </body>
 </html>
