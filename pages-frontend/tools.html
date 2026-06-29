@@ -139,8 +139,8 @@ footer{border-top:1px solid var(--line);padding:32px 0;color:var(--dim);font-siz
 
     <div class="summary-strip" id="summary-strip">
       <div class="sum-cell"><div class="sum-v" id="total-count">—</div><div class="sum-l">Total tools</div></div>
-      <div class="sum-cell"><div class="sum-v" id="configured-count" style="color:var(--green)">—</div><div class="sum-l">Configured</div></div>
-      <div class="sum-cell"><div class="sum-v" id="stub-count" style="color:var(--dim)">—</div><div class="sum-l">Stubs</div></div>
+      <div class="sum-cell"><div class="sum-v" id="configured-count" style="color:var(--green)">—</div><div class="sum-l">Ready out of the box</div></div>
+      <div class="sum-cell"><div class="sum-v" id="stub-count" style="color:var(--dim)">—</div><div class="sum-l">Optional integrations</div></div>
     </div>
   </div>
 </div>
@@ -154,7 +154,7 @@ footer{border-top:1px solid var(--line);padding:32px 0;color:var(--dim);font-siz
     <div class="bl-item"><div class="bl-dot" style="background:var(--amber)"></div> L3 · Always requires human approval</div>
     <div class="bl-item"><div class="bl-dot" style="background:var(--red)"></div> L4 · Unlimited — always escalates</div>
     <div class="bl-item" style="margin-left:auto;color:var(--green)">■ Green border = configured</div>
-    <div class="bl-item" style="color:var(--dim)">■ Grey border = stub (set env vars)</div>
+    <div class="bl-item" style="color:var(--dim)">■ Grey border = optional (bring your own credentials)</div>
   </div>
 
   <div class="filter-bar">
@@ -224,7 +224,7 @@ function renderCard(t) {
     </div>
     <div class="tc-desc">${t.description}</div>
     <div class="tc-foot">
-      <span class="tc-status ${t.configured ? 'configured' : 'stub'}">${t.configured ? '✓ configured' : '○ stub'}</span>
+      <span class="tc-status ${t.configured ? 'configured' : 'stub'}">${t.configured ? '✓ ready' : '○ optional'}</span>
       ${tags}${cost}
     </div>
   </div>`;

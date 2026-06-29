@@ -7,6 +7,7 @@ have to guess what's wrong from a generic parse traceback.
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Optional
 
 import yaml
 
@@ -14,7 +15,9 @@ from custodian.exceptions import PolicyNotFoundError, PolicyValidationError
 from custodian.policy.schema import (
     BandConfig,
     EscalationConfig,
+    MarginsConfig,
     MatchCondition,
+    PoliciesConfig,
     Policy,
     Rule,
 )
@@ -28,12 +31,26 @@ def _parse_band(raw: dict, name: str) -> BandConfig:
         raise PolicyValidationError(
             f"unknown band name '{name}' (valid: {[b.value for b in Band]})"
         )
+    # Opt-in directives: parsed here, validated in BandConfig.validate().
+    daily_envelope = raw.get("daily_envelope")
+    band_after_task_raw = raw.get("band_after_task")
+    band_after_task: Optional[Band] = None
+    if band_after_task_raw is not None:
+        try:
+            band_after_task = Band(band_after_task_raw)
+        except ValueError:
+            raise PolicyValidationError(
+                f"band {band.value}: unknown band_after_task "
+                f"'{band_after_task_raw}' (valid: {[b.value for b in Band]})"
+            )
     return BandConfig(
         name=band,
         max_spend=raw.get("max_spend"),
         requires_approval=bool(raw.get("requires_approval", False)),
         approval_backend=raw.get("approval_backend"),
         description=raw.get("description", ""),
+        daily_envelope=(float(daily_envelope) if daily_envelope is not None else None),
+        band_after_task=band_after_task,
     )
 
 
@@ -94,6 +111,28 @@ def parse_policy(raw: dict) -> Policy:
         retry_count=int(esc_raw.get("retry_count", 0)),
     )
 
+    # Opt-in: top-level `margins:` block. If absent, no margin gate is
+    # enforced anywhere — same behavior as before this feature shipped.
+    margins: Optional[MarginsConfig] = None
+    margins_raw = raw.get("margins")
+    if margins_raw is not None:
+        if not isinstance(margins_raw, dict):
+            raise PolicyValidationError("'margins' must be a mapping")
+        margins = MarginsConfig(
+            minimum_margin=margins_raw.get("minimum_margin"),
+            minimum_margin_pct=margins_raw.get("minimum_margin_pct"),
+        )
+
+    # Opt-in: top-level `policies:` block. Defaults to PoliciesConfig()
+    # (no toggles set) so existing tests that don't read this field are
+    # unaffected. We materialize a real PoliciesConfig rather than None
+    # because the check looks for `no_self_dealing = True` and the default
+    # of False is the safe, opt-out value.
+    policies_raw = raw.get("policies")
+    policies = PoliciesConfig(
+        no_self_dealing=bool((policies_raw or {}).get("no_self_dealing", False)),
+    )
+
     try:
         default_band = Band(raw["default_band"])
     except ValueError:
@@ -107,6 +146,8 @@ def parse_policy(raw: dict) -> Policy:
         bands=bands,
         rules=rules,
         escalation=escalation,
+        margins=margins,
+        policies=policies,
     )
     policy.validate()
     return policy

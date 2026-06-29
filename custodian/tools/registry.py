@@ -60,8 +60,15 @@ _ENV_REQUIREMENTS: dict[str, list[str]] = {
     "calendar-list":             ["GOOGLE_CALENDAR_TOKEN"],
     "calendar-create":           ["GOOGLE_CALENDAR_TOKEN"],
     "calendar-update":           ["GOOGLE_CALENDAR_TOKEN"],
+    "calendar-event-list":       ["GOOGLE_CALENDAR_TOKEN"],
+    "calendar-event-create":     ["GOOGLE_CALENDAR_TOKEN"],
+    "cron-list":                 ["CUSTODIAN_DB_PATH"],
+    "cron-create":               ["CUSTODIAN_DB_PATH"],
+    "cron-delete":               ["CUSTODIAN_DB_PATH"],
     # Modal
     "modal-run":                 ["MODAL_TOKEN_ID", "MODAL_TOKEN_SECRET"],
+    "modal-invoke":              ["MODAL_TOKEN_ID", "MODAL_TOKEN_SECRET"],
+    "modal-deploy":              ["MODAL_TOKEN_ID", "MODAL_TOKEN_SECRET"],
     # Cloud Storage (S3-compatible)
     "s3-list":                   ["AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY"],
     "s3-get":                    ["AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY"],
@@ -79,6 +86,11 @@ _ENV_REQUIREMENTS: dict[str, list[str]] = {
     "github-file-read":          ["GITHUB_TOKEN"],
     "github-release-list":       ["GITHUB_TOKEN"],
     "github-release-create":     ["GITHUB_TOKEN"],
+    "github-issue-list":         ["GITHUB_TOKEN"],
+    "github-repo-list":          ["GITHUB_TOKEN"],
+    "github-comment":            ["GITHUB_TOKEN"],
+    "slack-channel-list":        ["SLACK_BOT_TOKEN"],
+    "modal-function-list":       ["MODAL_TOKEN_ID", "MODAL_TOKEN_SECRET"],
     # AI Inference
     "openai-chat":               ["OPENAI_API_KEY"],
     "anthropic-chat":            ["ANTHROPIC_API_KEY"],

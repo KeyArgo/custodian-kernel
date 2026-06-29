@@ -7,7 +7,8 @@ from custodian.cli import (
     cmd_init, cmd_validate, cmd_status, cmd_audit, cmd_request, cmd_approve,
     cmd_deny, cmd_kill, cmd_resume,
 )
-from custodian.cli import cmd_tools, cmd_demo_verify
+from custodian.cli import cmd_tools, cmd_demo_verify, cmd_earn_and_buy
+from custodian.cli import cmd_status_enhanced, cmd_poison_tests, cmd_beancount, cmd_confirm
 from custodian.config import CustodianConfig
 
 
@@ -75,6 +76,23 @@ def main(argv: list[str] | None = None) -> int:
 
     p = sub.add_parser("demo-verify", help="Run 4 hardcoded claim-verification scenarios (no credentials needed)")
     p.set_defaults(func=cmd_demo_verify.run)
+
+    p = sub.add_parser("earn-and-buy", help="Close the full economic cycle on camera (test mode only, no credentials needed)")
+    p.set_defaults(func=cmd_earn_and_buy.run)
+
+    p = sub.add_parser("status-banner", help="Show kernel state in a one-screen banner (totals + last 5 entries)")
+    p.set_defaults(func=cmd_status_enhanced.run)
+
+    p = sub.add_parser("poison-tests", help="Run 5 planted-bad-claim tests through the verifier")
+    p.set_defaults(func=cmd_poison_tests.run)
+
+    p = sub.add_parser("beancount", help="Export audit ledger to Beancount v2 format")
+    p.add_argument("--since", help="Filter entries on or after this date (YYYY-MM-DD)")
+    p.set_defaults(func=cmd_beancount.run)
+
+    p = sub.add_parser("confirm", help="Confirm a request-id within the 60s deadline (marks VERIFIED/UNVERIFIED)")
+    p.add_argument("request_id", help="The request-id returned by `custodian request`")
+    p.set_defaults(func=cmd_confirm.run)
 
     # tools subcommand
     tools_parser = sub.add_parser("tools", help="List and invoke Custodian-governed tools")

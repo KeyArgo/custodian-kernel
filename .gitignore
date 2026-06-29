@@ -9,3 +9,5 @@ build/
 *.db-shm
 secrets/*.env
 state-snapshot/
+custodian/custodian/
+export/

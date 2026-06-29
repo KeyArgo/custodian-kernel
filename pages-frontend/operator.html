@@ -622,7 +622,8 @@ function opNemoOpen() {
             body: JSON.stringify({ question: greeting, history: opNemoHistory.slice(-6), page: 'operator' })
         }).then(r=>r.json()).then(d => {
             thinking.remove();
-            const ans = d.answer || "I'm Nemotron — ask me about any of the demo steps.";
+            const raw = d.answer || "I'm Nemotron — ask me about any of the demo steps.";
+            const ans = raw.replace(/\[\[(?:jump|entry|suggest):[^\]]*\]\]/g, '').trim();
             opNemoAddMsg(ans, 'bot');
         }).catch(() => {
             thinking.remove();
