@@ -355,16 +355,41 @@
   .hero-left .specs{display:inline-flex}
   .hero-right{display:flex;flex-direction:column;gap:14px;align-items:stretch}
   .ring-wrap{position:relative;width:100%;max-width:440px;margin:0 auto}
+  /* terminal must not overflow hero-right */
+  #vkit-wrap{min-width:0;width:100%}
+  #vkit-wrap pre{white-space:pre-wrap;word-break:break-all;overflow-x:hidden}
+  #kticker{min-width:0;width:100%}
   @keyframes ring-pulse{0%,100%{stroke-opacity:1}50%{stroke-opacity:0.45}}
   @keyframes core-pulse{0%,100%{opacity:1;r:12}50%{opacity:0.55;r:16}}
+  /* ring label classes — used to hide on small screens */
+  .ring-lbl{}
+  .ring-bands-legend{display:none}
   @media(max-width:860px){
-    .hero-split{grid-template-columns:1fr;gap:40px}
-    .hero-left{text-align:center}
+    .hero-split{grid-template-columns:1fr;gap:32px}
+    .hero-left{text-align:center;order:1}
     .hero-left .eyebrow{justify-content:center}
-    .hero-left h1{text-align:center}
-    .hero-left .lede{text-align:center;margin:0 auto 36px}
+    .hero-left h1{text-align:center;font-size:clamp(2.4em,7vw,3.2em)}
+    .hero-left .lede{text-align:center;margin:0 auto 28px}
     .hero-left .hero-cta{justify-content:center}
-    .hero-right{order:-1;max-width:380px;margin:0 auto}
+    /* ring below headline on tablet */
+    .hero-right{order:2;max-width:360px;margin:0 auto;width:100%}
+    .ring-wrap{max-width:320px}
+  }
+  @media(max-width:560px){
+    .hero{padding:72px 0 48px}
+    .hero-left h1{font-size:clamp(2em,8.5vw,2.8em)}
+    .ring-wrap{max-width:260px}
+    /* hide verbose ring labels — keep only L2 ACTIVE and center KERNEL */
+    .ring-lbl-l4,.ring-lbl-l3,.ring-lbl-l1,.ring-lbl-l0,.ring-lbl-allow{display:none}
+    /* show a compact HTML band legend instead */
+    .ring-bands-legend{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;
+      margin-top:8px;font-family:'JetBrains Mono',monospace;font-size:0.68em}
+    /* shrink specs table on phone */
+    .specs{flex-wrap:wrap;gap:8px}
+    .spec{min-width:140px}
+    /* hero-cta stacks on very small screens */
+    .hero-cta{flex-direction:column;align-items:center;gap:10px}
+    .hero-cta .btn{width:100%;max-width:280px;justify-content:center}
   }
 </style>
 </head>
@@ -474,23 +499,23 @@
 
             <!-- L4 outer ring (grey, locked) -->
             <circle cx="200" cy="200" r="178" fill="none" stroke="#2a2d3a" stroke-width="1.5" stroke-dasharray="6 5"/>
-            <text x="200" y="22" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9" fill="#3d4055" letter-spacing="1.5">L4 · HUMAN REQUIRED · UNLIMITED</text>
+            <text class="ring-lbl ring-lbl-l4" x="200" y="22" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9" fill="#3d4055" letter-spacing="1.5">L4 · HUMAN REQUIRED · UNLIMITED</text>
 
             <!-- L3 ring (red threshold) -->
             <circle cx="200" cy="200" r="148" fill="none" stroke="#ff5c5c" stroke-width="1.5" stroke-opacity="0.3" stroke-dasharray="5 4"/>
-            <text x="200" y="50" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9" fill="#ff5c5c" fill-opacity="0.55" letter-spacing="1">L3 · ALWAYS ESCALATES</text>
+            <text class="ring-lbl ring-lbl-l3" x="200" y="50" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9" fill="#ff5c5c" fill-opacity="0.55" letter-spacing="1">L3 · ALWAYS ESCALATES</text>
 
             <!-- L2 ring (amber, ACTIVE — main ring) -->
             <circle cx="200" cy="200" r="115" fill="none" stroke="#ffb000" stroke-width="2.5" filter="url(#gl-amber)" style="animation:ring-pulse 3.5s ease-in-out infinite"/>
-            <text x="200" y="82" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9.5" fill="#ffcf57" font-weight="700" letter-spacing="1.5">L2 · AUTONOMOUS UP TO CAP ▶ ACTIVE</text>
+            <text class="ring-lbl ring-lbl-l2" x="200" y="82" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9.5" fill="#ffcf57" font-weight="700" letter-spacing="1.5">L2 · AUTONOMOUS UP TO CAP ▶ ACTIVE</text>
 
             <!-- L1 ring (green) -->
             <circle cx="200" cy="200" r="80" fill="none" stroke="#2ee6a6" stroke-width="1.5" stroke-opacity="0.55" filter="url(#gl-green)"/>
-            <text x="200" y="120" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9" fill="#2ee6a6" fill-opacity="0.7" letter-spacing="1">L1 · FREE / TRIVIAL SIDE-EFFECTS</text>
+            <text class="ring-lbl ring-lbl-l1" x="200" y="120" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9" fill="#2ee6a6" fill-opacity="0.7" letter-spacing="1">L1 · FREE / TRIVIAL SIDE-EFFECTS</text>
 
             <!-- L0 ring (green, innermost) -->
             <circle cx="200" cy="200" r="50" fill="none" stroke="#2ee6a6" stroke-width="1.5" stroke-opacity="0.8"/>
-            <text x="200" y="150" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9" fill="#2ee6a6" letter-spacing="1">L0 · READ-ONLY</text>
+            <text class="ring-lbl ring-lbl-l0" x="200" y="150" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9" fill="#2ee6a6" letter-spacing="1">L0 · READ-ONLY</text>
 
             <!-- center kernel core -->
             <circle cx="200" cy="200" r="22" fill="rgba(255,176,0,0.08)" stroke="#ffb000" stroke-width="1.5"/>
@@ -507,8 +532,21 @@
             </g>
 
             <!-- Sector label: ALLOW zone -->
-            <text x="200" y="240" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" fill="#2ee6a6" fill-opacity="0.45" letter-spacing="1">VERIFIED · ALLOW</text>
+            <text class="ring-lbl ring-lbl-allow" x="200" y="240" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" fill="#2ee6a6" fill-opacity="0.45" letter-spacing="1">VERIFIED · ALLOW</text>
           </svg>
+        </div>
+
+        <!-- mobile-only band legend (desktop shows labels in SVG) -->
+        <div class="ring-bands-legend">
+          <span style="color:#5d6273">L4 locked</span>
+          <span style="color:var(--dim)">·</span>
+          <span style="color:rgba(255,92,92,0.7)">L3 escalate</span>
+          <span style="color:var(--dim)">·</span>
+          <span style="color:#ffcf57;font-weight:700">L2 ▶ ACTIVE</span>
+          <span style="color:var(--dim)">·</span>
+          <span style="color:#2ee6a6">L1 free</span>
+          <span style="color:var(--dim)">·</span>
+          <span style="color:#2ee6a6">L0 read</span>
         </div>
 
         <!-- live kernel decision ticker -->
