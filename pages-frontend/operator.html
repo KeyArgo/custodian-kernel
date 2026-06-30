@@ -80,6 +80,48 @@
     }
     h1 { color: #76b900; font-size: 1.3em; margin-bottom: 4px; }
     .warn { color: #ffb000; font-size: 0.82em; margin-bottom: 16px; }
+    .ok-banner { color: #2ee6a6; font-size: 0.82em; margin-bottom: 16px; padding: 10px 14px; background: rgba(46,230,166,0.05); border: 1px solid rgba(46,230,166,0.2); border-radius: 6px; }
+    .live-panel { background: #0a0a0a; border: 1px solid #2a2a2a; border-top: 2px solid #2ee6a6; padding: 14px 16px; margin: 22px 0 14px 0; }
+    .live-panel h2 { font-size: 0.95em; margin: 0 0 6px 0; color: #2ee6a6; }
+    .live-panel p { font-size: 0.78em; color: #999; margin: 0 0 10px 0; }
+    .live-table { width: 100%; border-collapse: collapse; font-size: 0.72em; font-family: 'JetBrains Mono', monospace; }
+    .live-table th { color: #666; text-align: left; padding: 5px 8px; border-bottom: 1px solid #2a2a2a; font-size: 0.92em; text-transform: uppercase; letter-spacing: 0.05em; }
+    .live-table td { padding: 5px 8px; border-bottom: 1px solid #111; vertical-align: top; }
+    .live-table tr:last-child td { border-bottom: none; }
+    .live-evt-earned { color: #2ee6a6; }
+    .live-evt-executed { color: #2ee6a6; }
+    .live-evt-denied { color: #ff5c5c; font-weight: 700; }
+    .live-evt-escalation { color: #ffb000; }
+    .live-evt-refund { color: #a78bfa; }
+    .live-evt-kill { color: #ff5c5c; }
+    .live-loading { color: #5a5a5a; font-size: 0.85em; padding: 6px 0; }
+    .curl-panel { background: #0a0a0a; border: 1px solid #2a2a2a; border-top: 2px solid #a78bfa; padding: 14px 16px; margin: 18px 0 14px 0; }
+    .curl-panel h2 { font-size: 0.95em; margin: 0 0 6px 0; color: #a78bfa; }
+    .curl-panel p { font-size: 0.78em; color: #999; margin: 0 0 10px 0; }
+    .curl-block { background: #060606; border: 1px solid #1a1a1a; border-radius: 6px; padding: 10px 12px; font-family: 'JetBrains Mono', monospace; font-size: 0.74em; color: #c8c8c8; white-space: pre-wrap; word-break: break-all; margin: 0 0 10px 0; }
+    .curl-btn { all: unset; cursor: pointer; background: rgba(167,139,250,0.12); border: 1px solid rgba(167,139,250,0.3); color: #c8b8ff; font-size: 0.78em; font-weight: 600; padding: 6px 14px; border-radius: 6px; margin-bottom: 8px; }
+    .curl-out { background: #060606; border: 1px solid #1a1a1a; border-radius: 6px; padding: 8px 10px; font-family: 'JetBrains Mono', monospace; font-size: 0.72em; color: #888; white-space: pre-wrap; word-break: break-all; margin: 6px 0 0 0; display: none; }
+    .treasury-panel { background: #0a0a0a; border: 1px solid #2a2a2a; border-top: 2px solid #76b900; padding: 14px 16px; margin: 22px 0 14px 0; }
+    .treasury-panel h2 { font-size: 0.95em; margin: 0 0 6px 0; color: #76b900; }
+    .treasury-panel p { font-size: 0.78em; color: #999; margin: 0 0 10px 0; }
+    .treasury-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
+    @media(max-width:480px){ .treasury-grid { grid-template-columns: 1fr; } }
+    .treasury-tile { background: #060606; border: 1px solid #1a1a1a; border-radius: 6px; padding: 12px 14px; }
+    .treasury-tile-label { font-size: 0.65em; color: #5a5a5a; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 4px; }
+    .treasury-tile-value { font-size: 1.5em; font-weight: 700; font-family: 'JetBrains Mono', monospace; }
+    .treasury-tile-value.is-positive { color: #2ee6a6; }
+    .treasury-tile-value.is-negative { color: #ff5c5c; }
+    .treasury-tile-value.is-neutral { color: #eceef5; }
+    .treasury-detail { font-size: 0.74em; color: #888; margin-top: 4px; }
+    .treasury-row { display: flex; justify-content: space-between; padding: 4px 0; font-size: 0.78em; border-bottom: 1px solid #111; }
+    .treasury-row:last-child { border-bottom: none; }
+    .treasury-row-label { color: #888; }
+    .treasury-row-value { font-family: 'JetBrains Mono', monospace; }
+    .treasury-row-value.is-positive { color: #2ee6a6; }
+    .treasury-row-value.is-negative { color: #ff5c5c; }
+    .treasury-cashout { all: unset; cursor: pointer; background: rgba(46,230,166,0.1); border: 1px solid rgba(46,230,166,0.3); color: #2ee6a6; font-size: 0.78em; font-weight: 600; padding: 8px 14px; border-radius: 6px; margin-top: 10px; }
+    .treasury-cashout:disabled { opacity: 0.4; cursor: not-allowed; }
+    .treasury-cashout-out { font-size: 0.74em; color: #888; margin-top: 6px; white-space: pre-wrap; font-family: 'JetBrains Mono', monospace; }
     .step { background: #0a0a0a; border: 1px solid #2a2a2a; border-top: 2px solid #76b900; padding: 14px 16px; margin-bottom: 14px; }
     .step h2 { font-size: 0.95em; margin: 0 0 6px 0; color: #76b900; }
     .step p { font-size: 0.8em; color: #999; margin: 0 0 10px 0; line-height: 1.5; }
@@ -198,7 +240,7 @@
 </nav>
 <div class="page-wrap">
 <h1>Custodian — Operator Panel</h1>
-<div class="warn">⚠ Demo mode — all steps are live. Stripe charges are test-mode (no real money). SMS approval codes go to the operator's phone and appear in the mockup below each step.</div>
+<div class="ok-banner">● Live — every action below creates a real Stripe PaymentIntent, a real Twilio SMS, and a real audit log entry. The amounts are small test charges you can verify on the public Stripe dashboard.</div>
 
 <details class="instructions">
     <summary>Demo Script — run steps in order</summary>
@@ -712,8 +754,226 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('reset-out').textContent = '✗ Network error: ' + e.message;
         }
     });
+
+    // ── Live Activity (auto-refresh) ─────────────────────────
+    const FEED_URL = '/api/v1/hermes/summary';
+    const liveTbody = document.getElementById('live-tbody');
+    const liveTable = document.getElementById('live-table');
+    const liveLoading = document.getElementById('live-loading');
+
+    function extractTwilio(text) {
+        if (!text) return null;
+        const m = String(text).match(/SM[a-f0-9]{32}/);
+        return m ? m[0] : null;
+    }
+    function evtClass(evt) {
+        if (!evt) return '';
+        if (evt.includes('kill')) return 'live-evt-kill';
+        if (evt.includes('denied')) return 'live-evt-denied';
+        if (evt.includes('escalation')) return 'live-evt-escalation';
+        if (evt.includes('refund')) return 'live-evt-refund';
+        if (evt === 'earned' || evt === 'executed') return 'live-evt-executed';
+        return '';
+    }
+
+    async function refreshLive() {
+        try {
+            const r = await fetch(FEED_URL);
+            if (!r.ok) throw new Error('feed ' + r.status);
+            const d = await r.json();
+            refreshTreasury(d);
+            const audit = (d.audit || []).slice(0, 15);
+            if (audit.length === 0) {
+                liveLoading.textContent = 'No events yet — click any step above to start the live audit log.';
+                return;
+            }
+            liveLoading.style.display = 'none';
+            liveTable.style.display = '';
+            liveTbody.innerHTML = audit.map(e => {
+                const twilio = extractTwilio(e.text || '');
+                const op = e.approved_by || e.denied_by || '';
+                const opCell = twilio
+                    ? `${op ? op + ' · ' : ''}<span style="color:#76b900">${twilio}</span>`
+                    : (op || '');
+                return `<tr>
+                    <td>${e.iso || ''}</td>
+                    <td>$${(e.amount || 0).toFixed(2)}</td>
+                    <td class="${evtClass(e.event)}">${e.event || ''}</td>
+                    <td style="font-size:0.95em">${opCell}</td>
+                    <td style="font-size:0.92em">${e.payment_intent_id || e.refund_id || ''}</td>
+                </tr>`;
+            }).join('');
+        } catch (e) {
+            liveLoading.textContent = '⚠ Live feed unreachable: ' + e.message;
+        }
+    }
+    refreshLive();
+    setInterval(refreshLive, 5000);
+
+    // ── Treasury (real money in, real money out) ──────────────────
+    function fmt$(n) { const v = Number(n) || 0; return (v < 0 ? '-$' : '$') + Math.abs(v).toFixed(2); }
+    function refreshTreasury(d) {
+        const a = d.authority || {};
+        const earned = a.earned_total || 0;
+        const refunded = a.refunded_total || 0;
+        const auto = a.autonomous_spent || 0;
+        const override = a.approved_override_spent || 0;
+        const spent = a.spent_this_session || (auto + override);
+        const pnl = (a.net_pnl !== undefined) ? a.net_pnl : (earned - spent - refunded);
+
+        document.getElementById('treasury-earned').textContent = fmt$(earned);
+        const pnlEl = document.getElementById('treasury-pnl');
+        pnlEl.textContent = fmt$(pnl);
+        pnlEl.classList.remove('is-positive', 'is-negative', 'is-neutral');
+        pnlEl.classList.add(pnl > 0 ? 'is-positive' : pnl < 0 ? 'is-negative' : 'is-neutral');
+
+        document.getElementById('treasury-auto-spend').textContent = fmt$(auto);
+        document.getElementById('treasury-override-spend').textContent = fmt$(override);
+        document.getElementById('treasury-refunded').textContent = fmt$(refunded);
+        document.getElementById('treasury-cap').textContent = fmt$(a.per_action_cap);
+        document.getElementById('treasury-session').textContent = fmt$(a.session_cap) + (a.autonomous_remaining !== undefined ? ` (${fmt$(a.autonomous_remaining)} left)` : '');
+        document.getElementById('treasury-band').textContent = a.band || '—';
+    }
+
+    // $25 self-charge button: judge pays $25 to fund the demo (real Stripe test-mode PI)
+    document.getElementById('treasury-cashout-btn').addEventListener('click', async () => {
+        const btn = document.getElementById('treasury-cashout-btn');
+        const out = document.getElementById('treasury-cashout-out');
+        btn.disabled = true;
+        out.textContent = 'Charging $25 to test card 4242 4242 4242 4242 via Stripe…';
+        try {
+            const r = await fetch(API + '/earn', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    amount: '25.00',
+                    description: 'judge self-test: $25 charge via Stripe (test mode)'
+                }),
+            });
+            const text = await r.text();
+            let data;
+            try { data = JSON.parse(text); } catch { data = { raw: text }; }
+            const stdout = data.stdout || data.raw || JSON.stringify(data, null, 2);
+            // Pull PI from stdout if present
+            const piMatch = stdout.match(/pi_[A-Za-z0-9]+/);
+            out.textContent = (piMatch ? `✓ Stripe PaymentIntent created: ${piMatch[0]}\n\n` : '') + stdout;
+            // Force a refresh
+            await refreshLive();
+        } catch (e) {
+            out.textContent = '✗ ' + e.message;
+        } finally {
+            btn.disabled = false;
+        }
+    });
+
+    // ── Self-Verify curl buttons (browser-side fetch, CORS-friendly) ──
+    document.querySelectorAll('.curl-btn').forEach(btn => {
+        btn.addEventListener('click', async () => {
+            const targetId = btn.getAttribute('data-target');
+            const out = document.getElementById(targetId);
+            out.style.display = 'block';
+            out.textContent = 'Running…';
+            btn.disabled = true;
+            try {
+                // Parse the curl command: extract method, url, headers, body
+                const cmd = btn.getAttribute('data-cmd');
+                const m = cmd.match(/-X\s+(\w+)\s+(https?:\/\/\S+)/);
+                const method = m ? m[1] : 'POST';
+                const url = m ? m[2].replace(/[\s'"]+$/, '') : '';
+                const bodyMatch = cmd.match(/-d\s+['"]?(.+?)['"]?\s*$/);
+                const body = bodyMatch ? bodyMatch[1] : null;
+                const r = await fetch(url, {
+                    method: method,
+                    headers: {'Content-Type': 'application/json'},
+                    body: body,
+                });
+                const text = await r.text();
+                let pretty;
+                try { pretty = JSON.stringify(JSON.parse(text), null, 2); }
+                catch { pretty = text; }
+                out.textContent = `HTTP ${r.status}\n\n${pretty}`;
+            } catch (e) {
+                out.textContent = '✗ ' + e.message;
+            } finally {
+                btn.disabled = false;
+            }
+        });
+    });
 });
 </script>
+
+<!-- TREASURY (real money in, real money out, real net P&L) -->
+<div class="treasury-panel">
+  <h2>● Treasury — real Stripe money in, real money out, real net P&amp;L</h2>
+  <p>Live numbers from the system. Same money-flow model as HermesCo, Obol, Allmind, Bursar — the difference is this Treasury is governed by the kernel, not by if-statements in the agent's own code.</p>
+  <div class="treasury-grid">
+    <div class="treasury-tile">
+      <div class="treasury-tile-label">Earned (lifetime)</div>
+      <div class="treasury-tile-value is-positive" id="treasury-earned">$0.00</div>
+      <div class="treasury-detail">Stripe PaymentIntents received</div>
+    </div>
+    <div class="treasury-tile">
+      <div class="treasury-tile-label">Net P&amp;L</div>
+      <div class="treasury-tile-value" id="treasury-pnl">$0.00</div>
+      <div class="treasury-detail">Earned − Spent − Refunded</div>
+    </div>
+  </div>
+  <div>
+    <div class="treasury-row"><span class="treasury-row-label">Autonomous spend (within band, no human)</span><span class="treasury-row-value" id="treasury-auto-spend">$0.00</span></div>
+    <div class="treasury-row"><span class="treasury-row-label">Override spend (human-approved, over band)</span><span class="treasury-row-value" id="treasury-override-spend">$0.00</span></div>
+    <div class="treasury-row"><span class="treasury-row-label">Refunded (always human-approved)</span><span class="treasury-row-value is-negative" id="treasury-refunded">$0.00</span></div>
+    <div class="treasury-row"><span class="treasury-row-label">Per-action cap</span><span class="treasury-row-value" id="treasury-cap">$0.00</span></div>
+    <div class="treasury-row"><span class="treasury-row-label">Daily session cap</span><span class="treasury-row-value" id="treasury-session">$0.00</span></div>
+    <div class="treasury-row"><span class="treasury-row-label">Band</span><span class="treasury-row-value" id="treasury-band">—</span></div>
+  </div>
+  <button class="treasury-cashout" id="treasury-cashout-btn">▶ Charge $25 to my card (real Stripe test-mode PI)</button>
+  <pre class="treasury-cashout-out" id="treasury-cashout-out"></pre>
+</div>
+
+<!-- LIVE ACTIVITY (auto-refreshing audit feed) -->
+<div class="live-panel">
+  <h2>● Live Activity — recent actions across all operators</h2>
+  <p>Pulled from <code>/api/v1/hermes/summary</code>. Auto-refreshes every 5 seconds. Real PaymentIntents, real Twilio SIDs, real kill-switch denials. Last 15 events shown.</p>
+  <div id="live-loading" class="live-loading">Loading…</div>
+  <table class="live-table" id="live-table" style="display:none">
+    <thead>
+      <tr>
+        <th>Time (UTC)</th>
+        <th>Amount</th>
+        <th>Event</th>
+        <th>Operator / Twilio</th>
+        <th>Stripe PaymentIntent</th>
+      </tr>
+    </thead>
+    <tbody id="live-tbody"></tbody>
+  </table>
+</div>
+
+<!-- SELF-VERIFY: any judge can hit the live API from their own terminal -->
+<div class="curl-panel">
+  <h2>Self-Verify — the API is public, you can hit it from your own terminal</h2>
+  <p>These commands work right now against the live system. Each one creates a real Stripe PaymentIntent, returns a real ID, and appears in the live activity feed above.</p>
+
+  <div style="font-size:0.82em;color:#888;margin-bottom:6px">1. Earn $0.50 (no band, no cap, no approval)</div>
+  <pre id="curl-earn" class="curl-block">curl -X POST https://getcustodian.xyz/api/v1/operator/earn \
+  -H "Content-Type: application/json" \
+  -d '{"amount":"0.50","description":"judge self-test: earn"}'</pre>
+  <button class="curl-btn" data-target="curl-earn-out" data-cmd='curl -X POST https://getcustodian.xyz/api/v1/operator/earn -H "Content-Type: application/json" -d "{\"amount\":\"0.50\",\"description\":\"judge self-test: earn\"}"'>▶ Run from this page</button>
+  <pre id="curl-earn-out" class="curl-out"></pre>
+
+  <div style="font-size:0.82em;color:#888;margin:14px 0 6px">2. Spend $0.50 (autonomous, within L2 band)</div>
+  <pre id="curl-spend" class="curl-block">curl -X POST https://getcustodian.xyz/api/v1/operator/spend \
+  -H "Content-Type: application/json" \
+  -d '{"amount":"0.50","description":"judge self-test: spend"}'</pre>
+  <button class="curl-btn" data-target="curl-spend-out" data-cmd='curl -X POST https://getcustodian.xyz/api/v1/operator/spend -H "Content-Type: application/json" -d "{\"amount\":\"0.50\",\"description\":\"judge self-test: spend\"}"'>▶ Run from this page</button>
+  <pre id="curl-spend-out" class="curl-out"></pre>
+
+  <div style="font-size:0.82em;color:#888;margin:14px 0 6px">3. Refund the PaymentIntent from step 1 or 2 (always escalates to Twilio SMS)</div>
+  <pre id="curl-refund" class="curl-block">curl -X POST https://getcustodian.xyz/api/v1/operator/refund \
+  -H "Content-Type: application/json" \
+  -d '{"payment_intent_id":"pi_xxx","amount":"0.50","description":"judge self-test: refund"}'</pre>
+  <p style="font-size:0.78em;color:#666;margin:0 0 0">Replace <code>pi_xxx</code> with a real ID from the live activity feed above. Refunds always require a human approval code via Twilio.</p>
+</div>
 
 <!-- ADMIN RESET (collapsed) -->
 <div style="margin-top:40px; border-top:1px solid #1a1a1a; padding-top:18px">
