@@ -6,7 +6,11 @@
 <title>Custodian — Operator Panel</title>
 <link rel="icon" type="image/svg+xml" href="/static/favicon-operator.svg">
 <style>
-    body { background: #060606; color: #e8e8e8; font-family: 'Courier New', monospace; padding: 0; max-width: 100%; margin: 0; }
+    body { background:
+        radial-gradient(circle at top left, rgba(118,185,0,0.06), transparent 26%),
+        radial-gradient(circle at top right, rgba(255,176,0,0.08), transparent 22%),
+        linear-gradient(180deg, #06070b 0%, #05060a 100%);
+      color: #e8e8e8; font-family: 'Courier New', monospace; padding: 0; max-width: 100%; margin: 0; }
     .page-wrap { max-width: 800px; margin: 0 auto; padding: 24px; }
     .site-nav { display: flex; align-items: center; gap: 4px; background: #030303;
         border-bottom: 1px solid #1a1a1a; padding: 0 20px; overflow-x: auto; }
@@ -21,33 +25,33 @@
     .site-nav .nav-sep { color: #2a2a2a; margin: 0 2px; }
     h1 { color: #76b900; font-size: 1.3em; margin-bottom: 4px; }
     .warn { color: #ffb000; font-size: 0.82em; margin-bottom: 16px; }
-    .step { background: #0a0a0a; border: 1px solid #2a2a2a; border-top: 2px solid #76b900; padding: 14px 16px; margin-bottom: 14px; }
+    .step { background: linear-gradient(180deg, rgba(18,23,35,0.96), rgba(10,13,20,0.98)); border: 1px solid rgba(255,255,255,0.08); border-top: 2px solid #76b900; padding: 14px 16px; margin-bottom: 14px; border-radius: 12px; box-shadow: 0 10px 22px rgba(0,0,0,0.18); }
     .step h2 { font-size: 0.95em; margin: 0 0 6px 0; color: #76b900; }
     .step p { font-size: 0.8em; color: #999; margin: 0 0 10px 0; line-height: 1.5; }
     .row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; align-items: center; }
-    input { background: #111; border: 1px solid #333; color: #e8e8e8; padding: 6px 8px; font-family: inherit; font-size: 0.85em; }
-    button { background: rgba(118,185,0,0.12); border: 1px solid #76b900; color: #76b900; padding: 7px 14px;
-        cursor: pointer; font-family: inherit; font-size: 0.85em; }
-    button:hover { background: rgba(118,185,0,0.25); }
+    input { background: rgba(0,0,0,0.38); border: 1px solid rgba(255,255,255,0.08); color: #e8e8e8; padding: 6px 8px; font-family: inherit; font-size: 0.85em; border-radius: 10px; box-shadow: inset 0 1px 0 rgba(255,255,255,0.02); }
+    button { background: linear-gradient(180deg, rgba(118,185,0,0.16), rgba(118,185,0,0.08)); border: 1px solid #76b900; color: #76b900; padding: 7px 14px;
+        cursor: pointer; font-family: inherit; font-size: 0.85em; border-radius: 999px; transition: transform .15s, background .15s, border-color .15s, color .15s; }
+    button:hover { background: rgba(118,185,0,0.25); transform: translateY(-1px); }
     button:disabled { opacity: 0.4; cursor: not-allowed; }
     .btn-copy { background: rgba(255,176,0,0.1); border-color: #ffb000; color: #ffb000; font-size: 0.75em; padding: 4px 10px; display: none; }
     .btn-copy.show { display: inline-block; }
     .btn-copy:hover { background: rgba(255,176,0,0.22); }
-    .out { background: #000; border: 1px solid #222; padding: 8px 10px; margin-top: 8px; font-size: 0.78em;
-        white-space: pre-wrap; max-height: 200px; overflow-y: auto; display: none; }
+    .out { background: linear-gradient(180deg, rgba(10,12,18,0.96), rgba(7,8,13,0.98)); border: 1px solid rgba(255,255,255,0.08); padding: 8px 10px; margin-top: 8px; font-size: 0.78em;
+        white-space: pre-wrap; max-height: 200px; overflow-y: auto; display: none; border-radius: 12px; box-shadow: inset 0 1px 0 rgba(255,255,255,0.02); }
     .out.show { display: block; }
     .out.err { border-color: #ff3b3b; color: #ff9b9b; }
     /* ---- SMS phone mockup ---- */
     .sms-banner { display: none; margin-top: 14px; }
     .sms-banner.show { display: block; }
-    .phone-wrap { background: #111; border: 2px solid #333; border-radius: 20px; padding: 12px 10px;
+    .phone-wrap { background: linear-gradient(180deg, rgba(18,23,35,0.98), rgba(10,13,20,0.98)); border: 1px solid rgba(255,255,255,0.08); border-radius: 20px; padding: 12px 10px;
         max-width: 320px; font-family: -apple-system, 'Helvetica Neue', sans-serif; }
     .phone-top { display: flex; align-items: center; justify-content: space-between;
         font-size: 10px; color: #888; padding: 0 4px 8px; border-bottom: 1px solid #222; margin-bottom: 10px; }
     .phone-top .carrier { letter-spacing: 0.05em; }
     .phone-top .signal { display: flex; gap: 2px; align-items: flex-end; }
     .phone-top .signal span { background: #888; border-radius: 1px; width: 3px; display: inline-block; }
-    .notif-card { background: #1c1c1e; border-radius: 12px; padding: 12px 14px; }
+    .notif-card { background: linear-gradient(180deg, rgba(28,30,34,0.98), rgba(17,19,24,0.98)); border-radius: 12px; padding: 12px 14px; border: 1px solid rgba(255,255,255,0.06); }
     .notif-header { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
     .notif-app-icon { width: 22px; height: 22px; border-radius: 6px; background: #2cc64f;
         display: flex; align-items: center; justify-content: center; font-size: 12px; flex-shrink: 0; }
@@ -61,8 +65,8 @@
         padding: 6px 10px; border: 1px solid #1a2a10; border-radius: 6px; background: #050d00; }
 
     /* ---- instructions panel ---- */
-    .instructions { background: #08080a; border: 1px solid #1e1e2a; border-left: 3px solid #5db0ff;
-        padding: 14px 16px; margin-bottom: 20px; font-size: 0.82em; }
+    .instructions { background: linear-gradient(180deg, rgba(14,17,27,0.96), rgba(8,10,16,0.98)); border: 1px solid rgba(255,255,255,0.08); border-left: 3px solid #5db0ff;
+        padding: 14px 16px; margin-bottom: 20px; font-size: 0.82em; border-radius: 12px; box-shadow: 0 10px 22px rgba(0,0,0,0.2); }
     .instructions summary { color: #5db0ff; cursor: pointer; font-weight: 700; letter-spacing: 0.04em;
         text-transform: uppercase; font-size: 0.9em; margin-bottom: 0; list-style: none; }
     .instructions summary::before { content: '▶ '; }
