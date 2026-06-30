@@ -33,12 +33,12 @@ class GovernedReceipt:
     elapsed_ms: float
     output_hash: str       # SHA-256(json(output))
     claim_proof: Optional[str]
-    fingerprint: str       # SHA-256(receipt_id + ":" + verdict + ":" + output_hash)
+    fingerprint: str       # SHA-256(receipt_id:band:amount:verdict:output_hash)
 
     def verify(self) -> bool:
         """Recompute and compare fingerprint. Returns True iff receipt is untampered."""
         expected = hashlib.sha256(
-            f"{self.receipt_id}:{self.verdict}:{self.output_hash}".encode()
+            f"{self.receipt_id}:{self.band}:{self.amount}:{self.verdict}:{self.output_hash}".encode()
         ).hexdigest()
         return self.fingerprint == expected
 
@@ -58,7 +58,7 @@ class GovernedReceipt:
             json.dumps(output, default=str, sort_keys=True).encode()
         ).hexdigest()
         fingerprint = hashlib.sha256(
-            f"{receipt_id}:{verdict}:{output_hash}".encode()
+            f"{receipt_id}:{band}:{amount}:{verdict}:{output_hash}".encode()
         ).hexdigest()
         return cls(
             receipt_id=receipt_id, ts=ts, fn_name=fn_name, band=band,

@@ -20,14 +20,24 @@ def test_tamper_detected():
         description="fn", verdict="autonomous",
         reason="ok", elapsed_ms=1.0, output={"ok": True},
     )
-    # Tamper with amount
-    object.__setattr__(receipt, "amount", 9999.00)
-    # fingerprint still covers receipt_id + verdict + output_hash — amount is not fingerprinted
-    # but let's tamper with verdict instead
-    original = receipt.verdict
+    assert receipt.verify()
+
+    # Tamper with verdict — must fail
     object.__setattr__(receipt, "verdict", "denied")
     assert not receipt.verify()
-    object.__setattr__(receipt, "verdict", original)
+    object.__setattr__(receipt, "verdict", "autonomous")
+
+    # Tamper with amount — must also fail (amount is in the fingerprint)
+    object.__setattr__(receipt, "amount", 9999.00)
+    assert not receipt.verify()
+    object.__setattr__(receipt, "amount", 10.00)
+
+    # Tamper with band — must also fail
+    object.__setattr__(receipt, "band", "L0")
+    assert not receipt.verify()
+    object.__setattr__(receipt, "band", "L2")
+
+    # Fully restored — must pass again
     assert receipt.verify()
 
 
