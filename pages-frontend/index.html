@@ -687,18 +687,19 @@
       <p style="color:var(--muted);margin-bottom:24px;font-size:0.95em">The AI reads it. The verifier checks every factual claim against the real ledger. When the facts don't hold, the kernel overrides the AI — even if the AI said APPROVE.</p>
 
       <div style="background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.08);border-radius:16px;padding:24px">
-        <!-- Pack selector: Refunds / Purchasing / Cloud Ops -->
         <div id="idx-packs" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px">
-          <button data-pack="refunds" onclick="idxSetPack('refunds')" style="all:unset;cursor:pointer;border:1px solid var(--amber);background:rgba(255,176,0,0.12);color:var(--amber2);border-radius:8px;padding:7px 14px;font-size:0.82em;font-weight:600">⚖ Refunds</button>
-          <button data-pack="purchasing" onclick="idxSetPack('purchasing')" style="all:unset;cursor:pointer;border:1px solid rgba(255,255,255,0.12);border-radius:8px;padding:7px 14px;font-size:0.82em;font-weight:600;color:var(--muted)">🏷 Purchasing</button>
-          <button data-pack="cloud" onclick="idxSetPack('cloud')" style="all:unset;cursor:pointer;border:1px solid rgba(255,255,255,0.12);border-radius:8px;padding:7px 14px;font-size:0.82em;font-weight:600;color:var(--muted)">☁ Cloud Ops</button>
+          <button data-pack="refunds"    style="all:unset;cursor:pointer;border:1px solid var(--amber);background:rgba(255,176,0,0.12);color:var(--amber2);border-radius:8px;padding:7px 14px;font-size:0.82em;font-weight:600">⚖ Refunds</button>
+          <button data-pack="purchasing" style="all:unset;cursor:pointer;border:1px solid rgba(255,255,255,0.12);border-radius:8px;padding:7px 14px;font-size:0.82em;font-weight:600;color:var(--muted)">🏷 Purchasing</button>
+          <button data-pack="cloud"      style="all:unset;cursor:pointer;border:1px solid rgba(255,255,255,0.12);border-radius:8px;padding:7px 14px;font-size:0.82em;font-weight:600;color:var(--muted)">☁ Cloud Ops</button>
+          <button data-pack="hr"         style="all:unset;cursor:pointer;border:1px solid rgba(255,255,255,0.12);border-radius:8px;padding:7px 14px;font-size:0.82em;font-weight:600;color:var(--muted)">👤 HR</button>
+          <button data-pack="finance"    style="all:unset;cursor:pointer;border:1px solid rgba(255,255,255,0.12);border-radius:8px;padding:7px 14px;font-size:0.82em;font-weight:600;color:var(--muted)">💰 Finance</button>
+          <button data-pack="it"         style="all:unset;cursor:pointer;border:1px solid rgba(255,255,255,0.12);border-radius:8px;padding:7px 14px;font-size:0.82em;font-weight:600;color:var(--muted)">🔐 IT Access</button>
+          <button data-pack="legal"      style="all:unset;cursor:pointer;border:1px solid rgba(255,255,255,0.12);border-radius:8px;padding:7px 14px;font-size:0.82em;font-weight:600;color:var(--muted)">⚖ Legal</button>
         </div>
-        <div id="idx-cues" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">
-          <!-- per-pack cue buttons get rebuilt by idxSetPack() -->
-        </div>
-        <textarea id="idx-email" rows="3" placeholder="Write a request here — try lying…" style="width:100%;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.1);border-radius:10px;color:var(--text);font:14px/1.5 inherit;padding:12px 14px;resize:vertical;outline:none;box-sizing:border-box"></textarea>
+        <div id="idx-cues" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px"></div>
+        <textarea id="idx-email" rows="3" placeholder="Write any refund excuse here — try lying…" style="width:100%;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.1);border-radius:10px;color:var(--text);font:14px/1.5 inherit;padding:12px 14px;resize:vertical;outline:none;box-sizing:border-box"></textarea>
         <div style="display:flex;align-items:center;gap:14px;margin-top:10px;flex-wrap:wrap">
-          <button id="idx-btn" onclick="idxRunDemo()" style="all:unset;cursor:pointer;background:linear-gradient(135deg,var(--amber2),var(--amber));color:#100b00;font-weight:700;padding:10px 20px;border-radius:10px;font-size:0.9em">Analyze with Nemotron + Kernel →</button>
+          <button id="idx-btn" style="all:unset;cursor:pointer;background:linear-gradient(135deg,var(--amber2),var(--amber));color:#100b00;font-weight:700;padding:10px 20px;border-radius:10px;font-size:0.9em">Analyze with Nemotron + Kernel →</button>
           <span id="idx-sandbox" style="color:var(--dim);font-size:0.78em">Sandbox: ord_6006 · $80 · delivered · no defect · 19 days old</span>
         </div>
         <div id="idx-result" style="margin-top:18px"></div>
@@ -1145,40 +1146,83 @@ result <span style="color:var(--dim)">=</span> decide(
   function idxVchip(d){
     return `<span style="font-weight:800;padding:3px 10px;border-radius:6px;font-size:0.92em;background:rgba(255,255,255,0.05)">${IDX_VLABEL[d]||_e(d)}</span>`;
   }
-  function idxSetCue(t){document.getElementById('idx-email').value=t;}
-
   // -- per-pack live demo state -------------------------------------------
-  // The demo panel must know which pack is active so the right cues,
-  // sandbox label, and POST body go to /api/v1/triage/custom.
   const IDX_PACKS = {
     refunds: {
       label: 'ord_6006 · $80 · delivered · no defect · 19 days old',
       placeholder: 'Write any refund excuse here — try lying…',
+      backendPack: 'refunds',
       cues: [
-        {label: 'Lie: never arrived', text: 'I never received my package. Please refund me immediately.'},
-        {label: 'Lie: defective', text: 'The item arrived broken and completely defective.'},
-        {label: 'Honest: within window', text: 'I purchased this 19 days ago and would like to return it.'},
-        {label: 'Lie: double billed', text: 'I was charged twice for this same order.'},
+        {label: 'Lie: never arrived',   text: 'I never received my package. Please refund me immediately.'},
+        {label: 'Lie: defective',       text: 'The item arrived broken and completely defective.'},
+        {label: 'Honest: within window',text: 'I purchased this 19 days ago and would like to return it.'},
+        {label: 'Lie: double billed',   text: 'I was charged twice for this same order.'},
       ],
     },
     purchasing: {
       label: 'po_6010 · $150 authorized · BrightParts LLC · PO open',
-      placeholder: 'Write a vendor invoice message — try overbilling the PO…',
+      placeholder: 'Write a vendor invoice — try overbilling the PO…',
+      backendPack: 'purchasing',
       cues: [
-        {label: 'Honest: matches PO', text: 'Invoice for PO po_6010, $150.00 for parts delivered last week. — BrightParts LLC'},
-        {label: 'Lie: overbilled PO', text: 'Invoice for PO po_6010, $480.00. Please remit ASAP. — BrightParts LLC'},
-        {label: 'Lie: claim new vendor', text: 'Hi, this is a new supplier, invoice for PO po_6010, $150. — QuickShip Logistics'},
-        {label: 'Honest: claim approved', text: 'Following up on PO po_6010, $150.00 — open invoice, approved vendor BrightParts.'},
+        {label: 'Honest: matches PO',   text: 'Invoice for PO po_6010, $150.00 for parts delivered last week. — BrightParts LLC'},
+        {label: 'Lie: overbilled PO',   text: 'Invoice for PO po_6010, $480.00. Please remit ASAP. — BrightParts LLC'},
+        {label: 'Lie: wrong vendor',    text: 'Hi, this is a new supplier, invoice for PO po_6010, $150. — QuickShip Logistics'},
+        {label: 'Honest: approved',     text: 'Following up on PO po_6010, $150.00 — open invoice, approved vendor BrightParts.'},
       ],
     },
     cloud: {
-      label: 'nim_nemotron_super · $1.20/hr · NVIDIA NIM (sponsor) · Nemotron-3-Super-120B',
-      placeholder: 'Write a compute provisioning request — try under-reporting the cost…',
+      label: 'nim_nemotron_super · $1.20/hr · NVIDIA NIM · approved provider',
+      placeholder: 'Write a compute provisioning request — try hiding the real cost…',
+      backendPack: 'cloud',
       cues: [
-        {label: 'Honest: matches price', text: 'Spin up the Nemotron-3-Super-120B NIM endpoint — $1.20/hr, used for the demo.'},
-        {label: 'Lie: under-report cost', text: 'Spin up modal_a100_40g for the inference cluster — about $3/hr, well within budget.'},
-        {label: 'Lie: unapproved instance', text: 'Provision a Fly shared CPU instance for our worker — very cheap, around $0.02/hr.'},
-        {label: 'Honest: approved job', text: 'Run the Nemotron-3-Super NIM inference job, $1.20/hr, sponsor-rail approved.'},
+        {label: 'Honest: approved job',       text: 'Spin up the Nemotron-3-Super-120B NIM endpoint at $1.20/hr for the demo workload.'},
+        {label: 'Lie: under-report cost',     text: 'Spin up an A100 cluster for training — about $3/hr, well within budget.'},
+        {label: 'Lie: unapproved provider',   text: 'Provision a Fly.io shared CPU instance for our API worker — very cheap, $0.02/hr.'},
+        {label: 'Honest: NIM sponsor rail',   text: 'Run the Nemotron-3-Super NIM inference job, $1.20/hr, sponsor-rail approved.'},
+      ],
+    },
+    hr: {
+      label: 'offer_4821 · $85K band max · Sarah Chen · 15% over band',
+      placeholder: 'Write a hiring or comp request — try approving an out-of-band offer…',
+      backendPack: 'purchasing',
+      cues: [
+        {label: 'Lie: competing offer',       text: 'Sarah Chen has a competing offer at $100K — we need to match it to close her.'},
+        {label: 'Lie: critical to Q3',        text: 'Approve Sarah at $97K. She is critical for Q3 delivery and will walk without it.'},
+        {label: 'Honest: within band',        text: 'Offer Sarah Chen the role at $83K, within the approved band for L4 engineers.'},
+        {label: 'Lie: verbal approval',       text: 'VP already verbally approved $92K for Sarah. Just need the system sign-off.'},
+      ],
+    },
+    finance: {
+      label: 'exp_9042 · $2,400 receipt · $1,500 policy cap · Alex Rodriguez',
+      placeholder: 'Submit an expense report — try claiming more than the receipt supports…',
+      backendPack: 'refunds',
+      cues: [
+        {label: 'Honest: within policy',      text: 'Submitting $1,200 for the client dinner on June 14 — receipt attached, within cap.'},
+        {label: 'Lie: inflated total',        text: 'Client entertainment expense $2,400 — team dinner for 8, please approve promptly.'},
+        {label: 'Lie: missing receipt',       text: 'Lost the receipt but the hotel stay was $890, standard rate for that city.'},
+        {label: 'Lie: personal as business',  text: 'Family dinner during the Chicago trip, $340 — counted as team morale expense.'},
+      ],
+    },
+    it: {
+      label: 'acc_7731 · Jamie Park · contractor · 90-day access window · no admin rights',
+      placeholder: 'Request system access — try escalating beyond your authorization…',
+      backendPack: 'cloud',
+      cues: [
+        {label: 'Honest: within scope',       text: 'Jamie Park needs read access to the staging S3 bucket for the audit — 30 days.'},
+        {label: 'Lie: claim admin need',      text: 'Jamie needs admin rights to production to finish the migration by Friday deadline.'},
+        {label: 'Lie: extend expired access', text: 'Jamie\'s access expired but the project ran long — please reinstate for 6 months.'},
+        {label: 'Lie: impersonate role',      text: 'Provisioning access for Jamie under the senior-engineer role — manager approved it.'},
+      ],
+    },
+    legal: {
+      label: 'contract_0081 · $50K · 90-day payment · standard NDA · auto-renewal clause',
+      placeholder: 'Submit a contract for approval — try slipping in non-standard terms…',
+      backendPack: 'purchasing',
+      cues: [
+        {label: 'Honest: standard terms',     text: 'Vendor NDA for Acme Corp, $50K, 90-day net payment, standard boilerplate terms.'},
+        {label: 'Lie: hide auto-renewal',     text: 'Acme Corp services agreement, $50K. Routine contract, please sign off quickly.'},
+        {label: 'Lie: verbal amendment',      text: 'Legal already agreed to waive the indemnification clause verbally. Just need sign-off.'},
+        {label: 'Lie: misstate payment terms',text: 'Acme contract, $50K, net-30 as agreed. Ready to execute pending your approval.'},
       ],
     },
   };
@@ -1188,24 +1232,43 @@ result <span style="color:var(--dim)">=</span> decide(
     if(!IDX_PACKS[p]) return;
     IDX_ACTIVE = p;
     const pack = IDX_PACKS[p];
-    // Update tab styling: active pack gets the amber treatment
+    // Tab styling
     document.querySelectorAll('#idx-packs button').forEach(b=>{
-      if(b.dataset.pack===p){
-        b.style.cssText='all:unset;cursor:pointer;border:1px solid var(--amber);background:rgba(255,176,0,0.12);color:var(--amber2);border-radius:8px;padding:7px 14px;font-size:0.82em;font-weight:600';
-      } else {
-        b.style.cssText='all:unset;cursor:pointer;border:1px solid rgba(255,255,255,0.12);border-radius:8px;padding:7px 14px;font-size:0.82em;font-weight:600;color:var(--muted)';
-      }
+      const isActive = b.dataset.pack === p;
+      b.style.cssText = 'all:unset;cursor:pointer;border-radius:8px;padding:7px 14px;font-size:0.82em;font-weight:600;' +
+        (isActive
+          ? 'border:1px solid var(--amber);background:rgba(255,176,0,0.12);color:var(--amber2)'
+          : 'border:1px solid rgba(255,255,255,0.12);color:var(--muted)');
     });
-    // Rebuild the cue buttons for the active pack
-    const cues = document.getElementById('idx-cues');
-    cues.innerHTML = pack.cues.map(c=>
-      `<button onclick="idxSetCue(${JSON.stringify(c.text)})" style="all:unset;cursor:pointer;border:1px solid rgba(255,255,255,0.1);border-radius:7px;padding:4px 10px;font-size:0.78em;color:var(--muted)">${c.label}</button>`
+    // Rebuild cue buttons using data-idx — avoids quoting issues with inline onclick
+    const cuesEl = document.getElementById('idx-cues');
+    cuesEl.innerHTML = pack.cues.map((c,i)=>
+      `<button data-idx="${i}" style="all:unset;cursor:pointer;border:1px solid rgba(255,255,255,0.1);border-radius:7px;padding:4px 10px;font-size:0.78em;color:var(--muted)">${c.label}</button>`
     ).join('');
-    // Update sandbox label and placeholder for the active pack
     document.getElementById('idx-sandbox').textContent = 'Sandbox: ' + pack.label;
     document.getElementById('idx-email').placeholder = pack.placeholder;
   }
-  // Initialise the cues for the default pack
+
+  // Event delegation for cue buttons — one listener on the container, no inline onclick
+  document.getElementById('idx-cues').addEventListener('click', function(e){
+    const btn = e.target.closest('button[data-idx]');
+    if(!btn) return;
+    const idx = parseInt(btn.dataset.idx, 10);
+    const cue = IDX_PACKS[IDX_ACTIVE].cues[idx];
+    if(cue) document.getElementById('idx-email').value = cue.text;
+  });
+
+  // Tab buttons via delegation
+  document.getElementById('idx-packs').addEventListener('click', function(e){
+    const btn = e.target.closest('button[data-pack]');
+    if(btn) idxSetPack(btn.dataset.pack);
+  });
+
+  document.getElementById('idx-btn').addEventListener('click', idxRunDemo);
+  document.getElementById('idx-email').addEventListener('keydown', function(e){
+    if(e.key==='Enter'&&(e.ctrlKey||e.metaKey)) idxRunDemo();
+  });
+
   idxSetPack(IDX_ACTIVE);
   function idxRenderPanel(p){
     const conf=Math.round((p.agent_confidence||0)*100);
@@ -1273,7 +1336,7 @@ result <span style="color:var(--dim)">=</span> decide(
     try{
       const r=await fetch('/api/v1/triage/custom',{method:'POST',
         headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({customer_email:text, pack:IDX_ACTIVE})});
+        body:JSON.stringify({customer_email:text, pack:IDX_PACKS[IDX_ACTIVE].backendPack||IDX_ACTIVE})});
       const p=await r.json();
       if(p.error){out.innerHTML=`<div style="color:#ff5c5c;font-size:0.88em">${_e(p.error)}</div>`;return;}
       p.overrode_agent=p.overrode_agent??(p.adapter_disposition!==p.agent_recommended);
@@ -1282,9 +1345,6 @@ result <span style="color:var(--dim)">=</span> decide(
       out.innerHTML=`<div style="color:#ff5c5c;font-size:0.88em">Could not reach backend: ${_e(ex.message)}</div>`;
     }finally{btn.disabled=false; btn.textContent='Analyze with Nemotron + Kernel →';}
   }
-  document.getElementById('idx-email').addEventListener('keydown',e=>{
-    if(e.key==='Enter'&&(e.ctrlKey||e.metaKey))idxRunDemo();
-  });
   function handleEmailSubmit(e) {
     e.preventDefault();
     const email = document.getElementById("signup-email").value.trim();
