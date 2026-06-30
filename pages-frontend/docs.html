@@ -186,9 +186,8 @@ h1,h2,h3,h4{font-weight:700;letter-spacing:-0.01em;color:var(--text)}
 <nav class="k-nav">
   <a href="/" class="k-brand">
     <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <path d="M32 6 L54 14 V30 C54 44.5 44.2 54 32 58 C19.8 54 10 44.5 10 30 V14 Z" stroke="#ffb000" stroke-width="5" stroke-linejoin="round"/>
-      <circle cx="32" cy="29" r="6" stroke="#ffb000" stroke-width="4"/>
-      <rect x="30" y="32" width="4" height="10" rx="1" fill="#ffb000"/>
+      <polygon points="56,42 42,56 22,56 8,42 8,22 22,8 42,8 56,22" stroke="#ffb000" stroke-width="2.5" stroke-linejoin="round"/>
+      <path d="M 40.5,23.5 A 12,12 0 1,0 40.5,40.5" stroke="#ffb000" stroke-width="2.5" stroke-linecap="round"/>
     </svg>
     <span>CUSTODIAN</span>
   </a>
@@ -213,7 +212,8 @@ h1,h2,h3,h4{font-weight:700;letter-spacing:-0.01em;color:var(--text)}
   <aside class="sidebar" id="sidebar">
     <div class="sb-section">
       <div class="sb-heading">Start here</div>
-      <a href="#overview" class="sb-link active">Overview</a>
+      <a href="#quickstart" class="sb-link active">Quick start</a>
+      <a href="#overview" class="sb-link">What is Custodian?</a>
       <a href="#architecture" class="sb-link">Architecture</a>
     </div>
     <div class="sb-section">
@@ -236,6 +236,85 @@ h1,h2,h3,h4{font-weight:700;letter-spacing:-0.01em;color:var(--text)}
 
   <!-- CONTENT -->
   <main class="content">
+
+    <!-- QUICK START -->
+    <section class="doc-section" id="quickstart">
+      <div class="section-eyebrow">Start here</div>
+      <h2>Quick start</h2>
+      <p>Custodian ships as a single pip package. You need Python 3.10+ and a Linux host (or WSL2). The enforcement kernel runs locally; the Nemotron intelligence layer calls NVIDIA's hosted API.</p>
+
+      <h3>1 · Install the kernel</h3>
+      <pre><code>pip install custodian-kernel</code></pre>
+      <p>This installs the <code>custodian</code> CLI plus the enforcement kernel, verifier, OPA policy engine, and OCSF audit logger. No Docker required.</p>
+
+      <h3>2 · Verify the installation</h3>
+      <pre><code>custodian demo verify</code></pre>
+      <p>Runs a self-test against the sandbox order record (<code>ord_6006</code>) with a pre-captured Nemotron response. No API key needed. You should see:</p>
+      <pre><code>✓  Intelligence layer      — captured response loaded
+✓  Verifier                — 3 claims extracted, 1 CONTRADICTED
+✓  Kernel authority check  — DENY (contradiction override)
+✓  Audit log               — OCSF event written
+All checks passed.</code></pre>
+
+      <h3>3 · Run the full demo cycle</h3>
+      <pre><code>custodian demo cycle</code></pre>
+      <p>Runs six canonical cases back-to-back — honest claim, delivery lie, double-billing lie, within-window return, defective claim, and an amount above the autonomous cap. Each case shows the AI recommendation, the verifier's claim-by-claim check, and the kernel's final disposition.</p>
+
+      <h3>4 · Run simulated attacks</h3>
+      <pre><code>custodian demo attacks</code></pre>
+      <p>Tests the kernel against a suite of adversarial inputs: prompt injection, authority-claim spoofing, recursive self-approval attempts, and kill-switch bypass attempts. Each attack should be caught. If any aren't, the output shows exactly which control failed.</p>
+
+      <h3>5 · Start the enforcement server</h3>
+      <pre><code>custodian serve --port 8095</code></pre>
+      <p>Starts the HTTP enforcement node. Your AI agent (or any HTTP client) posts requests to this endpoint; the kernel evaluates them and returns <code>AUTONOMOUS</code>, <code>ESCALATE</code>, or <code>DENY</code>. The server logs every decision to the OCSF audit trail.</p>
+
+      <h3>Environment variables</h3>
+      <table class="outcome-table">
+        <thead><tr><th>Variable</th><th>Required</th><th>Purpose</th></tr></thead>
+        <tbody>
+          <tr><td><code>NVIDIA_API_KEY</code></td><td style="color:var(--amber)">For live inference</td><td>Calls Nemotron 3 Super via NVIDIA's hosted API. Not needed for <code>demo verify</code> or <code>demo cycle</code> (uses captured responses).</td></tr>
+          <tr><td><code>OPENROUTER_API_KEY</code></td><td style="color:var(--dim)">Optional fallback</td><td>Routes to Nemotron via OpenRouter if the NVIDIA key is absent. Same model, slightly higher latency.</td></tr>
+          <tr><td><code>STRIPE_SECRET_KEY</code></td><td style="color:var(--dim)">For payment flows</td><td>Test-mode key for real Stripe PaymentIntent creation. Use <code>sk_test_…</code> keys only for evaluation.</td></tr>
+          <tr><td><code>TWILIO_ACCOUNT_SID</code><br><code>TWILIO_AUTH_TOKEN</code><br><code>TWILIO_VERIFY_SID</code></td><td style="color:var(--dim)">For SMS approval</td><td>Sends real one-time codes to the operator's phone for over-cap escalation. Without these, escalations are logged but not delivered.</td></tr>
+          <tr><td><code>OPERATOR_PHONE</code></td><td style="color:var(--dim)">For SMS approval</td><td>E.164 phone number that receives escalation codes (e.g. <code>+14155552671</code>).</td></tr>
+        </tbody>
+      </table>
+
+      <div class="callout callout-green">
+        <div class="callout-label">Minimum viable run</div>
+        <p><code>pip install custodian-kernel && custodian demo verify</code> — no API keys, no config. The demo runs against sandboxed fixtures and proves the full pipeline end-to-end. Add <code>NVIDIA_API_KEY</code> when you want to route real customer messages through live Nemotron inference.</p>
+      </div>
+
+      <h3>Deploying to a second machine</h3>
+      <p>The enforcement kernel can run on any Linux server separate from the agent host. The agent has no network path to the kernel's internal state — it can only POST requests and receive verdicts.</p>
+      <pre><code># On the enforcement host (e.g. a DGX Spark, a VM, a bare-metal server)
+pip install custodian-kernel
+custodian serve --port 8095
+
+# Verify it's up
+curl http://localhost:8095/health
+# → {"ok": true, "node": "custodian-kernel", "role": "enforcement"}</code></pre>
+
+      <div class="callout callout-amber">
+        <div class="callout-label">Survive reboots with systemd</div>
+        <p>To keep the enforcement node running across reboots, install it as a systemd service:</p>
+      </div>
+      <pre><code>[Unit]
+Description=Custodian Enforcement Node
+After=network.target
+
+[Service]
+User=youruser
+WorkingDirectory=/home/youruser/custodian-kernel
+ExecStart=/home/youruser/custodian-venv/bin/python3 -m custodian serve --port 8095
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target</code></pre>
+      <pre><code>sudo systemctl enable --now custodian-enforce
+sudo systemctl status custodian-enforce</code></pre>
+    </section>
 
     <!-- OVERVIEW -->
     <section class="doc-section" id="overview">
