@@ -82,8 +82,10 @@ class CustodianSession:
 
         if decision.verdict == Verdict.AUTONOMOUS:
             self._spent += amount
-            if self.parent:
-                self.parent._spent += amount
+            ancestor = self.parent
+            while ancestor is not None:
+                ancestor._spent += amount
+                ancestor = ancestor.parent
 
         audit_id = f"{self.session_id}-{len(self._results)}"
         r = SessionResult(request=req, verdict=decision.verdict.value,

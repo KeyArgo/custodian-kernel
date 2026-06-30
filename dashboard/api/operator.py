@@ -131,11 +131,48 @@ def earn():
     return jsonify(result)
 
 
+def _read_flask_kill_switch() -> tuple:
+    """Read the Flask-layer kill switch written by /kill and /resume.
+    Returns (killed: bool, by: str, reason: str). Fails open to False if absent."""
+    ks_path = Path.home() / '.custodian' / 'kill_switch.json'
+    if not ks_path.exists():
+        return False, '', ''
+    try:
+        d = _json.loads(ks_path.read_text())
+        return bool(d.get('killed', False)), d.get('by', ''), d.get('reason', '')
+    except Exception:
+        return False, '', ''
+
+
+def _write_flask_kill_switch(killed: bool, by: str, reason: str = '') -> None:
+    """Write the Flask-layer kill switch state for the pre-check in /spend."""
+    ks_path = Path.home() / '.custodian' / 'kill_switch.json'
+    ks_path.parent.mkdir(parents=True, exist_ok=True)
+    ks_path.write_text(_json.dumps({'killed': killed, 'by': by, 'reason': reason}))
+
+
 @bp.route('/spend', methods=['POST'])
 def spend():
     data = request.get_json(force=True, silent=True) or {}
     amount = str(data.get('amount', ''))
     description = str(data.get('description', ''))[:200]
+
+    # Flask-layer kill switch pre-check: enforce before calling nemohermes.
+    # This guards against ephemeral sandbox exec contexts where the sandbox DB
+    # written by kill_toggle.py may not persist into spend.py's exec.
+    killed, kill_by, kill_reason = _read_flask_kill_switch()
+    if killed:
+        reason_str = f', reason: {kill_reason}' if kill_reason else ''
+        denied_line = (f'[authority] DENIED — kill switch is engaged (by {kill_by or "operator"}'
+                       f'{reason_str}).')
+        note_line = ('[authority] This overrides every band and cap, with no exceptions. '
+                     'Run `custodian resume --by <name>` to release it.')
+        return jsonify({
+            'returncode': 3,
+            'stdout': f'{denied_line}\n{note_line}',
+            'stderr': '',
+        })
+
     result = _run_script('spend.py', '--amount', amount, '--description', description)
     _write_reasoning('spend.py', result)
     return jsonify(result)
@@ -213,6 +250,9 @@ def kill():
     if reason:
         args += ['--reason', reason]
     result = _run_script('kill_toggle.py', 'engage', *args)
+    # Write Flask-layer kill switch so /spend can enforce it even if the sandbox
+    # exec context is ephemeral and doesn't share the sandbox SQLite state.
+    _write_flask_kill_switch(killed=True, by=by, reason=reason)
     _write_reasoning('kill_toggle.py', result)
     return jsonify(result)
 
@@ -222,6 +262,8 @@ def resume():
     data = request.get_json(force=True, silent=True) or {}
     by = str(data.get('by', 'Operator'))[:100]
     result = _run_script('kill_toggle.py', 'release', '--by', by)
+    # Clear Flask-layer kill switch so /spend proceeds normally after release.
+    _write_flask_kill_switch(killed=False, by=by)
     _write_reasoning('kill_toggle.py', result)
     return jsonify(result)
 
