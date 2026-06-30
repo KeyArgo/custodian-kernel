@@ -341,6 +341,21 @@ class ToolRegistry:
             "by_band": by_band,
         }
 
+    def run(self, name: str, **kwargs) -> dict:
+        """Convenience: look up a tool by name and invoke it.
+
+        Returns a structured error dict (never raises) when the tool is
+        unknown so callers can branch on `ok` without try/except plumbing.
+        """
+        tool = self.get(name)
+        if tool is None:
+            return {
+                "ok": False,
+                "error": f"tool not found: {name}",
+                "tool": name,
+            }
+        return tool.invoke(**kwargs)
+
 
 def default_registry() -> ToolRegistry:
     """Return registry pointed at the canonical skills/ directory.
