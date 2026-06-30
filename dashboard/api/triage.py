@@ -31,8 +31,57 @@ except ImportError:
 from custodian.packs.base import Envelope
 from custodian.packs.engine import replay_with_policy_change, triage
 from custodian.packs.narration import TOUR
-from custodian.packs.refunds.extractor import extract_envelope
+from custodian.packs.refunds.extractor import extract_envelope as refunds_extract_envelope
+from custodian.packs.purchasing.extractor import extract_envelope as purchasing_extract_envelope
+from custodian.packs.cloud.extractor import extract_envelope as cloud_extract_envelope
 from custodian.packs.registry import available, get_pack
+
+# Per-pack extractor dispatch + sandbox builders. Each pack has its own
+# fixed ground-truth fixture so live Nemotron claims can be checked against
+# the same ledger the corpus cases use, and the lie-catch stays reproducible.
+_EXTRACTORS = {
+    "refunds": refunds_extract_envelope,
+    "purchasing": purchasing_extract_envelope,
+    "cloud": cloud_extract_envelope,
+}
+
+# Sandbox fixtures for /triage/custom. These are KNOWN-GOOD ground truth so
+# a visitor's free-form text is checked against real data, never made up.
+#   refunds     -> ord_6006 / cus_marcus:  delivered, no defect, 19d old
+#   purchasing  -> po_6010 / vnd_brightparts:  $75 authorized, vendor approved, PO open
+#   cloud       -> nim_nemotron_super / nvidia_nim:  $1.20/hr NIM endpoint, approved
+_CUSTOM_SANDBOX = {
+    "refunds": {
+        "case_id": "visitor-custom",
+        "customer_id": "cus_marcus",
+        "order_id": "ord_6006",
+        "amount": 80.0,
+        "customer_email_field": None,  # set from payload at call time
+        "sandbox_label": "ord_6006 · $80 · delivered · no defect · 19 days old",
+        "placeholder": "Write any refund excuse here — try lying…",
+        "action": "refund.create",
+    },
+    "purchasing": {
+        "case_id": "visitor-custom",
+        "customer_id": "vnd_brightparts",
+        "order_id": "po_6010",
+        "amount": 150.0,
+        "customer_email_field": "customer_email",
+        "sandbox_label": "po_6010 · $150 authorized · BrightParts LLC · PO open",
+        "placeholder": "Write a vendor invoice message — try overbilling the PO…",
+        "action": "invoice.pay",
+    },
+    "cloud": {
+        "case_id": "visitor-custom",
+        "customer_id": "nvidia_nim",
+        "order_id": "nim_nemotron_super",
+        "amount": 1.20,
+        "customer_email_field": "customer_email",
+        "sandbox_label": "nim_nemotron_super · $1.20/hr · NVIDIA NIM (sponsor) · Nemotron-3-Super-120B",
+        "placeholder": "Write a compute provisioning request — try under-reporting the cost…",
+        "action": "compute.provision",
+    },
+}
 from custodian.policy.loader import load_policy
 from custodian.types import AuthorityState, Band
 
@@ -163,13 +212,14 @@ def _case_input(data: dict) -> dict:
     }
 
 
-def _envelope_for(data: dict, live: bool):
+def _envelope_for(data: dict, live: bool, pack_name: str = "refunds"):
     """Return (Envelope, source_label). Falls back to captured if live fails so
     a judge never hits a dead demo, but the label always tells the truth."""
     if live and _NVIDIA_SECRET.exists():
         client = _make_client()
+        extractor = _EXTRACTORS.get(pack_name, refunds_extract_envelope)
         try:
-            return extract_envelope(_case_input(data), client), client.name
+            return extractor(_case_input(data), client), client.name
         except (EnvelopeParseError, OSError, KeyError) as e:
             # fall through to captured, but say so
             return Envelope.from_dict(data["envelope"]), f"captured (live call failed: {e})"
@@ -192,7 +242,7 @@ def case_by_id(case_id: str):
     data = _load_case(corpus_dir, case_id)
     if not data:
         return jsonify({"error": f"no such case: {case_id} in pack {name}"}), 404
-    envelope, source = _envelope_for(data, False)
+    envelope, source = _envelope_for(data, False, pack_name=name)
     result = triage(pack, envelope, kernel_policy, _STATE())
     panel = result.to_panel()
     panel["pack"] = name
@@ -245,7 +295,7 @@ def run():
     if not data:
         return jsonify({"error": f"no such case: {case_id}"}), 404
 
-    envelope, source = _envelope_for(data, live and name == "refunds")
+    envelope, source = _envelope_for(data, live and name == "refunds", pack_name=name)
     result = triage(pack, envelope, kernel_policy, _STATE())
     panel = result.to_panel()
     panel["pack"] = name
@@ -259,51 +309,58 @@ def run():
 
 @bp.route("/custom", methods=["POST"])
 def custom():
-    """Run the triage engine on a visitor-submitted refund email.
+    """Run the triage engine on a visitor-submitted free-form message against
+    one of three sandbox fixtures (refunds / purchasing / cloud).
 
-    Uses a fixed sandbox order (ord_6006 / cus_marcus) so every factual claim
-    can be checked against real ground-truth ledger data.  Visitors can submit
-    any excuse — honest ones pass, lies get CONTRADICTED.
+    Each pack has a known ground-truth order/PO/job in its ledger so every
+    factual claim can be checked against real data. Visitors can submit
+    any input — honest ones pass, lies get CONTRADICTED.
     """
     payload = request.get_json(force=True, silent=True) or {}
-    text = (payload.get("customer_email") or "").strip()
+    name = (payload.get("pack") or "refunds").strip()
+    sandbox = _CUSTOM_SANDBOX.get(name)
+    if sandbox is None:
+        return jsonify({
+            "error": f"unknown pack: {name!r}. Pick one of: {', '.join(_CUSTOM_SANDBOX)}",
+            "packs": list(_CUSTOM_SANDBOX),
+        }), 400
+
+    text = (payload.get("customer_email") or payload.get("message") or "").strip()
     if not text:
         return jsonify({"error": "customer_email is required"}), 400
     if len(text) > 2000:
         return jsonify({"error": "message too long (max 2000 chars)"}), 400
 
-    # Sandbox order — known ground truth so the lie-catch demo is reproducible.
-    # ord_6006: delivered=true, defect_report_on_file=false, purchase_age=19d
+    # Sandbox order — known ground truth so the lie-catch demo is reproducible
+    # across all three packs. The amount can be overridden by the payload for
+    # tests, but defaults to the canonical sandbox amount.
     case_input = {
         "case_id": "visitor-custom",
-        "customer_id": "cus_marcus",
-        "order_id": "ord_6006",
-        "amount": float(payload.get("amount") or 80.0),
+        "customer_id": sandbox["customer_id"],
+        "order_id": sandbox["order_id"],
+        "amount": float(payload.get("amount") or sandbox["amount"]),
         "customer_email": text,
     }
 
-    name = payload.get("pack", "refunds")
-    if name != "refunds":
-        return jsonify({"error": "Custom triage with live Nemotron is only available for the Refunds pack. Select a corpus case above to explore Procurement or Cloud Ops."}), 400
-
     pack, kernel_policy, _ = _resolve_pack(name)
     if pack is None:
-        return jsonify({"error": "refunds pack unavailable"}), 500
+        return jsonify({"error": f"{name} pack unavailable"}), 500
 
     if not _NVIDIA_SECRET.exists():
         return jsonify({"error": "NVIDIA API key not configured on this server"}), 503
 
+    extractor = _EXTRACTORS.get(name, refunds_extract_envelope)
     client = _make_client()
     try:
-        envelope = extract_envelope(case_input, client)
+        envelope = extractor(case_input, client)
         source = client.name
     except (EnvelopeParseError, OSError, KeyError, RuntimeError) as e:
         envelope = Envelope.from_dict({
             "case_id": "visitor-custom",
-            "customer_id": "cus_marcus",
-            "order_id": "ord_6006",
+            "customer_id": sandbox["customer_id"],
+            "order_id": sandbox["order_id"],
             "amount": case_input["amount"],
-            "requested_action": "refund.create",
+            "requested_action": sandbox["action"],
             "recommended_disposition": "escalate_ambiguous",
             "confidence": 0.5,
             "agent_summary": "Could not reach Nemotron model; showing conservative escalation.",
@@ -320,6 +377,11 @@ def custom():
     panel["expected_disposition"] = None
     panel["envelope_source"] = source
     panel["overrode_agent"] = panel["adapter_disposition"] != panel["agent_recommended"]
+    panel["sandbox"] = {
+        "label": sandbox["sandbox_label"],
+        "order_id": sandbox["order_id"],
+        "amount": case_input["amount"],
+    }
     return jsonify(panel)
 
 

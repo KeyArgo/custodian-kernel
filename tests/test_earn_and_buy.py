@@ -20,7 +20,7 @@ from unittest.mock import patch
 import pytest
 
 
-CLI = ["custodian", "earn-and-buy"]
+CLI = ["custodian", "demo", "cycle"]
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────

@@ -680,26 +680,29 @@
   <div class="wrap">
     <div class="reveal" style="max-width:860px;margin:0 auto">
       <div class="sec-eyebrow">Try it live</div>
-      <h2 style="font-size:clamp(1.5em,3vw,2.2em);margin-bottom:10px">Type any refund excuse. Watch Nemotron + the kernel process it.</h2>
-      <p style="color:var(--muted);margin-bottom:24px;font-size:0.95em">The AI reads it. The verifier checks every factual claim against the real order record. When the facts don't hold, the kernel overrides the AI — even if the AI said APPROVE.</p>
+      <h2 style="font-size:clamp(1.5em,3vw,2.2em);margin-bottom:10px">Type any request. Watch Nemotron + the kernel process it.</h2>
+      <p style="color:var(--muted);margin-bottom:24px;font-size:0.95em">The AI reads it. The verifier checks every factual claim against the real ledger. When the facts don't hold, the kernel overrides the AI — even if the AI said APPROVE.</p>
 
       <div style="background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.08);border-radius:16px;padding:24px">
-        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px" id="idx-cues">
-          <button onclick="idxSetCue('I never received my package. Please refund me immediately.')" style="all:unset;cursor:pointer;border:1px solid rgba(255,255,255,0.1);border-radius:7px;padding:4px 10px;font-size:0.78em;color:var(--muted)">Lie: never arrived</button>
-          <button onclick="idxSetCue('The item arrived broken and completely defective.')" style="all:unset;cursor:pointer;border:1px solid rgba(255,255,255,0.1);border-radius:7px;padding:4px 10px;font-size:0.78em;color:var(--muted)">Lie: defective</button>
-          <button onclick="idxSetCue('I purchased this 19 days ago and would like to return it.')" style="all:unset;cursor:pointer;border:1px solid rgba(255,255,255,0.1);border-radius:7px;padding:4px 10px;font-size:0.78em;color:var(--muted)">Honest: within window</button>
-          <button onclick="idxSetCue('I was charged twice for this same order.')" style="all:unset;cursor:pointer;border:1px solid rgba(255,255,255,0.1);border-radius:7px;padding:4px 10px;font-size:0.78em;color:var(--muted)">Lie: double billed</button>
+        <!-- Pack selector: Refunds / Purchasing / Cloud Ops -->
+        <div id="idx-packs" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px">
+          <button data-pack="refunds" onclick="idxSetPack('refunds')" style="all:unset;cursor:pointer;border:1px solid var(--amber);background:rgba(255,176,0,0.12);color:var(--amber2);border-radius:8px;padding:7px 14px;font-size:0.82em;font-weight:600">⚖ Refunds</button>
+          <button data-pack="purchasing" onclick="idxSetPack('purchasing')" style="all:unset;cursor:pointer;border:1px solid rgba(255,255,255,0.12);border-radius:8px;padding:7px 14px;font-size:0.82em;font-weight:600;color:var(--muted)">🏷 Purchasing</button>
+          <button data-pack="cloud" onclick="idxSetPack('cloud')" style="all:unset;cursor:pointer;border:1px solid rgba(255,255,255,0.12);border-radius:8px;padding:7px 14px;font-size:0.82em;font-weight:600;color:var(--muted)">☁ Cloud Ops</button>
         </div>
-        <textarea id="idx-email" rows="3" placeholder="Write any refund excuse here — try lying…" style="width:100%;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.1);border-radius:10px;color:var(--text);font:14px/1.5 inherit;padding:12px 14px;resize:vertical;outline:none;box-sizing:border-box"></textarea>
+        <div id="idx-cues" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">
+          <!-- per-pack cue buttons get rebuilt by idxSetPack() -->
+        </div>
+        <textarea id="idx-email" rows="3" placeholder="Write a request here — try lying…" style="width:100%;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.1);border-radius:10px;color:var(--text);font:14px/1.5 inherit;padding:12px 14px;resize:vertical;outline:none;box-sizing:border-box"></textarea>
         <div style="display:flex;align-items:center;gap:14px;margin-top:10px;flex-wrap:wrap">
           <button id="idx-btn" onclick="idxRunDemo()" style="all:unset;cursor:pointer;background:linear-gradient(135deg,var(--amber2),var(--amber));color:#100b00;font-weight:700;padding:10px 20px;border-radius:10px;font-size:0.9em">Analyze with Nemotron + Kernel →</button>
-          <span style="color:var(--dim);font-size:0.78em">Sandbox: ord_6006 · $80 · delivered · no defect · 19 days old</span>
+          <span id="idx-sandbox" style="color:var(--dim);font-size:0.78em">Sandbox: ord_6006 · $80 · delivered · no defect · 19 days old</span>
         </div>
         <div id="idx-result" style="margin-top:18px"></div>
       </div>
 
       <div style="text-align:center;margin-top:16px">
-        <a href="/triage" style="color:var(--muted);font-size:0.85em;text-decoration:underline">Full lie-catch walkthrough with all 6 corpus cases →</a>
+        <a href="/triage" style="color:var(--muted);font-size:0.85em;text-decoration:underline">Full lie-catch walkthrough with all corpus cases →</a>
       </div>
     </div>
   </div>

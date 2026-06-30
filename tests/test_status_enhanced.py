@@ -34,7 +34,7 @@ class TestStatusBannerEmpty:
         assert rc == 0
         out = capsys.readouterr().out
         assert "ledger empty" in out
-        assert "demo-verify" in out
+        assert "demo verify" in out
 
     def test_empty_database_prints_hint(self, state_dir, capsys):
         """Database exists but has zero rows → fallback banner."""
@@ -43,7 +43,7 @@ class TestStatusBannerEmpty:
         assert rc == 0
         out = capsys.readouterr().out
         assert "ledger empty" in out
-        assert "demo-verify" in out
+        assert "demo verify" in out
 
 
 class TestStatusBannerWithEntries:
