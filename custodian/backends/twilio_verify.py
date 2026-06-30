@@ -1,9 +1,10 @@
 """Twilio Verify approval backend.
 
 Ports the real Twilio Verify integration from skills/payments/stripe-spend/
-scripts/notify.py (same API calls, same secret-file-loading pattern, same
-retry/error behavior) into the abstract ApprovalBackend interface so the
-policy engine can dispatch through it without knowing which backend is wired.
+scripts/notify.py (same API calls, same secret-file-loading pattern) into
+the abstract ApprovalBackend interface so the policy engine can dispatch
+through it without knowing which backend is wired. HTTP errors propagate
+as exceptions; no retry logic is implemented.
 
 The code itself is generated and held only by Twilio's servers and the
 human's phone. It is never returned to this process or written to any file

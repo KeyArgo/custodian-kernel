@@ -1,7 +1,13 @@
 """NemoClaw inference router — tries endpoints in priority order with fallback.
 
 Implements the same LLMClient protocol as NvidiaNemotronClient so it is a
-drop-in replacement. Endpoint order: DGX Spark → local NIM → NVIDIA hosted API.
+drop-in replacement. Endpoint order: OpenRouter → NVIDIA NIM.
+
+OpenRouter is primary: faster failover between its upstream providers, more
+reliable uptime than NIM direct. NIM is secondary in case OpenRouter is down.
+
+Note: DGX Spark runs the enforcement kernel only (:8095/decide). Inference
+always goes to a cloud endpoint — never local.
 """
 from __future__ import annotations
 
@@ -14,27 +20,34 @@ from pathlib import Path
 from typing import Optional
 
 DEFAULT_ENDPOINTS = [
-    # 1. DGX Spark — local inference, air-gapped, primary
-    "http://192.168.50.56:11434/v1/chat/completions",
-    # 2. NVIDIA hosted API — always available, requires key
+    # 1. OpenRouter — primary (reliable, fast failover between providers)
+    "https://openrouter.ai/api/v1/chat/completions",
+    # 2. NVIDIA NIM — secondary, requires NVIDIA key
     "https://integrate.api.nvidia.com/v1/chat/completions",
 ]
 NVIDIA_HOSTED = "integrate.api.nvidia.com"
+OPENROUTER_HOSTED = "openrouter.ai"
+
+# Model to use on OpenRouter when falling back — env-overridable.
+OPENROUTER_FALLBACK_MODEL = os.environ.get(
+    "OPENROUTER_FALLBACK_MODEL", "nvidia/llama-3.3-nemotron-super-49b-v1"
+)
 
 
 @dataclass
 class NemoClawRouter:
     """Tries endpoints in order, falls back on timeout or connection error.
-    The NVIDIA hosted endpoint requires an API key; local endpoints do not.
+    Endpoint priority: DGX Spark (local) → NVIDIA NIM (cloud) → OpenRouter (fallback).
     name and live reflect the endpoint that actually responded."""
     endpoints: list[str] = field(default_factory=lambda: list(DEFAULT_ENDPOINTS))
     model: str = "nvidia/nemotron-3-super-120b-a12b"
     timeout: int = 2        # seconds per endpoint attempt before fallback
     nvidia_api_key_file: Optional[Path] = None
+    openrouter_key_file: Optional[Path] = None
     name: str = "nemoclaw-router (not yet called)"
     live: bool = False
 
-    def _key(self) -> Optional[str]:
+    def _nvidia_key(self) -> Optional[str]:
         if env_key := os.environ.get("NVIDIA_API_KEY"):
             return env_key
         if self.nvidia_api_key_file and self.nvidia_api_key_file.exists():
@@ -43,21 +56,43 @@ class NemoClawRouter:
                     return line.split("=", 1)[1].strip()
         return None
 
+    def _openrouter_key(self) -> Optional[str]:
+        if env_key := os.environ.get("OPENROUTER_API_KEY"):
+            return env_key
+        if self.openrouter_key_file and self.openrouter_key_file.exists():
+            for line in self.openrouter_key_file.read_text().splitlines():
+                if line.startswith("OPENROUTER_API_KEY="):
+                    return line.split("=", 1)[1].strip()
+        return None
+
     def _model_for(self, endpoint: str) -> str:
-        """Local Ollama endpoints use a different model identifier than the cloud API."""
-        if "11434" in endpoint:
-            # Ollama model name — must match what's pulled on that host
-            return os.environ.get("LOCAL_MODEL", "llama3.3:latest")
+        if OPENROUTER_HOSTED in endpoint:
+            return OPENROUTER_FALLBACK_MODEL
         return self.model
+
+    def _headers_for(self, endpoint: str) -> dict:
+        headers = {"Content-Type": "application/json"}
+        if NVIDIA_HOSTED in endpoint:
+            key = self._nvidia_key()
+            if key:
+                headers["Authorization"] = f"Bearer {key}"
+        elif OPENROUTER_HOSTED in endpoint:
+            key = self._openrouter_key()
+            if key:
+                headers["Authorization"] = f"Bearer {key}"
+            headers["HTTP-Referer"] = "https://getcustodian.xyz"
+            headers["X-Title"] = "Custodian"
+        return headers
 
     def complete(self, system: str, user: str) -> str:
         last_error: Exception = RuntimeError("no endpoints configured")
         for endpoint in self.endpoints:
-            headers = {"Content-Type": "application/json"}
-            if NVIDIA_HOSTED in endpoint:
-                key = self._key()
-                if key:
-                    headers["Authorization"] = f"Bearer {key}"
+            headers = self._headers_for(endpoint)
+            # Skip cloud endpoints that have no key configured
+            if NVIDIA_HOSTED in endpoint and "Authorization" not in headers:
+                continue
+            if OPENROUTER_HOSTED in endpoint and "Authorization" not in headers:
+                continue
             payload = json.dumps({
                 "model": self._model_for(endpoint),
                 "messages": [

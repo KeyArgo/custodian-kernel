@@ -1,6 +1,6 @@
 [project]
 name = "custodian-kernel"
-version = "0.1.2"
+version = "0.2.0"
 description = "Kernel-enforced authority and spend platform for AI agents"
 requires-python = ">=3.11"
 readme = "README.md"
@@ -35,6 +35,7 @@ dev = [
 
 [project.scripts]
 custodian = "custodian.cli.main:main"
+custodian-verify = "custodian.verify_kit:main"
 
 [build-system]
 requires = ["setuptools>=64"]
@@ -44,7 +45,7 @@ build-backend = "setuptools.build_meta"
 include = ["custodian*"]
 
 [tool.setuptools.package-data]
-"custodian" = ["bundled_skills/**/*", "bundled_skills/**"]
+"custodian" = ["bundled_skills/**/*", "bundled_skills/**", "packs/**/corpus/*.json", "packs/**/*.yaml", "packs/**/*.json"]
 
 [tool.pytest.ini_options]
 addopts = "-m 'not network'"

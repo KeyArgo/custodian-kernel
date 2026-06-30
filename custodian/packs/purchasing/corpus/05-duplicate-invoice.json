@@ -1,0 +1,23 @@
+{
+  "title": "Duplicate → flagged (needs payment-history memory)",
+  "expect": "flag_hold",
+  "customer_email": "Following up on invoice for PO po_6002, $90.00 — haven't seen payment yet. — BrightParts LLC",
+  "envelope": {
+    "case_id": "05-duplicate-invoice",
+    "customer_id": "vnd_brightparts",
+    "order_id": "po_6002",
+    "amount": 90.0,
+    "requested_action": "invoice.pay",
+    "recommended_disposition": "auto_pay",
+    "confidence": 0.88,
+    "agent_summary": "Approved vendor, invoice $90 matches open PO po_6002. On the invoice alone, payable.",
+    "policy_clauses_cited": [
+      {"source": "policy", "quote": "Pay invoices that match their purchase order.", "locator": "purchasing_rules.yaml"}
+    ],
+    "claims": [
+      {"id": "amount_matches_po", "statement": "Invoice amount matches the authorized PO amount", "customer_quote": "$90.00", "ledger_path": "po.amount", "relation": "eq", "asserted": 90.0},
+      {"id": "vendor_approved", "statement": "Vendor is on the approved list", "customer_quote": "BrightParts LLC", "ledger_path": "vendor.approved", "relation": "eq", "asserted": true},
+      {"id": "po_open", "statement": "Purchase order is open", "customer_quote": "invoice for PO po_6002", "ledger_path": "po.status", "relation": "eq", "asserted": "open"}
+    ]
+  }
+}

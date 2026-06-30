@@ -1,9 +1,25 @@
 """Regression tests for custodian demo-verify command and the claim verifier."""
 from __future__ import annotations
 
+import subprocess
+import sys
+
 import pytest
 
 from custodian.packs.base import Claim, ClaimStatus, verify_claims
+
+
+def test_demo_verify_all_cases():
+    """demo-verify runs all 4 cases and returns exit code 0."""
+    result = subprocess.run(
+        ["custodian", "demo", "verify"],
+        capture_output=True, text=True,
+    )
+    assert result.returncode == 0, f"demo-verify exited {result.returncode}\n{result.stdout}\n{result.stderr}"
+    assert "VERIFIED" in result.stdout
+    assert "CONTRADICTED" in result.stdout
+    assert "UNVERIFIABLE" in result.stdout
+    assert "self-approval" in result.stdout.lower()
 
 
 class TestDemoVerifyScenarios:

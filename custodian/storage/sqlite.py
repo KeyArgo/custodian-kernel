@@ -147,8 +147,9 @@ class SqliteStorage(StorageBackend):
             conn = self._connect()
             sql = "SELECT * FROM audit_log ORDER BY id ASC"
             if limit is not None:
-                sql += f" LIMIT {limit}"
-            rows = conn.execute(sql).fetchall()
+                rows = conn.execute(sql + " LIMIT ?", (int(limit),)).fetchall()
+            else:
+                rows = conn.execute(sql).fetchall()
             conn.close()
             result = []
             for row in rows:

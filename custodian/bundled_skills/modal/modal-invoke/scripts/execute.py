@@ -4,7 +4,7 @@ TOOL = "modal-invoke"
 
 def _use_sdk(app_name, func_name, payload):
     import modal
-    f = modal.Function.lookup(app_name, func_name)
+    f = modal.Function.from_name(app_name, func_name)
     args = payload if payload else ()
     kwargs = payload if isinstance(payload, dict) else {}
     if isinstance(payload, list):

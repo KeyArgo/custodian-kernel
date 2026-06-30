@@ -15,6 +15,26 @@ from typing import Optional
 from custodian.exceptions import PolicyValidationError
 from custodian.types import Band
 
+
+# -- Optional opt-in directives -------------------------------------------------
+#
+# The original Custodian policy only had three things to enforce: per-band
+# max_spend, session cap, and self-approval detection. We are adding four
+# OPT-IN directives (daily envelope, margin gate, auto-downgrade, and
+# self-dealing detection). They are deliberately wired in as Optional
+# fields with sensible None/false defaults so existing policies — and the
+# dozens of existing tests that pin their behavior — continue to work
+# unchanged. The new checks only fire when the corresponding directive
+# is set, and the evaluator's try/except wrapper around each check means
+# a malformed directive logs and continues rather than blowing up the
+# decision.
+#
+# Adding an Optional field with a default of None is not a public-API
+# change to Policy / BandConfig: existing constructors that pass the
+# previous set of arguments still work, load_policy() still loads the
+# same YAML shape, and Policy.validate() still passes on every policy
+# that does not opt into the new directives.
+
 # Only backends with a real, shipped implementation belong here. A policy
 # citing a backend name that isn't actually wired would otherwise pass
 # validation and only fail silently at escalation time -- that's a false
@@ -31,6 +51,13 @@ class BandConfig:
     approval_backend: Optional[str] = None
     description: str = ""
 
+    # --- Opt-in policy directives (all default to None / disabled) ------------
+    # Each is read by its dedicated check in custodian.policy.{envelope,autorank}.
+    # None / unset means "do not run this check for this band" — preserves
+    # 100% backward compatibility with policies that don't know about them.
+    daily_envelope: Optional[float] = None
+    band_after_task: Optional[Band] = None
+
     def validate(self) -> None:
         if self.max_spend is not None and self.max_spend < 0:
             raise PolicyValidationError(
@@ -45,6 +72,44 @@ class BandConfig:
                 f"band {self.name}: unknown approval_backend '{self.approval_backend}' "
                 f"(valid: {sorted(VALID_APPROVAL_BACKENDS)})"
             )
+        if self.daily_envelope is not None and self.daily_envelope < 0:
+            raise PolicyValidationError(
+                f"band {self.name}: daily_envelope must be >= 0, got {self.daily_envelope}"
+            )
+
+
+@dataclass
+class MarginsConfig:
+    """Optional margin-gate directives (opt-in at the Policy level).
+
+    A policy that doesn't set `margins:` simply has no margin gate enforced.
+    This is what makes the new directive truly opt-in: no existing test
+    that constructs a Policy() without a margins field ever sees the
+    check_margin() path run.
+    """
+    minimum_margin: Optional[float] = None
+    minimum_margin_pct: Optional[float] = None
+
+    def validate(self) -> None:
+        if self.minimum_margin is not None and self.minimum_margin < 0:
+            raise PolicyValidationError(
+                f"margins.minimum_margin must be >= 0, got {self.minimum_margin}"
+            )
+        if self.minimum_margin_pct is not None and (
+            self.minimum_margin_pct < 0 or self.minimum_margin_pct > 100
+        ):
+            raise PolicyValidationError(
+                f"margins.minimum_margin_pct must be in [0, 100], "
+                f"got {self.minimum_margin_pct}"
+            )
+
+
+@dataclass
+class PoliciesConfig:
+    """Top-level `policies:` block — a place for opt-in policy toggles that
+    don't fit cleanly inside a single band (i.e. they're request-level
+    checks, not per-band caps)."""
+    no_self_dealing: bool = False
 
 
 @dataclass
@@ -99,6 +164,12 @@ class Policy:
     bands: dict[Band, BandConfig]
     rules: list[Rule] = field(default_factory=list)
     escalation: EscalationConfig = field(default_factory=EscalationConfig)
+    # Opt-in policy-level directives. The defaults preserve full backward
+    # compatibility: a Policy() constructed without these never invokes the
+    # new checks. `margins=None` is the sentinel that check_margin() looks
+    # for; same for `policies=None` in check_self_dealing().
+    margins: Optional[MarginsConfig] = None
+    policies: Optional[PoliciesConfig] = None
 
     def validate(self) -> None:
         if self.version != "1.0":
@@ -116,6 +187,17 @@ class Policy:
                     f"rule assigns undefined band '{rule.assign_band}'"
                 )
         self.escalation.validate()
+        if self.margins is not None:
+            self.margins.validate()
+        # If a band declares band_after_task, it must be a defined band —
+        # otherwise a downgrade could route to a band that doesn't exist,
+        # which would be a silent fail-open in the wrong direction.
+        for band_cfg in self.bands.values():
+            if band_cfg.band_after_task is not None and band_cfg.band_after_task not in self.bands:
+                raise PolicyValidationError(
+                    f"band {band_cfg.name.value}: band_after_task "
+                    f"'{band_cfg.band_after_task.value}' is not defined in bands"
+                )
 
     def band_for(self, skill: Optional[str], context: dict, spend_estimate: Optional[float]) -> Band:
         """First matching rule wins, in declared order; falls back to default_band."""

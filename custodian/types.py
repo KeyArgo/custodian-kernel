@@ -57,6 +57,15 @@ class SpendRequest:
     recipe: Optional[str] = None
     to: Optional[str] = None
     message: Optional[str] = None
+    # Opt-in fields for the new policy directives (Feature 2 margin gate,
+    # Feature 3 autorank, Feature 4 self-dealing). All default to None
+    # so existing tests that build SpendRequest without them are
+    # completely unaffected — and the evaluator only consults these
+    # fields when the corresponding directive is set on the policy.
+    revenue: Optional[float] = None
+    cost: Optional[float] = None
+    requester_agent_id: Optional[str] = None
+    recipient_agent_id: Optional[str] = None
     requested_at: float = field(default_factory=time.time)
 
 

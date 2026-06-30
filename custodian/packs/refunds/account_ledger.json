@@ -1,0 +1,83 @@
+{
+  "_comment": "Ground truth. The verifier checks the agent's extracted claims against THIS, never against the agent's own narration. Per-customer order history, delivery facts, prior refunds, tenure. In production this is your real order DB / Stripe; here it is fixtures so the demo is reproducible.",
+  "customers": {
+    "cus_amara": {
+      "tenure_months": 26,
+      "prior_refunds_90d": 0,
+      "orders": {
+        "ord_1001": {
+          "purchase_age_days": 8,
+          "amount": 39.0,
+          "delivered": true,
+          "customer_acknowledged_at": null,
+          "defect_report_on_file": false
+        }
+      }
+    },
+    "cus_diego": {
+      "tenure_months": 14,
+      "prior_refunds_90d": 0,
+      "orders": {
+        "ord_2002": {
+          "purchase_age_days": 41,
+          "amount": 72.0,
+          "delivered": true,
+          "customer_acknowledged_at": null,
+          "defect_report_on_file": true
+        }
+      }
+    },
+    "cus_priya": {
+      "tenure_months": 9,
+      "prior_refunds_90d": 0,
+      "orders": {
+        "ord_3003": {
+          "purchase_age_days": 63,
+          "amount": 24.0,
+          "delivered": true,
+          "customer_acknowledged_at": "2026-05-01T10:00:00Z",
+          "defect_report_on_file": false
+        }
+      }
+    },
+    "cus_keith": {
+      "tenure_months": 11,
+      "prior_refunds_90d": 4,
+      "orders": {
+        "ord_4004": {
+          "purchase_age_days": 12,
+          "amount": 45.0,
+          "delivered": true,
+          "customer_acknowledged_at": null,
+          "defect_report_on_file": false
+        }
+      }
+    },
+    "cus_lena": {
+      "tenure_months": 7,
+      "prior_refunds_90d": 1,
+      "orders": {
+        "ord_5005": {
+          "purchase_age_days": 33,
+          "amount": 60.0,
+          "delivered": true,
+          "customer_acknowledged_at": null,
+          "defect_report_on_file": false
+        }
+      }
+    },
+    "cus_marcus": {
+      "tenure_months": 8,
+      "prior_refunds_90d": 0,
+      "orders": {
+        "ord_6006": {
+          "purchase_age_days": 19,
+          "amount": 80.0,
+          "delivered": true,
+          "customer_acknowledged_at": "2026-06-04T16:20:00Z",
+          "defect_report_on_file": false
+        }
+      }
+    }
+  }
+}

@@ -17,7 +17,7 @@ def cmd_tools_list(args) -> int:
     tools = reg.all()
     s = reg.summary()
 
-    print(f"\n{BOLD}Custodian Tool Registry{RESET}  —  {s['total']} tools · {s['configured']} configured · {s['stubs']} stubs\n")
+    print(f"\n{BOLD}Custodian Tool Registry{RESET}  —  {s['total']} tools · {s['configured']} ready · {s['stubs']} optional (bring your own key)\n")
 
     current_band = None
     for t in tools:
@@ -34,7 +34,14 @@ def cmd_tools_list(args) -> int:
             color = BAND_COLOR.get(t.band, "")
             print(f"  {color}{BOLD}{label}{RESET}")
 
-        status = "" if t.configured else f"  {DIM}[stub — set env vars to enable]{RESET}"
+        from custodian.tools.registry import _ENV_REQUIREMENTS
+        envs = _ENV_REQUIREMENTS.get(t.name)
+        if t.configured:
+            status = ""
+        elif envs:
+            status = f"  {DIM}[optional — needs: {', '.join(envs)}]{RESET}"
+        else:
+            status = f"  {DIM}[optional — set credentials to enable]{RESET}"
         cost = f"  ~${t.cost_usd:.2f}/call" if t.cost_usd else ""
         print(f"    {'✓' if t.configured else '○'}  {t.name:<32} {DIM}{t.description[:55]}{RESET}{cost}{status}")
 

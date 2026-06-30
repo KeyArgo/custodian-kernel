@@ -60,8 +60,15 @@ _ENV_REQUIREMENTS: dict[str, list[str]] = {
     "calendar-list":             ["GOOGLE_CALENDAR_TOKEN"],
     "calendar-create":           ["GOOGLE_CALENDAR_TOKEN"],
     "calendar-update":           ["GOOGLE_CALENDAR_TOKEN"],
+    "calendar-event-list":       ["GOOGLE_CALENDAR_TOKEN"],
+    "calendar-event-create":     ["GOOGLE_CALENDAR_TOKEN"],
+    "cron-list":                 ["CUSTODIAN_DB_PATH"],
+    "cron-create":               ["CUSTODIAN_DB_PATH"],
+    "cron-delete":               ["CUSTODIAN_DB_PATH"],
     # Modal
     "modal-run":                 ["MODAL_TOKEN_ID", "MODAL_TOKEN_SECRET"],
+    "modal-invoke":              ["MODAL_TOKEN_ID", "MODAL_TOKEN_SECRET"],
+    "modal-deploy":              ["MODAL_TOKEN_ID", "MODAL_TOKEN_SECRET"],
     # Cloud Storage (S3-compatible)
     "s3-list":                   ["AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY"],
     "s3-get":                    ["AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY"],
@@ -79,6 +86,11 @@ _ENV_REQUIREMENTS: dict[str, list[str]] = {
     "github-file-read":          ["GITHUB_TOKEN"],
     "github-release-list":       ["GITHUB_TOKEN"],
     "github-release-create":     ["GITHUB_TOKEN"],
+    "github-issue-list":         ["GITHUB_TOKEN"],
+    "github-repo-list":          ["GITHUB_TOKEN"],
+    "github-comment":            ["GITHUB_TOKEN"],
+    "slack-channel-list":        ["SLACK_BOT_TOKEN"],
+    "modal-function-list":       ["MODAL_TOKEN_ID", "MODAL_TOKEN_SECRET"],
     # AI Inference
     "openai-chat":               ["OPENAI_API_KEY"],
     "anthropic-chat":            ["ANTHROPIC_API_KEY"],
@@ -156,7 +168,7 @@ class CustodianTool:
                     band=Band.L2, per_action_cap=250.0, session_cap=1000.0
                 )
 
-            # Kill switch
+            # Kill switch — fail closed on corruption (same policy as govern.py)
             ks_path = Path.home() / ".custodian" / "kill_switch.json"
             killed = False
             if ks_path.exists():
@@ -164,7 +176,7 @@ class CustodianTool:
                     ks_data = json.loads(ks_path.read_text())
                     killed = bool(ks_data.get("killed", False))
                 except Exception:
-                    pass
+                    killed = True  # corrupted kill switch file = treat as killed
 
             # Policy: workspace first, then default preset
             policy_path = Path.home() / ".custodian" / "policy.yaml"
@@ -194,7 +206,9 @@ class CustodianTool:
 
         Returns dict with at minimum {"ok": bool}.
         """
-        if not self.configured:
+        from custodian import bus as _event_bus
+
+        if not _is_configured(self.name, self.configured):
             return {
                 "ok": False,
                 "stub": True,
@@ -207,9 +221,21 @@ class CustodianTool:
             }
 
         # Kernel gate for spending bands
+        decision = None
         if self.band in ("L2", "L3", "L4"):
             decision = self._kernel_decide()
             if decision is not None and decision["verdict"] != "autonomous":
+                payload = {
+                    "tool": self.name,
+                    "band": self.band,
+                    "verdict": decision["verdict"],
+                    "reason": decision["reason"],
+                    "cost_usd": self.cost_usd,
+                }
+                if decision["verdict"] == "denied":
+                    _event_bus.emit("kernel_denied", payload)
+                else:
+                    _event_bus.emit("escalation_required", payload)
                 return {
                     "ok": False,
                     "kernel_escalation": True,
@@ -231,6 +257,8 @@ class CustodianTool:
                 "tool": self.name,
             }
 
+        _event_bus.emit("pre_execute", {"tool": self.name, "band": self.band, "kwargs": kwargs})
+
         cmd = ["python3", str(self.execute_script)]
         for k, v in kwargs.items():
             cmd += [f"--{k.replace('_', '-')}", str(v)]
@@ -246,6 +274,12 @@ class CustodianTool:
             parsed["tool"] = self.name
             if result.stderr.strip():
                 parsed.setdefault("stderr", result.stderr.strip())
+            _event_bus.emit("post_execute", {
+                "tool": self.name,
+                "band": self.band,
+                "ok": parsed.get("ok", False),
+                "result": parsed,
+            })
             return parsed
         except subprocess.TimeoutExpired:
             return {"ok": False, "error": "timeout", "tool": self.name}
@@ -328,6 +362,21 @@ class ToolRegistry:
             "stubs": sum(1 for t in tools if not t.configured),
             "by_band": by_band,
         }
+
+    def run(self, name: str, **kwargs) -> dict:
+        """Convenience: look up a tool by name and invoke it.
+
+        Returns a structured error dict (never raises) when the tool is
+        unknown so callers can branch on `ok` without try/except plumbing.
+        """
+        tool = self.get(name)
+        if tool is None:
+            return {
+                "ok": False,
+                "error": f"tool not found: {name}",
+                "tool": name,
+            }
+        return tool.invoke(**kwargs)
 
 
 def default_registry() -> ToolRegistry:
