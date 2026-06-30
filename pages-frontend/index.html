@@ -342,6 +342,30 @@
   @supports(padding:env(safe-area-inset-bottom)){
     footer{padding-bottom:calc(40px + env(safe-area-inset-bottom))}
   }
+
+  /* ── Hero split layout ──────────────────────────────────────── */
+  .hero{padding:80px 0 56px;position:relative;overflow:hidden}
+  #star-field{position:absolute;inset:0;pointer-events:none;z-index:0}
+  .hero-split{display:grid;grid-template-columns:55% 1fr;gap:64px;align-items:center;position:relative;z-index:1}
+  .hero-left{text-align:left}
+  .hero-left .eyebrow{justify-content:flex-start}
+  .hero-left h1{text-align:left;font-size:clamp(2.8em,5.5vw,4.2em);margin-bottom:20px}
+  .hero-left .lede{text-align:left;margin-left:0;max-width:560px;margin-right:0}
+  .hero-left .hero-cta{justify-content:flex-start}
+  .hero-left .specs{display:inline-flex}
+  .hero-right{display:flex;flex-direction:column;gap:14px;align-items:stretch}
+  .ring-wrap{position:relative;width:100%;max-width:440px;margin:0 auto}
+  @keyframes ring-pulse{0%,100%{stroke-opacity:1}50%{stroke-opacity:0.45}}
+  @keyframes core-pulse{0%,100%{opacity:1;r:12}50%{opacity:0.55;r:16}}
+  @media(max-width:860px){
+    .hero-split{grid-template-columns:1fr;gap:40px}
+    .hero-left{text-align:center}
+    .hero-left .eyebrow{justify-content:center}
+    .hero-left h1{text-align:center}
+    .hero-left .lede{text-align:center;margin:0 auto 36px}
+    .hero-left .hero-cta{justify-content:center}
+    .hero-right{order:-1;max-width:380px;margin:0 auto}
+  }
 </style>
 </head>
 <body>
@@ -386,163 +410,216 @@
 
 <!-- HERO -->
 <header class="hero">
+  <canvas id="star-field"></canvas>
   <div class="wrap">
-    <div class="eyebrow"><span class="pulse"></span> NVIDIA · Nous Research · Stripe · Hackathon 2026</div>
-    <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-bottom:22px">
-      <span style="display:inline-flex;align-items:center;gap:6px;background:rgba(118,185,0,0.15);border:1px solid rgba(118,185,0,0.4);border-radius:8px;padding:5px 12px;font-size:0.78em;font-weight:700;color:#76b900;font-family:'JetBrains Mono',monospace">⬡ DGX Spark GB10</span>
-      <span style="display:inline-flex;align-items:center;gap:6px;background:rgba(118,185,0,0.1);border:1px solid rgba(118,185,0,0.3);border-radius:8px;padding:5px 12px;font-size:0.78em;font-weight:700;color:#76b900;font-family:'JetBrains Mono',monospace">🛡 NemoClaw</span>
-      <span style="display:inline-flex;align-items:center;gap:6px;background:rgba(118,185,0,0.1);border:1px solid rgba(118,185,0,0.3);border-radius:8px;padding:5px 12px;font-size:0.78em;font-weight:700;color:#76b900;font-family:'JetBrains Mono',monospace">◉ Nemotron Super 120B</span>
-      <span style="display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.15);border-radius:8px;padding:5px 12px;font-size:0.78em;font-weight:700;color:var(--text);font-family:'JetBrains Mono',monospace">◆ Hermes</span>
-      <span style="display:inline-flex;align-items:center;gap:6px;background:rgba(99,91,255,0.1);border:1px solid rgba(99,91,255,0.3);border-radius:8px;padding:5px 12px;font-size:0.78em;font-weight:700;color:#a78bfa;font-family:'JetBrains Mono',monospace">stripe</span>
-    </div>
-    <h1>Give AI a real wallet.<br><span class="grad">Without the risk.</span></h1>
-    <p class="lede">Most businesses won't deploy AI near money because there's no way to verify it actually followed the rules. Custodian is the enforcement kernel that changes that — define authority limits in code, the OS enforces them, the agent cannot exceed them, lie about them, or approve its own escalation. <b>This is proven, not promised.</b> A <b>Nous Hermes agent</b> on <b>NVIDIA Nemotron Super 120B</b> runs inside a <b>NemoClaw kernel sandbox</b> on a <b>DGX Spark GB10</b> — and the same enforcement ships as a pip package you can run anywhere.</p>
+    <div class="hero-split">
 
-    <!-- employee + company card visual -->
-    <div class="card-metaphor">
-      <div class="cc cc-employee">
-        <div class="chip"></div>
-        <div class="name">HERMES AGENT</div>
-        <div class="val">Nemotron Super 120B</div>
-        <div class="limit-row">
-          <span class="limit-key">ROLE</span>
-          <span class="limit-val">REQUESTS ONLY</span>
+      <!-- LEFT: headline + CTAs -->
+      <div class="hero-left">
+        <div class="eyebrow"><span class="pulse"></span> NVIDIA · Nous Research · Stripe · Hackathon 2026</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:22px">
+          <span style="display:inline-flex;align-items:center;gap:6px;background:rgba(118,185,0,0.15);border:1px solid rgba(118,185,0,0.4);border-radius:8px;padding:5px 12px;font-size:0.78em;font-weight:700;color:#76b900;font-family:'JetBrains Mono',monospace">⬡ DGX Spark GB10</span>
+          <span style="display:inline-flex;align-items:center;gap:6px;background:rgba(118,185,0,0.1);border:1px solid rgba(118,185,0,0.3);border-radius:8px;padding:5px 12px;font-size:0.78em;font-weight:700;color:#76b900;font-family:'JetBrains Mono',monospace">🛡 NemoClaw</span>
+          <span style="display:inline-flex;align-items:center;gap:6px;background:rgba(118,185,0,0.1);border:1px solid rgba(118,185,0,0.3);border-radius:8px;padding:5px 12px;font-size:0.78em;font-weight:700;color:#76b900;font-family:'JetBrains Mono',monospace">◉ Nemotron Super 120B</span>
+          <span style="display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.15);border-radius:8px;padding:5px 12px;font-size:0.78em;font-weight:700;color:var(--text);font-family:'JetBrains Mono',monospace">◆ Hermes</span>
+          <span style="display:inline-flex;align-items:center;gap:6px;background:rgba(99,91,255,0.1);border:1px solid rgba(99,91,255,0.3);border-radius:8px;padding:5px 12px;font-size:0.78em;font-weight:700;color:#a78bfa;font-family:'JetBrains Mono',monospace">stripe</span>
+        </div>
+        <h1>Give AI a real wallet.<br><span class="grad">Without the risk.</span></h1>
+        <p class="lede">Most businesses won't deploy AI near money because there's no way to verify it actually followed the rules. Custodian is the enforcement kernel that changes that — <b>define limits in code, the OS enforces them, the agent cannot lie or self-approve.</b> Proven in a live NemoClaw sandbox on a DGX Spark GB10 — and ships as a pip package.</p>
+        <div style="display:flex;gap:16px;flex-wrap:wrap;margin:16px 0 22px;font-family:'JetBrains Mono',monospace;font-size:0.77em">
+          <span style="color:#2ee6a6;font-weight:700">✓ 3/3 planted lies caught</span>
+          <span style="color:var(--dim)">·</span>
+          <span style="color:#2ee6a6;font-weight:700">✓ $0 unauthorized spend</span>
+          <span style="color:var(--dim)">·</span>
+          <span style="color:#2ee6a6;font-weight:700">✓ 1,245 tests pass</span>
+          <span style="color:var(--dim)">·</span>
+          <span style="color:#635bff;font-weight:700">✓ real Stripe PI on record</span>
+        </div>
+        <div class="hero-cta">
+          <a class="btn btn-primary" href="/operator" target="_blank" rel="noopener">▶ Run the live demo</a>
+          <a class="btn btn-ghost" href="/hermes">Watch it spend real money →</a>
+          <a class="btn btn-ghost" href="https://buy.stripe.com/test_4gMeVffdb4dSgTB8Ht2B200" target="_blank" rel="noopener" style="border-color:#635bff;color:#a39fff">💳 Safety Review — $25</a>
+        </div>
+        <div class="specs" id="specs" style="margin-top:22px">
+          <div class="spec"><div class="k">Authority band</div><div class="v" id="s-band">—</div></div>
+          <div class="spec live"><div class="k">Session budget left</div><div class="v" id="s-remaining">—</div></div>
+          <div class="spec"><div class="k">AI brain</div><div class="v">Nous Hermes (Nemotron)</div></div>
+          <div class="spec"><div class="k">Live tools</div><div class="v">102</div></div>
+          <div class="spec"><div class="k">Boundary</div><div class="v enf">ENFORCED AT KERNEL</div></div>
         </div>
       </div>
-      <div class="cc-vs">+</div>
-      <div class="cc cc-company">
-        <div class="chip"></div>
-        <div class="name">NEMOCLAW KERNEL</div>
-        <div class="val">Custodian Authority</div>
-        <div class="limit-row">
-          <span class="limit-key">PER-ACTION CAP</span>
-          <span class="limit-val" id="s-cap">$250</span>
-        </div>
-      </div>
-    </div>
-    <div class="cc-enforced">LIMITS ENFORCED BELOW THE AGENT · OS-LEVEL · NOT A PROMPT · NOT A PROMISE</div>
 
-    <div class="hero-cta" style="margin-top:28px">
-      <a class="btn btn-primary" href="/operator" target="_blank" rel="noopener">▶ Run the live demo</a>
-      <a class="btn btn-ghost" href="/hermes">Watch it spend real money →</a>
-      <a class="btn btn-ghost" href="https://buy.stripe.com/test_4gMeVffdb4dSgTB8Ht2B200" target="_blank" rel="noopener" style="border-color:#635bff;color:#a39fff">💳 Buy a Safety Review — $25</a>
-    </div>
-    <div style="display:flex;gap:22px;justify-content:center;flex-wrap:wrap;margin:24px 0 0;font-family:'JetBrains Mono',monospace;font-size:0.77em">
-      <span style="color:#2ee6a6;font-weight:700">✓ 3/3 planted lies caught</span>
-      <span style="color:var(--dim)">·</span>
-      <span style="color:#2ee6a6;font-weight:700">✓ $0 unauthorized spend</span>
-      <span style="color:var(--dim)">·</span>
-      <span style="color:#2ee6a6;font-weight:700">✓ 1,163 tests pass</span>
-      <span style="color:var(--dim)">·</span>
-      <span style="color:#635bff;font-weight:700">✓ real Stripe PI on record</span>
-    </div>
-    <div class="specs" id="specs" style="margin-top:8px">
-      <div class="spec"><div class="k">Authority band</div><div class="v" id="s-band">—</div></div>
-      <div class="spec live"><div class="k">Session budget left</div><div class="v" id="s-remaining">—</div></div>
-      <div class="spec"><div class="k">AI brain</div><div class="v">Nous Hermes (Nemotron)</div></div>
-      <div class="spec"><div class="k">Decision modules</div><div class="v" id="s-packs">3</div></div>
-      <div class="spec"><div class="k">Live tools</div><div class="v">102</div></div>
-      <div class="spec"><div class="k">Boundary</div><div class="v enf">ENFORCED AT KERNEL</div></div>
-    </div>
-    <!-- live kernel decision ticker -->
-    <div id="kticker" style="margin:20px auto 0;max-width:680px;overflow:hidden;
-      border:1px solid rgba(255,176,0,0.18);border-radius:4px;background:rgba(0,0,0,0.45);
-      display:flex;align-items:center;height:36px">
-      <div style="flex-shrink:0;padding:0 12px;font-family:'JetBrains Mono',monospace;
-        font-size:0.65em;font-weight:800;letter-spacing:.1em;color:#ffb000;
-        border-right:1px solid rgba(255,176,0,0.18);height:100%;display:flex;align-items:center">
-        ⬡ KERNEL
-      </div>
-      <div id="kt-line" style="flex:1;padding:0 14px;font-family:'JetBrains Mono',monospace;
-        font-size:0.72em;color:#aaa;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
-        initializing…
-      </div>
-    </div>
-    <script>
-    (function(){
-      var el=document.getElementById('kt-line');
-      if(!el)return;
-      var events=[
-        {v:'ALLOW',   c:'#2ee6a6', msg:'refund_request($45.00) · within authority band · session cap ok'},
-        {v:'DENY',    c:'#ff5f57', msg:'bulk_purchase($1,240.00) · exceeds per-action limit $250'},
-        {v:'ESCALATE',c:'#ffb000', msg:'vendor_payment($189.00) · new counterparty — escalating to human'},
-        {v:'ALLOW',   c:'#2ee6a6', msg:'refund_request($12.00) · 4 s latency · Stripe PI created'},
-        {v:'DENY',    c:'#ff5f57', msg:'self_approve($80.00) · agent cannot approve own spend'},
-        {v:'ALLOW',   c:'#2ee6a6', msg:'procurement($199.00) · pre-authorized vendor · cap ok'},
-        {v:'DENY',    c:'#ff5f57', msg:'killswitch check · killswitch=OFF · request blocked'},
-        {v:'ESCALATE',c:'#ffb000', msg:'invoice_payment($2,500.00) · over-band · paging human'},
-        {v:'ALLOW',   c:'#2ee6a6', msg:'refund_request($67.50) · Landlock enforced · allowed'},
-        {v:'DENY',    c:'#ff5f57', msg:'direct_api_call() · no kernel path · denied at OS'},
-      ];
-      var i=0;
-      function tick(){
-        var e=events[i%events.length]; i++;
-        el.innerHTML='<span style="color:'+e.c+';font-weight:800;margin-right:10px">'+e.v+'</span>'+e.msg;
-      }
-      tick();
-      setInterval(tick,2800);
-    })();
-    </script>
+      <!-- RIGHT: SVG kernel authority ring + ticker + terminal -->
+      <div class="hero-right">
+        <!-- kernel authority ring diagram -->
+        <div class="ring-wrap">
+          <svg viewBox="0 0 400 400" width="100%" height="auto" aria-hidden="true" style="overflow:visible">
+            <defs>
+              <filter id="gl-amber" x="-50%" y="-50%" width="200%" height="200%">
+                <feGaussianBlur stdDeviation="5" result="b"/>
+                <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+              </filter>
+              <filter id="gl-green" x="-50%" y="-50%" width="200%" height="200%">
+                <feGaussianBlur stdDeviation="3" result="b"/>
+                <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+              </filter>
+              <radialGradient id="bg-glow" cx="50%" cy="50%" r="50%">
+                <stop offset="0%" stop-color="rgba(255,176,0,0.07)"/>
+                <stop offset="100%" stop-color="transparent"/>
+              </radialGradient>
+            </defs>
 
-    <!-- verify_kit terminal animation -->
-    <div id="vkit-wrap" style="margin:32px auto 0;max-width:620px;text-align:left">
-      <div style="background:#0a0a0a;border:1px solid #2a2a2a;border-radius:10px;overflow:hidden;font-family:'JetBrains Mono',monospace;font-size:0.82em">
-        <div style="display:flex;align-items:center;gap:7px;padding:9px 14px;background:#111;border-bottom:1px solid #1e1e1e">
-          <span style="width:12px;height:12px;border-radius:50%;background:#ff5f57;display:inline-block"></span>
-          <span style="width:12px;height:12px;border-radius:50%;background:#febc2e;display:inline-block"></span>
-          <span style="width:12px;height:12px;border-radius:50%;background:#28c840;display:inline-block"></span>
-          <span style="color:#5a5a5a;font-size:0.9em;margin-left:4px">verify_kit.py — self-verifying proof</span>
+            <!-- background ambient glow -->
+            <circle cx="200" cy="200" r="190" fill="url(#bg-glow)"/>
+
+            <!-- L4 outer ring (grey, locked) -->
+            <circle cx="200" cy="200" r="178" fill="none" stroke="#2a2d3a" stroke-width="1.5" stroke-dasharray="6 5"/>
+            <text x="200" y="22" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9" fill="#3d4055" letter-spacing="1.5">L4 · HUMAN REQUIRED · UNLIMITED</text>
+
+            <!-- L3 ring (red threshold) -->
+            <circle cx="200" cy="200" r="148" fill="none" stroke="#ff5c5c" stroke-width="1.5" stroke-opacity="0.3" stroke-dasharray="5 4"/>
+            <text x="200" y="50" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9" fill="#ff5c5c" fill-opacity="0.55" letter-spacing="1">L3 · ALWAYS ESCALATES</text>
+
+            <!-- L2 ring (amber, ACTIVE — main ring) -->
+            <circle cx="200" cy="200" r="115" fill="none" stroke="#ffb000" stroke-width="2.5" filter="url(#gl-amber)" style="animation:ring-pulse 3.5s ease-in-out infinite"/>
+            <text x="200" y="82" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9.5" fill="#ffcf57" font-weight="700" letter-spacing="1.5">L2 · AUTONOMOUS UP TO CAP ▶ ACTIVE</text>
+
+            <!-- L1 ring (green) -->
+            <circle cx="200" cy="200" r="80" fill="none" stroke="#2ee6a6" stroke-width="1.5" stroke-opacity="0.55" filter="url(#gl-green)"/>
+            <text x="200" y="120" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9" fill="#2ee6a6" fill-opacity="0.7" letter-spacing="1">L1 · FREE / TRIVIAL SIDE-EFFECTS</text>
+
+            <!-- L0 ring (green, innermost) -->
+            <circle cx="200" cy="200" r="50" fill="none" stroke="#2ee6a6" stroke-width="1.5" stroke-opacity="0.8"/>
+            <text x="200" y="150" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9" fill="#2ee6a6" letter-spacing="1">L0 · READ-ONLY</text>
+
+            <!-- center kernel core -->
+            <circle cx="200" cy="200" r="22" fill="rgba(255,176,0,0.08)" stroke="#ffb000" stroke-width="1.5"/>
+            <circle cx="200" cy="200" r="22" fill="none" stroke="#ffcf57" stroke-width="1" stroke-opacity="0.4" style="animation:ring-pulse 2s ease-in-out infinite 0.5s"/>
+            <circle cx="200" cy="200" r="10" fill="rgba(255,176,0,0.25)" style="animation:core-pulse 2s ease-in-out infinite"/>
+            <circle cx="200" cy="200" r="5" fill="#ffb000"/>
+            <text x="200" y="205" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#ffcf57" font-weight="800" letter-spacing="2">KERNEL</text>
+
+            <!-- orbiting request dot on L2 ring (radius 115) -->
+            <g>
+              <animateTransform attributeName="transform" type="rotate" from="0 200 200" to="360 200 200" dur="7s" repeatCount="indefinite"/>
+              <circle cx="315" cy="200" r="7" fill="#ffb000" filter="url(#gl-amber)"/>
+              <text x="324" y="204" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#ffcf57" font-weight="700">REQ</text>
+            </g>
+
+            <!-- Sector label: ALLOW zone -->
+            <text x="200" y="240" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" fill="#2ee6a6" fill-opacity="0.45" letter-spacing="1">VERIFIED · ALLOW</text>
+          </svg>
         </div>
-        <pre id="vkit-body" style="padding:14px 18px;line-height:1.8;white-space:pre;color:#aaa;height:330px;overflow:hidden;margin:0"><span style="color:#ffb000">$ python3 verify_kit.py</span>
+
+        <!-- live kernel decision ticker -->
+        <div id="kticker" style="overflow:hidden;border:1px solid rgba(255,176,0,0.18);border-radius:6px;background:rgba(0,0,0,0.5);display:flex;align-items:center;height:36px">
+          <div style="flex-shrink:0;padding:0 12px;font-family:'JetBrains Mono',monospace;font-size:0.65em;font-weight:800;letter-spacing:.1em;color:#ffb000;border-right:1px solid rgba(255,176,0,0.18);height:100%;display:flex;align-items:center">⬡ KERNEL</div>
+          <div id="kt-line" style="flex:1;padding:0 14px;font-family:'JetBrains Mono',monospace;font-size:0.72em;color:#aaa;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">initializing…</div>
+        </div>
+
+        <!-- verify_kit terminal (compact) -->
+        <div id="vkit-wrap" style="text-align:left">
+          <div style="background:#0a0a0a;border:1px solid #222;border-radius:10px;overflow:hidden;font-family:'JetBrains Mono',monospace;font-size:0.78em">
+            <div style="display:flex;align-items:center;gap:7px;padding:8px 14px;background:#111;border-bottom:1px solid #1e1e1e">
+              <span style="width:11px;height:11px;border-radius:50%;background:#ff5f57;display:inline-block"></span>
+              <span style="width:11px;height:11px;border-radius:50%;background:#febc2e;display:inline-block"></span>
+              <span style="width:11px;height:11px;border-radius:50%;background:#28c840;display:inline-block"></span>
+              <span style="color:#5a5a5a;font-size:0.9em;margin-left:4px">verify_kit.py — self-verifying proof</span>
+            </div>
+            <pre id="vkit-body" style="padding:12px 16px;line-height:1.75;white-space:pre;color:#aaa;height:190px;overflow:hidden;margin:0"><span style="color:#ffb000">$ python3 verify_kit.py</span>
 </pre>
-      </div>
-    </div>
-    <script>
-    (function(){
-      var body=document.getElementById('vkit-body');
-      if(!body)return;
-      var lines=[
-        {t:'',p:300},
-        {t:'[1/4] REGRESSION TEST — agent cannot approve its own spend',c:'#888',p:400},
-        {t:'  Re-introducing the self-approval bug...',c:'#555',p:600},
-        {t:'  Result: REGRESSION TEST CAUGHT IT  ✓',c:'#2ee6a6',p:700},
-        {t:'',p:200},
-        {t:'[2/4] TEST SUITE — tests pass (network tests excluded)',c:'#888',p:400},
-        {t:'  Result: ALL TESTS PASS (1,163 passed, 4 deselected)  ✓',c:'#2ee6a6',p:800},
-        {t:'',p:200},
-        {t:'[3/4] LIVE STRIPE — real PaymentIntent on record',c:'#888',p:400},
-        {t:'  Result: STRIPE CONFIRMED  ✓',c:'#2ee6a6',p:700},
-        {t:'',p:200},
-        {t:'[4/4] KILL SWITCH — operator can stop the agent instantly',c:'#888',p:400},
-        {t:'  Result: KILL SWITCH VERIFIED  ✓',c:'#2ee6a6',p:1800},
-        {t:'',p:200},
-        {t:'CUSTODIAN PROVEN',c:'#2ee6a6',p:300},
-        {t:'The agent cannot approve its own spend.',c:'#2ee6a6',p:2500},
-      ];
-      var li=0;
-      var cursor=document.createElement('span');
-      cursor.innerHTML='█';
-      cursor.style.cssText='color:#ffb000;animation:vkblink 1s step-end infinite';
-      var st=document.createElement('style');
-      st.textContent='@keyframes vkblink{0%,100%{opacity:1}50%{opacity:0}}';
-      document.head.appendChild(st);
-      body.innerHTML='<span style="color:#ffb000">$ python3 verify_kit.py</span>\n';
-      body.appendChild(cursor);
-      function next(){
-        if(li>=lines.length){setTimeout(function(){body.innerHTML='<span style="color:#ffb000">$ python3 verify_kit.py</span>\n';body.appendChild(cursor);li=0;next();},3500);return;}
-        var l=lines[li++];
-        var span=document.createElement('span');
-        if(l.c)span.style.color=l.c;
-        span.textContent=l.t;
-        body.insertBefore(span,cursor);
-        body.insertBefore(document.createTextNode('\n'),cursor);
-        setTimeout(next,l.p);
-      }
-      setTimeout(next,600);
-    })();
-</script>
-  </div>
+          </div>
+        </div>
+      </div><!-- end hero-right -->
+
+    </div><!-- end hero-split -->
+  </div><!-- end wrap -->
 </header>
+
+<script>
+/* particle starfield */
+(function(){
+  var c=document.getElementById('star-field');
+  if(!c)return;
+  function resize(){c.width=window.innerWidth;c.height=c.parentElement.offsetHeight||800}
+  resize();
+  window.addEventListener('resize',resize);
+  var ctx=c.getContext('2d');
+  var N=110;
+  var stars=[];
+  for(var i=0;i<N;i++){stars.push({x:Math.random()*c.width,y:Math.random()*c.height,r:Math.random()*1.1+0.2,o:Math.random()*0.45+0.05,d:Math.random()*0.18+0.04,dir:Math.random()>0.5?1:-1})}
+  var amber={r:255,g:176,b:0};
+  function draw(){
+    ctx.clearRect(0,0,c.width,c.height);
+    for(var i=0;i<N;i++){
+      var s=stars[i];
+      s.o+=s.d*s.dir;
+      if(s.o>0.55||s.o<0.04)s.dir*=-1;
+      var col=i%8===0?'rgba('+amber.r+','+amber.g+','+amber.b+','+s.o+')':'rgba(200,210,255,'+s.o+')';
+      ctx.beginPath();ctx.arc(s.x,s.y,s.r,0,6.283);ctx.fillStyle=col;ctx.fill();
+    }
+    requestAnimationFrame(draw);
+  }
+  draw();
+})();
+/* kernel ticker */
+(function(){
+  var el=document.getElementById('kt-line');
+  if(!el)return;
+  var events=[
+    {v:'ALLOW',   c:'#2ee6a6', msg:'refund_request($45.00) · within authority band · session cap ok'},
+    {v:'DENY',    c:'#ff5f57', msg:'bulk_purchase($1,240.00) · exceeds per-action limit $250'},
+    {v:'ESCALATE',c:'#ffb000', msg:'vendor_payment($189.00) · new counterparty — escalating to human'},
+    {v:'ALLOW',   c:'#2ee6a6', msg:'refund_request($12.00) · 4 s latency · Stripe PI created'},
+    {v:'DENY',    c:'#ff5f57', msg:'self_approve($80.00) · agent cannot approve own spend'},
+    {v:'ALLOW',   c:'#2ee6a6', msg:'procurement($199.00) · pre-authorized vendor · cap ok'},
+    {v:'DENY',    c:'#ff5f57', msg:'killswitch check · killswitch=OFF · request blocked'},
+    {v:'ESCALATE',c:'#ffb000', msg:'invoice_payment($2,500.00) · over-band · paging human'},
+    {v:'ALLOW',   c:'#2ee6a6', msg:'refund_request($67.50) · Landlock enforced · allowed'},
+    {v:'DENY',    c:'#ff5f57', msg:'direct_api_call() · no kernel path · denied at OS'},
+  ];
+  var i=0;
+  function tick(){var e=events[i%events.length];i++;el.innerHTML='<span style="color:'+e.c+';font-weight:800;margin-right:10px">'+e.v+'</span>'+e.msg;}
+  tick();setInterval(tick,2800);
+})();
+/* verify_kit terminal */
+(function(){
+  var body=document.getElementById('vkit-body');
+  if(!body)return;
+  var lines=[
+    {t:'',p:300},
+    {t:'[1/4] REGRESSION — self-approval bug reintroduced',c:'#888',p:400},
+    {t:'  Result: CAUGHT BY TEST SUITE  ✓',c:'#2ee6a6',p:700},
+    {t:'',p:200},
+    {t:'[2/4] TEST SUITE — 1,245 tests',c:'#888',p:400},
+    {t:'  Result: ALL PASS  ✓',c:'#2ee6a6',p:800},
+    {t:'',p:200},
+    {t:'[3/4] LIVE STRIPE — real PaymentIntent',c:'#888',p:400},
+    {t:'  Result: STRIPE CONFIRMED  ✓',c:'#2ee6a6',p:700},
+    {t:'',p:200},
+    {t:'[4/4] KILL SWITCH — instant halt',c:'#888',p:400},
+    {t:'  Result: KILL SWITCH VERIFIED  ✓',c:'#2ee6a6',p:1600},
+    {t:'',p:200},
+    {t:'CUSTODIAN PROVEN — exit 0',c:'#2ee6a6',p:2200},
+  ];
+  var li=0;
+  var cursor=document.createElement('span');
+  cursor.innerHTML='█';cursor.style.cssText='color:#ffb000;animation:vkblink 1s step-end infinite';
+  var st=document.createElement('style');
+  st.textContent='@keyframes vkblink{0%,100%{opacity:1}50%{opacity:0}}';
+  document.head.appendChild(st);
+  body.innerHTML='<span style="color:#ffb000">$ python3 verify_kit.py</span>\n';
+  body.appendChild(cursor);
+  function next(){
+    if(li>=lines.length){setTimeout(function(){body.innerHTML='<span style="color:#ffb000">$ python3 verify_kit.py</span>\n';body.appendChild(cursor);li=0;next();},3000);return;}
+    var l=lines[li++];var span=document.createElement('span');
+    if(l.c)span.style.color=l.c;span.textContent=l.t;
+    body.insertBefore(span,cursor);body.insertBefore(document.createTextNode('\n'),cursor);
+    setTimeout(next,l.p);
+  }
+  setTimeout(next,500);
+})();
+</script>
 
 <!-- BUSINESS OWNERS -->
 <section id="for-business" style="padding:70px 0;background:rgba(0,0,0,0.2)">
