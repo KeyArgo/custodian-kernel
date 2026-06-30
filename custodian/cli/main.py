@@ -9,6 +9,7 @@ from custodian.cli import (
 )
 from custodian.cli import cmd_tools, cmd_demo_verify, cmd_earn_and_buy
 from custodian.cli import cmd_status_enhanced, cmd_poison_tests, cmd_beancount, cmd_confirm
+from custodian.cli import cmd_demo_receipt
 from custodian.config import CustodianConfig
 
 
@@ -325,6 +326,17 @@ def main(argv: list[str] | None = None) -> int:
         ),
     )
     ds.set_defaults(func=cmd_poison_tests.run)
+
+    ds = demo_sub.add_parser(
+        "receipt",
+        help="@govern decorator + GovernedReceipt — kernel as fabric",
+        description=(
+            "Demonstrates the 0.2.0 kernel fabric: @govern wraps a charge function, "
+            "the kernel evaluates autonomously, a SHA-256 fingerprinted receipt is "
+            "generated, and a kill-switch denial is shown."
+        ),
+    )
+    ds.set_defaults(func=cmd_demo_receipt.run)
 
     args = parser.parse_args(argv)
     try:
