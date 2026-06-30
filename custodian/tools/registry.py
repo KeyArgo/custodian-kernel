@@ -206,6 +206,8 @@ class CustodianTool:
 
         Returns dict with at minimum {"ok": bool}.
         """
+        from custodian import bus as _event_bus
+
         if not _is_configured(self.name, self.configured):
             return {
                 "ok": False,
@@ -219,9 +221,21 @@ class CustodianTool:
             }
 
         # Kernel gate for spending bands
+        decision = None
         if self.band in ("L2", "L3", "L4"):
             decision = self._kernel_decide()
             if decision is not None and decision["verdict"] != "autonomous":
+                payload = {
+                    "tool": self.name,
+                    "band": self.band,
+                    "verdict": decision["verdict"],
+                    "reason": decision["reason"],
+                    "cost_usd": self.cost_usd,
+                }
+                if decision["verdict"] == "denied":
+                    _event_bus.emit("kernel_denied", payload)
+                else:
+                    _event_bus.emit("escalation_required", payload)
                 return {
                     "ok": False,
                     "kernel_escalation": True,
@@ -243,6 +257,8 @@ class CustodianTool:
                 "tool": self.name,
             }
 
+        _event_bus.emit("pre_execute", {"tool": self.name, "band": self.band, "kwargs": kwargs})
+
         cmd = ["python3", str(self.execute_script)]
         for k, v in kwargs.items():
             cmd += [f"--{k.replace('_', '-')}", str(v)]
@@ -258,6 +274,12 @@ class CustodianTool:
             parsed["tool"] = self.name
             if result.stderr.strip():
                 parsed.setdefault("stderr", result.stderr.strip())
+            _event_bus.emit("post_execute", {
+                "tool": self.name,
+                "band": self.band,
+                "ok": parsed.get("ok", False),
+                "result": parsed,
+            })
             return parsed
         except subprocess.TimeoutExpired:
             return {"ok": False, "error": "timeout", "tool": self.name}

@@ -2,8 +2,23 @@ from __future__ import annotations
 from collections import defaultdict
 from typing import Any, Callable, Dict, List
 import logging
+import time
+from pathlib import Path
 
 log = logging.getLogger(__name__)
+
+
+def _default_audit_handler(event: str, payload: Any) -> None:
+    """Write kernel events to ~/.custodian/bus_events.log by default."""
+    try:
+        log_path = Path.home() / ".custodian" / "bus_events.log"
+        log_path.parent.mkdir(parents=True, exist_ok=True)
+        ts = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+        line = f"{ts} {event} {payload}\n"
+        with open(log_path, "a") as f:
+            f.write(line)
+    except Exception:
+        pass
 
 
 class EventBus:
@@ -39,6 +54,7 @@ class EventBus:
         return decorator
 
     def emit(self, event: str, payload: Any = None) -> None:
+        _default_audit_handler(event, payload)
         for handler in self._handlers.get(event, []):
             try:
                 handler(payload)
