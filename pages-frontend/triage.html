@@ -32,8 +32,8 @@
   header p{color:var(--dim);margin:0 0 8px}
   .back{font-size:13px;color:var(--dim)}
   .back a{color:var(--accent)}
-  .tier{background:var(--panel);border:1px solid rgba(255,176,0,0.12);border-radius:2px;
-    margin:14px 0;overflow:hidden;border-left:2px solid rgba(255,176,0,0.3)}
+  .tier{background:#0b0d16;border:1px solid rgba(255,176,0,0.2);border-radius:2px;
+    margin:14px 0;overflow:hidden;border-left:3px solid rgba(255,176,0,0.45)}
   .tier > button.head{all:unset;display:flex;gap:14px;align-items:flex-start;
     width:100%;cursor:pointer;padding:18px 20px}
   .tier .num{flex:0 0 28px;height:28px;border-radius:2px;background:transparent;
@@ -225,24 +225,25 @@
     padding:12px 14px;color:#cdd8e6;white-space:pre-wrap;font-size:0.88em;margin:10px 0;line-height:1.6}
 
   /* triage two-column layout */
-  .triage-layout{display:grid;grid-template-columns:168px 1fr;border:1px solid rgba(255,176,0,0.12);
-    border-radius:4px;overflow:hidden;margin:0 0 28px;min-height:420px}
-  .pack-sidebar{background:#08090f;border-right:1px solid rgba(255,176,0,0.10);
+  .triage-layout{display:grid;grid-template-columns:168px 1fr;border:1px solid rgba(255,176,0,0.28);
+    border-radius:4px;overflow:hidden;margin:0 0 28px;min-height:420px;
+    box-shadow:0 0 0 1px rgba(0,0,0,0.5),0 4px 24px rgba(0,0,0,0.4)}
+  .pack-sidebar{background:#050609;border-right:2px solid rgba(255,176,0,0.22);
     display:flex;flex-direction:column;padding:8px 0;flex-shrink:0}
-  .sidebar-label{font-size:0.62em;letter-spacing:.12em;text-transform:uppercase;color:var(--dim);
-    padding:10px 14px 4px;font-weight:700}
+  .sidebar-label{font-size:0.62em;letter-spacing:.12em;text-transform:uppercase;color:rgba(255,176,0,0.45);
+    padding:10px 14px 4px;font-weight:700;border-bottom:1px solid rgba(255,176,0,0.08);margin-bottom:4px}
   .pack-tab{all:unset;cursor:pointer;display:flex;align-items:center;gap:9px;
     padding:9px 14px;font-size:0.78em;font-weight:700;letter-spacing:.03em;text-transform:uppercase;
-    color:var(--dim);border-left:3px solid transparent;transition:all .12s;line-height:1.2}
-  .pack-tab:hover{color:var(--text);background:rgba(255,255,255,0.03)}
-  .pack-tab.active{color:var(--amber);border-left-color:var(--amber);background:rgba(255,176,0,0.06)}
+    color:var(--muted);border-left:3px solid transparent;transition:all .12s;line-height:1.2}
+  .pack-tab:hover{color:var(--text);background:rgba(255,255,255,0.05)}
+  .pack-tab.active{color:var(--amber);border-left-color:var(--amber);background:rgba(255,176,0,0.09)}
   .pack-tab .tab-icon{font-size:1.1em;flex-shrink:0}
-  .triage-main{flex:1;min-width:0;display:flex;flex-direction:column}
+  .triage-main{flex:1;min-width:0;display:flex;flex-direction:column;background:#090b12}
   .pack-section{display:none;padding:20px;flex:1}
   .pack-section.visible{display:flex;flex-direction:column;gap:14px}
-  .pack-section-header{padding-bottom:12px;border-bottom:1px solid rgba(255,176,0,0.08)}
-  .pack-section-title{font-size:1em;font-weight:700;color:var(--amber);margin:0 0 3px}
-  .pack-section-desc{font-size:0.8em;color:var(--dim);margin:0}
+  .pack-section-header{padding-bottom:14px;border-bottom:2px solid rgba(255,176,0,0.18);margin-bottom:4px}
+  .pack-section-title{font-size:1em;font-weight:700;color:var(--amber);margin:0 0 4px;letter-spacing:0.02em}
+  .pack-section-desc{font-size:0.8em;color:var(--muted);margin:0}
   /* ── scenario cards (HR / Finance / IT / Legal) ─────────── */
   .scenarios-header{font-size:0.72em;letter-spacing:.1em;text-transform:uppercase;
     color:var(--dim);margin-bottom:10px;font-weight:700}
@@ -467,6 +468,7 @@
 const API = '/api/v1/triage';
 let useLive = false;
 const ACTIVE = new Map(); // tier id -> {caseId, mount}
+let lastTriageResult = null; // last completed triage result — sent as context to Nemotron
 
 const VCLASS = {approve_recommended:'v-approve', deny_recommended:'v-deny',
   flag_abuse:'v-flag', escalate_ambiguous:'v-escalate',
@@ -581,8 +583,18 @@ function renderPanel(p){
     </div>`;
   } else {
     decisionBlock = `<div class="rp-no-override">
-      <div class="rp-block-label">Deterministic verdict (AI and verifier agree)</div>
-      <div style="margin-bottom:6px">${vchip(p.adapter_disposition)}</div>
+      <div class="rp-block-label">✓ AI and Verifier agree — consensus verdict</div>
+      <div class="rp-impact-split" style="margin:10px 0">
+        <div class="rp-impact-ai">
+          <div class="rp-impact-role">🤖 AI proposed</div>
+          <div class="rp-impact-verdict rp-ai-color">${VLABEL[p.agent_recommended]||esc(p.agent_recommended)}</div>
+        </div>
+        <div class="rp-impact-arrow" style="color:var(--good)">✓</div>
+        <div class="rp-impact-kernel">
+          <div class="rp-impact-role">⚡ Kernel confirmed</div>
+          <div class="rp-impact-verdict rp-kernel-color">${VLABEL[p.adapter_disposition]||esc(p.adapter_disposition)}</div>
+        </div>
+      </div>
       ${p.adapter_reasons.map(r=>`<div class="rp-reason">${esc(r)}</div>`).join('')}
       <div class="rp-why-script">${esc(p.why_not_a_script)}</div>
     </div>`;
@@ -1060,6 +1072,12 @@ async function runCustom() {
   flex-direction:column;z-index:999;box-shadow:0 8px 40px rgba(0,0,0,0.75);overflow:hidden}
 .tr-np-hdr{display:flex;align-items:center;gap:10px;padding:13px 16px;border-bottom:1px solid #1a2a10;
   background:rgba(118,185,0,0.04)}
+.tr-minimize-hint{display:none;font-size:0.65em;color:rgba(118,185,0,0.5);letter-spacing:.05em;
+  text-align:center;padding:5px 14px;background:rgba(0,0,0,0.3);border-top:1px solid #1a2a10}
+@media(max-width:680px){
+  #tr-nemo-panel{width:calc(100vw - 24px);right:12px;bottom:80px;max-height:60vh}
+  .tr-minimize-hint{display:block}
+}
 .tr-np-body{flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:10px;
   max-height:300px;font-size:0.83em;line-height:1.6;color:#c8d8c0}
 .tr-np-foot{border-top:1px solid #1a2a10;padding:10px 12px;display:flex;gap:8px}
@@ -1089,8 +1107,9 @@ async function runCustom() {
       <div style="font-size:0.78em;font-weight:700;color:#76b900;letter-spacing:.04em">Nemotron 3 Super</div>
       <div style="font-size:0.67em;color:#3a5a3a">intelligence layer · lie-catch guide</div>
     </div>
-    <button id="tr-nemo-close" style="all:unset;cursor:pointer;color:#444;font-size:1.2em;margin-left:auto;padding:4px 6px">✕</button>
+    <button id="tr-nemo-close" style="all:unset;cursor:pointer;color:#6a8a6a;font-size:0.75em;font-weight:700;margin-left:auto;padding:5px 9px;border:1px solid rgba(118,185,0,0.2);border-radius:4px;letter-spacing:0.04em" title="Minimize and browse freely">✕ minimize</button>
   </div>
+  <div class="tr-minimize-hint">tap ✕ to browse · Nemotron stays ready</div>
   <div id="tr-nemo-body" class="tr-np-body"></div>
   <div class="tr-np-foot">
     <input id="tr-nemo-input" class="tr-np-input" type="text" placeholder="Ask why the kernel overrides the AI…">

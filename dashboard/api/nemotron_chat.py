@@ -464,7 +464,21 @@ def ask():
         if role in ('user', 'assistant') and content:
             history_msgs.append({'role': role, 'content': content})
 
+    # Optional: last triage case the visitor just ran (from the page JS)
+    triage_context = data.get('triage_context')
+
     context_block = _build_context_block()
+    # Inject triage result when available so Nemotron knows what case was just run
+    if triage_context and isinstance(triage_context, dict) and page == 'triage':
+        safe_ctx = {k: triage_context[k] for k in (
+            'agent_recommended', 'agent_summary', 'agent_confidence',
+            'adapter_disposition', 'kernel_verdict', 'kernel_reason',
+            'contradiction_count', 'why_not_a_script', 'adapter_reasons',
+        ) if k in triage_context}
+        context_block += (
+            f"\n\nMOST RECENTLY RAN TRIAGE CASE (the case the visitor just ran on this page):\n"
+            f"{json.dumps(safe_ctx, indent=2)}"
+        )
     page_guidance = _PAGE_GUIDANCE.get(page, '')
     # Lead with the most compelling thing and earn depth one step at a time --
     # the same most-compelling-first ordering the guided dashboard page uses,

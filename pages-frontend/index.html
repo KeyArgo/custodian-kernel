@@ -1394,6 +1394,22 @@ result <span style="color:var(--dim)">=</span> decide(
         <div style="font-style:italic;color:#c09898;font-size:0.85em;line-height:1.6;border-left:2px solid rgba(255,92,92,0.4);padding-left:10px">"${_e(p.why_not_a_script)}"</div>
       </div>`;
     }
+    if(!p.overrode_agent){
+      html+=`<div style="background:rgba(46,230,166,0.04);border:1px solid rgba(46,230,166,0.18);border-radius:10px;padding:12px 14px;margin-bottom:10px">
+        <div style="font-size:0.7em;font-weight:800;font-family:monospace;letter-spacing:.08em;text-transform:uppercase;color:#2ee6a6;margin-bottom:10px">✓ AI and Kernel agree</div>
+        <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+          <div style="padding:8px 12px;background:rgba(93,176,255,0.08);border:1px solid rgba(93,176,255,0.2);border-radius:8px">
+            <div style="font-size:0.68em;color:var(--dim);font-family:monospace;margin-bottom:3px">🤖 AI proposed</div>
+            <div style="font-weight:800;color:#5db0ff">${IDX_VLABEL[p.agent_recommended]||_e(p.agent_recommended)}</div>
+          </div>
+          <span style="font-size:1.2em;color:#2ee6a6">✓</span>
+          <div style="padding:8px 12px;background:rgba(255,176,0,0.06);border:1px solid rgba(255,176,0,0.2);border-radius:8px">
+            <div style="font-size:0.68em;color:var(--dim);font-family:monospace;margin-bottom:3px">⚡ Kernel confirmed</div>
+            <div style="font-weight:800;color:var(--amber)">${IDX_VLABEL[p.adapter_disposition]||_e(p.adapter_disposition)}</div>
+          </div>
+        </div>
+      </div>`;
+    }
     html+=`<div style="background:rgba(255,255,255,0.03);border-radius:8px;padding:10px 12px;font-size:0.85em">
       <b>Authority: ${_e((p.kernel_verdict||'').toUpperCase())}</b> — ${_e(p.kernel_reason)}
       ${p.final_action&&IDX_FINAL[p.final_action]?`<div style="margin-top:4px;font-weight:700;color:var(--amber)">${IDX_FINAL[p.final_action]}</div>`:''}
