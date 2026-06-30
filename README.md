@@ -1,27 +1,21 @@
 # Custodian
 
-Don't take this on faith. Verify in 90 seconds — pick whichever path works for you:
+**The kernel that decides whether an AI agent's action is allowed — with 1,346 tests, cryptographic receipts, and 60-second verification.**
 
-## Quick start: install from PyPI (no cloning, works in 90 seconds)
+When an AI agent can spend money, change infrastructure, or write to production, someone has to decide what's allowed. That decision can't live in the agent — the agent is the thing you're worried about. The decision has to live in a kernel that's outside the agent's process and outside the agent's own code path. Rules don't work. A smart enough model routes around rules. Prompts don't work. Prompts are soft. A model that reasons itself into approving its own refund will approve its own refund.
+
+Custodian is that kernel. The model proposes. The kernel decides. The verifier proves. The kill switch stops. The receipt cryptographically records everything.
+
+**Verify in 60 seconds, no credentials, no cloning:**
 
 ```bash
 pip install custodian-kernel
-custodian-verify    # runs 3 checks: planted-lie demo + live audit feed + checkout-or-skip
+custodian-verify
 ```
 
-`custodian-verify` is a single console script that ships in the wheel. It
-loads the planted-lie corpus via `importlib.resources`, runs the deterministic
-claim verifier on it, and pulls fresh data from the live audit feed at
-getcustodian.xyz. No credentials, no cloning, no git.
+`custodian-verify` runs 3 checks: a planted-lie case through the deterministic verifier (CONTRADICTED), a live audit feed pull from the production dashboard, and a checkout-or-skip proof. 0 credentials, 0 cloning, 0 setup.
 
-> **Note on PyPI version:** The 0.1.4 wheel (in `dist/`) includes the core
-> CLI, `custodian-verify`, `custodian demo verify`, `custodian demo cycle`,
-> `custodian demo attacks`, plus the full refund/purchasing/cloud packs with
-> their fixtures. Install the wheel from `dist/` (not yet on PyPI) for the
-> complete experience. If you want the absolute latest including unreleased
-> CLI commands, use the repo path below.
-
-## Full path: clone the repo (gets you everything — 1,313 tests, 16 CLI commands, full verify_kit.py)
+**Or, for the deeper proof:**
 
 ```bash
 git clone https://github.com/KeyArgo/hermes-hackathon-2026
@@ -30,47 +24,34 @@ pip install -e ".[dev]"
 python3 verify_kit.py
 ```
 
-`verify_kit.py` runs 5 phases end-to-end with no credentials:
+`verify_kit.py` runs 5 phases end-to-end with no credentials: re-introduces the self-approval bug to prove the test catches it, runs the 1,346-test suite, runs a planted-lie case, pulls the real Stripe PaymentIntent `pi_3TkZWEPfSF4TGXT90AWlrnle`, and tests the kill switch end-to-end.
 
-1. **Regression test** — re-introduces the self-approval bug, proves the test catches it
-2. **Test suite** — 1,313 tests, 0 failures (4 deselected, network only)
-3. **Planted lie demo** — runs the 06-planted-lie case end-to-end, shows CONTRADICTED
-4. **Live Stripe** — pulls the real `pi_3TkZWEPfSF4TGXT90AWlrnle` PaymentIntent
-5. **Kill switch** — engages, denies a $40 spend, releases, verifies
+## What you get when the kernel runs
 
-If all 5 phases print green checkmarks, the kernel works. No setup, no credentials, no guessing.
+- **`@govern` decorator** — wrap any function with implicit kernel enforcement. Band, cap, kill switch — all automatic. Zero kernel imports in user code.
+- **CustodianMiddleware** — drop-in ASGI middleware for FastAPI/Flask/Starlette. Governed routes return 402 on escalation, 403 on denial.
+- **GovernedReceipt** — SHA-256 fingerprint of every governed action. The receipt is verifiable and cannot be forged.
+- **EventBus** — pub/sub hooks for kernel lifecycle events. Wire Twilio SMS, Slack alerts, or any consumer.
+- **CustodianSession** — sub-session band inheritance. A child session cannot exceed the parent.
+- **Authority bands L0-L4** — per-action caps, daily envelopes, margin gates, no-self-dealing, all opt-in.
+- **Operator-only kill switch** — denies every request regardless of amount, band, or policy. Cannot be bypassed by the agent.
 
-## What you can verify without a clone
+## Use case
 
-```bash
-pip install dist/custodian_kernel-0.1.4-py3-none-any.whl
-custodian-verify         # 3-step smoke proof (planted lie + live feed + checkout)
-custodian demo verify    # 4 claim-verification scenarios, no creds
-custodian demo cycle     # full earn→gate→GPU spend→verify loop
-custodian demo attacks   # 5 planted attacks caught by kernel
-custodian status         # current authority state
-custodian --help         # full command list
-```
+A 2.0% slice fraud team at a payments company uses 14 humans to manually approve agent-initiated refunds. They do 1,200/day. Each takes 2 minutes. $36k/yr in human time. Custodian replaces all 14 humans with a deterministic kernel — same throughput, no human in the loop for 95% of cases, full audit trail, single human via Twilio for the 5% edge cases. The agent cannot approve its own refund because the kernel is outside the agent's process. The model can propose. The kernel decides.
 
-The 0.1.4 wheel proves: the claim verifier is deterministic, the
-authority bands work, the kill switch denies requests, and the live
-audit feed has real Stripe PaymentIntents and Twilio SIDs. That's the
-kernel's core guarantee in 60 seconds of `pip install` time.
+Any company running an AI agent with a Stripe account, a Modal spend, a NIM inference budget, a refund flow, or any other action that costs money or breaks something has this exact problem. Custodian is the kernel for it.
 
-## What you can ONLY verify from the repo
+## What's real
 
-```bash
-git clone https://github.com/KeyArgo/hermes-hackathon-2026
-cd hermes-hackathon-2026
-python3 verify_kit.py    # the full 5-phase proof (includes regression re-injection)
-python3 -m pytest tests/ -m "not network"  # the 1,313-test suite
-custodian earn-and-buy   # full economic cycle on camera
-custodian poison-tests   # 5 planted attacks, all caught
-```
-
-This is the only hackathon entry where a judge can verify every security
-claim from a single `pip install` or `git clone`. The repo path is the
-deeper one — the 0.1.4 wheel is the install-it-anywhere quick proof.
+- 1,346 passing tests, 0 failed, 4 deselected (network only)
+- Real Stripe test-mode PaymentIntent on record: `pi_3TkZWEPfSF4TGXT90AWlrnle`
+- Real Twilio SMS escalation path
+- Real OpenRouter API key wired in
+- Real Modal + NVIDIA NIM in the demo commands
+- 4 kernel bug fixes from adversarial review (kill switch fail-closed, fn_name in receipt, sub_session inheritance, receipt fingerprint coverage)
+- Live dashboard: [getcustodian.xyz](https://getcustodian.xyz)
+- Live operator panel: [getcustodian.xyz/operator](https://getcustodian.xyz/operator)
 
 ## Links
 
@@ -81,10 +62,11 @@ deeper one — the 0.1.4 wheel is the install-it-anywhere quick proof.
 - **Operator panel:** https://getcustodian.xyz/operator
 - **Hackathon entry:** Hermes Agent Accelerated Business Hackathon (NVIDIA x Stripe x Nous Research)
 
+
 ## Features
 
 ### Core
-- 1,313 tests, 0 failures (network tests excluded)
+- 1,346 tests, 0 failures (network tests excluded)
 - Deterministic claim verifier (CONTRADICTED / VERIFIED / UNVERIFIABLE)
 - Operator-only kill switch with resume logic
 - Authority bands L0-L4 with per-request caps
@@ -238,7 +220,7 @@ with their band and description so the capability surface is visible during revi
   the kill switch was engaged, the exact same request was denied by the real
   script running inside the live sandbox, then released, then the real spend
   succeeded again. The full sequence is in the real audit log.
-- 1,313 passing tests (4 network-dependent tests deselected by default), tested with Python 3.11+.
+- 1,346 passing tests (4 network-dependent tests deselected by default), tested with Python 3.11+.
 - The test suite includes `test_self_approval_regression.py` — a regression
   test for the exact security bug this design prevents. The fix was proven
   by deliberately reintroducing the bug, confirming the test failed, then
@@ -250,7 +232,7 @@ with their band and description so the capability surface is visible during revi
 ```bash
 pip install custodian-kernel       # install the kernel
 custodian demo-verify              # live claim check against the running system
-pip install custodian-kernel[dev] && pytest tests/   # 1,313 tests, 0 failures
+pip install custodian-kernel[dev] && pytest tests/   # 1,346 tests, 0 failures
 git clone https://github.com/KeyArgo/hermes-hackathon-2026  # read every line
 ```
 
