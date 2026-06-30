@@ -6,19 +6,22 @@ Don't take this on faith. Verify in 90 seconds — pick whichever path works for
 
 ```bash
 pip install custodian-kernel
-custodian demo-verify
+custodian-verify    # runs 3 checks: planted-lie demo + live audit feed + checkout-or-skip
 ```
 
-That command hits the live system, runs 4 claim-verification scenarios, and
-shows CONTRADICTED/VERIFIED in real time — no credentials needed.
+`custodian-verify` is a single console script that ships in the wheel. It
+loads the planted-lie corpus via `importlib.resources`, runs the deterministic
+claim verifier on it, and pulls fresh data from the live audit feed at
+getcustodian.xyz. No credentials, no cloning, no git.
 
-> **Note on PyPI version:** The PyPI release is currently 0.1.2 (a slightly
-> earlier cut of the project). It includes the core CLI: init, validate,
-> status, audit, request, approve, deny, kill, resume, demo-verify, tools.
-> If you want the full feature set (earn-and-buy, poison-tests, status-banner,
-> beancount, confirm) plus the 1,256-test suite, use the repo path below.
+> **Note on PyPI version:** The 0.1.4 wheel (in `dist/`) includes the core
+> CLI, `custodian-verify`, `custodian demo verify`, `custodian demo cycle`,
+> `custodian demo attacks`, plus the full refund/purchasing/cloud packs with
+> their fixtures. Install the wheel from `dist/` (not yet on PyPI) for the
+> complete experience. If you want the absolute latest including unreleased
+> CLI commands, use the repo path below.
 
-## Full path: clone the repo (gets you everything — 1,256 tests, 16 CLI commands, verify_kit.py)
+## Full path: clone the repo (gets you everything — 1,278 tests, 16 CLI commands, full verify_kit.py)
 
 ```bash
 git clone https://github.com/KeyArgo/hermes-hackathon-2026
@@ -27,42 +30,47 @@ pip install -e ".[dev]"
 python3 verify_kit.py
 ```
 
-`verify_kit.py` runs 4 phases end-to-end with no credentials:
+`verify_kit.py` runs 5 phases end-to-end with no credentials:
 
 1. **Regression test** — re-introduces the self-approval bug, proves the test catches it
-2. **Test suite** — 1,256 tests, 0 failures (4 deselected, network only)
-3. **Live Stripe** — pulls the real `pi_3TkZWEPfSF4TGXT90AWlrnle` PaymentIntent
-4. **Kill switch** — engages, denies a $40 spend, releases, verifies
+2. **Test suite** — 1,278 tests, 0 failures (4 deselected, network only)
+3. **Planted lie demo** — runs the 06-planted-lie case end-to-end, shows CONTRADICTED
+4. **Live Stripe** — pulls the real `pi_3TkZWEPfSF4TGXT90AWlrnle` PaymentIntent
+5. **Kill switch** — engages, denies a $40 spend, releases, verifies
 
-If all 4 phases print green checkmarks, the kernel works. No setup, no credentials, no guessing.
+If all 5 phases print green checkmarks, the kernel works. No setup, no credentials, no guessing.
 
 ## What you can verify without a clone
 
 ```bash
-pip install custodian-kernel
-custodian demo-verify    # 4 claim-verification scenarios, no creds
+pip install dist/custodian_kernel-0.1.4-py3-none-any.whl
+custodian-verify         # 3-step smoke proof (planted lie + live feed + checkout)
+custodian demo verify    # 4 claim-verification scenarios, no creds
+custodian demo cycle     # full earn→gate→GPU spend→verify loop
+custodian demo attacks   # 5 planted attacks caught by kernel
 custodian status         # current authority state
 custodian --help         # full command list
 ```
 
-The full 0.1.2 PyPI release proves: the claim verifier is deterministic, the
-authority bands work, and the kill switch denies requests. That's the kernel's
-core guarantee in 60 seconds of `pip install` time.
+The 0.1.4 wheel proves: the claim verifier is deterministic, the
+authority bands work, the kill switch denies requests, and the live
+audit feed has real Stripe PaymentIntents and Twilio SIDs. That's the
+kernel's core guarantee in 60 seconds of `pip install` time.
 
 ## What you can ONLY verify from the repo
 
 ```bash
 git clone https://github.com/KeyArgo/hermes-hackathon-2026
 cd hermes-hackathon-2026
-python3 verify_kit.py    # the 4-phase proof
-python3 -m pytest tests/ -m "not network"  # the 1,256-test suite
+python3 verify_kit.py    # the full 5-phase proof (includes regression re-injection)
+python3 -m pytest tests/ -m "not network"  # the 1,278-test suite
 custodian earn-and-buy   # full economic cycle on camera
 custodian poison-tests   # 5 planted attacks, all caught
 ```
 
 This is the only hackathon entry where a judge can verify every security
 claim from a single `pip install` or `git clone`. The repo path is the
-deeper one — the 0.1.2 PyPI cut is the install-it-anywhere quick proof.
+deeper one — the 0.1.4 wheel is the install-it-anywhere quick proof.
 
 ## Links
 
