@@ -206,7 +206,7 @@ class CustodianTool:
 
         Returns dict with at minimum {"ok": bool}.
         """
-        if not self.configured:
+        if not _is_configured(self.name, self.configured):
             return {
                 "ok": False,
                 "stub": True,

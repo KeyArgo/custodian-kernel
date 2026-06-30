@@ -118,9 +118,8 @@ def _call_modal_benchmark() -> dict:
         registry.load()
         return registry.run(
             "modal-invoke",
-            app="custodian-benchmark",
-            function="run_benchmark",
-            args={},
+            app_name="custodian-benchmark",
+            function_name="run_benchmark",
         )
     except Exception as e:  # pragma: no cover - defensive
         return {
