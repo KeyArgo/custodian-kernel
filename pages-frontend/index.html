@@ -107,6 +107,18 @@
     .nav-links .btn{font-size:0.82em;padding:8px 14px}
     .nav-burger{display:flex}
   }
+  @media(max-width:560px){
+    .nav-links .btn{display:none}
+    .nav-in{gap:12px}
+    .brand .nm{font-size:0.98em}
+  }
+  @media(max-width:680px){
+    .tour-offer{padding:14px}
+    .tour-offer-head{display:block}
+    .tour-offer-actions{flex-direction:column}
+    .tour-pill{width:100%;box-sizing:border-box;text-align:center}
+    .tour-mobile-note{display:block}
+  }
   @media(max-width:420px){
     .nav-links .btn{display:none} /* burger has it */
   }
@@ -116,7 +128,8 @@
   .eyebrow{display:inline-flex; align-items:center; gap:9px; font-family:'JetBrains Mono',monospace;
     font-size:0.74em; letter-spacing:0.14em; text-transform:uppercase; color:var(--amber2);
     border:1px solid rgba(255,176,0,0.3); background:rgba(255,176,0,0.06);
-    padding:7px 15px; border-radius:100px; margin-bottom:28px}
+    padding:7px 15px; border-radius:100px; margin-bottom:28px; max-width:100%;
+    flex-wrap:wrap; justify-content:center; text-align:center; line-height:1.5}
 
   /* employee + company card visual */
   .card-metaphor{display:flex; gap:14px; justify-content:center; align-items:stretch;
@@ -156,6 +169,20 @@
   .lede b{color:var(--text); font-weight:500}
   .hero-cta{display:flex; gap:14px; justify-content:center; flex-wrap:wrap; margin-bottom:46px}
   .hero-cta .btn{padding:13px 24px; font-size:1em}
+  .tour-offer{margin:20px auto 0;max-width:760px;padding:16px 18px;border:1px solid rgba(255,176,0,0.22);border-radius:16px;background:rgba(11,13,20,0.78);backdrop-filter:blur(10px);display:none;text-align:left}
+  .tour-offer.show{display:block}
+  .tour-offer-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;margin-bottom:10px}
+  .tour-offer-kicker{font-family:var(--mono);font-size:0.72em;letter-spacing:0.12em;text-transform:uppercase;color:var(--amber2);margin-bottom:6px}
+  .tour-offer p{color:var(--muted);font-size:0.94em}
+  .tour-offer-actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px}
+  .tour-pill{all:unset;cursor:pointer;padding:10px 14px;border-radius:10px;border:1px solid var(--line2);color:var(--text);font-size:0.9em;font-weight:600;background:rgba(255,255,255,0.03)}
+  .tour-pill:hover{border-color:var(--amber);transform:translateY(-1px)}
+  .tour-pill.primary{background:rgba(255,176,0,0.12);border-color:rgba(255,176,0,0.4);color:var(--amber2)}
+  .tour-dismiss{all:unset;cursor:pointer;color:var(--dim);font-size:0.82em;padding:3px 0}
+  .tour-dismiss:hover{color:var(--text)}
+  .tour-mobile-note{display:none;margin-top:14px;padding:12px 14px;border-radius:12px;border:1px solid rgba(118,185,0,0.18);background:rgba(118,185,0,0.06);text-align:left}
+  .tour-mobile-note strong{color:#b8eb7d}
+  .tour-mobile-note p{color:var(--muted);font-size:0.9em}
 
   /* live spec strip */
   .specs{display:inline-flex; flex-wrap:wrap; gap:0; border:1px solid var(--line2); border-radius:14px;
@@ -353,12 +380,96 @@
   .hero-left .lede{text-align:left;margin-left:0;max-width:560px;margin-right:0}
   .hero-left .hero-cta{justify-content:flex-start}
   .hero-left .specs{display:inline-flex}
-  .hero-right{display:flex;flex-direction:column;gap:14px;align-items:stretch}
+  .hero-right{display:flex;flex-direction:column;gap:14px;align-items:stretch;min-width:0}
+  .hero-chip-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:22px}
+  .hero-chip{
+    display:inline-flex;align-items:center;gap:6px;border-radius:8px;padding:5px 12px;
+    font-size:0.78em;font-weight:700;font-family:var(--mono)
+  }
+  .hero-chip.is-nvidia{background:rgba(118,185,0,0.15);border:1px solid rgba(118,185,0,0.4);color:#76b900}
+  .hero-chip.is-kernel{background:rgba(118,185,0,0.1);border:1px solid rgba(118,185,0,0.3);color:#76b900}
+  .hero-chip.is-model{background:rgba(118,185,0,0.1);border:1px solid rgba(118,185,0,0.3);color:#76b900}
+  .hero-chip.is-agent{background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.15);color:var(--text)}
+  .hero-chip.is-stripe{background:rgba(99,91,255,0.1);border:1px solid rgba(99,91,255,0.3);color:#a78bfa}
+  .hero-proof-strip{display:flex;gap:16px;flex-wrap:wrap;margin:16px 0 22px;font-family:var(--mono);font-size:0.77em}
+  .hero-proof-strip .proof-item{color:#2ee6a6;font-weight:700}
+  .hero-proof-strip .proof-dot{color:var(--dim)}
+  .hero-visual-stack{
+    position:relative;
+    width:100%;
+    padding:20px 18px 18px;
+    border-radius:24px;
+    border:1px solid rgba(255,176,0,0.14);
+    background:
+      linear-gradient(180deg, rgba(255,255,255,0.035), rgba(255,255,255,0.015)),
+      radial-gradient(circle at top, rgba(255,176,0,0.1), transparent 52%);
+    box-shadow:0 24px 60px -34px rgba(0,0,0,0.92), inset 0 1px 0 rgba(255,255,255,0.04);
+    overflow:hidden
+  }
+  .hero-visual-stack::before{
+    content:"";
+    position:absolute;
+    inset:0;
+    background:
+      linear-gradient(135deg, rgba(255,176,0,0.07), transparent 26%),
+      linear-gradient(0deg, rgba(46,230,166,0.035), transparent 40%);
+    pointer-events:none
+  }
+  .hero-visual-stack > *{position:relative;z-index:1}
   .ring-wrap{position:relative;width:100%;max-width:440px;margin:0 auto}
   /* terminal must not overflow hero-right */
   #vkit-wrap{min-width:0;width:100%}
-  #vkit-wrap pre{white-space:pre-wrap;word-break:break-all;overflow-x:hidden}
-  #kticker{min-width:0;width:100%}
+  #vkit-wrap pre{white-space:pre-wrap;word-break:break-word;overflow-x:hidden}
+  .kernel-ticker{
+    min-width:0;width:100%;height:42px;overflow:clip;border:1px solid rgba(255,176,0,0.18);
+    border-radius:10px;background:rgba(0,0,0,0.58);display:grid;grid-template-columns:minmax(150px,max-content) minmax(0,1fr);
+    align-items:stretch
+  }
+  .kernel-status{
+    display:flex;align-items:center;justify-content:center;gap:6px;padding:0 12px;height:100%;
+    font-family:var(--mono);font-size:0.66em;font-weight:800;letter-spacing:.1em;color:#ffb000;
+    text-transform:uppercase;border-right:1px solid rgba(255,176,0,0.18);white-space:nowrap;
+    min-width:0;overflow:visible
+  }
+  .kernel-status strong{font-size:0.95em;color:#fff2c7;letter-spacing:.08em}
+  .kernel-message{
+    min-width:0;padding:0 14px;display:flex;align-items:center;gap:10px;font-family:var(--mono);
+    font-size:0.72em;color:#aaa;white-space:nowrap;overflow:hidden
+  }
+  /* topology row — shows where the kernel actually runs vs where NemoClaw lives */
+  .kernel-topology{
+    display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;
+    margin:10px 0 12px;padding:10px 12px;
+    border:1px dashed rgba(255,176,0,0.22);border-radius:8px;
+    background:rgba(255,176,0,0.03);font-family:var(--mono);font-size:0.7em
+  }
+  .kernel-topology .node{
+    display:flex;flex-direction:column;gap:2px;padding:6px 10px;
+    border:1px solid rgba(255,255,255,0.08);border-radius:6px;background:rgba(0,0,0,0.4);
+    min-width:0;line-height:1.3
+  }
+  .kernel-topology .node .name{color:#ffcf57;font-weight:800;letter-spacing:.08em;font-size:1em}
+  .kernel-topology .node .where{color:#8d93a6;font-size:.86em;letter-spacing:.04em}
+  .kernel-topology .node.airgap{border-color:rgba(255,176,0,0.45);background:rgba(255,176,0,0.06)}
+  .kernel-topology .node.airgap .name{color:#ffb000}
+  .kernel-topology .arrow{color:#5d6273;font-size:0.9em;text-align:center;white-space:nowrap}
+  .kernel-topology .arrow .link{color:#2ee6a6;font-weight:700;letter-spacing:.08em}
+  .kernel-topology .arrow .why{color:#5d6273;display:block;font-size:.82em;margin-top:2px}
+  @media(max-width:720px){
+    .kernel-topology{grid-template-columns:1fr;gap:6px;font-size:0.66em}
+    .kernel-topology .arrow{padding:0 0 4px}
+  }
+  .kernel-message-label{flex:0 0 auto;font-weight:800}
+  .kernel-message-text{min-width:0;overflow:hidden;text-overflow:ellipsis}
+  .vkit-shell{
+    text-align:left;background:#0a0a0a;border:1px solid #222;border-radius:14px;overflow:hidden;
+    font-family:var(--mono);font-size:0.78em;box-shadow:inset 0 1px 0 rgba(255,255,255,0.04)
+  }
+  .vkit-window{
+    display:flex;align-items:center;gap:7px;padding:8px 14px;background:#111;border-bottom:1px solid #1e1e1e
+  }
+  .vkit-window-title{color:#5a5a5a;font-size:0.9em;margin-left:4px}
+  #vkit-body{padding:12px 16px;line-height:1.75;white-space:pre;color:#aaa;height:190px;overflow:hidden;margin:0}
   @keyframes ring-pulse{0%,100%{stroke-opacity:1}50%{stroke-opacity:0.45}}
   @keyframes core-pulse{0%,100%{opacity:1;r:12}50%{opacity:0.55;r:16}}
   /* ring label classes — used to hide on small screens */
@@ -371,25 +482,45 @@
     .hero-left h1{text-align:center;font-size:clamp(2.4em,7vw,3.2em)}
     .hero-left .lede{text-align:center;margin:0 auto 28px}
     .hero-left .hero-cta{justify-content:center}
+    .hero-chip-row,.hero-proof-strip{justify-content:center}
     /* ring below headline on tablet */
     .hero-right{order:2;max-width:360px;margin:0 auto;width:100%}
+    .hero-visual-stack{padding:18px 16px 16px}
     .ring-wrap{max-width:320px}
   }
   @media(max-width:560px){
+    .wrap{padding:0 12px}
     .hero{padding:72px 0 48px}
-    .hero-left h1{font-size:clamp(2em,8.5vw,2.8em)}
+    .eyebrow{font-size:0.66em;padding:7px 12px;letter-spacing:0.12em}
+    .hero-left h1{font-size:clamp(1.75em,7.8vw,2.45em);line-height:1.08}
+    .hero-left .lede{font-size:0.98em}
+    .hero-chip-row{gap:6px;margin-bottom:18px}
+    .hero-chip{justify-content:center;flex:1 1 calc(50% - 6px);min-width:134px;padding:6px 10px;font-size:0.73em}
+    .hero-proof-strip{
+      display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:18px 0 20px;font-size:0.72em
+    }
+    .hero-proof-strip .proof-item{
+      padding:9px 10px;border-radius:10px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);
+      text-align:center
+    }
+    .hero-proof-strip .proof-dot{display:none}
+    .hero-visual-stack{padding:16px 14px 14px;border-radius:20px}
     .ring-wrap{max-width:260px}
     /* hide verbose ring labels — keep only L2 ACTIVE and center KERNEL */
     .ring-lbl-l4,.ring-lbl-l3,.ring-lbl-l1,.ring-lbl-l0,.ring-lbl-allow{display:none}
     /* show a compact HTML band legend instead */
     .ring-bands-legend{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;
       margin-top:8px;font-family:'JetBrains Mono',monospace;font-size:0.68em}
+    .kernel-ticker{grid-template-columns:120px minmax(0,1fr);height:46px}
+    .kernel-status{font-size:0.6em;letter-spacing:.08em;padding:0 8px}
+    .kernel-message{padding:0 10px;font-size:0.68em}
+    #vkit-body{height:176px;font-size:0.95em}
     /* shrink specs table on phone */
-    .specs{flex-wrap:wrap;gap:8px}
-    .spec{min-width:140px}
+    .specs{display:grid !important;grid-template-columns:1fr 1fr;width:100%}
+    .spec{min-width:0;padding:14px 16px}
     /* hero-cta stacks on very small screens */
     .hero-cta{flex-direction:column;align-items:center;gap:10px}
-    .hero-cta .btn{width:100%;max-width:280px;justify-content:center}
+    .hero-cta .btn{width:100%;max-width:none;justify-content:center}
   }
 </style>
 </head>
@@ -442,28 +573,46 @@
       <!-- LEFT: headline + CTAs -->
       <div class="hero-left">
         <div class="eyebrow"><span class="pulse"></span> NVIDIA · Nous Research · Stripe · Hackathon 2026</div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:22px">
-          <span style="display:inline-flex;align-items:center;gap:6px;background:rgba(118,185,0,0.15);border:1px solid rgba(118,185,0,0.4);border-radius:8px;padding:5px 12px;font-size:0.78em;font-weight:700;color:#76b900;font-family:'JetBrains Mono',monospace">⬡ DGX Spark GB10</span>
-          <span style="display:inline-flex;align-items:center;gap:6px;background:rgba(118,185,0,0.1);border:1px solid rgba(118,185,0,0.3);border-radius:8px;padding:5px 12px;font-size:0.78em;font-weight:700;color:#76b900;font-family:'JetBrains Mono',monospace">🛡 NemoClaw</span>
-          <span style="display:inline-flex;align-items:center;gap:6px;background:rgba(118,185,0,0.1);border:1px solid rgba(118,185,0,0.3);border-radius:8px;padding:5px 12px;font-size:0.78em;font-weight:700;color:#76b900;font-family:'JetBrains Mono',monospace">◉ Nemotron Super 120B</span>
-          <span style="display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.15);border-radius:8px;padding:5px 12px;font-size:0.78em;font-weight:700;color:var(--text);font-family:'JetBrains Mono',monospace">◆ Hermes</span>
-          <span style="display:inline-flex;align-items:center;gap:6px;background:rgba(99,91,255,0.1);border:1px solid rgba(99,91,255,0.3);border-radius:8px;padding:5px 12px;font-size:0.78em;font-weight:700;color:#a78bfa;font-family:'JetBrains Mono',monospace">stripe</span>
+        <div class="hero-chip-row">
+          <span class="hero-chip is-nvidia">⬡ DGX Spark GB10</span>
+          <span class="hero-chip is-kernel">🛡 NemoClaw</span>
+          <span class="hero-chip is-model">◉ Nemotron Super 120B</span>
+          <span class="hero-chip is-agent">◆ Hermes</span>
+          <span class="hero-chip is-stripe">stripe</span>
         </div>
         <h1>Give AI a real wallet.<br><span class="grad">Without the risk.</span></h1>
-        <p class="lede">Most businesses won't deploy AI near money because there's no way to verify it actually followed the rules. Custodian is the enforcement kernel that changes that — <b>define limits in code, the OS enforces them, the agent cannot lie or self-approve.</b> Proven in a live NemoClaw sandbox on a DGX Spark GB10 — and ships as a pip package.</p>
-        <div style="display:flex;gap:16px;flex-wrap:wrap;margin:16px 0 22px;font-family:'JetBrains Mono',monospace;font-size:0.77em">
-          <span style="color:#2ee6a6;font-weight:700">✓ 3/3 planted lies caught</span>
-          <span style="color:var(--dim)">·</span>
-          <span style="color:#2ee6a6;font-weight:700">✓ $0 unauthorized spend</span>
-          <span style="color:var(--dim)">·</span>
-          <span style="color:#2ee6a6;font-weight:700">✓ 1,245 tests pass</span>
-          <span style="color:var(--dim)">·</span>
-          <span style="color:#635bff;font-weight:700">✓ real Stripe PI on record</span>
+        <p class="lede">Most businesses won't deploy AI near money because there's no way to verify it actually followed the rules. Custodian is the enforcement kernel that changes that — <b>define limits in code, the OS enforces them, the agent cannot lie or self-approve.</b> Deployed with the kernel on a separate physical host, enforcing in real time. Ships as a pip package.</p>
+        <div class="hero-proof-strip">
+          <span class="proof-item">✓ 3/3 planted lies caught</span>
+          <span class="proof-dot">·</span>
+          <span class="proof-item">✓ $0 unauthorized spend</span>
+          <span class="proof-dot">·</span>
+          <span class="proof-item">✓ 1,298 tests pass</span>
+          <span class="proof-dot">·</span>
+          <span class="proof-item" style="color:#a39fff">✓ real Stripe PI on record</span>
         </div>
         <div class="hero-cta">
           <a class="btn btn-primary" href="/operator" target="_blank" rel="noopener">▶ Run the live demo</a>
           <a class="btn btn-ghost" href="/hermes">Watch it spend real money →</a>
           <a class="btn btn-ghost" href="https://buy.stripe.com/test_4gMeVffdb4dSgTB8Ht2B200" target="_blank" rel="noopener" style="border-color:#635bff;color:#a39fff">💳 Safety Review — $25</a>
+        </div>
+        <div class="tour-offer" id="tour-offer" aria-live="polite">
+          <div class="tour-offer-head">
+            <div>
+              <div class="tour-offer-kicker">Nemotron guide</div>
+              <p>Need the fast version? Start in the console and let the AI walk you through what Custodian is, then hand you into the operator flow when it matters.</p>
+            </div>
+            <button class="tour-dismiss" id="tour-offer-dismiss" type="button">Not now</button>
+          </div>
+          <div class="tour-offer-actions">
+            <button class="tour-pill primary" id="tour-mode-quick" type="button">Quick walkthrough</button>
+            <button class="tour-pill" id="tour-mode-deep" type="button">Deep dive</button>
+            <button class="tour-pill" id="tour-mode-free" type="button">Browse freely</button>
+          </div>
+        </div>
+        <div class="tour-mobile-note" id="tour-mobile-note">
+          <strong>Nemotron stays lightweight on mobile.</strong>
+          <p>It won’t auto-cover the page. Open Console if you want the guided tour, or keep browsing and ask questions only when you need them.</p>
         </div>
         <div class="specs" id="specs" style="margin-top:22px">
           <div class="spec"><div class="k">Authority band</div><div class="v" id="s-band">—</div></div>
@@ -476,6 +625,7 @@
 
       <!-- RIGHT: SVG kernel authority ring + ticker + terminal -->
       <div class="hero-right">
+        <div class="hero-visual-stack">
         <!-- kernel authority ring diagram -->
         <div class="ring-wrap">
           <svg viewBox="0 0 400 400" width="100%" height="auto" aria-hidden="true" style="overflow:visible">
@@ -550,23 +700,42 @@
         </div>
 
         <!-- live kernel decision ticker -->
-        <div id="kticker" style="overflow:hidden;border:1px solid rgba(255,176,0,0.18);border-radius:6px;background:rgba(0,0,0,0.5);display:flex;align-items:center;height:36px">
-          <div style="flex-shrink:0;padding:0 12px;font-family:'JetBrains Mono',monospace;font-size:0.65em;font-weight:800;letter-spacing:.1em;color:#ffb000;border-right:1px solid rgba(255,176,0,0.18);height:100%;display:flex;align-items:center">⬡ KERNEL</div>
-          <div id="kt-line" style="flex:1;padding:0 14px;font-family:'JetBrains Mono',monospace;font-size:0.72em;color:#aaa;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">initializing…</div>
+        <div class="kernel-topology" aria-label="Deployment topology">
+          <div class="node">
+            <span class="name">NemoClaw</span>
+            <span class="where">agent host · not on Spark</span>
+          </div>
+          <div class="arrow">
+            <span class="link">──── Tailscale mesh ────</span>
+            <span class="why">encrypted · identity-bound</span>
+          </div>
+          <div class="node airgap">
+            <span class="name">⬡ KERNEL</span>
+            <span class="where">DGX Spark · 128GB · separate host</span>
+          </div>
+        </div>
+
+        <div class="kernel-ticker">
+          <div class="kernel-status">⬡ KERNEL <strong id="kt-status">BOOT</strong></div>
+          <div class="kernel-message">
+            <span class="kernel-message-label" id="kt-label" style="color:#ffb000">BOOT</span>
+            <span class="kernel-message-text" id="kt-message">initializing…</span>
+          </div>
         </div>
 
         <!-- verify_kit terminal (compact) -->
         <div id="vkit-wrap" style="text-align:left">
-          <div style="background:#0a0a0a;border:1px solid #222;border-radius:10px;overflow:hidden;font-family:'JetBrains Mono',monospace;font-size:0.78em">
-            <div style="display:flex;align-items:center;gap:7px;padding:8px 14px;background:#111;border-bottom:1px solid #1e1e1e">
+          <div class="vkit-shell">
+            <div class="vkit-window">
               <span style="width:11px;height:11px;border-radius:50%;background:#ff5f57;display:inline-block"></span>
               <span style="width:11px;height:11px;border-radius:50%;background:#febc2e;display:inline-block"></span>
               <span style="width:11px;height:11px;border-radius:50%;background:#28c840;display:inline-block"></span>
-              <span style="color:#5a5a5a;font-size:0.9em;margin-left:4px">verify_kit.py — self-verifying proof</span>
+              <span class="vkit-window-title">verify_kit.py — self-verifying proof</span>
             </div>
-            <pre id="vkit-body" style="padding:12px 16px;line-height:1.75;white-space:pre;color:#aaa;height:190px;overflow:hidden;margin:0"><span style="color:#ffb000">$ python3 verify_kit.py</span>
+            <pre id="vkit-body"><span style="color:#ffb000">$ python3 verify_kit.py</span>
 </pre>
           </div>
+        </div>
         </div>
       </div><!-- end hero-right -->
 
@@ -574,6 +743,7 @@
   </div><!-- end wrap -->
 </header>
 
+<script src="/site-tour.js"></script>
 <script>
 /* particle starfield */
 (function(){
@@ -602,8 +772,10 @@
 })();
 /* kernel ticker */
 (function(){
-  var el=document.getElementById('kt-line');
-  if(!el)return;
+  var statusEl=document.getElementById('kt-status');
+  var labelEl=document.getElementById('kt-label');
+  var messageEl=document.getElementById('kt-message');
+  if(!statusEl||!labelEl||!messageEl)return;
   var events=[
     {v:'ALLOW',   c:'#2ee6a6', msg:'refund_request($45.00) · within authority band · session cap ok'},
     {v:'DENY',    c:'#ff5f57', msg:'bulk_purchase($1,240.00) · exceeds per-action limit $250'},
@@ -617,7 +789,15 @@
     {v:'DENY',    c:'#ff5f57', msg:'direct_api_call() · no kernel path · denied at OS'},
   ];
   var i=0;
-  function tick(){var e=events[i%events.length];i++;el.innerHTML='<span style="color:'+e.c+';font-weight:800;margin-right:10px">'+e.v+'</span>'+e.msg;}
+  function tick(){
+    var e=events[i%events.length];
+    i++;
+    statusEl.textContent=e.v;
+    statusEl.style.color=e.c;
+    labelEl.textContent=e.v;
+    labelEl.style.color=e.c;
+    messageEl.textContent=e.msg;
+  }
   tick();setInterval(tick,2800);
 })();
 /* verify_kit terminal */
@@ -629,7 +809,7 @@
     {t:'[1/4] REGRESSION — self-approval bug reintroduced',c:'#888',p:400},
     {t:'  Result: CAUGHT BY TEST SUITE  ✓',c:'#2ee6a6',p:700},
     {t:'',p:200},
-    {t:'[2/4] TEST SUITE — 1,245 tests',c:'#888',p:400},
+    {t:'[2/4] TEST SUITE — 1,298 tests',c:'#888',p:400},
     {t:'  Result: ALL PASS  ✓',c:'#2ee6a6',p:800},
     {t:'',p:200},
     {t:'[3/4] LIVE STRIPE — real PaymentIntent',c:'#888',p:400},
@@ -850,7 +1030,7 @@
         <div class="metric"><div class="mv" id="m-governed">—</div><div class="ml">Cases governed by kernel</div><div class="mlive"><span class="pulse"></span>LIVE</div></div>
         <div class="metric"><div class="mv" id="m-payments">—</div><div class="ml">Stripe test-mode PaymentIntents created</div></div>
         <div class="metric"><div class="mv">3/3</div><div class="ml">Planted lies caught (0 false positives)</div></div>
-        <div class="metric"><div class="mv">1,163</div><div class="ml">Passing tests — run them yourself</div></div>
+        <div class="metric"><div class="mv">1,298</div><div class="ml">Passing tests — run them yourself</div></div>
       </div>
       <div class="reveal">
         <ul class="checks">
@@ -1011,7 +1191,7 @@ result <span style="color:var(--dim)">=</span> decide(
     </div>
     <div class="reveal" style="max-width:900px;margin:20px auto 0;display:flex;gap:16px;flex-wrap:wrap;justify-content:center">
       <div style="background:#080a10;border:1px solid var(--line);border-radius:8px;padding:12px 18px;font-size:0.82em;color:var(--muted)">
-        <span style="color:var(--green);font-weight:700">1,163</span> tests · <span style="color:var(--green);font-weight:700">0</span> failures · <span style="color:var(--green);font-weight:700">102</span> bundled skills
+        <span style="color:var(--green);font-weight:700">1,298</span> tests · <span style="color:var(--green);font-weight:700">0</span> failures · <span style="color:var(--green);font-weight:700">102</span> bundled skills
       </div>
       <div style="background:#080a10;border:1px solid var(--line);border-radius:8px;padding:12px 18px;font-size:0.82em;color:var(--muted)">
         Run <code style="color:var(--amber)">python3 verify_kit.py</code> to prove it yourself — 90 seconds, no credentials
@@ -1045,7 +1225,7 @@ result <span style="color:var(--dim)">=</span> decide(
       <div class="card reveal" style="padding:22px 24px">
         <div style="font-family:'JetBrains Mono',monospace;font-size:0.65em;letter-spacing:0.12em;text-transform:uppercase;color:var(--amber);margin-bottom:10px">Step 3 — Test suite</div>
         <code style="font-size:0.82em;color:var(--amber);display:block;margin-bottom:8px">pip install "custodian-kernel[dev]"<br>pytest tests/</code>
-        <div style="color:var(--muted);font-size:0.85em">1,163 tests. 0 failures. Includes self-approval regression proof.</div>
+        <div style="color:var(--muted);font-size:0.85em">1,298 tests. 0 failures. Includes self-approval regression proof.</div>
       </div>
       <div class="card reveal" style="padding:22px 24px">
         <div style="font-family:'JetBrains Mono',monospace;font-size:0.65em;letter-spacing:0.12em;text-transform:uppercase;color:var(--cyan);margin-bottom:10px">Step 4 — Read the source</div>
@@ -1588,6 +1768,42 @@ result <span style="color:var(--dim)">=</span> decide(
         burger.setAttribute('aria-expanded', 'false');
       }
     });
+  })();
+
+  (function(){
+    if(!window.CustodianTour) return;
+    const tour = window.CustodianTour;
+    const offer = document.getElementById('tour-offer');
+    const state = tour.getState();
+    tour.onPage('home');
+
+    function choose(mode){
+      tour.setMode(mode);
+      tour.markHomeOfferSeen();
+      if(mode === 'free'){
+        offer.classList.remove('show');
+        return;
+      }
+      window.location.href = '/hermes';
+    }
+
+    document.getElementById('tour-mode-quick').addEventListener('click', ()=>choose('quick'));
+    document.getElementById('tour-mode-deep').addEventListener('click', ()=>choose('deep'));
+    document.getElementById('tour-mode-free').addEventListener('click', ()=>choose('free'));
+    document.getElementById('tour-offer-dismiss').addEventListener('click', ()=>{
+      offer.classList.remove('show');
+      tour.patchState({ home_offer_dismissed: true, home_offer_seen: true });
+    });
+
+    if (state.mode && state.mode !== 'free') {
+      offer.classList.add('show');
+    }
+    if (!tour.isMobile() && !state.home_offer_seen && !state.home_offer_dismissed) {
+      setTimeout(() => {
+        offer.classList.add('show');
+        tour.markHomeOfferSeen();
+      }, 60000);
+    }
   })();
 </script>
 </body>
