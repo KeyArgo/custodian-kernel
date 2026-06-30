@@ -905,65 +905,66 @@ result <span style="color:var(--dim)">=</span> decide(
 <section id="architecture" style="padding:70px 0; background:linear-gradient(180deg,rgba(118,185,0,0.04),transparent 80%)">
   <div class="wrap">
     <div class="reveal">
-      <div class="sec-eyebrow" style="color:#76b900">Hardware Architecture · Powered by NVIDIA</div>
-      <h2>The agent thinks in the cloud. The law runs on NVIDIA hardware.</h2>
-      <p class="sec-sub">Custodian physically separates inference from enforcement. The inference model thinks. The enforcement kernel decides. Those two processes run on separate machines — the agent has no network path to the enforcement layer. The Custodian deployment here runs its enforcement kernel on a DGX Spark GB10 as proof-of-concept; the kernel itself is hardware-agnostic and ships as <code style="color:var(--green)">pip install custodian-kernel</code>.</p>
+      <div class="sec-eyebrow" style="color:#76b900">Enforcement Architecture</div>
+      <h2>Separate the thing that thinks from the thing that decides.</h2>
+      <p class="sec-sub">The core pattern: inference and enforcement run on different machines. The AI model recommends. The kernel decides. Those two processes have no network path between them — the agent cannot reach the enforcement layer, talk its way past it, or instruct it directly. This separation is what makes the guarantee structural rather than assumed.<br><br>The kernel runs on whatever you have. A $20/mo cloud VM. Your existing server. A laptop. The same <code style="color:var(--green)">pip install custodian-kernel</code> that runs on a Raspberry Pi also runs on our DGX Spark GB10 — which is exactly how we know it handles anything you throw at it.</p>
     </div>
+
     <div class="reveal" style="margin-top:48px; display:grid; grid-template-columns:1fr auto 1fr; gap:0; align-items:center; max-width:860px; margin-left:auto; margin-right:auto">
 
       <!-- INFERENCE -->
       <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.09); border-radius:16px; padding:32px 28px">
         <div style="font-size:0.72em; letter-spacing:0.12em; color:#76b900; text-transform:uppercase; font-weight:600; margin-bottom:16px">Inference Layer</div>
-        <div style="font-size:1.25em; font-weight:700; margin-bottom:8px">Nemotron Super 120B</div>
-        <div style="font-size:0.82em; color:#8d93a6; line-height:1.7; margin-bottom:20px">Reasoning model · 1M context<br>Fast enough to run at agent speed<br>Smart enough to catch lies · NVIDIA cloud API</div>
+        <div style="font-size:1.25em; font-weight:700; margin-bottom:8px">Any AI Model</div>
+        <div style="font-size:0.82em; color:#8d93a6; line-height:1.7; margin-bottom:20px">Cloud API or local · swap freely<br>Nemotron, GPT-4, Claude, Llama<br>The kernel doesn't care which model</div>
         <div style="font-size:0.75em; font-family:var(--mono); color:#5d6273; border-top:1px solid rgba(255,255,255,0.07); padding-top:14px">
-          <div style="color:#76b900; margin-bottom:4px">● Model makes recommendations</div>
-          <div>Agent calls here</div>
+          <div style="color:#76b900; margin-bottom:4px">● Makes recommendations only</div>
+          <div>Cannot touch money or take action directly</div>
         </div>
       </div>
 
       <!-- ARROW -->
       <div style="text-align:center; padding:0 20px">
-        <div style="font-size:0.7em; color:#5d6273; letter-spacing:0.08em; text-transform:uppercase; margin-bottom:8px">Tailscale</div>
+        <div style="font-size:0.65em; color:#5d6273; letter-spacing:0.08em; text-transform:uppercase; margin-bottom:8px">request only</div>
         <div style="font-size:1.6em; color:#3a4050">⟶</div>
-        <div style="font-size:0.65em; color:#ff5c5c; margin-top:8px; letter-spacing:0.06em">one-way</div>
+        <div style="font-size:0.65em; color:#ff5c5c; margin-top:8px; letter-spacing:0.06em">no return path</div>
       </div>
 
       <!-- ENFORCEMENT -->
       <div style="background:rgba(118,185,0,0.06); border:1px solid rgba(118,185,0,0.25); border-radius:16px; padding:32px 28px; position:relative">
-        <div style="position:absolute; top:-12px; right:16px; background:#76b900; color:#000; font-size:0.65em; font-weight:700; letter-spacing:0.1em; padding:3px 10px; border-radius:20px; text-transform:uppercase">On-Device</div>
+        <div style="position:absolute; top:-12px; right:16px; background:#76b900; color:#000; font-size:0.65em; font-weight:700; letter-spacing:0.1em; padding:3px 10px; border-radius:20px; text-transform:uppercase">Your Server</div>
         <div style="font-size:0.72em; letter-spacing:0.12em; color:#76b900; text-transform:uppercase; font-weight:600; margin-bottom:16px">Enforcement Layer</div>
-        <div style="font-size:1.25em; font-weight:700; margin-bottom:8px">Custodian Kernel · DGX Spark GB10</div>
-        <div style="font-size:0.82em; color:#8d93a6; line-height:1.7; margin-bottom:20px">NemoClaw sandbox · OS-level enforcement<br>Enforcement decisions on NVIDIA hardware<br>Grace Blackwell · 128 GB unified memory</div>
+        <div style="font-size:1.25em; font-weight:700; margin-bottom:8px">Custodian Kernel</div>
+        <div style="font-size:0.82em; color:#8d93a6; line-height:1.7; margin-bottom:20px">OS-level enforcement · any Linux host<br>Runs on a VPS, bare metal, or on-device<br>Policy as YAML · audit log append-only</div>
         <div style="font-size:0.75em; font-family:var(--mono); color:#5d6273; border-top:1px solid rgba(118,185,0,0.15); padding-top:14px">
           <div style="color:#ff5c5c; margin-bottom:4px">● Agent cannot reach this layer</div>
-          <div style="color:#76b900; margin-bottom:4px">● Every decision runs here</div>
-          <div>Kernel enforces · Spark executes</div>
+          <div style="color:#76b900; margin-bottom:4px">● Every spend decision runs here</div>
+          <div>pip install custodian-kernel</div>
         </div>
       </div>
     </div>
 
-    <!-- REDUNDANCY BAR -->
-    <div class="reveal" style="margin-top:28px; max-width:860px; margin-left:auto; margin-right:auto; background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.07); border-radius:12px; padding:18px 24px; display:flex; align-items:center; gap:16px">
-      <span style="font-size:1.1em">🔄</span>
+    <!-- DGX SPARK CALLOUT — the flex -->
+    <div class="reveal" style="margin-top:28px; max-width:860px; margin-left:auto; margin-right:auto; background:rgba(118,185,0,0.04); border:1px solid rgba(118,185,0,0.2); border-radius:12px; padding:18px 24px; display:flex; align-items:flex-start; gap:16px">
+      <span style="font-size:1.2em; flex-shrink:0">⬡</span>
       <div>
-        <span style="font-size:0.82em; color:#eceef5; font-weight:600">Enforcement redundancy — </span>
-        <span style="font-size:0.82em; color:#8d93a6">DGX Spark GB10 is the primary trust anchor. If the local network is unreachable, enforcement fails over to a secondary node automatically — same kernel, same policy, same audit trail. The enforcement layer never goes dark.</span>
+        <span style="font-size:0.82em; color:#eceef5; font-weight:600">Our reference deployment: NVIDIA DGX Spark GB10 — </span>
+        <span style="font-size:0.82em; color:#8d93a6">We run the enforcement kernel on a DGX Spark (Grace Blackwell, 128 GB unified memory) because it's the hardware we have — and because running it there proves it handles any load you can throw at it. If the kernel holds on a supercomputer under real production traffic, it holds on your server. The redundancy layer automatically fails over to a secondary node if the primary is unreachable — same policy, same audit trail, zero downtime.</span>
       </div>
     </div>
 
     <div class="reveal" style="margin-top:40px; display:flex; gap:24px; justify-content:center; flex-wrap:wrap">
       <div style="text-align:center; padding:16px 24px; background:rgba(255,255,255,0.025); border:1px solid rgba(255,255,255,0.08); border-radius:12px">
-        <div style="font-size:1.5em; font-weight:700; color:#76b900">128 GB</div>
-        <div style="font-size:0.75em; color:#8d93a6; margin-top:4px">DGX Spark unified memory</div>
-      </div>
-      <div style="text-align:center; padding:16px 24px; background:rgba(255,255,255,0.025); border:1px solid rgba(255,255,255,0.08); border-radius:12px">
-        <div style="font-size:1.5em; font-weight:700; color:#76b900">1M</div>
-        <div style="font-size:0.75em; color:#8d93a6; margin-top:4px">Nemotron context window</div>
-      </div>
-      <div style="text-align:center; padding:16px 24px; background:rgba(255,255,255,0.025); border:1px solid rgba(255,255,255,0.08); border-radius:12px">
         <div style="font-size:1.5em; font-weight:700; color:#ff5c5c">0</div>
         <div style="font-size:0.75em; color:#8d93a6; margin-top:4px">network paths from agent to kernel</div>
+      </div>
+      <div style="text-align:center; padding:16px 24px; background:rgba(255,255,255,0.025); border:1px solid rgba(255,255,255,0.08); border-radius:12px">
+        <div style="font-size:1.5em; font-weight:700; color:#76b900">any</div>
+        <div style="font-size:0.75em; color:#8d93a6; margin-top:4px">Linux host — VPS to supercomputer</div>
+      </div>
+      <div style="text-align:center; padding:16px 24px; background:rgba(255,255,255,0.025); border:1px solid rgba(255,255,255,0.08); border-radius:12px">
+        <div style="font-size:1.5em; font-weight:700; color:#76b900">1</div>
+        <div style="font-size:0.75em; color:#8d93a6; margin-top:4px">command to deploy the kernel</div>
       </div>
       <div style="text-align:center; padding:16px 24px; background:rgba(255,255,255,0.025); border:1px solid rgba(255,255,255,0.08); border-radius:12px">
         <div style="font-size:1.5em; font-weight:700; color:#76b900">2-layer</div>
