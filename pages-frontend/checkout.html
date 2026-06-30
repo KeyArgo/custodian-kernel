@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Custodian AI Safety Review — $25</title>
+<meta name="description" content="Get your AI agent audited by the Custodian kernel. We run verify_kit against your workflow and deliver a written safety report.">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<style>
+:root{
+  --bg:#06070b;--surface:#0d0f16;--border:rgba(255,255,255,0.08);
+  --text:#e8eaf0;--dim:#6b7280;--green:#2ee6a6;--amber:#f59e0b;
+  --nvidia:#76b900;--stripe:#635bff;--mono:'JetBrains Mono',monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Inter',sans-serif;min-height:100vh}
+
+nav{display:flex;align-items:center;justify-content:space-between;padding:16px 32px;border-bottom:1px solid var(--border)}
+.logo{font-family:var(--mono);font-weight:700;font-size:1.1em;letter-spacing:-0.02em}
+.logo span{color:var(--green)}
+.nav-links{display:flex;gap:24px;font-size:0.88em}
+.nav-links a{color:var(--dim);text-decoration:none;transition:color 0.2s}
+.nav-links a:hover{color:var(--text)}
+
+.hero{max-width:860px;margin:0 auto;padding:80px 32px 48px;text-align:center}
+.eyebrow{display:inline-flex;align-items:center;gap:8px;font-family:var(--mono);font-size:0.72em;letter-spacing:0.12em;text-transform:uppercase;color:var(--nvidia);border:1px solid rgba(118,185,0,0.3);background:rgba(118,185,0,0.05);padding:6px 14px;border-radius:100px;margin-bottom:24px}
+h1{font-size:clamp(2.2em,5vw,3.4em);font-weight:800;line-height:1.1;margin-bottom:20px;letter-spacing:-0.03em}
+h1 span{background:linear-gradient(135deg,#2ee6a6,#76b900);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.sub{font-size:1.15em;color:var(--dim);max-width:560px;margin:0 auto 40px;line-height:1.6}
+
+.cards{display:grid;grid-template-columns:1fr 1fr;gap:24px;max-width:760px;margin:0 auto 60px}
+@media(max-width:640px){.cards{grid-template-columns:1fr}}
+
+.card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:32px;text-align:left;position:relative;transition:border-color 0.2s}
+.card:hover{border-color:rgba(118,185,0,0.4)}
+.card.featured{border-color:rgba(46,230,166,0.4);background:linear-gradient(135deg,rgba(46,230,166,0.03),rgba(118,185,0,0.03))}
+.card-badge{font-family:var(--mono);font-size:0.68em;letter-spacing:0.1em;text-transform:uppercase;color:var(--green);margin-bottom:12px}
+.card-price{font-size:2.8em;font-weight:800;letter-spacing:-0.04em;margin-bottom:4px}
+.card-price span{font-size:0.4em;font-weight:400;color:var(--dim);vertical-align:top;margin-top:12px;display:inline-block}
+.card-label{font-size:0.85em;color:var(--dim);margin-bottom:24px}
+.card-features{list-style:none;display:flex;flex-direction:column;gap:10px;margin-bottom:28px}
+.card-features li{font-size:0.88em;color:var(--text);display:flex;gap:10px;align-items:flex-start}
+.card-features li::before{content:'✓';color:var(--green);font-family:var(--mono);font-weight:700;flex-shrink:0;margin-top:1px}
+.btn-checkout{display:block;width:100%;padding:14px;border-radius:10px;font-weight:700;font-size:0.95em;text-align:center;text-decoration:none;transition:all 0.2s;cursor:pointer;border:none}
+.btn-primary{background:var(--green);color:#06070b}
+.btn-primary:hover{background:#26d496;transform:translateY(-1px)}
+.btn-secondary{background:transparent;color:var(--text);border:1px solid var(--border)}
+.btn-secondary:hover{border-color:rgba(255,255,255,0.3)}
+
+.what{max-width:760px;margin:0 auto 80px;padding:0 32px}
+.what h2{font-size:1.5em;font-weight:700;margin-bottom:32px;text-align:center}
+.steps{display:flex;flex-direction:column;gap:0}
+.step{display:grid;grid-template-columns:48px 1fr;gap:20px;padding:24px 0;border-bottom:1px solid var(--border)}
+.step:last-child{border-bottom:none}
+.step-num{width:48px;height:48px;border-radius:50%;background:rgba(46,230,166,0.1);border:1px solid rgba(46,230,166,0.3);display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:0.85em;color:var(--green);font-weight:700;flex-shrink:0}
+.step-body h3{font-size:1em;font-weight:700;margin-bottom:6px}
+.step-body p{font-size:0.88em;color:var(--dim);line-height:1.6}
+.step-tag{display:inline-block;font-family:var(--mono);font-size:0.7em;padding:2px 8px;border-radius:4px;margin-top:8px}
+.tag-kernel{background:rgba(46,230,166,0.1);color:var(--green);border:1px solid rgba(46,230,166,0.2)}
+.tag-escalate{background:rgba(245,158,11,0.1);color:var(--amber);border:1px solid rgba(245,158,11,0.2)}
+.tag-verified{background:rgba(118,185,0,0.1);color:var(--nvidia);border:1px solid rgba(118,185,0,0.2)}
+
+.proof{max-width:760px;margin:0 auto 80px;padding:0 32px}
+.proof h2{font-size:1.5em;font-weight:700;margin-bottom:24px;text-align:center}
+.proof-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+@media(max-width:560px){.proof-grid{grid-template-columns:1fr}}
+.proof-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px;text-align:center}
+.proof-val{font-family:var(--mono);font-size:1.8em;font-weight:800;color:var(--green);margin-bottom:4px}
+.proof-lbl{font-size:0.8em;color:var(--dim)}
+
+.receipt-demo{max-width:760px;margin:0 auto 80px;padding:0 32px}
+.receipt-demo h2{font-size:1.5em;font-weight:700;margin-bottom:24px;text-align:center}
+.terminal{background:#0a0b0f;border:1px solid var(--border);border-radius:12px;padding:24px;font-family:var(--mono);font-size:0.82em;line-height:1.7;overflow-x:auto}
+.t-green{color:var(--green)}
+.t-amber{color:var(--amber)}
+.t-dim{color:var(--dim)}
+.t-blue{color:#60a5fa}
+.t-red{color:#f87171}
+
+.faq{max-width:640px;margin:0 auto 80px;padding:0 32px}
+.faq h2{font-size:1.5em;font-weight:700;margin-bottom:32px;text-align:center}
+.faq-item{border-bottom:1px solid var(--border);padding:20px 0}
+.faq-item:last-child{border-bottom:none}
+.faq-q{font-weight:600;margin-bottom:8px}
+.faq-a{font-size:0.9em;color:var(--dim);line-height:1.6}
+
+footer{border-top:1px solid var(--border);padding:24px 32px;text-align:center;font-size:0.82em;color:var(--dim)}
+footer a{color:var(--dim);text-decoration:none}
+footer a:hover{color:var(--text)}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="logo"><span>C</span> Custodian</div>
+  <div class="nav-links">
+    <a href="/">Home</a>
+    <a href="/operator">Live Demo</a>
+    <a href="/tools">Tools</a>
+    <a href="/docs">Docs</a>
+  </div>
+</nav>
+
+<div class="hero">
+  <div class="eyebrow">◉ Kernel-enforced · SHA-256 receipts · Real Stripe</div>
+  <h1>AI Safety Review<br><span>by Custodian</span></h1>
+  <p class="sub">We run <code>verify_kit</code> against your AI agent workflow, catch self-approval loops and unbounded spend, and deliver a written safety report — enforced by the same kernel the judges are reviewing.</p>
+</div>
+
+<div class="cards">
+  <div class="card featured">
+    <div class="card-badge">◉ Most popular</div>
+    <div class="card-price">$25<span>/ seat</span></div>
+    <div class="card-label">Solo AI Safety Review</div>
+    <ul class="card-features">
+      <li>verify_kit run against your workflow</li>
+      <li>Authority band recommendations (L0–L4)</li>
+      <li>Self-approval vulnerability scan</li>
+      <li>Kill-switch placement advice</li>
+      <li>Written report, delivered in 48h</li>
+      <li>SHA-256 receipt — kernel-verified purchase</li>
+    </ul>
+    <a class="btn-checkout btn-primary" href="https://buy.stripe.com/test_4gMeVffdb4dSgTB8Ht2B200" target="_blank" rel="noopener">
+      Pay $25 — Start Review
+    </a>
+  </div>
+
+  <div class="card">
+    <div class="card-badge" style="color:var(--amber)">◈ Team pack</div>
+    <div class="card-price" style="color:var(--amber)">$100<span>/ team</span></div>
+    <div class="card-label">4-seat AI Safety Review</div>
+    <ul class="card-features">
+      <li>Everything in Solo × 4 seats</li>
+      <li>Cross-agent interaction audit</li>
+      <li>Policy YAML review + hardening</li>
+      <li>Kill-switch topology for your stack</li>
+      <li>Priority turnaround — 24h</li>
+      <li>SHA-256 receipt — kernel-verified purchase</li>
+    </ul>
+    <a class="btn-checkout btn-secondary" href="https://buy.stripe.com/test_4gMeVffdb4dSgTB8Ht2B200?quantity=4" target="_blank" rel="noopener">
+      Pay $100 — Team Review
+    </a>
+  </div>
+</div>
+
+<div class="what">
+  <h2>What the kernel does with your payment</h2>
+  <div class="steps">
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-body">
+        <h3>Payment received — VERIFIED earn</h3>
+        <p>Your Stripe PaymentIntent hits our webhook. The kernel logs it as a VERIFIED earn event. The claim verifier checks the ledger: $25 inbound matches the Stripe object. No fabrication possible.</p>
+        <span class="step-tag tag-verified">VERIFIED — ledger matches</span>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-body">
+        <h3>Kernel gates the review cost</h3>
+        <p>Running verify_kit costs compute. The kernel evaluates the spend request — band L2, within cap. AUTONOMOUS. No human needed. The review starts immediately.</p>
+        <span class="step-tag tag-kernel">AUTONOMOUS — within band L2</span>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-body">
+        <h3>If you request a refund — ESCALATED</h3>
+        <p>Refunds involve self-dealing: the agent cannot approve its own outgoing payment. The kernel catches this, escalates to a human operator, and nothing moves until we approve it. The agent cannot bypass this.</p>
+        <span class="step-tag tag-escalate">ESCALATED — self-dealing detected</span>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">4</div>
+      <div class="step-body">
+        <h3>SHA-256 receipt for every action</h3>
+        <p>Each step produces a GovernedReceipt — fingerprinted with SHA-256 over <code>receipt_id:band:amount:verdict:output_hash</code>. Tamper any field, verify() fails. Every action is auditable, forever.</p>
+        <span class="step-tag tag-kernel">receipt.verify() → True</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="receipt-demo">
+  <h2>What a kernel receipt looks like</h2>
+  <div class="terminal">
+<span class="t-dim">$ custodian demo receipt</span>
+
+<span class="t-amber">[STEP 2] KERNEL EVALUATES — amount=$25.00, cap=$50.00, band=L2</span>
+  verdict    : <span class="t-green">AUTONOMOUS</span>  (no human needed)
+  audit_id   : <span class="t-blue">a4f2e891</span>
+  elapsed_ms : 0.4
+
+<span class="t-amber">[STEP 3] RECEIPT GENERATED</span>
+  {
+    "receipt_id": "<span class="t-blue">2653e2ff-528a-4d2b-ad3e-578de993e94c</span>",
+    "band": "<span class="t-green">L2</span>",
+    "amount": <span class="t-green">25.0</span>,
+    "verdict": "<span class="t-green">autonomous</span>",
+    "fingerprint": "<span class="t-dim">64e6ea1f42b4bd7a4f4287c0812a2084...</span>"
+  }
+
+<span class="t-amber">[STEP 4] VERIFY — recompute fingerprint</span>
+  receipt.verify() → <span class="t-green">True</span>  ✓ untampered
+
+<span class="t-amber">[STEP 5] KILL SWITCH — denied verdict</span>
+  verdict : <span class="t-red">DENIED</span>
+  ok      : False  ← <span class="t-dim">function body never ran</span>
+  </div>
+</div>
+
+<div class="proof">
+  <h2>By the numbers</h2>
+  <div class="proof-grid">
+    <div class="proof-card">
+      <div class="proof-val">1,298</div>
+      <div class="proof-lbl">Tests — run them yourself</div>
+    </div>
+    <div class="proof-card">
+      <div class="proof-val">102</div>
+      <div class="proof-lbl">Governed tools, L0–L4</div>
+    </div>
+    <div class="proof-card">
+      <div class="proof-val">5/5</div>
+      <div class="proof-lbl">Planted attacks caught</div>
+    </div>
+  </div>
+</div>
+
+<div class="faq">
+  <h2>Questions</h2>
+  <div class="faq-item">
+    <div class="faq-q">Is this a real Stripe charge?</div>
+    <div class="faq-a">Yes. Your payment goes through Stripe's real infrastructure. You get a real PaymentIntent ID that you can verify on stripe.com. The kernel logs the earn event and produces a SHA-256 receipt. Refunds are available — the kernel escalates refund requests to a human operator (by design).</div>
+  </div>
+  <div class="faq-item">
+    <div class="faq-q">What do I get in the safety report?</div>
+    <div class="faq-a">A written analysis of your AI agent workflow: which authority bands your tools should be in (L0–L4), whether self-approval loops exist, where a kill switch should be placed, and what your policy.yaml should look like. Delivered within 48h via email.</div>
+  </div>
+  <div class="faq-item">
+    <div class="faq-q">Why does a refund require human approval?</div>
+    <div class="faq-a">Because the agent cannot approve its own outgoing payments — that's self-dealing. The Custodian kernel detects this pattern, sets verdict to ESCALATED, and blocks execution until a human operator approves it. This is the same control that caught the self-approval attack in the demo.</div>
+  </div>
+  <div class="faq-item">
+    <div class="faq-q">Can I verify the kernel code myself?</div>
+    <div class="faq-a">Yes. <code>pip install custodian-kernel</code> then <code>python3 -m pytest tests/ --tb=no -q</code>. All 1,298 tests are public. The claim verifier, authority bands, kill switch, and receipt system are all in the package.</div>
+  </div>
+</div>
+
+<footer>
+  <a href="/">Custodian</a> · <a href="/operator">Live Demo</a> · <a href="/docs">Docs</a> · <a href="https://github.com/KeyArgo/hermes-hackathon-2026" target="_blank" rel="noopener">GitHub</a>
+  <br><br>
+  All payments processed by Stripe. SHA-256 receipts generated by the Custodian kernel.
+</footer>
+
+</body>
+</html>
