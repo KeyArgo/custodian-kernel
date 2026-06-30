@@ -24,7 +24,13 @@
       --nvidia: #76b900;
       --mono:   'JetBrains Mono', 'Fira Code', monospace;
     }
-    body { background: var(--bg); color: #e8e8e8; font-family: var(--mono); padding: 0; max-width: 100%; margin: 0; }
+    body {
+      background:
+        radial-gradient(circle at top left, rgba(118,185,0,0.06), transparent 26%),
+        radial-gradient(circle at top right, rgba(255,176,0,0.08), transparent 22%),
+        linear-gradient(180deg, #06070b 0%, #05060a 100%);
+      color: #e8e8e8; font-family: var(--mono); padding: 0; max-width: 100%; margin: 0;
+    }
     .page-wrap { max-width: 860px; margin: 0 auto; padding: 24px 24px 40px; }
     /* ── kernel nav ─────────────────────────────────────────── */
     .k-nav {
@@ -81,7 +87,7 @@
     h1 { color: #76b900; font-size: 1.3em; margin-bottom: 4px; }
     .warn { color: #ffb000; font-size: 0.82em; margin-bottom: 16px; }
     .ok-banner { color: #2ee6a6; font-size: 0.82em; margin-bottom: 16px; padding: 10px 14px; background: rgba(46,230,166,0.05); border: 1px solid rgba(46,230,166,0.2); border-radius: 6px; }
-    .live-panel { background: #0a0a0a; border: 1px solid #2a2a2a; border-top: 2px solid #2ee6a6; padding: 14px 16px; margin: 22px 0 14px 0; }
+    .live-panel { background: linear-gradient(180deg, rgba(18,23,35,0.96), rgba(10,13,20,0.98)); border: 1px solid rgba(255,255,255,0.08); border-top: 2px solid #2ee6a6; padding: 14px 16px; margin: 22px 0 14px 0; border-radius: 12px; box-shadow: 0 10px 22px rgba(0,0,0,0.18); }
     .live-panel h2 { font-size: 0.95em; margin: 0 0 6px 0; color: #2ee6a6; }
     .live-panel p { font-size: 0.78em; color: #999; margin: 0 0 10px 0; }
     .live-table { width: 100%; border-collapse: collapse; font-size: 0.72em; font-family: 'JetBrains Mono', monospace; }
@@ -95,18 +101,18 @@
     .live-evt-refund { color: #a78bfa; }
     .live-evt-kill { color: #ff5c5c; }
     .live-loading { color: #5a5a5a; font-size: 0.85em; padding: 6px 0; }
-    .curl-panel { background: #0a0a0a; border: 1px solid #2a2a2a; border-top: 2px solid #a78bfa; padding: 14px 16px; margin: 18px 0 14px 0; }
+    .curl-panel { background: linear-gradient(180deg, rgba(18,23,35,0.96), rgba(10,13,20,0.98)); border: 1px solid rgba(255,255,255,0.08); border-top: 2px solid #a78bfa; padding: 14px 16px; margin: 18px 0 14px 0; border-radius: 12px; box-shadow: 0 10px 22px rgba(0,0,0,0.18); }
     .curl-panel h2 { font-size: 0.95em; margin: 0 0 6px 0; color: #a78bfa; }
     .curl-panel p { font-size: 0.78em; color: #999; margin: 0 0 10px 0; }
     .curl-block { background: #060606; border: 1px solid #1a1a1a; border-radius: 6px; padding: 10px 12px; font-family: 'JetBrains Mono', monospace; font-size: 0.74em; color: #c8c8c8; white-space: pre-wrap; word-break: break-all; margin: 0 0 10px 0; }
     .curl-btn { all: unset; cursor: pointer; background: rgba(167,139,250,0.12); border: 1px solid rgba(167,139,250,0.3); color: #c8b8ff; font-size: 0.78em; font-weight: 600; padding: 6px 14px; border-radius: 6px; margin-bottom: 8px; }
     .curl-out { background: #060606; border: 1px solid #1a1a1a; border-radius: 6px; padding: 8px 10px; font-family: 'JetBrains Mono', monospace; font-size: 0.72em; color: #888; white-space: pre-wrap; word-break: break-all; margin: 6px 0 0 0; display: none; }
-    .treasury-panel { background: #0a0a0a; border: 1px solid #2a2a2a; border-top: 2px solid #76b900; padding: 14px 16px; margin: 22px 0 14px 0; }
+    .treasury-panel { background: linear-gradient(180deg, rgba(18,23,35,0.96), rgba(10,13,20,0.98)); border: 1px solid rgba(255,255,255,0.08); border-top: 2px solid #76b900; padding: 14px 16px; margin: 22px 0 14px 0; border-radius: 12px; box-shadow: 0 10px 22px rgba(0,0,0,0.18); }
     .treasury-panel h2 { font-size: 0.95em; margin: 0 0 6px 0; color: #76b900; }
     .treasury-panel p { font-size: 0.78em; color: #999; margin: 0 0 10px 0; }
     .treasury-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
     @media(max-width:480px){ .treasury-grid { grid-template-columns: 1fr; } }
-    .treasury-tile { background: #060606; border: 1px solid #1a1a1a; border-radius: 6px; padding: 12px 14px; }
+    .treasury-tile { background: linear-gradient(180deg, rgba(18,23,35,0.96), rgba(10,13,20,0.98)); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 12px 14px; box-shadow: 0 10px 20px rgba(0,0,0,0.16); }
     .treasury-tile-label { font-size: 0.65em; color: #5a5a5a; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 4px; }
     .treasury-tile-value { font-size: 1.5em; font-weight: 700; font-family: 'JetBrains Mono', monospace; }
     .treasury-tile-value.is-positive { color: #2ee6a6; }
@@ -122,33 +128,33 @@
     .treasury-cashout { all: unset; cursor: pointer; background: rgba(46,230,166,0.1); border: 1px solid rgba(46,230,166,0.3); color: #2ee6a6; font-size: 0.78em; font-weight: 600; padding: 8px 14px; border-radius: 6px; margin-top: 10px; }
     .treasury-cashout:disabled { opacity: 0.4; cursor: not-allowed; }
     .treasury-cashout-out { font-size: 0.74em; color: #888; margin-top: 6px; white-space: pre-wrap; font-family: 'JetBrains Mono', monospace; }
-    .step { background: #0a0a0a; border: 1px solid #2a2a2a; border-top: 2px solid #76b900; padding: 14px 16px; margin-bottom: 14px; }
+    .step { background: linear-gradient(180deg, rgba(18,23,35,0.96), rgba(10,13,20,0.98)); border: 1px solid rgba(255,255,255,0.08); border-top: 2px solid #76b900; padding: 14px 16px; margin-bottom: 14px; border-radius: 12px; box-shadow: 0 10px 22px rgba(0,0,0,0.18); }
     .step h2 { font-size: 0.95em; margin: 0 0 6px 0; color: #76b900; }
     .step p { font-size: 0.8em; color: #999; margin: 0 0 10px 0; line-height: 1.5; }
     .row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; align-items: center; }
-    input { background: #111; border: 1px solid #333; color: #e8e8e8; padding: 6px 8px; font-family: inherit; font-size: 0.85em; }
-    button { background: rgba(118,185,0,0.12); border: 1px solid #76b900; color: #76b900; padding: 7px 14px;
-        cursor: pointer; font-family: inherit; font-size: 0.85em; }
-    button:hover { background: rgba(118,185,0,0.25); }
+    input { background: rgba(0,0,0,0.38); border: 1px solid rgba(255,255,255,0.08); color: #e8e8e8; padding: 7px 9px; font-family: inherit; font-size: 0.85em; border-radius: 10px; }
+    button { background: linear-gradient(180deg, rgba(118,185,0,0.16), rgba(118,185,0,0.08)); border: 1px solid #76b900; color: #76b900; padding: 8px 14px;
+        cursor: pointer; font-family: inherit; font-size: 0.85em; border-radius: 999px; transition: transform .15s, background .15s, border-color .15s, color .15s; }
+    button:hover { background: rgba(118,185,0,0.25); transform: translateY(-1px); }
     button:disabled { opacity: 0.4; cursor: not-allowed; }
     .btn-copy { background: rgba(255,176,0,0.1); border-color: #ffb000; color: #ffb000; font-size: 0.75em; padding: 4px 10px; display: none; }
     .btn-copy.show { display: inline-block; }
     .btn-copy:hover { background: rgba(255,176,0,0.22); }
-    .out { background: #000; border: 1px solid #222; padding: 8px 10px; margin-top: 8px; font-size: 0.78em;
-        white-space: pre-wrap; max-height: 200px; overflow-y: auto; display: none; }
+    .out { background: linear-gradient(180deg, rgba(10,12,18,0.96), rgba(7,8,13,0.98)); border: 1px solid rgba(255,255,255,0.08); padding: 8px 10px; margin-top: 8px; font-size: 0.78em;
+        white-space: pre-wrap; max-height: 200px; overflow-y: auto; display: none; border-radius: 12px; box-shadow: inset 0 1px 0 rgba(255,255,255,0.02); }
     .out.show { display: block; }
     .out.err { border-color: #ff3b3b; color: #ff9b9b; }
     /* ---- SMS phone mockup ---- */
     .sms-banner { display: none; margin-top: 14px; }
     .sms-banner.show { display: block; }
-    .phone-wrap { background: #111; border: 2px solid #333; border-radius: 20px; padding: 12px 10px;
+    .phone-wrap { background: linear-gradient(180deg, rgba(18,23,35,0.98), rgba(10,13,20,0.98)); border: 1px solid rgba(255,255,255,0.08); border-radius: 20px; padding: 12px 10px;
         max-width: 320px; font-family: -apple-system, 'Helvetica Neue', sans-serif; }
     .phone-top { display: flex; align-items: center; justify-content: space-between;
         font-size: 10px; color: #888; padding: 0 4px 8px; border-bottom: 1px solid #222; margin-bottom: 10px; }
     .phone-top .carrier { letter-spacing: 0.05em; }
     .phone-top .signal { display: flex; gap: 2px; align-items: flex-end; }
     .phone-top .signal span { background: #888; border-radius: 1px; width: 3px; display: inline-block; }
-    .notif-card { background: #1c1c1e; border-radius: 12px; padding: 12px 14px; }
+    .notif-card { background: linear-gradient(180deg, rgba(28,30,34,0.98), rgba(17,19,24,0.98)); border-radius: 12px; padding: 12px 14px; border: 1px solid rgba(255,255,255,0.06); }
     .notif-header { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
     .notif-app-icon { width: 22px; height: 22px; border-radius: 6px; background: #2cc64f;
         display: flex; align-items: center; justify-content: center; font-size: 12px; flex-shrink: 0; }
@@ -162,8 +168,8 @@
         padding: 6px 10px; border: 1px solid #1a2a10; border-radius: 6px; background: #050d00; }
 
     /* ---- instructions panel ---- */
-    .instructions { background: #08080a; border: 1px solid #1e1e2a; border-left: 3px solid #5db0ff;
-        padding: 14px 16px; margin-bottom: 20px; font-size: 0.82em; }
+    .instructions { background: linear-gradient(180deg, rgba(14,17,27,0.96), rgba(8,10,16,0.98)); border: 1px solid rgba(255,255,255,0.08); border-left: 3px solid #5db0ff;
+        padding: 14px 16px; margin-bottom: 20px; font-size: 0.82em; border-radius: 12px; box-shadow: 0 10px 22px rgba(0,0,0,0.2); }
     .instructions summary { color: #5db0ff; cursor: pointer; font-weight: 700; letter-spacing: 0.04em;
         text-transform: uppercase; font-size: 0.9em; margin-bottom: 0; list-style: none; }
     .instructions summary::before { content: '▶ '; }
@@ -179,15 +185,15 @@
     #login-err { color: #ff5c5c; font-size: 0.82em; margin-top: 8px; display: none; }
 
     /* ---- mini audit feed ---- */
-    .op-feed-wrap { background: #050a00; border: 1px solid #1a2a10; border-radius: 10px; margin-bottom: 18px; overflow: hidden; }
-    .op-feed-hdr { display: flex; align-items: center; gap: 10px; padding: 9px 16px; background: rgba(118,185,0,0.04); border-bottom: 1px solid #1a2a10; }
+    .op-feed-wrap { background: linear-gradient(180deg, rgba(8,12,8,0.98), rgba(5,8,5,0.98)); border: 1px solid rgba(118,185,0,0.18); border-radius: 12px; margin-bottom: 18px; overflow: hidden; box-shadow: 0 10px 22px rgba(0,0,0,0.18); }
+    .op-feed-hdr { display: flex; align-items: center; gap: 10px; padding: 9px 16px; background: rgba(118,185,0,0.06); border-bottom: 1px solid rgba(118,185,0,0.12); }
     .op-feed-dot { width: 7px; height: 7px; border-radius: 50%; background: #76b900; flex-shrink: 0; animation: op-pulse 2s infinite; }
     @keyframes op-pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
     .op-feed-title { font-size: 0.72em; letter-spacing: 0.1em; text-transform: uppercase; color: #76b900; font-weight: 700; }
     .op-feed-link { font-size: 0.68em; color: #4a7a30; text-decoration: none; margin-left: auto; }
     .op-feed-link:hover { color: #76b900; }
     #op-feed { padding: 6px 16px; min-height: 46px; max-height: 160px; overflow-y: auto; font-size: 0.74em; line-height: 2; }
-    .op-ev { display: flex; gap: 10px; border-bottom: 1px solid #0a140a; padding: 1px 0; overflow: hidden; }
+    .op-ev { display: flex; gap: 10px; border-bottom: 1px solid rgba(118,185,0,0.08); padding: 1px 0; overflow: hidden; }
     .op-ev:last-child { border-bottom: none; }
     .op-ev-ts { color: #3a5a3a; flex-shrink: 0; }
     .op-ev-badge { flex-shrink: 0; text-transform: uppercase; font-size: 0.88em; font-weight: 700; }
@@ -203,9 +209,14 @@
       transition: transform 0.15s; }
     #op-nemo-bubble:hover { transform: scale(1.08); }
     #op-nemo-panel { position: fixed; bottom: 86px; right: 24px; width: 340px; max-height: 500px;
-      background: #0a0e06; border: 1px solid #2a4020; border-radius: 16px; display: none;
+      background: linear-gradient(180deg, rgba(10,14,6,0.98), rgba(6,10,4,0.98)); border: 1px solid #2a4020; border-radius: 16px; display: none;
       flex-direction: column; z-index: 999; box-shadow: 0 8px 40px rgba(0,0,0,0.7); overflow: hidden; }
-    .op-np-hdr { display: flex; align-items: center; gap: 10px; padding: 13px 16px; border-bottom: 1px solid #1a2a10; background: rgba(118,185,0,0.04); }
+    /* On phones the floating bubble blocks the action buttons (Approve / Engage kill switch).
+       Hide it. The bubble is a desktop affordance. */
+    @media(max-width:680px){
+      #op-nemo-bubble, #op-nemo-panel { display: none !important; }
+    }
+    .op-np-hdr { display: flex; align-items: center; gap: 10px; padding: 13px 16px; border-bottom: 1px solid rgba(118,185,0,0.12); background: rgba(118,185,0,0.06); }
     .op-np-body { flex: 1; overflow-y: auto; padding: 14px 14px; display: flex; flex-direction: column; gap: 10px; max-height: 320px; font-size: 0.82em; line-height: 1.6; }
     .op-np-foot { border-top: 1px solid #1a2a10; padding: 10px 12px; display: flex; gap: 8px; }
     .op-np-input { flex: 1; background: #111; border: 1px solid #2a3a1a; border-radius: 8px; color: #ccc; font-size: 0.85em; padding: 8px 12px; outline: none; font-family: var(--mono); }
@@ -431,7 +442,7 @@
             <div style="background:#0a0a0a; border:1px solid #2a2a2a; padding:10px 14px; border-radius:4px;">
                 <span style="color:#76b900; font-weight:700;">Net Balance card</span>
                 <span style="color:#666;"> → </span>
-                <span style="color:#bbb;">Shows real revenue in vs. net spend. The $1,200 earn was uncapped; the $85 autonomous spend and $3,500 override are tracked separately; the $85 refund nets out. You can see exactly which dollars the AI moved on its own vs. which required you.</span>
+                <span style="color:#bbb;">Shows test-mode revenue in vs. net spend. The $1,200 earn was uncapped; the $85 autonomous spend and $3,500 override are tracked separately; the $85 refund nets out. You can see exactly which test-mode dollars the AI moved on its own vs. which required you.</span>
             </div>
             <div style="background:#0a0a0a; border:1px solid #2a2a2a; padding:10px 14px; border-radius:4px;">
                 <span style="color:#76b900; font-weight:700;">Ask Nemotron</span>
@@ -442,9 +453,12 @@
     </div>
 </div>
 
+<script src="/site-tour.js"></script>
 <script>
 const API = '/api/v1/operator';
 let spendPI = '';
+const siteTour = window.CustodianTour || null;
+if (siteTour) siteTour.onPage('operator');
 
 document.addEventListener('DOMContentLoaded', function () {
 
@@ -474,11 +488,13 @@ function extractPI(text) {
 document.getElementById('step0-btn').addEventListener('click', async () => {
     const data = await call('/earn', { amount: '1200.00', description: 'Demo: support contract renewal -- customer payment received' });
     renderOut('step0-out', data);
+    if (siteTour && !data.error) siteTour.markOperatorStep(0, { completed: true });
 });
 
 document.getElementById('step1-btn').addEventListener('click', async () => {
     const data = await call('/spend', { amount: '85.00', description: 'Demo: cloud backup storage renewal' });
     renderOut('step1-out', data);
+    if (siteTour && !data.error) siteTour.markOperatorStep(1, { completed: true });
     const text = data.error || [data.stdout, data.stderr].filter(Boolean).join('\n');
     const pi = extractPI(text);
     if (pi) {
@@ -528,6 +544,7 @@ function startCodePoll(codeElId, approveInputId, noteId) {
 document.getElementById('step2-btn').addEventListener('click', async () => {
     const data = await call('/spend', { amount: '3500.00', description: 'Demo: NAS license renewal' });
     renderOut('step2-out', data);
+    if (siteTour && !data.error) siteTour.markOperatorStep(2, { completed: true });
     const text = data.error || [data.stdout, data.stderr].filter(Boolean).join('\n');
     if (text.includes('TWILIO') || text.includes('approval code') || text.includes('escalation')) {
         const t = smsNow();
@@ -544,28 +561,33 @@ document.getElementById('approve1-btn').addEventListener('click', async () => {
     const by = document.getElementById('approve1-by').value || 'Operator';
     const data = await call('/approve', { code, approved_by: by });
     renderOut('approve1-out', data);
+    if (siteTour && !data.error) siteTour.markOperatorStep(3, { completed: true });
 });
 
 document.getElementById('kill-btn').addEventListener('click', async () => {
     const reason = document.getElementById('kill-reason').value;
     const data = await call('/kill', { by: 'Operator', reason });
     renderOut('kill-out', data);
+    if (siteTour && !data.error) siteTour.markOperatorStep(4, { completed: true });
 });
 
 document.getElementById('step5-btn').addEventListener('click', async () => {
     const data = await call('/spend', { amount: '40.00', description: 'Demo: this should be denied' });
     renderOut('step5-out', data);
+    if (siteTour && !data.error) siteTour.markOperatorStep(5, { completed: true });
 });
 
 document.getElementById('resume-btn').addEventListener('click', async () => {
     const data = await call('/resume', { by: 'Operator' });
     renderOut('resume-out', data);
+    if (siteTour && !data.error) siteTour.markOperatorStep(6, { completed: true });
 });
 
 document.getElementById('refund-btn').addEventListener('click', async () => {
     const pi = document.getElementById('refund-pi').value.trim();
     const data = await call('/refund', { payment_intent_id: pi, amount: '85.00', description: 'Demo: refund -- double-billed' });
     renderOut('refund-out', data);
+    if (siteTour && !data.error) siteTour.markOperatorStep(7, { completed: true });
     const text = data.error || [data.stdout, data.stderr].filter(Boolean).join('\n');
     if (text.includes('TWILIO') || text.includes('approval code') || text.includes('escalation')) {
         const t = smsNow();
@@ -582,6 +604,11 @@ document.getElementById('approve2-btn').addEventListener('click', async () => {
     const by = document.getElementById('approve2-by').value || 'Operator';
     const data = await call('/approve', { code, approved_by: by });
     renderOut('approve2-out', data);
+    if (siteTour && !data.error) {
+        siteTour.markOperatorStep(8, { completed: true });
+        opNemoOpen();
+        opNemoAddMsg('Nice. The full arc is complete. Head back to the live console and I will walk you through the exact audit entries and kernel policy decisions your actions created.', 'bot');
+    }
 });
 
 }); // DOMContentLoaded
@@ -625,9 +652,14 @@ setInterval(refreshOpFeed, 3000);
 // ---- Nemotron operator widget ----
 const NEMO_HISTORY_KEY = 'custodian_nemotron_history';
 function nemoLoadHistory() {
+    if (siteTour) return siteTour.getHistory();
     try { return JSON.parse(localStorage.getItem(NEMO_HISTORY_KEY) || '[]'); } catch { return []; }
 }
 function nemoSaveHistory(h) {
+    if (siteTour) {
+        siteTour.saveHistory(h);
+        return;
+    }
     try { localStorage.setItem(NEMO_HISTORY_KEY, JSON.stringify(h.slice(-16))); } catch {}
 }
 
@@ -652,16 +684,17 @@ function opNemoAddMsg(text, role) {
 function opNemoOpen() {
     opNemoPanel.style.display = 'flex';
     opNemoBubble.style.display = 'none';
+    if (siteTour) siteTour.enableAssistant();
     if (!opNemoOpened) {
         opNemoOpened = true;
         const thinking = opNemoAddMsg('…', 'bot');
         const greeting = opNemoHistory.length > 0
-            ? 'We were just talking. I\'m here in the operator panel now — ask me about any demo step or what the kernel just did.'
-            : 'You just opened in the operator panel. Greet in 2 sentences: who you are (Nemotron, the intelligence layer for payments reasoning), and offer to explain what any demo step demonstrates about the Custodian architecture. Be concise.';
+            ? 'We were just talking. I am here in the operator panel now. In 2 short sentences, explain that you will stay quiet while the visitor runs the steps, but you can explain any step or kernel verdict on request.'
+            : 'You just opened in the operator panel. Greet in 2 sentences: who you are (Nemotron, the intelligence layer for payments reasoning), and explain that this page is the proof phase of the tour. Tell them to run the steps in order and that you will stay available without interrupting each one.';
         fetch('/api/v1/nemotron/ask', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ question: greeting, history: opNemoHistory.slice(-6), page: 'operator' })
+            body: JSON.stringify({ question: greeting, history: opNemoHistory.slice(-6), page: 'operator', site_context: siteTour ? siteTour.buildSiteContext() : {} })
         }).then(r=>r.json()).then(d => {
             thinking.remove();
             const raw = d.answer || "I'm Nemotron — ask me about any of the demo steps.";
@@ -679,11 +712,21 @@ opNemoBubble.addEventListener('click', opNemoOpen);
 opNemoCloseBtn.addEventListener('click', () => {
     opNemoPanel.style.display = 'none';
     opNemoBubble.style.display = 'flex';
+    if (siteTour) siteTour.dismissAssistant();
 });
 
-// Auto-open the chat if the user arrived from the console jump link (has history)
-if (opNemoHistory.length > 0) {
-    setTimeout(opNemoOpen, 600);
+// Auto-open the chat on first visit (and on return visits with history) so
+// the visitor gets a tour-greeting instead of having to discover the bubble.
+// Skip on mobile (bubble is hidden), in 'free' tour mode, or after the user
+// has explicitly dismissed the assistant.
+{
+    const state = siteTour ? siteTour.getState() : {};
+    const isMobile = siteTour ? siteTour.isMobile() : (window.innerWidth <= 680);
+    const isDismissed = state.assistant_dismissed;
+    const isFreeMode = state.mode === 'free';
+    if (!isMobile && !isDismissed && !isFreeMode) {
+        setTimeout(opNemoOpen, 600);
+    }
 }
 
 async function opNemoSend() {
@@ -697,7 +740,7 @@ async function opNemoSend() {
         const r = await fetch('/api/v1/nemotron/ask', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ question: q, history: opNemoHistory.slice(-8), page: 'operator' })
+            body: JSON.stringify({ question: q, history: opNemoHistory.slice(-8), page: 'operator', site_context: siteTour ? siteTour.buildSiteContext() : {} })
         });
         const d = await r.json();
         thinking.remove();
@@ -810,7 +853,7 @@ document.addEventListener('DOMContentLoaded', () => {
     refreshLive();
     setInterval(refreshLive, 5000);
 
-    // ── Treasury (real money in, real money out) ──────────────────
+    // ── Treasury (Stripe test-mode revenue in, test-mode spend out) ──────────────────
     function fmt$(n) { const v = Number(n) || 0; return (v < 0 ? '-$' : '$') + Math.abs(v).toFixed(2); }
     function refreshTreasury(d) {
         const a = d.authority || {};
@@ -902,9 +945,9 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 </script>
 
-<!-- TREASURY (real money in, real money out, real net P&L) -->
+<!-- TREASURY (Stripe test-mode revenue in, test-mode spend out) -->
 <div class="treasury-panel">
-  <h2>● Treasury — real Stripe money in, real money out, real net P&amp;L</h2>
+  <h2>● Treasury — Stripe test-mode money in, test-mode money out, real net P&amp;L</h2>
   <p>Live numbers from the system. Same money-flow model as HermesCo, Obol, Allmind, Bursar — the difference is this Treasury is governed by the kernel, not by if-statements in the agent's own code.</p>
   <div class="treasury-grid">
     <div class="treasury-tile">

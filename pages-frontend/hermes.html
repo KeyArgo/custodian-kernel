@@ -13,7 +13,10 @@
 
         body {
             font-family: var(--mono);
-            background: var(--bg);
+            background:
+              radial-gradient(circle at top left, rgba(93,176,255,0.08), transparent 28%),
+              radial-gradient(circle at top right, rgba(255,176,0,0.08), transparent 24%),
+              linear-gradient(180deg, #06070b 0%, #05060a 100%);
             color: #d4d4d4;
             min-height: 100vh;
             padding: 0;
@@ -24,7 +27,7 @@
             --bg:     #06070b;
             --bg2:    #0a0c13;
             --panel:  #0e1018;
-            --line:   rgba(255,176,0,0.10);
+            --line:   rgba(255,176,0,0.12);
             --text:   #eceef5;
             --muted:  #8d93a6;
             --dim:    #5d6273;
@@ -44,8 +47,9 @@
             align-items: center;
             justify-content: space-between;
             padding: 16px 28px;
-            border-bottom: 1px solid #2a2a2a;
-            background: #000;
+            border-bottom: 1px solid rgba(255,176,0,0.12);
+            background: linear-gradient(180deg, rgba(6,7,11,0.96), rgba(4,5,9,0.98));
+            box-shadow: 0 10px 26px rgba(0,0,0,0.24);
         }
         .top-bar-brand { display: flex; align-items: center; gap: 10px; }
         .top-bar-logo {
@@ -78,6 +82,7 @@
             gap: 0;
             max-width: 1700px;
             margin: 0 auto;
+            background: linear-gradient(180deg, rgba(255,255,255,0.01), transparent);
         }
         @media (max-width: 1100px) {
             .page-grid { grid-template-columns: 1fr; }
@@ -86,8 +91,9 @@
         .content-col { padding: 40px 40px 60px; min-width: 0; }
 
         .pipeline-rail {
-            border-left: 1px solid #2a2a2a;
+            border-left: 1px solid rgba(255,176,0,0.14);
             padding: 40px 24px;
+            background: linear-gradient(180deg, rgba(255,255,255,0.015), rgba(255,255,255,0.01));
         }
         @media (max-width: 1100px) {
             .pipeline-rail { border-left: none; border-top: 1px solid #2a2a2a; }
@@ -227,8 +233,8 @@
 
         /* ---- verdict cards ---- */
         .flow-diagram { display: flex; align-items: stretch; gap: 14px; margin-bottom: 44px; flex-wrap: wrap; }
-        .flow-box { flex: 1; min-width: 180px; background: #0a0a0a; border: 1px solid #2a2a2a; border-top: 2px solid var(--green);
-            padding: 16px 18px; }
+        .flow-box { flex: 1; min-width: 180px; background: linear-gradient(180deg, rgba(18,23,35,0.96), rgba(10,13,20,0.98)); border: 1px solid rgba(255,255,255,0.08); border-top: 2px solid var(--green);
+            padding: 16px 18px; box-shadow: 0 12px 26px rgba(0,0,0,0.22); border-radius: 12px; }
         .flow-label { font-weight: 700; letter-spacing: 0.08em; color: var(--green); font-size: 0.95em; margin-bottom: 8px; }
         .flow-desc { color: #999; font-size: 0.85em; line-height: 1.4; }
         .flow-arrow { display: flex; align-items: center; color: #3a3a3a; font-size: 1.6em; }
@@ -240,13 +246,14 @@
         .verdict-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0; }
         @media (max-width: 760px) { .verdict-grid { grid-template-columns: 1fr; } }
         .verdict-card {
-            background: #0a0a0a;
-            border: 1px solid #2a2a2a;
-            border-radius: 0;
+            background: linear-gradient(180deg, rgba(18,23,35,0.96), rgba(10,13,20,0.98));
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 12px;
             padding: 18px 18px 16px;
             text-align: left;
             margin-right: -1px;
             margin-bottom: -1px;
+            box-shadow: 0 12px 26px rgba(0,0,0,0.18);
         }
         .verdict-lens { color: #6b6b6b; font-size: 0.7em; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 10px; }
         .verdict-headline { color: #e0e0e0; font-weight: 600; font-size: 0.95em; line-height: 1.4; margin-bottom: 14px; min-height: 3.9em; }
@@ -275,12 +282,12 @@
         .metrics-section { margin-bottom: 44px; }
         .grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 0; }
         @media (max-width: 760px) { .grid { grid-template-columns: repeat(2, 1fr); } }
-        .card { background: #0a0a0a; border-radius: 0; padding: 16px 18px; border: 1px solid #2a2a2a; margin-right: -1px; margin-bottom: -1px; }
+        .card { background: linear-gradient(180deg, rgba(18,23,35,0.96), rgba(10,13,20,0.98)); border-radius: 12px; padding: 16px 18px; border: 1px solid rgba(255,255,255,0.08); margin-right: -1px; margin-bottom: -1px; box-shadow: 0 10px 22px rgba(0,0,0,0.18); }
         .card .label { font-size: 0.72em; color: #6b6b6b; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px; }
         .card .value { font-size: 1.4em; font-weight: 700; color: #e8e8e8; }
         .card.band .value { color: var(--amber); }
 
-        .bar-track { margin-top: 10px; height: 6px; border-radius: 0; background: #1a1a1a; overflow: hidden; }
+        .bar-track { margin-top: 10px; height: 6px; border-radius: 999px; background: rgba(255,255,255,0.08); overflow: hidden; }
         .bar-fill { height: 100%; background: var(--amber); transition: width 0.4s ease; }
         .bar-fill.warn { background: #ff8c00; }
         .bar-fill.danger { background: var(--red); }
@@ -385,7 +392,7 @@
         .stripe-mode-badge { display: inline-block; background: #fff3cd; color: #7a5c00; border: 1px solid #f0c040; padding: 2px 8px; font-size: 0.75em; letter-spacing: 0.05em; border-radius: 2px; margin-left: 8px; vertical-align: middle; font-weight: 700; }
         .stripe-stat-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin: 18px 0; }
         @media (max-width: 700px) { .stripe-stat-grid { grid-template-columns: repeat(2, 1fr); } }
-        .stripe-stat { background: #0a0a0a; border: 1px solid #2a2a2a; padding: 14px 16px; }
+        .stripe-stat { background: linear-gradient(180deg, rgba(18,23,35,0.96), rgba(10,13,20,0.98)); border: 1px solid rgba(255,255,255,0.08); padding: 14px 16px; border-radius: 12px; box-shadow: 0 10px 22px rgba(0,0,0,0.18); }
         .stripe-stat-label { font-size: 0.68em; color: #5a5a5a; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 6px; }
         .stripe-stat-value { font-size: 1.35em; font-weight: 700; color: #f2f2f2; }
         .stripe-pi-table { width: 100%; border-collapse: collapse; font-size: 0.78em; margin-top: 14px; }
@@ -405,7 +412,7 @@
         .section-title { color: #ffb000; font-size: 0.85em; letter-spacing: 0.05em; text-transform: uppercase; margin-bottom: 10px; font-weight: 700; }
         .section-title::before { content: "// "; color: #5a5a5a; }
 
-        .feed { background: #060606; border-radius: 0; border: 1px solid #2a2a2a; overflow: hidden; }
+        .feed { background: linear-gradient(180deg, rgba(10,12,18,0.96), rgba(7,8,13,0.98)); border-radius: 12px; border: 1px solid rgba(255,255,255,0.08); overflow: hidden; box-shadow: 0 10px 22px rgba(0,0,0,0.2); }
         .event { display: flex; align-items: baseline; gap: 14px; padding: 11px 16px; border-bottom: 1px solid #1a1a1a; font-size: 0.85em; flex-wrap: wrap; }
         .event:last-child { border-bottom: none; }
         .event .ts { color: #5a5a5a; min-width: 140px; font-size: 0.85em; }
@@ -439,7 +446,7 @@
 
         .empty-state { padding: 24px; text-align: center; color: #5a5a5a; font-size: 0.85em; }
 
-        .pending-banner { background: #100a00; border: 1px solid var(--amber); border-radius: 0; padding: 12px 18px; color: var(--amber); display: none; font-size: 0.85em; margin-bottom: 20px; }
+        .pending-banner { background: linear-gradient(180deg, rgba(32,24,8,0.96), rgba(16,12,4,0.98)); border: 1px solid var(--amber); border-radius: 12px; padding: 12px 18px; color: var(--amber); display: none; font-size: 0.85em; margin-bottom: 20px; box-shadow: 0 10px 22px rgba(0,0,0,0.18); }
         .pending-banner.show { display: block; }
 
         .sub-note { margin-top: 8px; font-size: 0.72em; color: #5a5a5a; }
@@ -562,7 +569,7 @@
             width: 380px;
             min-height: 520px;
             max-height: calc(100vh - 80px);
-            background: #0d0f0a;
+            background: linear-gradient(180deg, rgba(10,14,6,0.98), rgba(6,10,4,0.98));
             border: 2px solid var(--nvidia-green);
             border-radius: 16px 0 0 16px;
             box-shadow: -4px 8px 40px rgba(0,0,0,0.6);
@@ -584,8 +591,8 @@
         .nemotron-close-btn:hover { color: #fff; }
         .nemotron-chat-body { flex: 1; overflow-y: auto; padding: 14px; display: flex; flex-direction: column; gap: 10px; font-size: 0.85em; line-height: 1.5; }
         .nemotron-msg { padding: 9px 12px; border-radius: 10px; max-width: 90%; white-space: pre-wrap; }
-        .nemotron-msg.bot { background: rgba(118,185,0,0.1); border: 1px solid rgba(118,185,0,0.25); align-self: flex-start; }
-        .nemotron-msg.user { background: rgba(255,255,255,0.06); align-self: flex-end; color: #ddd; }
+        .nemotron-msg.bot { background: rgba(118,185,0,0.1); border: 1px solid rgba(118,185,0,0.25); align-self: flex-start; border-radius: 12px 12px 12px 3px; }
+        .nemotron-msg.user { background: rgba(255,255,255,0.06); align-self: flex-end; color: #ddd; border-radius: 12px 12px 3px 12px; }
         .nemotron-msg.thinking { color: #9fb38a; font-style: italic; display: flex; align-items: center; gap: 4px; }
         .nemotron-msg.thinking .nemotron-bot-face { width: 1.2em; height: 1.2em; }
         .nemotron-chat-input-row { display: flex; border-top: 1px solid rgba(118,185,0,0.25); padding: 10px; gap: 8px; }
@@ -760,7 +767,7 @@
             <div class="flow-diagram">
                 <div class="flow-box">
                     <div class="flow-label">AGENT (Nemotron)</div>
-                    <div class="flow-desc">Decides to act. Calls spend.py — the only door to real money. Cannot call Stripe directly.</div>
+                    <div class="flow-desc">Decides to act. Calls spend.py — the only door to real Stripe. Cannot call Stripe directly.</div>
                 </div>
                 <div class="flow-arrow">→</div>
                 <div class="flow-box">
@@ -1051,6 +1058,7 @@
                         <path d="M 34 65 Q 50 76 66 65" stroke="currentColor" stroke-width="5" fill="none" stroke-linecap="round"/>
                     </svg></div>
 
+    <script src="/site-tour.js"></script>
     <script>
         const fmtUSD = (n) => '$' + Number(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
         const fmtTime = (iso) => {
@@ -1218,7 +1226,7 @@
                 pnlValue.classList.toggle('pnl-positive', netPnl >= 0);
                 pnlValue.classList.toggle('pnl-negative', netPnl < 0);
                 earnedNote.textContent = earnedTotal > 0
-                    ? `${fmtUSD(earnedTotal)} real revenue in, kernel-enforced both directions`
+                    ? `${fmtUSD(earnedTotal)} test-mode revenue in, kernel-enforced both directions`
                     : 'no revenue yet -- earning has no cap, only spend is gated';
 
                 document.getElementById('spec-band').textContent = auth.band || '—';
@@ -1705,6 +1713,8 @@
         const nemotronBubble = document.getElementById('nemotron-bubble');
         const nemotronFlyin = document.getElementById('nemotron-flyin');
         let nemotronOpenedOnce = false;
+        const siteTour = window.CustodianTour || null;
+        if (siteTour) siteTour.onPage('console');
 
         function nemotronAddMessage(text, cls) {
             const div = document.createElement('div');
@@ -1733,6 +1743,28 @@
             nemotronBody.appendChild(div);
             nemotronBody.scrollTop = nemotronBody.scrollHeight;
             return div;
+        }
+
+        function nemotronSiteContext(extra) {
+            return siteTour ? siteTour.buildSiteContext(extra) : (extra || {});
+        }
+
+        function nemotronSaveHistory() {
+            if (siteTour) siteTour.saveHistory(nemotronHistory);
+            else {
+                try { localStorage.setItem(NEMO_HISTORY_KEY, JSON.stringify(nemotronHistory.slice(-16))); } catch {}
+            }
+        }
+
+        function nemotronIntroPrompt() {
+            const state = siteTour ? siteTour.getState() : {};
+            if (state.pending_console_followup) {
+                return "The visitor just came back from the operator panel after completing the live demo arc. In 2-3 sentences, explain what they should look at first in the audit feed and kernel policy log, then invite them to try the sandbox policy tester themselves. Mention that triage is the next stop once they understand the audit. End with 2-3 [[suggest:...]] chips.";
+            }
+            if (state.mode === 'deep') {
+                return "You just opened for a visitor who chose the deep dive. In 2-3 sentences: explain that this console is the operating picture for Custodian, point them to the audit feed and kernel policy log, and tell them you'll walk with them into the operator panel when they're ready. End with 2-3 [[suggest:...]] chips.";
+            }
+            return "You just opened for a new visitor. In 2-3 sentences: who you are and what this dashboard watches. Then tell them the MOST IMPORTANT thing is to try the live demo themselves — include [[jump:operator|the operator panel]] as a clickable link RIGHT IN THE BODY of your response. Mention the audit feed as secondary. End with 2-3 [[suggest:...]] chips.";
         }
 
         // Lets a bot answer include a clickable jump to the page section it's
@@ -1954,17 +1986,20 @@ function nemotronRenderAnswer(rawText) {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        question: "You just opened for a new visitor. In 2-3 sentences: who you are and " +
-                            "what this dashboard watches. Then tell them the MOST IMPORTANT thing is to " +
-                            "try the live demo themselves — include [[jump:operator|the operator panel]] " +
-                            "as a clickable link RIGHT IN THE BODY of your response. Mention the audit " +
-                            "feed as secondary. End with 2-3 [[suggest:...]] chips.",
+                        question: nemotronIntroPrompt(),
                         history: nemotronHistory.slice(-4),
-                        page: 'hermes'
+                        page: 'hermes',
+                        site_context: nemotronSiteContext(),
                     }),
                 }).then(r => r.json()).then(data => {
                     thinkingMsg.remove();
-                    if (data.answer) { nemotronRenderAnswer(data.answer); }
+                    if (data.answer) {
+                        nemotronRenderAnswer(data.answer);
+                        if (siteTour && siteTour.getState().pending_console_followup) {
+                            document.querySelector('.tab-btn[data-tab="audit"]').click();
+                            siteTour.completeConsoleFollowup();
+                        }
+                    }
                     else { nemotronAddMessage(data.error || "I'm Nemotron Super 120B — ask me anything about what you're seeing.", 'bot'); }
                 }).catch(() => {
                     thinkingMsg.remove();
@@ -1980,29 +2015,24 @@ function nemotronRenderAnswer(rawText) {
         function nemotronClose() {
             nemotronPanel.classList.remove('open');
             document.body.classList.remove('nemotron-chat-open');
+            if (siteTour) siteTour.dismissAssistant();
             // Leave a small persistent bubble so closing doesn't mean losing the bot
             // entirely -- only show it once there's actually been a conversation.
             if (nemotronOpenedOnce) nemotronBubble.classList.add('show');
         }
-        nemotronLauncherBtn.addEventListener('click', () => nemotronOpen(true));
+        nemotronLauncherBtn.addEventListener('click', () => {
+            if (siteTour) siteTour.enableAssistant();
+            nemotronOpen(true);
+        });
         nemotronCloseBtn.addEventListener('click', nemotronClose);
-        nemotronBubble.addEventListener('click', () => nemotronOpen(true));
-        // Auto-open a few seconds after load so the bot introduces itself without
-        // requiring a visitor to spot and click a small button first. Don't steal
-        // focus on auto-open -- only do that for an explicit click. The robot
-        // flies in and "lands" over the launcher button first, then the panel
-        // opens right after -- a one-time entrance, not a click target itself
-        // (pointer-events: none), so it never gets in the way.
-        setTimeout(() => {
-            nemotronFlyin.classList.add('go');
-            setTimeout(() => {
-                nemotronFlyin.style.display = 'none';
-                nemotronOpen(false);
-            }, 1100);
-        }, 2500);
+        nemotronBubble.addEventListener('click', () => {
+            if (siteTour) siteTour.enableAssistant();
+            nemotronOpen(true);
+        });
 
         const NEMO_HISTORY_KEY = 'custodian_nemotron_history';
         const nemotronHistory = (() => {
+            if (siteTour) return siteTour.getHistory();
             try { return JSON.parse(localStorage.getItem(NEMO_HISTORY_KEY) || '[]'); } catch { return []; }
         })();
 
@@ -2018,7 +2048,7 @@ function nemotronRenderAnswer(rawText) {
                 const res = await fetch('/api/v1/nemotron/ask', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ question, history: nemotronHistory.slice(-8), page: 'hermes' }),
+                    body: JSON.stringify({ question, history: nemotronHistory.slice(-8), page: 'hermes', site_context: nemotronSiteContext() }),
                 });
                 const data = await res.json();
                 thinkingMsg.remove();
@@ -2029,9 +2059,9 @@ function nemotronRenderAnswer(rawText) {
                     const clean = data.answer.replace(/\[\[(jump|entry|suggest):[^\]]*\]\]/g, '').trim();
                     nemotronHistory.push({role: 'user', content: question});
                     nemotronHistory.push({role: 'assistant', content: clean});
-                    try { localStorage.setItem(NEMO_HISTORY_KEY, JSON.stringify(nemotronHistory.slice(-16))); } catch {}
+                    nemotronSaveHistory();
                     // After 2 full exchanges (4 history entries), nudge to operator panel
-                    if (nemotronHistory.length === 4 && !sessionStorage.getItem('_op_nudge_sent')) {
+                    if (nemotronHistory.length === 4 && !sessionStorage.getItem('_op_nudge_sent') && (!siteTour || siteTour.getState().mode !== 'free')) {
                         sessionStorage.setItem('_op_nudge_sent', '1');
                         setTimeout(() => {
                             nemotronRenderAnswer(
@@ -2053,6 +2083,30 @@ function nemotronRenderAnswer(rawText) {
         nemotronInput.addEventListener('keydown', (e) => {
             if (e.key === 'Enter') nemotronSend();
         });
+        if (siteTour) {
+            const tourState = siteTour.getState();
+            const shouldAutoOpen = !siteTour.isMobile()
+                && !tourState.assistant_dismissed
+                && (tourState.mode === 'quick' || tourState.mode === 'deep' || tourState.pending_console_followup);
+            if (shouldAutoOpen) {
+                setTimeout(() => {
+                    nemotronFlyin.classList.add('go');
+                    setTimeout(() => {
+                        nemotronFlyin.style.display = 'none';
+                        nemotronOpen(false);
+                    }, 1100);
+                }, 1800);
+            } else {
+                nemotronFlyin.style.display = 'none';
+            }
+            if (tourState.mode === 'quick' && !tourState.quick_console_started) {
+                siteTour.patchState({ quick_console_started: true });
+                setTimeout(() => document.getElementById('tour-start-btn').click(), 900);
+            }
+            if (tourState.mode === 'deep' && !tourState.deep_console_started) {
+                siteTour.patchState({ deep_console_started: true });
+            }
+        }
     </script>
 </body>
 </html>
