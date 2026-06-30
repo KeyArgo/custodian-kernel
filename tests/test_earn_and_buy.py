@@ -80,7 +80,7 @@ def test_earn_and_buy_shows_kernel_decision():
     r = _run()
     assert "Single cap:" in r.stdout
     assert "Daily envelope:" in r.stdout
-    assert "self-approval check" in r.stdout
+    assert "kernel evaluator" in r.stdout
     assert "AUTONOMOUS" in r.stdout
 
 

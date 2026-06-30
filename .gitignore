@@ -11,3 +11,7 @@ secrets/*.env
 state-snapshot/
 custodian/custodian/
 export/
+# custodian workspace artifacts (created by `custodian init`)
+policy.yaml
+/state/
+/secrets/*.env
