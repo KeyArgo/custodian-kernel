@@ -297,7 +297,7 @@ def custom():
     try:
         envelope = extract_envelope(case_input, client)
         source = client.name
-    except (EnvelopeParseError, OSError, KeyError) as e:
+    except (EnvelopeParseError, OSError, KeyError, RuntimeError) as e:
         envelope = Envelope.from_dict({
             "case_id": "visitor-custom",
             "customer_id": "cus_marcus",

@@ -34,11 +34,8 @@ if [[ "${SKIP_SPARK:-}" != "1" ]]; then
       --exclude='build' --exclude='*.egg-info' \
       "$REPO/custodian/" "$SPARK_HOST:$SPARK_DIR/custodian/"
     rsync -a "$REPO/spark-enforcement/enforce_server.py" "$SPARK_HOST:$SPARK_DIR/"
-    ssh "$SPARK_HOST" "
-      pkill -f enforce_server.py 2>/dev/null || true
-      sleep 1
-      cd $SPARK_DIR
-      nohup $SPARK_VENV/bin/python3 enforce_server.py > /home/bogart/custodian-enforce.log 2>&1 &
+    ssh -t "$SPARK_HOST" "
+      sudo systemctl restart custodian-enforce
       sleep 2
       curl -sf http://localhost:8095/health && echo '' || echo 'HEALTH CHECK FAILED'
     "

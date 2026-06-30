@@ -26,10 +26,11 @@ async function tryFetch(url, init, timeoutMs) {
   try {
     const res = await fetch(url, { ...init, signal: controller.signal });
     clearTimeout(timer);
-    // Treat 5xx as backend failure — fall through to secondary.
-    // Also treat 4xx with non-JSON body as a Cloudflare error page (e.g. 1003 comes
-    // back as 403 text/plain) — fall through so the real backend can respond.
-    if (res.status >= 500) return null;
+    // Fall through to secondary only on infra failures (non-JSON error bodies).
+    // JSON 5xx = application/inference error — return it directly so the client
+    // sees a useful message instead of a misleading "both nodes unreachable" 503.
+    // JSON 4xx = real app error (bad input, etc.) — return directly.
+    // Non-JSON 4xx or 5xx = Cloudflare/infra error page (e.g. 1003 as 403 text/plain) — fall through.
     if (res.status >= 400) {
       const ct = res.headers.get('content-type') || '';
       if (!ct.includes('application/json')) return null;
