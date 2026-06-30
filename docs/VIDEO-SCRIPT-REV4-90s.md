@@ -1,7 +1,7 @@
 # CUSTODIAN — Video Script Rev 4 (90-second cut)
 **Length:** ~1:42 (within the 1–3 minute budget)
 **Format:** Terminal screen recording + voiceover. No face. No music. Hard cuts only.
-**URL:** rein.argobox.com
+**URL:** getcustodian.xyz
 **Test count:** 1,298
 
 ---
@@ -110,7 +110,7 @@ custodian demo receipt
 
 **Slide 3** [1:38–1:45]:
 ```
-REIN.ARGOBOX.COM
+GETCUSTODIAN.XYZ
 ```
 
 No voiceover on any slide. Silence. Hard cuts.
@@ -126,7 +126,7 @@ No voiceover on any slide. Silence. Hard cuts.
 | Close is "in code, not in a prompt" instead of "pip install" | Stronger final impression; install command moves to Slide 2 |
 | `custodian demo receipt` kept (13 seconds) | External review incorrectly claimed it didn't exist — it ships in 0.2.0 and runs clean |
 | Test count: 1,298 (not 1,245 or 1,278) | 0.2.0 added 53 tests; 1,278 from external review was wrong |
-| URL: rein.argobox.com (not getcustodian.xyz) | External review hallucinated a domain |
+| URL: getcustodian.xyz (not rein.argobox.com) — HTML canonical/og:url all say getcustodian.xyz | External review hallucinated a domain |
 
 ---
 

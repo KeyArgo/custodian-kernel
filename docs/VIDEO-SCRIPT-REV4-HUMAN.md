@@ -103,7 +103,7 @@ custodian demo receipt
 ```
 
 ```
-REIN.ARGOBOX.COM
+GETCUSTODIAN.XYZ
 ```
 
 ---
