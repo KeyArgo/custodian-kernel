@@ -21,7 +21,7 @@ getcustodian.xyz. No credentials, no cloning, no git.
 > complete experience. If you want the absolute latest including unreleased
 > CLI commands, use the repo path below.
 
-## Full path: clone the repo (gets you everything — 1,278 tests, 16 CLI commands, full verify_kit.py)
+## Full path: clone the repo (gets you everything — 1,313 tests, 16 CLI commands, full verify_kit.py)
 
 ```bash
 git clone https://github.com/KeyArgo/hermes-hackathon-2026
@@ -33,7 +33,7 @@ python3 verify_kit.py
 `verify_kit.py` runs 5 phases end-to-end with no credentials:
 
 1. **Regression test** — re-introduces the self-approval bug, proves the test catches it
-2. **Test suite** — 1,278 tests, 0 failures (4 deselected, network only)
+2. **Test suite** — 1,313 tests, 0 failures (4 deselected, network only)
 3. **Planted lie demo** — runs the 06-planted-lie case end-to-end, shows CONTRADICTED
 4. **Live Stripe** — pulls the real `pi_3TkZWEPfSF4TGXT90AWlrnle` PaymentIntent
 5. **Kill switch** — engages, denies a $40 spend, releases, verifies
@@ -63,7 +63,7 @@ kernel's core guarantee in 60 seconds of `pip install` time.
 git clone https://github.com/KeyArgo/hermes-hackathon-2026
 cd hermes-hackathon-2026
 python3 verify_kit.py    # the full 5-phase proof (includes regression re-injection)
-python3 -m pytest tests/ -m "not network"  # the 1,278-test suite
+python3 -m pytest tests/ -m "not network"  # the 1,313-test suite
 custodian earn-and-buy   # full economic cycle on camera
 custodian poison-tests   # 5 planted attacks, all caught
 ```
@@ -84,7 +84,7 @@ deeper one — the 0.1.4 wheel is the install-it-anywhere quick proof.
 ## Features
 
 ### Core
-- 1,256 tests, 0 failures (network tests excluded)
+- 1,313 tests, 0 failures (network tests excluded)
 - Deterministic claim verifier (CONTRADICTED / VERIFIED / UNVERIFIABLE)
 - Operator-only kill switch with resume logic
 - Authority bands L0-L4 with per-request caps
@@ -238,20 +238,20 @@ with their band and description so the capability surface is visible during revi
   the kill switch was engaged, the exact same request was denied by the real
   script running inside the live sandbox, then released, then the real spend
   succeeded again. The full sequence is in the real audit log.
-- 1,239 passing tests (4 network-dependent tests deselected by default), tested with Python 3.11+.
+- 1,313 passing tests (4 network-dependent tests deselected by default), tested with Python 3.11+.
 - The test suite includes `test_self_approval_regression.py` — a regression
   test for the exact security bug this design prevents. The fix was proven
   by deliberately reintroducing the bug, confirming the test failed, then
   restoring the fix. That test exists so the bug can never silently return.
-- Public commit history at `github.com/KeyArgo/custodian-kernel`.
+- Public commit history at `github.com/KeyArgo/hermes-hackathon-2026`.
 
 **Don't take any of this on faith.** Everything verifiable from pip:
 
 ```bash
 pip install custodian-kernel       # install the kernel
 custodian demo-verify              # live claim check against the running system
-pip install custodian-kernel[dev] && pytest tests/   # 1,239 tests, 0 failures
-git clone https://github.com/KeyArgo/custodian-kernel  # read every line
+pip install custodian-kernel[dev] && pytest tests/   # 1,313 tests, 0 failures
+git clone https://github.com/KeyArgo/hermes-hackathon-2026  # read every line
 ```
 
 See `docs/VERIFICATION.md` for the full manual breakdown.
