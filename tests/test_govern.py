@@ -84,10 +84,12 @@ def test_govern_result_receipt():
         return {"charged": amount}
 
     result = charge(amount=5.00)
+    assert result.fn_name == "charge"
     receipt = result.receipt()
     assert receipt.verify()
     assert receipt.band == "L2"
     assert receipt.amount == 5.00
+    assert receipt.fn_name == "charge"  # must record actual function name, not description
 
 
 def test_govern_amount_from_kwarg():

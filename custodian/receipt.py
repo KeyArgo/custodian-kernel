@@ -13,8 +13,9 @@ class GovernedReceipt:
     Cryptographically verifiable proof artifact for a governed action.
 
     Every @govern-wrapped function, middleware intercept, or session.request()
-    can produce a GovernedReceipt. The fingerprint is SHA-256(receipt_id +
-    verdict + output_hash) and cannot be forged without knowing all three.
+    can produce a GovernedReceipt. The fingerprint is
+    SHA-256(receipt_id:band:amount:verdict:output_hash) covering all five
+    tamper-sensitive fields — changing any one invalidates verify().
 
     Usage:
         result = charge_customer(85.00, "cus_123")

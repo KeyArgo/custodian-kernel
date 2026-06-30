@@ -18,6 +18,7 @@ class GovernedResult:
     band: str
     amount: float
     description: str
+    fn_name: str                  # actual __name__ of the governed function
     elapsed_ms: float
     claim_proof: Optional[str] = None   # "verified" / "contradicted" / "unverifiable"
     ts: float = field(default_factory=time.time)
@@ -29,7 +30,7 @@ class GovernedResult:
     def receipt(self) -> "GovernedReceipt":
         from custodian.receipt import GovernedReceipt
         return GovernedReceipt.build(
-            fn_name=self.description, band=self.band, amount=self.amount,
+            fn_name=self.fn_name, band=self.band, amount=self.amount,
             description=self.description, verdict=self.verdict,
             reason="", elapsed_ms=self.elapsed_ms, output=self.value,
             claim_proof=self.claim_proof,
@@ -102,7 +103,8 @@ def govern(
                 if raise_on_escalation:
                     raise KernelDenied(decision, request)
                 return GovernedResult(value=None, verdict="denied", audit_id=audit_id,
-                                      band=band, amount=amount, description=_desc, elapsed_ms=0.0)
+                                      band=band, amount=amount, description=_desc,
+                                      fn_name=fn.__name__, elapsed_ms=0.0)
 
             if decision.verdict == Verdict.ESCALATION_REQUIRED:
                 _bus.emit("escalation_required", {
@@ -112,7 +114,8 @@ def govern(
                 if raise_on_escalation:
                     raise EscalationRequired(decision, request)
                 return GovernedResult(value=None, verdict="escalation_required", audit_id=audit_id,
-                                      band=band, amount=amount, description=_desc, elapsed_ms=0.0)
+                                      band=band, amount=amount, description=_desc,
+                                      fn_name=fn.__name__, elapsed_ms=0.0)
 
             # AUTONOMOUS — execute
             _bus.emit("pre_execute", {"audit_id": audit_id, "amount": amount, "fn": fn.__name__})
@@ -128,7 +131,7 @@ def govern(
             result = GovernedResult(
                 value=value, verdict="autonomous", audit_id=audit_id,
                 band=band, amount=amount, description=_desc,
-                elapsed_ms=elapsed_ms, claim_proof=claim_proof,
+                fn_name=fn.__name__, elapsed_ms=elapsed_ms, claim_proof=claim_proof,
             )
             _bus.emit("post_execute", {"audit_id": audit_id, "result": result})
             return result
@@ -187,7 +190,7 @@ def _evaluate(request, band, cap, policy_path, state_dir):
         try:
             killed = bool(json.loads(ks_file.read_text()).get("killed", False))
         except Exception:
-            pass
+            killed = True  # fail closed: corrupted kill switch = treated as killed
 
     return decide(request, state, policy, killed=killed)
 

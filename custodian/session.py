@@ -93,8 +93,10 @@ class CustodianSession:
 
     def sub_session(self, band: str, cap: Optional[float] = None) -> "CustodianSession":
         """Create a child session with a lower (or equal) band ceiling."""
-        return CustodianSession(band=band, cap=cap or self.cap,
-                                daily_envelope=self.daily_envelope, parent=self)
+        return CustodianSession(band=band, cap=cap if cap is not None else self.cap,
+                                daily_envelope=self.daily_envelope,
+                                policy_path=self.policy_path, state_dir=self.state_dir,
+                                parent=self)
 
     def log(self) -> str:
         lines = [f"CustodianSession {self.session_id} — "
