@@ -412,9 +412,37 @@ IMPORTANT: Do NOT use [[jump:KEY|label]] syntax — this page has no dashboard s
 Plain prose only. Do offer [[suggest:...]] questions to continue the tour.
 """
 
+_TOOLS_GUIDANCE = """
+PAGE CONTEXT: The visitor is on the TOOLS page (/tools). This page proves that Custodian is not
+just about one refund or one payment demo. The same kernel can govern a growing tool registry:
+email, GitHub, Stripe, cloud provisioning, databases, NVIDIA NIM calls, and more.
+
+Your role here: help the visitor understand the business implication. The key point is that the
+same authority model scales across tools, so teams do not need a separate safety story for every
+integration. Keep answers grounded in that pattern: one kernel, many governed actions.
+
+IMPORTANT: Do NOT use [[jump:KEY|label]] or [[entry:TS|label]] syntax here. This page is a catalog,
+not the console. Plain prose only. Do offer [[suggest:...]] questions to continue the tour.
+"""
+
+_DOCS_GUIDANCE = """
+PAGE CONTEXT: The visitor is on the DOCS page (/docs). They are likely moving from "show me" to
+"how does this actually work?" This page exists to turn the live demo into an understandable
+architecture: kernel, verifier, authority bands, kill switch, human approval, and API surface.
+
+Your role here: answer more directly and technically than on the marketing pages, but keep the
+same core message: the model reasons, the verifier checks facts, and the kernel is the final
+authority. Help the visitor connect what they saw in the demo to the underlying design.
+
+IMPORTANT: Do NOT use [[jump:KEY|label]] or [[entry:TS|label]] syntax here. Plain prose only.
+Do offer [[suggest:...]] questions to continue the tour.
+"""
+
 _PAGE_GUIDANCE: dict[str, str] = {
     'operator': _OPERATOR_GUIDANCE,
     'triage': _TRIAGE_GUIDANCE,
+    'tools': _TOOLS_GUIDANCE,
+    'docs': _DOCS_GUIDANCE,
 }
 
 
@@ -466,6 +494,7 @@ def ask():
 
     # Optional: last triage case the visitor just ran (from the page JS)
     triage_context = data.get('triage_context')
+    site_context = data.get('site_context')
 
     context_block = _build_context_block()
     # Inject triage result when available so Nemotron knows what case was just run
@@ -479,6 +508,19 @@ def ask():
             f"\n\nMOST RECENTLY RAN TRIAGE CASE (the case the visitor just ran on this page):\n"
             f"{json.dumps(safe_ctx, indent=2)}"
         )
+    if site_context and isinstance(site_context, dict):
+        safe_site = {
+            k: site_context[k] for k in (
+                'mode', 'stage', 'assistant_behavior', 'operator_step',
+                'last_completed_action', 'pending_console_followup',
+                'pending_tools_followup', 'pending_docs_followup', 'mobile',
+            ) if k in site_context
+        }
+        if safe_site:
+            context_block += (
+                "\n\nVISITOR TOUR CONTEXT (shared across pages):\n"
+                f"{json.dumps(safe_site, indent=2)}"
+            )
     page_guidance = _PAGE_GUIDANCE.get(page, '')
     # Lead with the most compelling thing and earn depth one step at a time --
     # the same most-compelling-first ordering the guided dashboard page uses,
