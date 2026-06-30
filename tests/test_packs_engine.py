@@ -72,14 +72,17 @@ class DummyPack(PolicyPack):
 
 class TestFinalAction:
     @pytest.mark.parametrize(
-        ("disposition", "kernel_verdict", "autonomous_dispositions", "expected"),
+        ("disposition", "kernel_verdict", "autonomous_dispositions", "kernel_reason", "expected"),
         [
-            ("auto_pay", "autonomous", frozenset({"auto_pay"}), "executed_autonomously"),
-            ("auto_pay", "escalation_required", frozenset({"auto_pay"}), "pending_human_approval"),
-            ("auto_pay", "denied", frozenset({"auto_pay"}), "blocked_kill_switch"),
-            ("manual_review", "autonomous", frozenset({"auto_pay"}), "needs_human_review"),
-            ("manual_review", "escalation_required", frozenset({"auto_pay"}), "needs_human_review"),
-            ("manual_review", "denied", frozenset({"auto_pay"}), "blocked_kill_switch"),
+            ("auto_pay", "autonomous", frozenset({"auto_pay"}), "", "executed_autonomously"),
+            ("auto_pay", "escalation_required", frozenset({"auto_pay"}), "", "pending_human_approval"),
+            # kill switch denial: reason string contains "kill switch"
+            ("auto_pay", "denied", frozenset({"auto_pay"}), "kill switch is engaged -- all requests denied", "blocked_kill_switch"),
+            ("manual_review", "autonomous", frozenset({"auto_pay"}), "", "needs_human_review"),
+            ("manual_review", "escalation_required", frozenset({"auto_pay"}), "", "needs_human_review"),
+            ("manual_review", "denied", frozenset({"auto_pay"}), "kill switch is engaged -- all requests denied", "blocked_kill_switch"),
+            # non-kill-switch denial (self-dealing, margin, etc.) maps to "blocked"
+            ("auto_pay", "denied", frozenset({"auto_pay"}), "self_dealing_detected: requester and recipient are the same agent", "blocked"),
         ],
     )
     def test_final_action_resolves_expected_outcome(
@@ -87,9 +90,10 @@ class TestFinalAction:
         disposition: str,
         kernel_verdict: str,
         autonomous_dispositions: frozenset[str],
+        kernel_reason: str,
         expected: str,
     ):
-        assert _final_action(disposition, kernel_verdict, autonomous_dispositions) == expected
+        assert _final_action(disposition, kernel_verdict, autonomous_dispositions, kernel_reason) == expected
 
 
 class TestTriage:
