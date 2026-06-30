@@ -550,7 +550,7 @@
     <div class="reveal" style="text-align:center;max-width:760px;margin:0 auto">
       <div class="sec-eyebrow" style="color:var(--green)">What this unlocks</div>
       <h2>AI that handles money. Finally.</h2>
-      <p class="sec-sub">You've been holding back on AI because you can't trust it with refunds, spend, or purchasing decisions. Custodian is the missing piece — a kernel-level enforcement layer that makes deploying AI near money actually viable. Set your rules. The kernel enforces them. Ship.</p>
+      <p class="sec-sub">AI is finally capable enough to handle refunds, spend, and purchasing decisions — Nemotron Super 120B makes that reasoning possible. Custodian is the deployment layer that makes it production-safe: kernel-level enforcement that gives you full control without constraining what the model can do. Set your limits. The kernel enforces them. Ship.</p>
     </div>
 
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(270px,1fr));gap:18px;margin-top:40px">
@@ -620,7 +620,7 @@
     <div class="reveal">
       <div class="sec-eyebrow">Why Custodian is different</div>
       <h2>Everyone gives the agent a wallet.<br>We give it a kernel.</h2>
-      <p class="sec-sub">Spend caps and approval flows are commodities now. The hard problem isn't limiting a number — it's that the agent can be wrong, or can lie, and that it shouldn't be <em>trusted</em> to route money through an approved path in the first place.</p>
+      <p class="sec-sub">Spend caps and approval flows are commodities now. The hard problem is that AI output is probabilistic by nature — and probabilistic recommendations should never directly authorize money movement. The kernel is deterministic. It's not a limitation on the model; it's how responsible deployment at this level works.</p>
     </div>
     <div class="wedge">
       <div class="card them reveal">
@@ -650,8 +650,8 @@
         <div class="num">01 · AI JUDGMENT</div>
         <div class="ic">🤖</div>
         <h4>The intelligence layer</h4>
-        <p>Nemotron reads messy, unstructured customer messages and extracts structured claims — was it delivered? in the return window? defective? — assigns confidence, and proposes a disposition it has zero power to act on. Everything after that is deterministic code.</p>
-        <span class="role">can be wrong · can lie · doesn't matter</span>
+        <p>We chose Nemotron for exactly this — reading messy, unstructured customer messages and extracting structured claims: was it delivered? in the return window? defective? It assigns confidence and proposes a disposition it has zero power to act on. Everything after that is deterministic code.</p>
+        <span class="role">best-in-class NLU · sandboxed from final execution</span>
       </div>
       <div class="stage s2 reveal">
         <div class="num">02 · VERIFIER</div>
@@ -672,7 +672,7 @@
     </div>
     <div class="liecatch reveal">
       <span class="badge">CLAIM CHECK</span>
-      <p><b>The agent can lie. Money still can't move wrong.</b> When a customer invents a story to get a refund and the AI recommends <em>approve</em>, the verifier catches that the claim is contradicted by the ledger and the kernel overrides the AI. No competitor can demonstrate this because their model is "agent asks, check the limit" not "agent asks, check if the agent is lying."</p>
+      <p><b>A customer's claim may be fabricated. Money still can't move wrong.</b> When a customer invents a story to get a refund and Nemotron recommends <em>approve</em>, the verifier checks every extracted claim against your actual order data — contradicted claims are blocked before anything executes. No competitor can demonstrate this because their approach is "agent asks, check the limit" not "verify every claim the agent extracted before it moves money."</p>
     </div>
 
   </div>

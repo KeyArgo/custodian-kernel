@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Custodian Tools — 53 Live Kernel-Governed Tools</title>
-<meta name="description" content="Every tool call — email, NVIDIA NIM, GitHub, Docker, Stripe — passes through the Custodian kernel before executing. 53 live tools, fully configured.">
+<title>Custodian Tools — Kernel-Governed Tool Registry</title>
+<meta name="description" content="Every tool call — email, NVIDIA NIM, GitHub, Docker, Stripe — passes through the Custodian kernel before executing. 100+ governed tools, ready to deploy.">
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 <meta property="og:title" content="Custodian Tools — 53 Live Kernel-Governed Tools">
 <meta property="og:url" content="https://getcustodian.xyz/tools">
@@ -134,7 +134,7 @@ footer{border-top:1px solid var(--line);padding:32px 0;color:var(--dim);font-siz
 <div class="tools-hero">
   <div class="wrap">
     <div class="eyebrow">◉ NVIDIA NemoClaw · Governed Tool Registry</div>
-    <h1>53 live tools.<br>One kernel. Zero exceptions.</h1>
+    <h1><span id="hero-count">100</span> governed tools.<br>One kernel. Zero exceptions.</h1>
     <p class="lede">Every tool call — whether it sends an SMS, submits an NVIDIA NIM inference job, reads a GitHub PR, or queries a database — passes through the <b>same Custodian kernel</b> before executing. Authority band enforced. OCSF-logged. Kill-switch honoured.</p>
 
     <div class="summary-strip" id="summary-strip">
@@ -236,15 +236,18 @@ async function loadTools() {
     if (!r.ok) throw new Error('API error');
     const data = await r.json();
     allTools = data.tools || [];
-    document.getElementById('total-count').textContent = data.total || allTools.length;
+    const total = data.total || allTools.length;
+    document.getElementById('total-count').textContent = total;
     document.getElementById('configured-count').textContent = data.configured || 0;
     document.getElementById('stub-count').textContent = data.stubs || 0;
+    document.getElementById('hero-count').textContent = total;
     applyFilter();
   } catch(e) {
     // Fallback: show static known count if API unreachable (CF Pages serving static)
     document.getElementById('total-count').textContent = '100';
-    document.getElementById('configured-count').textContent = '40';
-    document.getElementById('stub-count').textContent = '60';
+    document.getElementById('configured-count').textContent = '39';
+    document.getElementById('stub-count').textContent = '61';
+    document.getElementById('hero-count').textContent = '100';
     document.getElementById('tools-grid').innerHTML = `<div class="empty">
       Tool registry API not reachable from static preview.<br>
       <a href="/hermes" style="color:var(--amber)">Open live console</a> to see the registry live, or run <code>custodian tools list</code> locally.
