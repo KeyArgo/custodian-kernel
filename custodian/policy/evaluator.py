@@ -137,10 +137,10 @@ def decide(
     if band_cfg.requires_approval or over_band_cap or over_session_cap:
         reasons = []
         if band_cfg.requires_approval:
-            reasons.append(f"band {band.value} always requires approval")
+            reasons.append(f"band {effective_band.value} always requires approval")
         if over_band_cap:
             reasons.append(
-                f"${request.amount:.2f} exceeds band {band.value} max_spend ${band_cfg.max_spend:.2f}"
+                f"${request.amount:.2f} exceeds band {effective_band.value} max_spend ${band_cfg.max_spend:.2f}"
             )
         if over_session_cap:
             reasons.append(
@@ -158,7 +158,7 @@ def decide(
         verdict=Verdict.AUTONOMOUS,
         request=request,
         reason=(
-            f"${request.amount:.2f} within band {band.value} "
+            f"${request.amount:.2f} within band {effective_band.value} "
             f"(cap ${band_cfg.max_spend if band_cfg.max_spend is not None else float('inf'):.2f}, "
             f"remaining ${state.remaining_session_budget():.2f})"
         ),

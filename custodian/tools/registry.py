@@ -168,7 +168,7 @@ class CustodianTool:
                     band=Band.L2, per_action_cap=250.0, session_cap=1000.0
                 )
 
-            # Kill switch
+            # Kill switch — fail closed on corruption (same policy as govern.py)
             ks_path = Path.home() / ".custodian" / "kill_switch.json"
             killed = False
             if ks_path.exists():
@@ -176,7 +176,7 @@ class CustodianTool:
                     ks_data = json.loads(ks_path.read_text())
                     killed = bool(ks_data.get("killed", False))
                 except Exception:
-                    pass
+                    killed = True  # corrupted kill switch file = treat as killed
 
             # Policy: workspace first, then default preset
             policy_path = Path.home() / ".custodian" / "policy.yaml"
