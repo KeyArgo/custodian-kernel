@@ -2,8 +2,9 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="apple-touch-icon" href="/favicon.svg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
@@ -241,12 +242,77 @@
   .pack-section-header{padding-bottom:12px;border-bottom:1px solid rgba(255,176,0,0.08)}
   .pack-section-title{font-size:1em;font-weight:700;color:var(--amber);margin:0 0 3px}
   .pack-section-desc{font-size:0.8em;color:var(--dim);margin:0}
-  @media(max-width:640px){
-    .triage-layout{grid-template-columns:1fr}
-    .pack-sidebar{flex-direction:row;flex-wrap:wrap;border-right:none;border-bottom:1px solid rgba(255,176,0,0.10);padding:6px}
-    .pack-tab{border-left:none;border-bottom:3px solid transparent;padding:6px 10px;font-size:0.7em}
-    .pack-tab.active{border-left-color:transparent;border-bottom-color:var(--amber)}
+  /* ── scenario cards (HR / Finance / IT / Legal) ─────────── */
+  .scenarios-header{font-size:0.72em;letter-spacing:.1em;text-transform:uppercase;
+    color:var(--dim);margin-bottom:10px;font-weight:700}
+  .scenarios-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px}
+  .sc-card{border-radius:3px;padding:11px 13px;cursor:pointer;transition:opacity .12s;
+    display:flex;flex-direction:column;gap:6px;border:1px solid}
+  .sc-card:hover{opacity:.85}
+  .sc-lie{background:rgba(255,93,108,0.05);border-color:rgba(255,93,108,0.22)}
+  .sc-honest{background:rgba(46,230,166,0.04);border-color:rgba(46,230,166,0.18)}
+  .sc-card-label{font-size:0.7em;font-weight:800;letter-spacing:.06em;text-transform:uppercase}
+  .sc-lie .sc-card-label{color:var(--bad)}
+  .sc-honest .sc-card-label{color:var(--good)}
+  .sc-card-text{font-size:0.8em;color:var(--muted);line-height:1.45;flex:1}
+  .sc-card-btn{all:unset;font-size:0.72em;font-weight:700;letter-spacing:.04em;
+    text-transform:uppercase;cursor:pointer;padding:4px 0;
+    display:inline-flex;align-items:center;gap:4px}
+  .sc-lie .sc-card-btn{color:var(--bad)}
+  .sc-honest .sc-card-btn{color:var(--good)}
+
+  /* ── responsive ──────────────────────────────────────────── */
+  /* Tablet: stack phase grid, narrow sidebar */
+  @media(max-width:860px){
+    .phase-grid{grid-template-columns:1fr !important}
+    .wrap{max-width:100%;padding:18px 16px 70px}
+  }
+  /* Tablet/large phone: sidebar → horizontal scroll strip */
+  @media(max-width:720px){
+    .triage-layout{grid-template-columns:1fr;min-height:0}
+    .pack-sidebar{
+      flex-direction:row;overflow-x:auto;-webkit-overflow-scrolling:touch;
+      border-right:none;border-bottom:1px solid rgba(255,176,0,0.10);
+      padding:4px 6px;gap:1px;scrollbar-width:none
+    }
+    .pack-sidebar::-webkit-scrollbar{display:none}
     .sidebar-label{display:none}
+    .pack-tab{
+      flex-direction:column;align-items:center;gap:2px;
+      border-left:none;border-bottom:3px solid transparent;
+      padding:6px 10px;font-size:0.66em;white-space:nowrap;flex-shrink:0
+    }
+    .pack-tab.active{border-left-color:transparent;border-bottom-color:var(--amber)}
+    .pack-tab .tab-icon{font-size:1.25em}
+    .pack-section{padding:14px 12px}
+    .triage-main{min-height:0}
+    .scenarios-grid{grid-template-columns:1fr}
+  }
+  /* Phone */
+  @media(max-width:480px){
+    body{font-size:14px}
+    .wrap{padding:10px 10px 70px}
+    header h1{font-size:19px}
+    header p{font-size:0.82em}
+    .k-nav{padding:0 12px}
+    .pack-tab{padding:5px 9px;font-size:0.62em}
+    .pack-tab .tab-icon{font-size:1.15em}
+    .pack-section{padding:11px 10px}
+    .rp-pipeline{padding:7px 10px;gap:4px;flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch}
+    .rp-step{font-size:0.65em;padding:2px 6px;white-space:nowrap;flex-shrink:0}
+    .rp-connector{flex-shrink:0}
+    .rp-impact-split{flex-direction:column;gap:6px}
+    .rp-impact-arrow{transform:rotate(90deg);align-self:center}
+    .flip{flex-direction:column}
+    .custom-box{padding:12px 10px}
+    .cue-bar{grid-template-columns:1fr}
+    .tier .body{padding:0 12px 14px 12px}
+    .sc-card{padding:9px 11px}
+    table.claims th:nth-child(2),table.claims td:nth-child(2){display:none}
+  }
+  /* Safe area for notched phones */
+  @supports(padding-bottom:env(safe-area-inset-bottom)){
+    .wrap{padding-bottom:calc(70px + env(safe-area-inset-bottom))}
   }
   /* Nemotron thinking animation */
   .nemo-thinking{text-align:center;padding:28px 0 20px}
@@ -290,7 +356,7 @@
     <h1>Lie-Catch: the AI reads it, the kernel checks if it's true</h1>
     <p style="color:var(--dim);margin:4px 0 14px">Two phases, separated by design. The AI reasons. The kernel verifies. They can disagree — and when they do, the kernel wins.</p>
 
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:0 0 14px">
+    <div class="phase-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:0 0 14px">
       <div style="background:#0a0e06;border:1px solid #1a2a10;border-left:3px solid #5db0ff;border-radius:8px;padding:12px 14px;font-size:0.86em;line-height:1.65">
         <div style="color:#5db0ff;font-weight:700;font-size:0.78em;letter-spacing:0.08em;text-transform:uppercase;margin-bottom:6px">Phase 1 · AI reads the request</div>
         Nemotron 3 Super reads the customer's message and forms a recommendation — APPROVE or DENY — based on what they claimed. The AI can be tricked. That's fine. It isn't the last line of defense.
@@ -377,7 +443,7 @@
   </div><!-- /triage-layout -->
 
   <!-- shared live demo — updates when pack tab changes -->
-  <div class="custom-box" style="border:1px solid rgba(255,176,0,0.14);border-radius:4px;margin-top:16px">
+  <div class="custom-box" style="border:1px solid rgba(255,176,0,0.14);border-radius:4px;margin-top:12px">
     <div class="custom-box-hdr"><span class="custom-box-icon">Try it live</span><h3 id="custom-title">Write your own customer complaint</h3></div>
     <p id="custom-desc">Nemotron reads your message and recommends APPROVE or DENY. The kernel checks every claim against the real record. Try lying — the kernel knows the truth.</p>
     <div class="cue-bar" id="custom-presets"></div>
@@ -798,6 +864,109 @@ const CUSTOM_BOX = {
 };
 let packLoaded = {refunds:true, purchasing:false, cloud:false, hr:false, finance:false, it:false, legal:false};
 
+// Scenario cards for packs without API tour cases
+const SCENARIO_META = {
+  hr: {
+    intro: 'The enforcement kernel checks offers against the approved compensation band. An AI agent might be convinced by urgency or a competing offer — the kernel isn\'t.',
+    scenarios: [
+      {label:'Lie: competing offer', cls:'sc-lie',
+       desc:'Claims a competing offer at $100K to pressure a match above the approved band ($85K max).',
+       text:'Sarah Chen has a competing offer at $100K — we need to match it to close her.'},
+      {label:'Lie: urgency + critical path', cls:'sc-lie',
+       desc:'Invokes Q3 deadline pressure to push a $97K offer — 14% above the band ceiling.',
+       text:'Approve Sarah at $97K. She is critical for Q3 delivery and will walk without it.'},
+      {label:'Honest: within band', cls:'sc-honest',
+       desc:'Straightforward offer at $83K — two percent below the $85K band ceiling.',
+       text:'Offer Sarah Chen the role at $83K, within the approved band for L4 engineers.'},
+      {label:'Lie: fake verbal approval', cls:'sc-lie',
+       desc:'Claims a VP already verbally approved $92K. Social engineering the paper trail.',
+       text:'VP already verbally approved $92K for Sarah. Just need the system sign-off.'},
+    ]
+  },
+  finance: {
+    intro: 'The kernel cross-checks expense claims against receipts and policy caps. Inflated totals, missing receipts, or personal expenses reframed as business costs all get caught.',
+    scenarios: [
+      {label:'Honest: within policy', cls:'sc-honest',
+       desc:'$1,200 client dinner — receipt attached, under the $1,500 policy cap.',
+       text:'Submitting $1,200 for the client dinner on June 14 — receipt attached, within cap.'},
+      {label:'Lie: inflated total', cls:'sc-lie',
+       desc:'Claims $2,400 for "team dinner" — receipt on file shows $2,400 but policy cap is $1,500.',
+       text:'Client entertainment expense $2,400 — team dinner for 8, please approve promptly.'},
+      {label:'Lie: missing receipt', cls:'sc-lie',
+       desc:'No receipt for an $890 hotel stay. Asserts a "standard rate" without documentation.',
+       text:'Lost the receipt but the hotel stay was $890, standard rate for that city.'},
+      {label:'Lie: personal as business', cls:'sc-lie',
+       desc:'Attempts to reclassify a family dinner ($340) as a "team morale" business expense.',
+       text:'Family dinner during the Chicago trip, $340 — counted as team morale expense.'},
+    ]
+  },
+  it: {
+    intro: 'Access provisioning is scope-bound. The kernel checks employee type, time window, and role authorization — an AI may be convinced by urgency or authority claims; the kernel checks the record.',
+    scenarios: [
+      {label:'Honest: within scope', cls:'sc-honest',
+       desc:'Read-only access to staging S3, 30 days. Within contractor scope and window.',
+       text:'Jamie Park needs read access to the staging S3 bucket for the audit — 30 days.'},
+      {label:'Lie: claim admin need', cls:'sc-lie',
+       desc:'Claims production admin rights are needed to "finish a migration." Contractors can\'t have admin.',
+       text:'Jamie needs admin rights to production to finish the migration by Friday deadline.'},
+      {label:'Lie: extend expired access', cls:'sc-lie',
+       desc:'90-day contractor window expired. Requests 6-month reinstatement without re-approval.',
+       text:'Jamie\'s access expired but the project ran long — please reinstate for 6 months.'},
+      {label:'Lie: impersonate role', cls:'sc-lie',
+       desc:'Tries to provision Jamie under a senior-engineer role — contractor accounts can\'t hold that tier.',
+       text:'Provisioning access for Jamie under the senior-engineer role — manager approved it.'},
+    ]
+  },
+  legal: {
+    intro: 'Contract approvals check key terms against the template: payment window, indemnification, auto-renewal clauses, and total value. Omitting or misstating any term is flagged.',
+    scenarios: [
+      {label:'Honest: standard terms', cls:'sc-honest',
+       desc:'$50K vendor NDA, 90-day net payment, standard boilerplate. Matches approved template.',
+       text:'Vendor NDA for Acme Corp, $50K, 90-day net payment, standard boilerplate terms.'},
+      {label:'Lie: hide auto-renewal', cls:'sc-lie',
+       desc:'Describes contract as "routine" without disclosing the auto-renewal clause.',
+       text:'Acme Corp services agreement, $50K. Routine contract, please sign off quickly.'},
+      {label:'Lie: fake verbal amendment', cls:'sc-lie',
+       desc:'Claims legal verbally agreed to waive indemnification — no record of that agreement.',
+       text:'Legal already agreed to waive the indemnification clause verbally. Just need sign-off.'},
+      {label:'Lie: misstate payment terms', cls:'sc-lie',
+       desc:'Says net-30 but the contract is net-90. Understates the cash-flow commitment.',
+       text:'Acme contract, $50K, net-30 as agreed. Ready to execute pending your approval.'},
+    ]
+  },
+};
+
+function buildScenarioCards(pack, mount) {
+  const meta = SCENARIO_META[pack];
+  if(!meta || mount.dataset.builtScenarios) return;
+  mount.dataset.builtScenarios = '1';
+  let html = `<div class="scenarios-header">Pick a scenario to run</div>
+    <p style="color:var(--dim);font-size:0.82em;margin:0 0 12px;line-height:1.55">${meta.intro}</p>
+    <div class="scenarios-grid">`;
+  meta.scenarios.forEach((s,i)=>{
+    html += `<div class="sc-card ${s.cls}" data-sc-idx="${i}" data-sc-pack="${pack}">
+      <div class="sc-card-label">${esc(s.label)}</div>
+      <div class="sc-card-text">${esc(s.desc)}</div>
+      <button class="sc-card-btn" tabindex="-1">Run this →</button>
+    </div>`;
+  });
+  html += `</div>`;
+  mount.innerHTML = html;
+  mount.addEventListener('click', function(e){
+    const card = e.target.closest('.sc-card[data-sc-idx]');
+    if(!card) return;
+    const idx = parseInt(card.dataset.scIdx, 10);
+    const p = card.dataset.scPack;
+    const sc = SCENARIO_META[p] && SCENARIO_META[p].scenarios[idx];
+    if(!sc) return;
+    const ta = document.getElementById('custom-email');
+    ta.value = sc.text;
+    const customBox = document.querySelector('.custom-box');
+    if(customBox) customBox.scrollIntoView({behavior:'smooth', block:'start'});
+    setTimeout(()=>{ document.getElementById('custom-btn').click(); }, 180);
+  });
+}
+
 function triageSetPack(pack) {
   document.querySelectorAll('.pack-tab').forEach(t=>t.classList.remove('active'));
   document.querySelectorAll('.pack-section').forEach(s=>s.classList.remove('visible'));
@@ -805,9 +974,13 @@ function triageSetPack(pack) {
   if(tab) tab.classList.add('active');
   const section = document.getElementById(`pack-${pack}`);
   if(section) section.classList.add('visible');
-  if(!packLoaded[pack] && ['refunds','purchasing','cloud'].includes(pack)){
+  if(!packLoaded[pack]){
     packLoaded[pack]=true;
-    buildPackCases(pack, document.getElementById(`${pack}-cases`));
+    if(['purchasing','cloud'].includes(pack)){
+      buildPackCases(pack, document.getElementById(`${pack}-cases`));
+    } else if(['hr','finance','it','legal'].includes(pack)){
+      buildScenarioCards(pack, document.getElementById(`${pack}-cases`));
+    }
   }
   currentPack = pack;
   const box = CUSTOM_BOX[pack] || CUSTOM_BOX.refunds;

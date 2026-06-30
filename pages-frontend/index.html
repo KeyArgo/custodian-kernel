@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Custodian — Kernel-Enforced Authority for AI Agents</title>
 <meta name="description" content="Give your AI agent a company card with Custodian. Under the limit it spends autonomously. Over the limit it calls you first. If a customer lies to get a refund, the kernel catches it — enforced at the OS level, not promised in a prompt.">
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
@@ -280,6 +280,29 @@
   footer{border-top:1px solid var(--line); padding:40px 0; color:var(--dim); font-size:0.86em}
   .foot-in{display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:14px}
   .foot-in .mono{color:var(--muted)}
+
+  /* ── Global mobile / tablet ─────────────────────────────── */
+  @media(max-width:860px){
+    .wrap{padding:0 18px}
+    .metrics{grid-template-columns:1fr}
+  }
+  @media(max-width:680px){
+    .wrap{padding:0 12px}
+    .final-card{padding:36px 20px}
+    .final{padding:60px 0}
+    /* stack any inline 2-col grids */
+    [style*="grid-template-columns:1fr 1fr"]{grid-template-columns:1fr !important}
+    [style*="grid-template-columns:1fr auto 1fr"]{grid-template-columns:1fr !important}
+    .reveal{margin-left:0 !important;margin-right:0 !important}
+  }
+  @media(max-width:420px){
+    .wrap{padding:0 10px}
+    h1,h2{word-break:break-word}
+    .hero h1{font-size:clamp(1.5em,7vw,2.2em)}
+  }
+  @supports(padding:env(safe-area-inset-bottom)){
+    footer{padding-bottom:calc(40px + env(safe-area-inset-bottom))}
+  }
 </style>
 </head>
 <body>
