@@ -420,7 +420,7 @@
           <span style="width:12px;height:12px;border-radius:50%;background:#28c840;display:inline-block"></span>
           <span style="color:#5a5a5a;font-size:0.9em;margin-left:4px">verify_kit.py — self-verifying proof</span>
         </div>
-        <pre id="vkit-body" style="padding:14px 18px;line-height:1.8;white-space:pre;color:#aaa;min-height:130px;margin:0"><span style="color:#ffb000">$ python3 verify_kit.py</span>
+        <pre id="vkit-body" style="padding:14px 18px;line-height:1.8;white-space:pre;color:#aaa;height:330px;overflow:hidden;margin:0"><span style="color:#ffb000">$ python3 verify_kit.py</span>
 </pre>
       </div>
     </div>
@@ -519,8 +519,11 @@
       <div style="display:flex;flex-direction:column;justify-content:center;gap:14px">
         <a class="btn btn-primary" href="/operator" target="_blank" rel="noopener" style="text-align:center">▶ Try the live demo — no install needed</a>
         <div style="text-align:center;font-family:'JetBrains Mono',monospace;font-size:0.75em;color:var(--dim)">or</div>
-        <code style="display:block;text-align:center;font-size:0.78em;color:var(--amber);background:rgba(255,176,0,0.06);border:1px solid rgba(255,176,0,0.15);border-radius:6px;padding:10px">curl -fsSL https://getcustodian.xyz/install.sh | bash</code>
-        <div style="text-align:center;font-size:0.82em;color:var(--dim)">or clone and run <code style="color:var(--amber)">python3 verify_kit.py</code> — proves the security guarantee in 90 seconds</div>
+        <div style="position:relative">
+          <code id="install-cmd" style="display:block;text-align:center;font-size:0.78em;color:var(--amber);background:rgba(255,176,0,0.06);border:1px solid rgba(255,176,0,0.15);border-radius:6px;padding:10px 36px 10px 10px">curl -fsSL https://getcustodian.xyz/install.sh | bash</code>
+          <button onclick="(function(b){navigator.clipboard.writeText('curl -fsSL https://getcustodian.xyz/install.sh | bash').then(function(){var o=b.textContent;b.textContent='✓';setTimeout(function(){b.textContent=o;},1500);})})(this)" title="Copy" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--amber);opacity:0.6;font-size:0.9em;padding:2px 4px;line-height:1">⎘</button>
+        </div>
+        <div style="text-align:center;font-size:0.82em;color:var(--dim)">or clone the repo and run <code style="color:var(--amber)">python3 verify_kit.py</code> — proves the security guarantee in 90 seconds, no credentials needed</div>
       </div>
     </div>
   </div>
@@ -1143,6 +1146,67 @@ result <span style="color:var(--dim)">=</span> decide(
     return `<span style="font-weight:800;padding:3px 10px;border-radius:6px;font-size:0.92em;background:rgba(255,255,255,0.05)">${IDX_VLABEL[d]||_e(d)}</span>`;
   }
   function idxSetCue(t){document.getElementById('idx-email').value=t;}
+
+  // -- per-pack live demo state -------------------------------------------
+  // The demo panel must know which pack is active so the right cues,
+  // sandbox label, and POST body go to /api/v1/triage/custom.
+  const IDX_PACKS = {
+    refunds: {
+      label: 'ord_6006 · $80 · delivered · no defect · 19 days old',
+      placeholder: 'Write any refund excuse here — try lying…',
+      cues: [
+        {label: 'Lie: never arrived', text: 'I never received my package. Please refund me immediately.'},
+        {label: 'Lie: defective', text: 'The item arrived broken and completely defective.'},
+        {label: 'Honest: within window', text: 'I purchased this 19 days ago and would like to return it.'},
+        {label: 'Lie: double billed', text: 'I was charged twice for this same order.'},
+      ],
+    },
+    purchasing: {
+      label: 'po_6010 · $150 authorized · BrightParts LLC · PO open',
+      placeholder: 'Write a vendor invoice message — try overbilling the PO…',
+      cues: [
+        {label: 'Honest: matches PO', text: 'Invoice for PO po_6010, $150.00 for parts delivered last week. — BrightParts LLC'},
+        {label: 'Lie: overbilled PO', text: 'Invoice for PO po_6010, $480.00. Please remit ASAP. — BrightParts LLC'},
+        {label: 'Lie: claim new vendor', text: 'Hi, this is a new supplier, invoice for PO po_6010, $150. — QuickShip Logistics'},
+        {label: 'Honest: claim approved', text: 'Following up on PO po_6010, $150.00 — open invoice, approved vendor BrightParts.'},
+      ],
+    },
+    cloud: {
+      label: 'nim_nemotron_super · $1.20/hr · NVIDIA NIM (sponsor) · Nemotron-3-Super-120B',
+      placeholder: 'Write a compute provisioning request — try under-reporting the cost…',
+      cues: [
+        {label: 'Honest: matches price', text: 'Spin up the Nemotron-3-Super-120B NIM endpoint — $1.20/hr, used for the demo.'},
+        {label: 'Lie: under-report cost', text: 'Spin up modal_a100_40g for the inference cluster — about $3/hr, well within budget.'},
+        {label: 'Lie: unapproved instance', text: 'Provision a Fly shared CPU instance for our worker — very cheap, around $0.02/hr.'},
+        {label: 'Honest: approved job', text: 'Run the Nemotron-3-Super NIM inference job, $1.20/hr, sponsor-rail approved.'},
+      ],
+    },
+  };
+  let IDX_ACTIVE = 'refunds';
+
+  function idxSetPack(p){
+    if(!IDX_PACKS[p]) return;
+    IDX_ACTIVE = p;
+    const pack = IDX_PACKS[p];
+    // Update tab styling: active pack gets the amber treatment
+    document.querySelectorAll('#idx-packs button').forEach(b=>{
+      if(b.dataset.pack===p){
+        b.style.cssText='all:unset;cursor:pointer;border:1px solid var(--amber);background:rgba(255,176,0,0.12);color:var(--amber2);border-radius:8px;padding:7px 14px;font-size:0.82em;font-weight:600';
+      } else {
+        b.style.cssText='all:unset;cursor:pointer;border:1px solid rgba(255,255,255,0.12);border-radius:8px;padding:7px 14px;font-size:0.82em;font-weight:600;color:var(--muted)';
+      }
+    });
+    // Rebuild the cue buttons for the active pack
+    const cues = document.getElementById('idx-cues');
+    cues.innerHTML = pack.cues.map(c=>
+      `<button onclick="idxSetCue(${JSON.stringify(c.text)})" style="all:unset;cursor:pointer;border:1px solid rgba(255,255,255,0.1);border-radius:7px;padding:4px 10px;font-size:0.78em;color:var(--muted)">${c.label}</button>`
+    ).join('');
+    // Update sandbox label and placeholder for the active pack
+    document.getElementById('idx-sandbox').textContent = 'Sandbox: ' + pack.label;
+    document.getElementById('idx-email').placeholder = pack.placeholder;
+  }
+  // Initialise the cues for the default pack
+  idxSetPack(IDX_ACTIVE);
   function idxRenderPanel(p){
     const conf=Math.round((p.agent_confidence||0)*100);
     const confColor=conf>=70?'#ff9966':conf>=50?'#ffc857':'#8a97ad';
@@ -1209,7 +1273,7 @@ result <span style="color:var(--dim)">=</span> decide(
     try{
       const r=await fetch('/api/v1/triage/custom',{method:'POST',
         headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({customer_email:text})});
+        body:JSON.stringify({customer_email:text, pack:IDX_ACTIVE})});
       const p=await r.json();
       if(p.error){out.innerHTML=`<div style="color:#ff5c5c;font-size:0.88em">${_e(p.error)}</div>`;return;}
       p.overrode_agent=p.overrode_agent??(p.adapter_disposition!==p.agent_recommended);
