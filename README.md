@@ -1,6 +1,8 @@
 # Custodian
 
-Don't take this on faith. Verify from pip in 90 seconds:
+Don't take this on faith. Verify in 90 seconds — pick whichever path works for you:
+
+## Quick start: install from PyPI (no cloning, works in 90 seconds)
 
 ```bash
 pip install custodian-kernel
@@ -8,17 +10,73 @@ custodian demo-verify
 ```
 
 That command hits the live system, runs 4 claim-verification scenarios, and
-shows CONTRADICTED/VERIFIED in real time — no credentials, no cloning.
+shows CONTRADICTED/VERIFIED in real time — no credentials needed.
 
-For the full test suite: `pip install custodian-kernel[dev] && pytest tests/`
+> **Note on PyPI version:** The PyPI release is currently 0.1.2 (a slightly
+> earlier cut of the project). It includes the core CLI: init, validate,
+> status, audit, request, approve, deny, kill, resume, demo-verify, tools.
+> If you want the full feature set (earn-and-buy, poison-tests, status-banner,
+> beancount, confirm) plus the 1,256-test suite, use the repo path below.
+
+## Full path: clone the repo (gets you everything — 1,256 tests, 16 CLI commands, verify_kit.py)
+
+```bash
+git clone https://github.com/KeyArgo/hermes-hackathon-2026
+cd hermes-hackathon-2026
+pip install -e ".[dev]"
+python3 verify_kit.py
+```
+
+`verify_kit.py` runs 4 phases end-to-end with no credentials:
+
+1. **Regression test** — re-introduces the self-approval bug, proves the test catches it
+2. **Test suite** — 1,256 tests, 0 failures (4 deselected, network only)
+3. **Live Stripe** — pulls the real `pi_3TkZWEPfSF4TGXT90AWlrnle` PaymentIntent
+4. **Kill switch** — engages, denies a $40 spend, releases, verifies
+
+If all 4 phases print green checkmarks, the kernel works. No setup, no credentials, no guessing.
+
+## What you can verify without a clone
+
+```bash
+pip install custodian-kernel
+custodian demo-verify    # 4 claim-verification scenarios, no creds
+custodian status         # current authority state
+custodian --help         # full command list
+```
+
+The full 0.1.2 PyPI release proves: the claim verifier is deterministic, the
+authority bands work, and the kill switch denies requests. That's the kernel's
+core guarantee in 60 seconds of `pip install` time.
+
+## What you can ONLY verify from the repo
+
+```bash
+git clone https://github.com/KeyArgo/hermes-hackathon-2026
+cd hermes-hackathon-2026
+python3 verify_kit.py    # the 4-phase proof
+python3 -m pytest tests/ -m "not network"  # the 1,256-test suite
+custodian earn-and-buy   # full economic cycle on camera
+custodian poison-tests   # 5 planted attacks, all caught
+```
 
 This is the only hackathon entry where a judge can verify every security
-claim from a single `pip install`.
+claim from a single `pip install` or `git clone`. The repo path is the
+deeper one — the 0.1.2 PyPI cut is the install-it-anywhere quick proof.
+
+## Links
+
+- **Repo (GitHub):** https://github.com/KeyArgo/hermes-hackathon-2026
+- **Repo (Gitea):** https://git.argobox.com/KeyArgo/hermes-hackathon-2026
+- **PyPI:** https://pypi.org/project/custodian-kernel/
+- **Live dashboard:** https://getcustodian.xyz
+- **Operator panel:** https://getcustodian.xyz/operator
+- **Hackathon entry:** Hermes Agent Accelerated Business Hackathon (NVIDIA x Stripe x Nous Research)
 
 ## Features
 
 ### Core
-- 1,254+ tests, 0 failures (network tests excluded)
+- 1,256 tests, 0 failures (network tests excluded)
 - Deterministic claim verifier (CONTRADICTED / VERIFIED / UNVERIFIABLE)
 - Operator-only kill switch with resume logic
 - Authority bands L0-L4 with per-request caps
