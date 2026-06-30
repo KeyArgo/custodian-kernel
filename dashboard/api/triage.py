@@ -23,7 +23,15 @@ from custodian.packs.agent import EnvelopeParseError
 try:
     from custodian.inference.router import NemoClawRouter
     def _make_client():
-        return NemoClawRouter(nvidia_api_key_file=_NVIDIA_SECRET)
+        # Wire both OpenRouter and NIM keys so the primary (OpenRouter)
+        # actually gets used. Without openrouter_key_file the router
+        # silently skips OpenRouter (it has no key) and falls through to
+        # NIM, which times out and triggers the no-AI fallback path.
+        return NemoClawRouter(
+            timeout=10,
+            nvidia_api_key_file=_NVIDIA_SECRET,
+            openrouter_key_file=_KEYS_ENV,
+        )
 except ImportError:
     from custodian.packs.agent import NvidiaNemotronClient
     def _make_client():
