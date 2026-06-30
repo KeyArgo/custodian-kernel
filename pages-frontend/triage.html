@@ -104,6 +104,7 @@
   .k-nav{position:sticky;top:0;z-index:100;display:flex;align-items:center;
     height:52px;padding:0 24px;background:rgba(6,7,11,0.95);
     border-bottom:1px solid rgba(255,176,0,0.12);backdrop-filter:blur(14px);
+    -webkit-backdrop-filter:blur(14px);will-change:transform;transform:translateZ(0);
     font-family:var(--mono);font-size:14px;gap:0}
   .k-brand{display:flex;align-items:center;gap:8px;color:var(--amber);text-decoration:none;
     font-size:0.8em;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;
@@ -268,7 +269,7 @@
     .wrap{max-width:100%;padding:18px 16px 70px}
   }
   /* Tablet/large phone: sidebar → horizontal scroll strip */
-  @media(max-width:720px){
+  @media(max-width:800px){
     .triage-layout{grid-template-columns:1fr;min-height:0}
     .pack-sidebar{
       flex-direction:row;overflow-x:auto;-webkit-overflow-scrolling:touch;

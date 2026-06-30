@@ -63,7 +63,8 @@
 
   /* ---------- nav ---------- */
   nav{position:sticky; top:0; z-index:50; backdrop-filter:blur(14px);
-    background:rgba(6,7,11,0.72); border-bottom:1px solid var(--line)}
+    -webkit-backdrop-filter:blur(14px); background:rgba(6,7,11,0.85);
+    border-bottom:1px solid var(--line); will-change:transform; transform:translateZ(0)}
   .nav-in{display:flex; align-items:center; justify-content:space-between; height:64px}
   .brand{display:flex; align-items:center; gap:11px; text-decoration:none; font-weight:600}
   .brand svg{width:30px; height:30px}
@@ -80,7 +81,35 @@
   .btn-primary:hover{transform:translateY(-2px); box-shadow:0 14px 30px -8px rgba(255,176,0,0.7)}
   .btn-ghost{color:var(--text); border-color:var(--line2); background:rgba(255,255,255,0.02)}
   .btn-ghost:hover{border-color:var(--amber); transform:translateY(-2px)}
-  @media(max-width:820px){.nav-links a:not(.btn){display:none}}
+  /* hamburger */
+  .nav-burger{display:none;flex-direction:column;justify-content:center;gap:5px;
+    background:none;border:none;cursor:pointer;padding:8px 6px;margin-left:8px;flex-shrink:0}
+  .nav-burger span{display:block;width:22px;height:2px;background:var(--muted);
+    border-radius:2px;transition:transform .2s,opacity .2s}
+  .nav-burger.open span:nth-child(1){transform:translateY(7px) rotate(45deg)}
+  .nav-burger.open span:nth-child(2){opacity:0}
+  .nav-burger.open span:nth-child(3){transform:translateY(-7px) rotate(-45deg)}
+  /* mobile nav panel */
+  .nav-panel{display:none;position:fixed;top:64px;left:0;right:0;z-index:49;
+    background:rgba(6,7,11,0.97);border-bottom:1px solid rgba(255,176,0,0.15);
+    backdrop-filter:blur(16px);padding:10px 24px 20px;flex-direction:column}
+  .nav-panel.open{display:flex}
+  .nav-panel a{color:var(--muted);text-decoration:none;padding:11px 0;font-size:0.95em;
+    border-bottom:1px solid rgba(255,255,255,0.05);transition:color .12s;font-weight:500}
+  .nav-panel a:last-child{border-bottom:none}
+  .nav-panel a:hover{color:var(--text)}
+  .nav-panel .np-cta{display:block;margin-top:12px;text-align:center;padding:13px;
+    background:linear-gradient(135deg,var(--amber2),var(--amber));color:#100b00;
+    font-weight:700;border-radius:10px;font-size:0.95em;text-decoration:none}
+  /* responsive */
+  @media(max-width:820px){
+    .nav-links a:not(.btn){display:none}
+    .nav-links .btn{font-size:0.82em;padding:8px 14px}
+    .nav-burger{display:flex}
+  }
+  @media(max-width:420px){
+    .nav-links .btn{display:none} /* burger has it */
+  }
 
   /* ---------- hero ---------- */
   .hero{padding:96px 0 60px; text-align:center; position:relative}
@@ -157,8 +186,8 @@
     text-transform:uppercase; color:var(--amber); margin-bottom:14px}
   h2{font-size:clamp(1.7em,3.6vw,2.6em); font-weight:600; letter-spacing:-0.015em; line-height:1.12; margin-bottom:18px}
   .sec-sub{color:var(--muted); font-size:1.06em; max-width:680px; line-height:1.65}
-  .reveal{opacity:0; transform:translateY(26px); transition:opacity .7s cubic-bezier(.2,.7,.2,1), transform .7s cubic-bezier(.2,.7,.2,1)}
-  .reveal.in{opacity:1; transform:none}
+  .reveal{opacity:0; transform:translateY(26px); transition:opacity .7s cubic-bezier(.2,.7,.2,1), transform .7s cubic-bezier(.2,.7,.2,1); will-change:opacity,transform}
+  .reveal.in{opacity:1; transform:none; will-change:auto}
 
   /* contrast / wedge */
   .wedge{display:grid; grid-template-columns:1fr 1fr; gap:22px; margin-top:46px}
@@ -282,6 +311,17 @@
   .foot-in .mono{color:var(--muted)}
 
   /* ── Global mobile / tablet ─────────────────────────────── */
+  /* gpu-backed blur elements (add -webkit- for Safari) */
+  .card,.nemo-card,.table-wrap,.final-card{-webkit-backdrop-filter:blur(8px)}
+  /* disable expensive blur on mobile to prevent scroll jank */
+  @media(max-width:820px){
+    .card,.nemo-card,.table-wrap,.final-card{backdrop-filter:none;-webkit-backdrop-filter:none}
+    nav{background:rgba(6,7,11,0.97)} /* solid on mobile — no blur needed */
+  }
+  /* utility: 2-col grid that stacks on small screens */
+  .g2{display:grid;grid-template-columns:1fr 1fr;gap:24px}
+  .g2b{display:grid;grid-template-columns:1fr 1fr;gap:28px}
+  .g3diagram{display:grid;grid-template-columns:1fr auto 1fr;gap:0;align-items:center}
   @media(max-width:860px){
     .wrap{padding:0 18px}
     .metrics{grid-template-columns:1fr}
@@ -290,15 +330,14 @@
     .wrap{padding:0 12px}
     .final-card{padding:36px 20px}
     .final{padding:60px 0}
-    /* stack any inline 2-col grids */
-    [style*="grid-template-columns:1fr 1fr"]{grid-template-columns:1fr !important}
-    [style*="grid-template-columns:1fr auto 1fr"]{grid-template-columns:1fr !important}
+    .g2,.g2b{grid-template-columns:1fr}
+    .g3diagram{grid-template-columns:1fr}
+    .g3diagram .g3-arrow{display:none}
     .reveal{margin-left:0 !important;margin-right:0 !important}
   }
   @media(max-width:420px){
     .wrap{padding:0 10px}
     h1,h2{word-break:break-word}
-    .hero h1{font-size:clamp(1.5em,7vw,2.2em)}
   }
   @supports(padding:env(safe-area-inset-bottom)){
     footer{padding-bottom:calc(40px + env(safe-area-inset-bottom))}
@@ -324,15 +363,26 @@
       <a href="#proof">Live proof</a>
       <a href="#install">Install</a>
       <a href="#compare">Compare</a>
-      <a href="#video">Demo</a>
       <a href="/triage">Lie-Catch</a>
       <a href="/tools">Tools</a>
       <a href="/docs">Docs</a>
-      <a href="/#verify">Verify</a>
       <a class="btn btn-primary" href="/hermes">Launch live console →</a>
+      <button class="nav-burger" id="nav-burger" aria-label="Open menu" aria-expanded="false">
+        <span></span><span></span><span></span>
+      </button>
     </div>
   </div>
 </nav>
+<div class="nav-panel" id="nav-panel" role="navigation" aria-label="Mobile menu">
+  <a href="#how">How it works</a>
+  <a href="#proof">Live proof</a>
+  <a href="#install">Install</a>
+  <a href="#compare">Compare</a>
+  <a href="/triage">Lie-Catch Demo</a>
+  <a href="/tools">Tools</a>
+  <a href="/docs">Docs</a>
+  <a href="/hermes" class="np-cta">Launch live console →</a>
+</div>
 
 <!-- HERO -->
 <header class="hero">
@@ -346,7 +396,7 @@
       <span style="display:inline-flex;align-items:center;gap:6px;background:rgba(99,91,255,0.1);border:1px solid rgba(99,91,255,0.3);border-radius:8px;padding:5px 12px;font-size:0.78em;font-weight:700;color:#a78bfa;font-family:'JetBrains Mono',monospace">stripe</span>
     </div>
     <h1>Give AI a real wallet.<br><span class="grad">Without the risk.</span></h1>
-    <p class="lede">Most businesses won't deploy AI near money because there's no way to verify it actually followed the rules. Custodian is the enforcement kernel that changes that — set limits in a YAML file, the OS enforces them, the agent cannot exceed them, lie about them, or approve its own escalation. <b>This is proven, not promised.</b> A <b>Nous Hermes agent</b> on <b>NVIDIA Nemotron Super 120B</b> runs inside a <b>NemoClaw kernel sandbox</b> on a <b>DGX Spark GB10</b> — and the same enforcement ships as a pip package you can run anywhere.</p>
+    <p class="lede">Most businesses won't deploy AI near money because there's no way to verify it actually followed the rules. Custodian is the enforcement kernel that changes that — define authority limits in code, the OS enforces them, the agent cannot exceed them, lie about them, or approve its own escalation. <b>This is proven, not promised.</b> A <b>Nous Hermes agent</b> on <b>NVIDIA Nemotron Super 120B</b> runs inside a <b>NemoClaw kernel sandbox</b> on a <b>DGX Spark GB10</b> — and the same enforcement ships as a pip package you can run anywhere.</p>
 
     <!-- employee + company card visual -->
     <div class="card-metaphor">
@@ -528,7 +578,7 @@
 
     </div>
 
-    <div style="margin-top:40px;display:grid;grid-template-columns:1fr 1fr;gap:24px;max-width:860px;margin-left:auto;margin-right:auto" class="reveal">
+    <div class="reveal g2" style="margin-top:40px;max-width:860px;margin-left:auto;margin-right:auto">
       <div>
         <div style="font-family:'JetBrains Mono',monospace;font-size:0.7em;color:var(--dim);margin-bottom:10px">Your rules. One file.</div>
         <pre style="background:#0a0c12;border:1px solid var(--line);border-radius:8px;padding:16px 18px;font-size:0.8em;line-height:1.8;color:#c8ccd8;margin:0"><span style="color:var(--dim)"># policy.yaml — kernel-enforced</span>
@@ -741,7 +791,7 @@
     <div class="reveal" style="background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.08); border-radius:20px; padding:40px; max-width:860px; margin:0 auto">
       <div class="sec-eyebrow">Plain English</div>
       <h2 style="font-size:clamp(1.4em,2.8vw,2em);margin-bottom:20px">How does the kernel actually stop the AI?</h2>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:28px;margin-bottom:28px">
+      <div class="g2b" style="margin-bottom:28px">
         <div>
           <p style="color:var(--muted);line-height:1.75;font-size:0.98em">
             Think of it like a new employee at a company. They can fill out a purchase order and decide it makes sense — but they can't <em>sign</em> their own check. The signed check is a separate system, run by people with authority the employee doesn't have.
@@ -818,13 +868,14 @@
       <h2>Add the kernel to your agent in 60 seconds</h2>
       <p class="sec-sub">One pip install. Drop <code style="color:var(--green)">decide()</code> in front of any consequential action. The rest is policy.</p>
     </div>
-    <div class="reveal" style="display:grid;grid-template-columns:1fr 1fr;gap:24px;max-width:900px;margin:0 auto">
+    <div class="reveal g2" style="max-width:900px;margin:0 auto">
       <div style="background:#080a10;border:1px solid var(--line2);border-radius:12px;padding:24px">
         <div style="color:var(--muted);font-size:0.75em;letter-spacing:0.1em;margin-bottom:12px">INSTALL</div>
         <pre style="margin:0;font-size:0.9em;color:var(--green);line-height:1.8">pip install custodian-kernel</pre>
-        <div style="margin-top:16px;color:var(--muted);font-size:0.75em;letter-spacing:0.1em;margin-bottom:8px">OR FROM SOURCE</div>
+        <div style="margin-top:16px;color:var(--muted);font-size:0.75em;letter-spacing:0.1em;margin-bottom:8px">OR FROM SOURCE (contributors)</div>
         <pre style="margin:0;font-size:0.82em;color:var(--dim);line-height:1.7">git clone https://github.com/KeyArgo/custodian-kernel
-cd custodian-kernel &amp;&amp; pip install -e .</pre>
+cd custodian-kernel
+pip install -e ".[dev]"</pre>
         <div style="margin-top:16px;display:flex;gap:10px;flex-wrap:wrap">
           <a href="https://pypi.org/project/custodian-kernel/" target="_blank" rel="noopener" style="color:var(--green);font-size:0.8em;text-decoration:none;border:1px solid rgba(46,230,166,0.3);padding:4px 10px;border-radius:6px">PyPI ↗</a>
           <a href="https://github.com/KeyArgo/custodian-kernel" target="_blank" rel="noopener" style="color:var(--muted);font-size:0.8em;text-decoration:none;border:1px solid var(--line2);padding:4px 10px;border-radius:6px">GitHub ↗</a>
@@ -878,7 +929,7 @@ result <span style="color:var(--dim)">=</span> decide(
       </div>
       <div class="card reveal" style="padding:22px 24px">
         <div style="font-family:'JetBrains Mono',monospace;font-size:0.65em;letter-spacing:0.12em;text-transform:uppercase;color:var(--amber);margin-bottom:10px">Step 3 — Test suite</div>
-        <code style="font-size:0.82em;color:var(--amber);display:block;margin-bottom:8px">pip install custodian-kernel[dev]<br>pytest tests/</code>
+        <code style="font-size:0.82em;color:var(--amber);display:block;margin-bottom:8px">pip install "custodian-kernel[dev]"<br>pytest tests/</code>
         <div style="color:var(--muted);font-size:0.85em">1,163 tests. 0 failures. Includes self-approval regression proof.</div>
       </div>
       <div class="card reveal" style="padding:22px 24px">
@@ -933,7 +984,7 @@ result <span style="color:var(--dim)">=</span> decide(
       <p class="sec-sub">The core pattern: inference and enforcement run on different machines. The AI model recommends. The kernel decides. Those two processes have no network path between them — the agent cannot reach the enforcement layer, talk its way past it, or instruct it directly. This separation is what makes the guarantee structural rather than assumed.<br><br>The kernel runs on whatever you have. A $20/mo cloud VM. Your existing server. A laptop. The same <code style="color:var(--green)">pip install custodian-kernel</code> that runs on a Raspberry Pi also runs on our DGX Spark GB10 — which is exactly how we know it handles anything you throw at it.</p>
     </div>
 
-    <div class="reveal" style="margin-top:48px; display:grid; grid-template-columns:1fr auto 1fr; gap:0; align-items:center; max-width:860px; margin-left:auto; margin-right:auto">
+    <div class="reveal g3diagram" style="margin-top:48px; max-width:860px; margin-left:auto; margin-right:auto">
 
       <!-- INFERENCE -->
       <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.09); border-radius:16px; padding:32px 28px">
@@ -947,7 +998,7 @@ result <span style="color:var(--dim)">=</span> decide(
       </div>
 
       <!-- ARROW -->
-      <div style="text-align:center; padding:0 20px">
+      <div class="g3-arrow" style="text-align:center; padding:0 20px">
         <div style="font-size:0.65em; color:#5d6273; letter-spacing:0.08em; text-transform:uppercase; margin-bottom:8px">request only</div>
         <div style="font-size:1.6em; color:#3a4050">⟶</div>
         <div style="font-size:0.65em; color:#ff5c5c; margin-top:8px; letter-spacing:0.06em">no return path</div>
@@ -958,7 +1009,7 @@ result <span style="color:var(--dim)">=</span> decide(
         <div style="position:absolute; top:-12px; right:16px; background:#76b900; color:#000; font-size:0.65em; font-weight:700; letter-spacing:0.1em; padding:3px 10px; border-radius:20px; text-transform:uppercase">Your Server</div>
         <div style="font-size:0.72em; letter-spacing:0.12em; color:#76b900; text-transform:uppercase; font-weight:600; margin-bottom:16px">Enforcement Layer</div>
         <div style="font-size:1.25em; font-weight:700; margin-bottom:8px">Custodian Kernel</div>
-        <div style="font-size:0.82em; color:#8d93a6; line-height:1.7; margin-bottom:20px">OS-level enforcement · any Linux host<br>Runs on a VPS, bare metal, or on-device<br>Policy as YAML · audit log append-only</div>
+        <div style="font-size:0.82em; color:#8d93a6; line-height:1.7; margin-bottom:20px">OS-level enforcement · any Linux host<br>Runs on a VPS, bare metal, or on-device<br>Config-driven policy · audit log append-only</div>
         <div style="font-size:0.75em; font-family:var(--mono); color:#5d6273; border-top:1px solid rgba(118,185,0,0.15); padding-top:14px">
           <div style="color:#ff5c5c; margin-bottom:4px">● Agent cannot reach this layer</div>
           <div style="color:#76b900; margin-bottom:4px">● Every spend decision runs here</div>
@@ -1380,6 +1431,33 @@ result <span style="color:var(--dim)">=</span> decide(
     // For a production list use Mailchimp/Resend here
     return false;
   }
+
+  // ── hamburger nav ──────────────────────────────────────
+  (function(){
+    var burger = document.getElementById('nav-burger');
+    var panel  = document.getElementById('nav-panel');
+    if(!burger || !panel) return;
+    burger.addEventListener('click', function(){
+      var open = panel.classList.toggle('open');
+      burger.classList.toggle('open', open);
+      burger.setAttribute('aria-expanded', open);
+    });
+    panel.querySelectorAll('a').forEach(function(a){
+      a.addEventListener('click', function(){
+        panel.classList.remove('open');
+        burger.classList.remove('open');
+        burger.setAttribute('aria-expanded', 'false');
+      });
+    });
+    // close on outside click
+    document.addEventListener('click', function(e){
+      if(!burger.contains(e.target) && !panel.contains(e.target)){
+        panel.classList.remove('open');
+        burger.classList.remove('open');
+        burger.setAttribute('aria-expanded', 'false');
+      }
+    });
+  })();
 </script>
 </body>
 </html>
