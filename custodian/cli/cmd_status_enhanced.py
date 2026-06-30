@@ -49,7 +49,7 @@ def _format_kill_state(killed: bool) -> str:
 
 def _print_empty_banner() -> None:
     print("CUSTODIAN | ledger empty | no spend requests yet")
-    print("Run `custodian demo-verify` to see the claim verifier in action.")
+    print("Run `custodian demo verify` to see the claim verifier in action.")
 
 
 def _print_banner(
