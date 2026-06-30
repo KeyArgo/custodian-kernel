@@ -15,3 +15,6 @@ export/
 policy.yaml
 /state/
 /secrets/*.env
+# video project artifacts (separate project, not part of this repo)
+video-hf/
+video-build/*.mp4
