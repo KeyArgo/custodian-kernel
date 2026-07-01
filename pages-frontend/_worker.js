@@ -1,7 +1,7 @@
 /**
  * CF Pages _worker.js
  *
- * /hermes          → hermes.html static asset (public live-console page)
+ * /console          → console.html static asset (public live-console page)
  * /operator        → operator.html static asset (judge demo panel)
  * /triage          → triage.html static asset (lie-catch demo; JS calls API directly)
  * /api/v1/*        → Flask API endpoints (proxied to Flask backend)

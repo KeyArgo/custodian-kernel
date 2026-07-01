@@ -21,7 +21,16 @@
   --mono:'JetBrains Mono','Fira Code',monospace;
 }
 html{scroll-behavior:smooth}
-body{font-family:var(--mono);background:var(--bg);color:var(--text);line-height:1.55;-webkit-font-smoothing:antialiased}
+body{
+  font-family:var(--mono);
+  background:
+    radial-gradient(circle at top left, rgba(118,185,0,0.08), transparent 26%),
+    radial-gradient(circle at top right, rgba(255,176,0,0.08), transparent 24%),
+    linear-gradient(180deg, #06070b 0%, #05060a 100%);
+  color:var(--text);
+  line-height:1.55;
+  -webkit-font-smoothing:antialiased
+}
 .mono{font-family:'JetBrains Mono',monospace}
 a{color:inherit;text-decoration:none}
 /* ── kernel nav ─────────────────────────────────────────── */
@@ -51,59 +60,148 @@ a{color:inherit;text-decoration:none}
 .wrap{max-width:1180px;margin:0 auto;padding:0 28px}
 
 /* hero */
-.tools-hero{padding:64px 0 40px;text-align:center}
+.tools-hero{padding:64px 0 40px;text-align:center;position:relative}
+.tools-hero::before{
+  content:'';
+  position:absolute;inset:0;
+  background:linear-gradient(180deg, rgba(255,255,255,0.015), transparent 28%);
+  pointer-events:none
+}
 .eyebrow{display:inline-flex;align-items:center;gap:9px;font-family:'JetBrains Mono',monospace;font-size:0.72em;letter-spacing:0.14em;text-transform:uppercase;color:var(--nvidia);border:1px solid rgba(118,185,0,0.3);background:rgba(118,185,0,0.05);padding:6px 14px;border-radius:100px;margin-bottom:24px}
 h1{font-size:clamp(2em,5vw,3.2em);font-weight:700;line-height:1.1;letter-spacing:-0.02em;margin-bottom:16px}
 .lede{color:var(--muted);font-size:1.06em;max-width:620px;margin:0 auto 32px;line-height:1.65}
 .lede b{color:var(--text)}
 
 /* summary strip */
-.summary-strip{display:flex;gap:0;border:1px solid var(--line2);border-radius:14px;overflow:hidden;background:rgba(255,255,255,0.02);margin:0 auto 48px;max-width:700px}
-.sum-cell{flex:1;padding:16px 20px;text-align:center;border-right:1px solid var(--line)}
+.summary-strip{
+  display:flex;gap:0;
+  border:1px solid rgba(255,255,255,0.10);
+  border-radius:16px;overflow:hidden;
+  background:linear-gradient(180deg, rgba(18,23,35,0.96), rgba(9,11,18,0.98));
+  margin:0 auto 48px;max-width:700px;
+  box-shadow:0 16px 34px rgba(0,0,0,0.24), inset 0 1px 0 rgba(255,255,255,0.03)
+}
+.sum-cell{flex:1;padding:16px 20px;text-align:center;border-right:1px solid rgba(255,255,255,0.08)}
 .sum-cell:last-child{border-right:none}
-.sum-v{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:1.6em}
+.sum-v{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:1.6em;text-shadow:0 0 12px rgba(255,255,255,0.03)}
 .sum-l{font-size:0.78em;color:var(--muted);margin-top:4px}
 .c-l0{color:var(--dim)} .c-l1{color:var(--cyan)} .c-l2{color:var(--green)} .c-l3{color:var(--amber)} .c-l4{color:var(--red)}
+.guide-card{
+  max-width:760px;margin:0 auto 34px;padding:18px 20px;
+  border:1px solid rgba(118,185,0,0.24);border-radius:16px;
+  background:linear-gradient(180deg, rgba(14,20,12,0.96), rgba(8,12,8,0.98));
+  text-align:left;
+  box-shadow:0 14px 30px rgba(0,0,0,0.22)
+}
+.guide-kicker{font-size:0.72em;letter-spacing:0.12em;text-transform:uppercase;color:var(--nvidia);margin-bottom:8px}
+.guide-copy{color:var(--muted);font-size:0.92em;line-height:1.7}
+.guide-actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px}
+.guide-link{
+  display:inline-flex;align-items:center;gap:8px;padding:9px 14px;border-radius:999px;
+  border:1px solid rgba(118,185,0,0.28);color:var(--text);
+  background:rgba(255,255,255,0.03);
+  transition:transform .15s,border-color .15s,background .15s,color .15s,box-shadow .15s
+}
+.guide-link:hover{
+  border-color:var(--amber);color:var(--amber2);
+  background:rgba(255,176,0,0.06);
+  transform:translateY(-1px);
+  box-shadow:0 8px 18px rgba(0,0,0,0.18)
+}
 
 /* filter bar */
 .filter-bar{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:32px;align-items:center}
-.filter-btn{font-family:'JetBrains Mono',monospace;font-size:0.72em;letter-spacing:0.08em;cursor:pointer;border-radius:8px;padding:6px 13px;border:1px solid var(--line);background:rgba(255,255,255,0.02);color:var(--muted);transition:all .15s}
+.filter-btn{
+  font-family:'JetBrains Mono',monospace;font-size:0.72em;letter-spacing:0.08em;
+  cursor:pointer;border-radius:999px;padding:6px 13px;border:1px solid rgba(255,255,255,0.08);
+  background:rgba(255,255,255,0.02);color:var(--muted);
+  transition:all .15s, transform .15s
+}
 .filter-btn:hover{color:var(--text);border-color:var(--line2)}
-.filter-btn.active{color:var(--text);border-color:var(--amber);background:rgba(255,176,0,0.07)}
-.search-input{flex:1;min-width:180px;background:rgba(255,255,255,0.03);border:1px solid var(--line);border-radius:8px;color:var(--text);font:14px/1 inherit;padding:8px 14px;outline:none}
+.filter-btn:hover{transform:translateY(-1px)}
+.filter-btn.active{color:var(--text);border-color:var(--amber);background:rgba(255,176,0,0.07);box-shadow:0 0 0 1px rgba(255,176,0,0.06)}
+.search-input{
+  flex:1;min-width:180px;background:rgba(255,255,255,0.03);
+  border:1px solid rgba(255,255,255,0.08);border-radius:999px;color:var(--text);
+  font:14px/1 inherit;padding:10px 14px;outline:none;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,0.02)
+}
 .search-input:focus{border-color:var(--line2)}
 .search-input::placeholder{color:var(--dim)}
 
 /* tools grid */
 .tools-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px;margin-bottom:60px}
-.tool-card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:20px 22px;transition:border-color .2s,transform .2s;cursor:default}
-.tool-card:hover{border-color:var(--line2);transform:translateY(-2px)}
-.tool-card.configured{border-left:3px solid var(--green)}
-.tool-card.stub{border-left:3px solid var(--dim)}
+.tool-card{
+  position:relative;
+  background:linear-gradient(180deg, rgba(18,23,35,0.96), rgba(10,13,20,0.98));
+  border:1px solid rgba(255,255,255,0.08);
+  border-radius:16px;padding:20px 22px;
+  transition:border-color .2s,transform .2s,box-shadow .2s,background .2s;
+  cursor:default;
+  box-shadow:0 14px 28px rgba(0,0,0,0.18), inset 0 1px 0 rgba(255,255,255,0.03);
+  overflow:hidden
+}
+.tool-card::before{
+  content:'';
+  position:absolute;inset:0 auto 0 0;width:4px;
+  background:rgba(93,98,115,0.65)
+}
+.tool-card.configured::before{background:linear-gradient(180deg, rgba(46,230,166,0.95), rgba(118,185,0,0.85))}
+.tool-card.stub::before{background:linear-gradient(180deg, rgba(93,98,115,0.9), rgba(93,98,115,0.55))}
+.tool-card:hover{
+  border-color:rgba(255,255,255,0.14);
+  transform:translateY(-3px);
+  box-shadow:0 18px 34px rgba(0,0,0,0.28), 0 0 0 1px rgba(255,255,255,0.03)
+}
 .tc-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:10px}
-.tc-name{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:0.92em;color:var(--text)}
-.tc-band{font-family:'JetBrains Mono',monospace;font-size:0.65em;letter-spacing:0.08em;text-transform:uppercase;padding:3px 8px;border-radius:5px;flex-shrink:0}
+.tc-name{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:0.96em;color:var(--text);line-height:1.25}
+.tc-band{
+  font-family:'JetBrains Mono',monospace;font-size:0.65em;letter-spacing:0.08em;
+  text-transform:uppercase;padding:3px 8px;border-radius:999px;flex-shrink:0
+}
 .band-L0{color:var(--dim);background:rgba(93,98,115,0.12);border:1px solid rgba(93,98,115,0.2)}
 .band-L1{color:var(--cyan);background:rgba(73,214,232,0.08);border:1px solid rgba(73,214,232,0.2)}
 .band-L2{color:var(--green);background:rgba(46,230,166,0.08);border:1px solid rgba(46,230,166,0.2)}
 .band-L3{color:var(--amber);background:rgba(255,176,0,0.08);border:1px solid rgba(255,176,0,0.2)}
 .band-L4{color:var(--red);background:rgba(255,92,92,0.08);border:1px solid rgba(255,92,92,0.2)}
-.tc-desc{color:var(--muted);font-size:0.88em;line-height:1.55;margin-bottom:10px}
+.tc-desc{color:#a9afbf;font-size:0.9em;line-height:1.6;margin-bottom:12px}
 .tc-foot{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
-.tc-status{font-family:'JetBrains Mono',monospace;font-size:0.65em;letter-spacing:0.06em}
+.tc-status{
+  font-family:'JetBrains Mono',monospace;font-size:0.65em;letter-spacing:0.08em;
+  text-transform:uppercase;padding:3px 7px;border-radius:999px;
+  background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06)
+}
 .tc-status.configured{color:var(--green)}
 .tc-status.stub{color:var(--dim)}
-.tc-tag{font-size:0.68em;color:var(--dim);background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.07);border-radius:4px;padding:2px 7px}
+.tc-tag{
+  font-size:0.68em;color:var(--dim);
+  background:rgba(255,255,255,0.04);
+  border:1px solid rgba(255,255,255,0.07);
+  border-radius:999px;padding:3px 8px
+}
 
 /* band legend */
-.band-legend{display:flex;gap:18px;flex-wrap:wrap;margin-bottom:28px;font-size:0.82em;color:var(--muted)}
+.band-legend{
+  display:flex;gap:18px;flex-wrap:wrap;margin-bottom:28px;
+  font-size:0.82em;color:var(--muted);
+  padding:14px 16px;border:1px solid rgba(255,255,255,0.08);
+  border-radius:14px;background:rgba(255,255,255,0.02)
+}
 .bl-item{display:flex;align-items:center;gap:6px}
 .bl-dot{width:8px;height:8px;border-radius:50%}
 
 /* empty state */
-.empty{text-align:center;padding:60px 0;color:var(--dim);font-size:0.95em}
+.empty{
+  text-align:center;padding:60px 0;color:var(--dim);font-size:0.95em;
+  border:1px dashed rgba(255,255,255,0.12);border-radius:14px;
+  background:rgba(255,255,255,0.02)
+}
 
-footer{border-top:1px solid var(--line);padding:32px 0;color:var(--dim);font-size:0.84em;text-align:center}
+footer{
+  border-top:1px solid rgba(255,255,255,0.08);
+  padding:32px 0;color:var(--dim);font-size:0.84em;text-align:center;
+  background:linear-gradient(180deg, transparent, rgba(255,255,255,0.02))
+}
 </style>
 </head>
 <body>
@@ -119,7 +217,7 @@ footer{border-top:1px solid var(--line);padding:32px 0;color:var(--dim);font-siz
   </a>
   <div class="k-links">
     <a href="/">Home</a>
-    <a href="/hermes">Console</a>
+    <a href="/console">Console</a>
     <a href="/operator">Operator</a>
     <a href="/triage">Triage</a>
     <a href="/tools" class="active">Tools</a>
@@ -141,6 +239,14 @@ footer{border-top:1px solid var(--line);padding:32px 0;color:var(--dim);font-siz
       <div class="sum-cell"><div class="sum-v" id="total-count">—</div><div class="sum-l">Total tools</div></div>
       <div class="sum-cell"><div class="sum-v" id="configured-count" style="color:var(--green)">—</div><div class="sum-l">Ready out of the box</div></div>
       <div class="sum-cell"><div class="sum-v" id="stub-count" style="color:var(--dim)">—</div><div class="sum-l">Optional integrations</div></div>
+    </div>
+    <div class="guide-card" id="tools-guide-card">
+      <div class="guide-kicker">Why this matters</div>
+      <div class="guide-copy" id="tools-guide-copy">The demo proves one spend path. This page proves the bigger point: the same kernel can govern every consequential tool your agents touch.</div>
+      <div class="guide-actions">
+        <a class="guide-link" href="/triage">See why AI alone is not enough</a>
+        <a class="guide-link" href="/docs">Read how the kernel model scales</a>
+      </div>
     </div>
   </div>
 </div>
@@ -180,6 +286,7 @@ footer{border-top:1px solid var(--line);padding:32px 0;color:var(--dim);font-siz
   </div>
 </footer>
 
+<script src="/site-tour.js"></script>
 <script>
 let allTools = [];
 let activeBand = 'all';
@@ -250,12 +357,27 @@ async function loadTools() {
     document.getElementById('hero-count').textContent = '102';
     document.getElementById('tools-grid').innerHTML = `<div class="empty">
       Tool registry API not reachable from static preview.<br>
-      <a href="/hermes" style="color:var(--amber)">Open live console</a> to see the registry live, or run <code>custodian tools list</code> locally.
+      <a href="/console" style="color:var(--amber)">Open live console</a> to see the registry live, or run <code>custodian tools list</code> locally.
     </div>`;
   }
 }
 
 loadTools();
+
+(function(){
+  if(!window.CustodianTour) return;
+  const tour = window.CustodianTour;
+  tour.onPage('tools');
+  const copy = document.getElementById('tools-guide-copy');
+  const state = tour.getState();
+  if (state.pending_tools_followup) {
+    copy.textContent = 'You have already seen the audit and lie-catch. Now read this page as the scale story: Custodian is one authority model that can grow across every real tool an agent uses.';
+    tour.completeTools();
+  } else if (state.mode === 'deep') {
+    copy.textContent = 'Think of this as the expansion chapter of the tour: same kernel, more tools, same approval and audit shape each time.';
+  }
+})();
 </script>
+<script src="/nemo-guide.js"></script>
 </body>
 </html>

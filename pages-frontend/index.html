@@ -546,7 +546,7 @@
       <a href="/triage">Lie-Catch</a>
       <a href="/tools">Tools</a>
       <a href="/docs">Docs</a>
-      <a class="btn btn-primary" href="/hermes">Launch live console →</a>
+      <a class="btn btn-primary" href="/console">Launch live console →</a>
       <button class="nav-burger" id="nav-burger" aria-label="Open menu" aria-expanded="false">
         <span></span><span></span><span></span>
       </button>
@@ -561,7 +561,7 @@
   <a href="/triage">Lie-Catch Demo</a>
   <a href="/tools">Tools</a>
   <a href="/docs">Docs</a>
-  <a href="/hermes" class="np-cta">Launch live console →</a>
+  <a href="/console" class="np-cta">Launch live console →</a>
 </div>
 
 <!-- HERO -->
@@ -587,7 +587,7 @@
           <span class="proof-dot">·</span>
           <span class="proof-item">✓ $0 unauthorized spend</span>
           <span class="proof-dot">·</span>
-          <span class="proof-item">✓ 1,298 tests pass</span>
+          <span class="proof-item">✓ 1,350 tests pass</span>
           <span class="proof-dot">·</span>
           <span class="proof-item" style="color:#a39fff">✓ real Stripe PI on record</span>
           <span class="proof-dot">·</span>
@@ -595,7 +595,7 @@
         </div>
         <div class="hero-cta">
           <a class="btn btn-primary" href="/operator" target="_blank" rel="noopener">▶ Run the live demo</a>
-          <a class="btn btn-ghost" href="/hermes">Watch it request a real PaymentIntent →</a>
+          <a class="btn btn-ghost" href="/console">Watch it request a real PaymentIntent →</a>
           <a class="btn btn-ghost" href="https://buy.stripe.com/test_4gMeVffdb4dSgTB8Ht2B200" target="_blank" rel="noopener" style="border-color:#635bff;color:#a39fff">💳 Safety Review — $25</a>
         </div>
         <div class="tour-offer" id="tour-offer" aria-live="polite">
@@ -811,7 +811,7 @@
     {t:'[1/4] REGRESSION — self-approval bug reintroduced',c:'#888',p:400},
     {t:'  Result: CAUGHT BY TEST SUITE  ✓',c:'#2ee6a6',p:700},
     {t:'',p:200},
-    {t:'[2/4] TEST SUITE — 1,298 tests',c:'#888',p:400},
+    {t:'[2/4] TEST SUITE — 1,350 tests',c:'#888',p:400},
     {t:'  Result: ALL PASS  ✓',c:'#2ee6a6',p:800},
     {t:'',p:200},
     {t:'[3/4] LIVE STRIPE — real PaymentIntent',c:'#888',p:400},
@@ -1012,7 +1012,7 @@
       <div id="nemo-log-feed"><div class="nemo-empty">Connecting to kernel sandbox…</div></div>
     </div>
     <div style="margin-top:28px; text-align:center">
-      <a class="btn btn-ghost" href="/hermes" style="margin-right:12px">Watch the live console →</a>
+      <a class="btn btn-ghost" href="/console" style="margin-right:12px">Watch the live console →</a>
       <a class="btn btn-ghost" href="/triage">See the lie-catch demo →</a>
     </div>
   </div>
@@ -1032,7 +1032,7 @@
         <div class="metric"><div class="mv" id="m-governed">—</div><div class="ml">Cases governed by kernel</div><div class="mlive"><span class="pulse"></span>LIVE</div></div>
         <div class="metric"><div class="mv" id="m-payments">—</div><div class="ml">Stripe test-mode PaymentIntents created</div></div>
         <div class="metric"><div class="mv">3/3</div><div class="ml">Planted lies caught (0 false positives)</div></div>
-        <div class="metric"><div class="mv">1,298</div><div class="ml">Passing tests — run them yourself</div></div>
+        <div class="metric"><div class="mv">1,350</div><div class="ml">Passing tests — run them yourself</div></div>
       </div>
       <div class="reveal">
         <ul class="checks">
@@ -1042,7 +1042,7 @@
           <li><b>Rail-agnostic</b> — the same kernel governs refunds, payables, and NVIDIA NIM job provisioning.</li>
           <li><b>102 tools registered</b> — 41 active out of the box (monitoring, security, web, storage), 61 more with your own API keys. Every call kernel-checked regardless.</li>
         </ul>
-        <a class="btn btn-primary" href="/hermes" style="margin-top:22px">Open the live console →</a>
+        <a class="btn btn-primary" href="/console" style="margin-top:22px">Open the live console →</a>
       </div>
     </div>
   </div>
@@ -1193,7 +1193,7 @@ result <span style="color:var(--dim)">=</span> decide(
     </div>
     <div class="reveal" style="max-width:900px;margin:20px auto 0;display:flex;gap:16px;flex-wrap:wrap;justify-content:center">
       <div style="background:#080a10;border:1px solid var(--line);border-radius:8px;padding:12px 18px;font-size:0.82em;color:var(--muted)">
-        <span style="color:var(--green);font-weight:700">1,298</span> tests · <span style="color:var(--green);font-weight:700">0</span> failures · <span style="color:var(--green);font-weight:700">102</span> bundled skills
+        <span style="color:var(--green);font-weight:700">1,350</span> tests · <span style="color:var(--green);font-weight:700">0</span> failures · <span style="color:var(--green);font-weight:700">102</span> bundled skills
       </div>
       <div style="background:#080a10;border:1px solid var(--line);border-radius:8px;padding:12px 18px;font-size:0.82em;color:var(--muted)">
         Run <code style="color:var(--amber)">python3 verify_kit.py</code> to prove it yourself — 90 seconds, no credentials
@@ -1227,7 +1227,7 @@ result <span style="color:var(--dim)">=</span> decide(
       <div class="card reveal" style="padding:22px 24px">
         <div style="font-family:'JetBrains Mono',monospace;font-size:0.65em;letter-spacing:0.12em;text-transform:uppercase;color:var(--amber);margin-bottom:10px">Step 3 — Test suite</div>
         <code style="font-size:0.82em;color:var(--amber);display:block;margin-bottom:8px">pip install "custodian-kernel[dev]"<br>pytest tests/</code>
-        <div style="color:var(--muted);font-size:0.85em">1,298 tests. 0 failures. Includes self-approval regression proof.</div>
+        <div style="color:var(--muted);font-size:0.85em">1,350 tests. 0 failures. Includes self-approval regression proof.</div>
       </div>
       <div class="card reveal" style="padding:22px 24px">
         <div style="font-family:'JetBrains Mono',monospace;font-size:0.65em;letter-spacing:0.12em;text-transform:uppercase;color:var(--cyan);margin-bottom:10px">Step 4 — Read the source</div>
@@ -1360,7 +1360,7 @@ result <span style="color:var(--dim)">=</span> decide(
           <div class="play">▶</div>
           <div class="vt">Demo video drops before submission</div>
           <div class="vs">In the meantime, the live console is the real thing — every number on this page is pulled from it right now.</div>
-          <a class="btn btn-ghost" href="/hermes">Launch the live console instead →</a>
+          <a class="btn btn-ghost" href="/console">Launch the live console instead →</a>
         </div>
       </div>
     </div>
@@ -1415,7 +1415,7 @@ result <span style="color:var(--dim)">=</span> decide(
       <p>Money is just the first module. The same kernel governs any consequential action an AI agent can take — provisioning, payroll, data egress, infrastructure.</p>
       <div class="hero-cta" style="margin-bottom:0">
         <a class="btn btn-primary" href="/operator" target="_blank" rel="noopener">▶ Run the demo yourself</a>
-        <a class="btn btn-ghost" href="/hermes">Open the live console →</a>
+        <a class="btn btn-ghost" href="/console">Open the live console →</a>
         <a class="btn btn-ghost" href="https://buy.stripe.com/test_4gMeVffdb4dSgTB8Ht2B200" target="_blank" rel="noopener" style="border-color:#635bff;color:#a39fff">💳 Buy a Safety Review — $25</a>
       </div>
     </div>
@@ -1786,7 +1786,7 @@ result <span style="color:var(--dim)">=</span> decide(
         offer.classList.remove('show');
         return;
       }
-      window.location.href = '/hermes';
+      window.location.href = '/console';
     }
 
     document.getElementById('tour-mode-quick').addEventListener('click', ()=>choose('quick'));
@@ -1808,5 +1808,6 @@ result <span style="color:var(--dim)">=</span> decide(
     }
   })();
 </script>
+<script src="/nemo-guide.js"></script>
 </body>
 </html>

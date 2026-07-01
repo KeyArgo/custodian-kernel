@@ -361,7 +361,7 @@
   </a>
   <div class="k-links">
     <a href="/">Home</a>
-    <a href="/hermes">Console</a>
+    <a href="/console">Console</a>
     <a href="/operator">Operator</a>
     <a href="/triage" class="active">Triage</a>
     <a href="/tools">Tools</a>
@@ -635,6 +635,8 @@ async function runCase(caseId, mount, live){
     const r = await fetch(url,{method:'POST'});
     const p = await r.json();
     if(p.error){mount.innerHTML = `<div class="spin">${esc(p.error)}</div>`;return;}
+    lastTriageResult = p;
+    if (window.CustodianTour) window.CustodianTour.nudgeTools();
     mount.innerHTML = renderPanel(p);
   }catch(e){mount.innerHTML = `<div class="spin">error: ${esc(e.message)}</div>`;}
 }
@@ -776,6 +778,8 @@ async function runCase(caseId, mount, live, pack){
     const p = await r.json();
     if(p.error){mount.innerHTML = `<div class="spin">${esc(p.error)}</div>`;return;}
     p.overrode_agent = p.overrode_agent ?? (p.contradiction_count > 0);
+    lastTriageResult = p;
+    if (window.CustodianTour) window.CustodianTour.nudgeTools();
     mount.innerHTML = renderPanel(p);
   }catch(e){mount.innerHTML = `<div class="spin">error: ${esc(e.message)}</div>`;}
 }
@@ -1076,6 +1080,8 @@ async function runCustom() {
       return;
     }
     p.overrode_agent = p.overrode_agent ?? (p.contradiction_count > 0);
+    lastTriageResult = p;
+    if (window.CustodianTour) window.CustodianTour.nudgeTools();
     result.innerHTML = renderPanel(p);
   } catch(e) {
     result.innerHTML = `<div class="spin">Could not reach backend: ${esc(e.message)}</div>`;
@@ -1143,9 +1149,12 @@ async function runCustom() {
   </div>
 </div>
 
+<script src="/site-tour.js"></script>
 <script>
 (function(){
 const HISTORY_KEY = 'custodian_nemotron_history';
+const siteTour = window.CustodianTour || null;
+if (siteTour) siteTour.onPage('triage');
 const TRIAGE_POOL = [
     "What kinds of lies can the verifier actually catch — and which ones slip through?",
     "How does a contradicted claim physically stop money from moving?",
@@ -1168,7 +1177,7 @@ function nextSuggest(skip){
     return TRIAGE_POOL[0];
 }
 
-const history = (()=>{try{return JSON.parse(sessionStorage.getItem(HISTORY_KEY)||'[]')}catch{return []}})();
+const history = (()=>{ if(siteTour) return siteTour.getHistory(); try{return JSON.parse(localStorage.getItem(HISTORY_KEY)||'[]')}catch{return []}})();
 const bubble  = document.getElementById('tr-nemo-bubble');
 const panel   = document.getElementById('tr-nemo-panel');
 const body    = document.getElementById('tr-nemo-body');
@@ -1176,6 +1185,15 @@ const input   = document.getElementById('tr-nemo-input');
 const sendBtn = document.getElementById('tr-nemo-send');
 const closeBtn= document.getElementById('tr-nemo-close');
 let opened = false;
+
+function siteContext(extra){
+    return siteTour ? siteTour.buildSiteContext(extra) : (extra || {});
+}
+
+function saveHistory(){
+    if(siteTour) siteTour.saveHistory(history);
+    else { try{localStorage.setItem(HISTORY_KEY,JSON.stringify(history.slice(-16)));}catch{} }
+}
 
 function addMsg(text, role){
     const d=document.createElement('div');
@@ -1207,14 +1225,15 @@ function renderAnswer(raw){
 
 function open(){
     panel.style.display='flex'; bubble.style.display='none';
+    if(siteTour) siteTour.enableAssistant();
     if(!opened){
         opened=true;
         const thinking=addMsg('…','bot');
         const greet=history.length>0
-            ?'We were just talking on another page. I\'m now on the lie-catch demo. Introduce yourself in one sentence as the intelligence layer that reads requests — and tell the visitor in one sentence what this page specifically demonstrates about how the verifier catches lies.'
-            :'Greet in 2 sentences: you\'re Nemotron on the lie-catch demo page. This page shows what happens when the AI (you) gets fooled by a lying customer — and the deterministic verifier catches it anyway. End with one [[suggest:]] question to draw them in.';
+            ?'We were just talking on another page. I am now on the lie-catch demo. In 2 sentences, explain that this page proves the AI can be fooled while the verifier still catches contradictions. Mention that tools are the next stop after triage.'
+            :'Greet in 2 sentences: you are Nemotron on the lie-catch demo page. Explain that this page shows what happens when the AI gets fooled by a lying customer and the deterministic verifier catches it anyway. End with one [[suggest:]] question to draw them in.';
         fetch('/api/v1/nemotron/ask',{method:'POST',headers:{'Content-Type':'application/json'},
-            body:JSON.stringify({question:greet,history:history.slice(-4),page:'triage'})
+            body:JSON.stringify({question:greet,history:history.slice(-4),page:'triage',site_context:siteContext(),triage_context:lastTriageResult})
         }).then(r=>r.json()).then(d=>{thinking.remove();renderAnswer(d.answer||"I'm Nemotron — try a lie above and ask me what the kernel found.");})
           .catch(()=>{thinking.remove();addMsg("I'm Nemotron — try a lie above and ask me what the kernel found.",'bot');});
     }
@@ -1222,7 +1241,7 @@ function open(){
 }
 
 bubble.addEventListener('click',open);
-closeBtn.addEventListener('click',()=>{panel.style.display='none';bubble.style.display='flex';});
+closeBtn.addEventListener('click',()=>{panel.style.display='none';bubble.style.display='flex'; if(siteTour) siteTour.dismissAssistant();});
 
 async function send(){
     const q=input.value.trim(); if(!q) return;
@@ -1231,20 +1250,28 @@ async function send(){
     const thinking=addMsg('…','bot');
     try{
         const r=await fetch('/api/v1/nemotron/ask',{method:'POST',headers:{'Content-Type':'application/json'},
-            body:JSON.stringify({question:q,history:history.slice(-8),page:'triage'})});
+            body:JSON.stringify({question:q,history:history.slice(-8),page:'triage',site_context:siteContext(),triage_context:lastTriageResult})});
         const d=await r.json(); thinking.remove();
         const ans=(d.answer||d.error||'No answer.').trim();
         renderAnswer(ans);
         history.push({role:'user',content:q});
         history.push({role:'assistant',content:ans.replace(/\[\[.*?\]\]/g,'').trim()});
-        try{sessionStorage.setItem(HISTORY_KEY,JSON.stringify(history.slice(-16)));}catch{}
+        saveHistory();
     }catch(e){thinking.remove();addMsg('Could not reach Nemotron right now.','bot');}
     finally{sendBtn.disabled=false;input.focus();}
 }
 
 sendBtn.addEventListener('click',send);
 input.addEventListener('keydown',e=>{if(e.key==='Enter')send();});
+if(siteTour){
+    const state = siteTour.getState();
+    const shouldAutoOpen = !siteTour.isMobile() && !state.assistant_dismissed && state.mode !== 'free';
+    if(shouldAutoOpen){
+        setTimeout(open, 900);
+    }
+}
 })();
 </script>
+<script src="/nemo-guide.js"></script>
 </body>
 </html>

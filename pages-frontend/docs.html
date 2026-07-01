@@ -34,7 +34,11 @@
 *{box-sizing:border-box;margin:0;padding:0}
 html{scroll-behavior:smooth}
 body{
-  background:var(--bg);color:var(--text);
+  background:
+    radial-gradient(circle at top left, rgba(93,176,255,0.07), transparent 28%),
+    radial-gradient(circle at top right, rgba(255,176,0,0.07), transparent 24%),
+    linear-gradient(180deg, #06070b 0%, #05060a 100%);
+  color:var(--text);
   font:15px/1.7 var(--mono);
   display:flex;flex-direction:column;min-height:100vh;
 }
@@ -78,9 +82,11 @@ h1,h2,h3,h4{font-weight:700;letter-spacing:-0.01em;color:var(--text)}
 /* sidebar */
 .sidebar{
   width:240px;flex-shrink:0;
-  background:var(--sidebar);border-right:1px solid var(--line);
+  background:linear-gradient(180deg, rgba(9,12,20,0.98), rgba(7,9,15,0.98));
+  border-right:1px solid rgba(255,176,0,0.12);
   position:sticky;top:52px;height:calc(100vh - 52px);
   overflow-y:auto;padding:28px 0 60px;
+  box-shadow:inset -1px 0 0 rgba(255,255,255,0.03)
 }
 .sidebar::-webkit-scrollbar{width:4px}
 .sidebar::-webkit-scrollbar-track{background:transparent}
@@ -99,11 +105,17 @@ h1,h2,h3,h4{font-weight:700;letter-spacing:-0.01em;color:var(--text)}
 @media(max-width:900px){.content{padding:32px 24px 60px}}
 
 /* sections */
-.doc-section{margin-bottom:56px;padding-top:8px}
+.doc-section{
+  margin-bottom:56px;padding:20px 20px 8px;
+  background:linear-gradient(180deg, rgba(18,23,35,0.92), rgba(10,13,20,0.96));
+  border:1px solid rgba(255,255,255,0.08);
+  border-radius:16px;
+  box-shadow:0 14px 30px rgba(0,0,0,0.22), inset 0 1px 0 rgba(255,255,255,0.03)
+}
 .doc-section:first-child{padding-top:0}
 .section-eyebrow{font-family:var(--mono);font-size:0.65em;letter-spacing:0.14em;
   text-transform:uppercase;color:var(--nv);margin-bottom:8px;font-weight:700}
-.doc-section h2{font-size:1.75em;margin-bottom:14px;border-bottom:1px solid var(--line);
+.doc-section h2{font-size:1.75em;margin-bottom:14px;border-bottom:1px solid rgba(255,255,255,0.08);
   padding-bottom:10px}
 .doc-section h3{font-size:1.15em;margin:28px 0 10px;color:var(--text)}
 .doc-section h4{font-size:0.95em;margin:20px 0 8px;color:var(--muted);
@@ -113,16 +125,27 @@ h1,h2,h3,h4{font-weight:700;letter-spacing:-0.01em;color:var(--text)}
 .doc-section ul,.doc-section ol{color:var(--muted);padding-left:22px;margin-bottom:14px}
 .doc-section li{margin-bottom:6px;line-height:1.7}
 .doc-section li strong{color:var(--text)}
+.docs-guide{
+  margin:0 0 28px;padding:16px 18px;
+  border:1px solid rgba(255,176,0,0.22);border-radius:14px;
+  background:linear-gradient(180deg, rgba(22,16,5,0.98), rgba(12,8,2,0.98));
+  box-shadow:0 12px 24px rgba(0,0,0,0.18)
+}
+.docs-guide-kicker{font-size:0.72em;letter-spacing:0.12em;text-transform:uppercase;color:var(--amber2);margin-bottom:8px}
+.docs-guide-copy{color:var(--muted);font-size:0.92em;line-height:1.7}
 
 /* callout boxes */
-.callout{border-radius:10px;padding:14px 18px;margin:18px 0;font-size:0.92em;line-height:1.7}
-.callout-green{background:rgba(46,230,166,0.06);border:1px solid rgba(46,230,166,0.2)}
+.callout{
+  border-radius:12px;padding:14px 18px;margin:18px 0;font-size:0.92em;line-height:1.7;
+  box-shadow:0 10px 22px rgba(0,0,0,0.16)
+}
+.callout-green{background:linear-gradient(180deg, rgba(14,24,20,0.98), rgba(8,13,11,0.98));border:1px solid rgba(46,230,166,0.2)}
 .callout-green .callout-label{color:var(--green);font-weight:700;margin-bottom:4px;font-size:0.82em;letter-spacing:0.06em}
-.callout-amber{background:rgba(255,176,0,0.06);border:1px solid rgba(255,176,0,0.2)}
+.callout-amber{background:linear-gradient(180deg, rgba(24,18,8,0.98), rgba(13,10,4,0.98));border:1px solid rgba(255,176,0,0.2)}
 .callout-amber .callout-label{color:var(--amber);font-weight:700;margin-bottom:4px;font-size:0.82em;letter-spacing:0.06em}
-.callout-blue{background:rgba(93,176,255,0.06);border:1px solid rgba(93,176,255,0.2)}
+.callout-blue{background:linear-gradient(180deg, rgba(11,19,26,0.98), rgba(7,11,16,0.98));border:1px solid rgba(93,176,255,0.2)}
 .callout-blue .callout-label{color:var(--blue);font-weight:700;margin-bottom:4px;font-size:0.82em;letter-spacing:0.06em}
-.callout-red{background:rgba(255,77,77,0.06);border:1px solid rgba(255,77,77,0.2)}
+.callout-red{background:linear-gradient(180deg, rgba(25,11,14,0.98), rgba(13,7,9,0.98));border:1px solid rgba(255,77,77,0.2)}
 .callout-red .callout-label{color:var(--red);font-weight:700;margin-bottom:4px;font-size:0.82em;letter-spacing:0.06em}
 .callout p{margin:0;color:var(--muted)}
 
@@ -138,10 +161,13 @@ h1,h2,h3,h4{font-weight:700;letter-spacing:-0.01em;color:var(--text)}
 .badge-auto{color:var(--green)} .badge-esc{color:var(--amber)} .badge-deny{color:var(--red)} .badge-kill{color:var(--red)}
 
 /* api block */
-.api-block{background:var(--panel2);border:1px solid var(--line2);border-radius:10px;
-  margin:18px 0;overflow:hidden}
+.api-block{
+  background:linear-gradient(180deg, rgba(18,23,35,0.96), rgba(10,13,20,0.98));
+  border:1px solid rgba(255,255,255,0.08);border-radius:12px;
+  margin:18px 0;overflow:hidden;box-shadow:0 12px 24px rgba(0,0,0,0.16)
+}
 .api-block-head{display:flex;align-items:center;gap:10px;padding:12px 18px;
-  border-bottom:1px solid var(--line);background:rgba(255,255,255,0.02)}
+  border-bottom:1px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.02)}
 .api-method{font-family:var(--mono);font-size:0.78em;font-weight:700;
   padding:3px 8px;border-radius:5px;letter-spacing:0.04em}
 .method-post{background:rgba(46,230,166,0.1);color:var(--green);border:1px solid rgba(46,230,166,0.25)}
@@ -153,14 +179,18 @@ h1,h2,h3,h4{font-weight:700;letter-spacing:-0.01em;color:var(--text)}
 .api-block-body p:last-child{margin-bottom:0}
 
 /* faq */
-.faq-item{border:1px solid var(--line);border-radius:10px;margin-bottom:10px;overflow:hidden}
+.faq-item{
+  border:1px solid rgba(255,255,255,0.08);border-radius:12px;margin-bottom:10px;overflow:hidden;
+  background:linear-gradient(180deg, rgba(18,23,35,0.92), rgba(10,13,20,0.96));
+  box-shadow:0 10px 22px rgba(0,0,0,0.14)
+}
 .faq-q{all:unset;display:flex;align-items:center;justify-content:space-between;
   width:100%;cursor:pointer;padding:14px 18px;font-size:0.95em;font-weight:600;
   color:var(--text);gap:12px}
-.faq-q:hover{background:rgba(255,255,255,0.02)}
+.faq-q:hover{background:rgba(255,255,255,0.03)}
 .faq-q .faq-chevron{font-size:0.8em;color:var(--dim);flex-shrink:0;transition:transform .2s}
 .faq-item.open .faq-chevron{transform:rotate(90deg)}
-.faq-a{display:none;padding:0 18px 16px;color:var(--muted);font-size:0.9em;line-height:1.75;border-top:1px solid var(--line)}
+.faq-a{display:none;padding:0 18px 16px;color:var(--muted);font-size:0.9em;line-height:1.75;border-top:1px solid rgba(255,255,255,0.06)}
 .faq-item.open .faq-a{display:block}
 .faq-a p{margin:12px 0 0}
 .faq-a p:first-child{margin-top:12px}
@@ -193,7 +223,7 @@ h1,h2,h3,h4{font-weight:700;letter-spacing:-0.01em;color:var(--text)}
   </a>
   <div class="k-links">
     <a href="/">Home</a>
-    <a href="/hermes">Console</a>
+    <a href="/console">Console</a>
     <a href="/operator">Operator</a>
     <a href="/triage">Triage</a>
     <a href="/tools">Tools</a>
@@ -236,6 +266,10 @@ h1,h2,h3,h4{font-weight:700;letter-spacing:-0.01em;color:var(--text)}
 
   <!-- CONTENT -->
   <main class="content">
+    <div class="docs-guide">
+      <div class="docs-guide-kicker">From demo to architecture</div>
+      <div class="docs-guide-copy" id="docs-guide-copy">If the live demo made sense, this page is the translation layer: what the model does, what the verifier does, and what the kernel alone is allowed to decide.</div>
+    </div>
 
     <!-- QUICK START -->
     <section class="doc-section" id="quickstart">
@@ -424,7 +458,7 @@ sudo systemctl status custodian-enforce</code></pre>
       <p>Open Policy Agent evaluates every action request against the current authority band in real time. Per-action caps ($250), rolling session windows ($1,000 / 2 hr), and escalation thresholds are enforced as Rego rules, not application code that can be patched or reasoned around.</p>
 
       <h3>OCSF Audit Log</h3>
-      <p>Every allow and deny emits an Open Cybersecurity Schema Framework event. The log is append-only, tamper-evident, and structured: verifiable by any SIEM. You can see the live feed on the <a href="/hermes">Live Console</a>.</p>
+      <p>Every allow and deny emits an Open Cybersecurity Schema Framework event. The log is append-only, tamper-evident, and structured: verifiable by any SIEM. You can see the live feed on the <a href="/console">Live Console</a>.</p>
 
       <div class="callout callout-blue">
         <div class="callout-label">Why kernel-level?</div>
@@ -518,7 +552,7 @@ class CapturedClient:                # testing / replay
         <p><code>per_action_cap</code> is the ceiling for a single transaction. <code>autonomous_remaining</code> is how much session budget is left. A $200 spend might be fine per-action but denied if the session budget is exhausted. Both checks are independent.</p>
       </div>
 
-      <p>The current band and remaining session budget are visible live on the <a href="/hermes">Live Console</a> status grid.</p>
+      <p>The current band and remaining session budget are visible live on the <a href="/console">Live Console</a> status grid.</p>
     </section>
 
     <!-- KILL SWITCH -->
@@ -746,6 +780,7 @@ class CapturedClient:                # testing / replay
   </main>
 </div>
 
+<script src="/site-tour.js"></script>
 <script>
 // Sidebar active state on scroll
 const sections = document.querySelectorAll('.doc-section[id]');
@@ -772,6 +807,21 @@ document.querySelectorAll('.faq-q').forEach(btn => {
 });
 
 // Mobile sidebar: sidebar hidden on small screens via CSS
+
+(function(){
+    if(!window.CustodianTour) return;
+    const tour = window.CustodianTour;
+    tour.onPage('docs');
+    const copy = document.getElementById('docs-guide-copy');
+    const state = tour.getState();
+    if (state.pending_docs_followup) {
+        copy.textContent = 'You are at the last stop in the guided story. The key takeaway is simple: the model reasons, the verifier checks facts, and the kernel is the final authority every time.';
+        tour.completeDocs();
+    } else if (state.mode === 'deep') {
+        copy.textContent = 'This is the deep-dive layer of the tour: the live behavior you saw in console and operator is mapped here to the underlying kernel, verifier, and approval architecture.';
+    }
+})();
 </script>
+<script src="/nemo-guide.js"></script>
 </body>
 </html>
