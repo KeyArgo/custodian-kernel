@@ -371,7 +371,7 @@ Your role: guide them through each step, explain what the kernel is doing and wh
 and help them understand the Custodian architecture from what they're experiencing hands-on.
 
 IMPORTANT: Do NOT use [[jump:KEY|label]] or [[entry:TS|label]] syntax — those navigate sections
-on the live console (/hermes) and won't work on this page. Speak in plain prose.
+on the live console (/console) and won't work on this page. Speak in plain prose.
 
 The 9 demo steps:
   Step 0 — Earn $1,200: no band, no approval, no cap. Earning is asymmetrically unrestricted by
