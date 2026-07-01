@@ -485,16 +485,57 @@ function extractPI(text) {
     return m ? m[0] : null;
 }
 
+// After a step completes, have Nemotron narrate what just happened and what's next.
+// Opens the panel if it isn't already, then streams a short contextual message.
+const STEP_NARRATIONS = [
+    "I just earned $1,200 for the business with zero approval needed. Why is earning completely ungated while spending isn't?",
+    "I just spent $85 autonomously — the kernel approved it with no human involved. What exactly did the kernel check to allow that?",
+    "I just triggered a $3,500 request and got an SMS code on the operator's phone. What happens if nobody approves it?",
+    "I just approved the $3,500 spend with the SMS code. What proof is there that this actually required a human?",
+    "I just engaged the kill switch. What does that actually block and how is it different from just lowering the cap?",
+    "I just proved that a normally-fine $40 spend gets denied while the kill switch is on. Can anything override this?",
+    "I just released the kill switch. What changed, and could the AI have released it on its own?",
+    "I just triggered a refund request and got another SMS. Why does a refund always escalate — even a tiny one?",
+    "I just approved the refund. The full arc is done. What should I look at next to see the full picture?",
+];
+
+async function nemoNarrate(stepIdx) {
+    if (!STEP_NARRATIONS[stepIdx]) return;
+    opNemoOpen();
+    await new Promise(r => setTimeout(r, 400)); // let panel animate open
+    const question = STEP_NARRATIONS[stepIdx];
+    opNemoAddMsg(question, 'user');
+    const thinking = opNemoAddMsg('…', 'bot');
+    opNemoHistory.push({ role: 'user', content: question });
+    try {
+        const r = await fetch('/api/v1/nemotron/ask', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ question, history: opNemoHistory.slice(-8), page: 'operator', site_context: siteTour ? siteTour.buildSiteContext() : {} })
+        });
+        const d = await r.json();
+        thinking.remove();
+        const ans = (d.answer || 'Ask me anything about what just happened.').replace(/\[\[(?:jump|entry|suggest):[^\]]*\]\]/g, '').trim();
+        opNemoAddMsg(ans, 'bot');
+        opNemoHistory.push({ role: 'assistant', content: ans });
+        nemoSaveHistory(opNemoHistory);
+    } catch (_) {
+        thinking.remove();
+    }
+}
+
 document.getElementById('step0-btn').addEventListener('click', async () => {
     const data = await call('/earn', { amount: '1200.00', description: 'Demo: support contract renewal -- customer payment received' });
     renderOut('step0-out', data);
     if (siteTour && !data.error) siteTour.markOperatorStep(0, { completed: true });
+    if (!data.error) nemoNarrate(0);
 });
 
 document.getElementById('step1-btn').addEventListener('click', async () => {
     const data = await call('/spend', { amount: '85.00', description: 'Demo: cloud backup storage renewal' });
     renderOut('step1-out', data);
     if (siteTour && !data.error) siteTour.markOperatorStep(1, { completed: true });
+    if (!data.error) nemoNarrate(1);
     const text = data.error || [data.stdout, data.stderr].filter(Boolean).join('\n');
     const pi = extractPI(text);
     if (pi) {
@@ -553,6 +594,7 @@ document.getElementById('step2-btn').addEventListener('click', async () => {
         document.getElementById('sms-code-2').textContent = '••••••';
         document.getElementById('sms-banner').classList.add('show');
         startCodePoll('sms-code-2', 'approve1-code', 'approve1-note');
+        nemoNarrate(2);
     }
 });
 
@@ -562,6 +604,7 @@ document.getElementById('approve1-btn').addEventListener('click', async () => {
     const data = await call('/approve', { code, approved_by: by });
     renderOut('approve1-out', data);
     if (siteTour && !data.error) siteTour.markOperatorStep(3, { completed: true });
+    if (!data.error) nemoNarrate(3);
 });
 
 document.getElementById('kill-btn').addEventListener('click', async () => {
@@ -569,18 +612,21 @@ document.getElementById('kill-btn').addEventListener('click', async () => {
     const data = await call('/kill', { by: 'Operator', reason });
     renderOut('kill-out', data);
     if (siteTour && !data.error) siteTour.markOperatorStep(4, { completed: true });
+    if (!data.error) nemoNarrate(4);
 });
 
 document.getElementById('step5-btn').addEventListener('click', async () => {
     const data = await call('/spend', { amount: '40.00', description: 'Demo: this should be denied' });
     renderOut('step5-out', data);
     if (siteTour && !data.error) siteTour.markOperatorStep(5, { completed: true });
+    nemoNarrate(5); // always narrate — denial is the point
 });
 
 document.getElementById('resume-btn').addEventListener('click', async () => {
     const data = await call('/resume', { by: 'Operator' });
     renderOut('resume-out', data);
     if (siteTour && !data.error) siteTour.markOperatorStep(6, { completed: true });
+    if (!data.error) nemoNarrate(6);
 });
 
 document.getElementById('refund-btn').addEventListener('click', async () => {
@@ -596,6 +642,7 @@ document.getElementById('refund-btn').addEventListener('click', async () => {
         document.getElementById('sms-code-7').textContent = '••••••';
         document.getElementById('sms-banner-refund').classList.add('show');
         startCodePoll('sms-code-7', 'approve2-code', 'approve2-note');
+        nemoNarrate(7);
     }
 });
 
@@ -606,8 +653,7 @@ document.getElementById('approve2-btn').addEventListener('click', async () => {
     renderOut('approve2-out', data);
     if (siteTour && !data.error) {
         siteTour.markOperatorStep(8, { completed: true });
-        opNemoOpen();
-        opNemoAddMsg('Nice. The full arc is complete. Head back to the live console and I will walk you through the exact audit entries and kernel policy decisions your actions created.', 'bot');
+        nemoNarrate(8);
     }
 });
 
@@ -689,8 +735,8 @@ function opNemoOpen() {
         opNemoOpened = true;
         const thinking = opNemoAddMsg('…', 'bot');
         const greeting = opNemoHistory.length > 0
-            ? 'We were just talking. I am here in the operator panel now. In 2 short sentences, explain that you will stay quiet while the visitor runs the steps, but you can explain any step or kernel verdict on request.'
-            : 'You just opened in the operator panel. Greet in 2 sentences: who you are (Nemotron, the intelligence layer for payments reasoning), and explain that this page is the proof phase of the tour. Tell them to run the steps in order and that you will stay available without interrupting each one.';
+            ? "We were chatting on another page and I followed you here. What's this Operator Panel for and what do I do?"
+            : "I just opened the Operator Panel. What is this and what do I run first?";
         fetch('/api/v1/nemotron/ask', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },

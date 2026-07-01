@@ -117,6 +117,14 @@ def _openrouter_key() -> str | None:
     return None
 
 
+def _strip_thinking(text: str) -> str:
+    """Strip <think>/<thinking> reasoning tokens that reasoning models leak into content."""
+    import re
+    text = re.sub(r'<think>.*?</think>', '', text, flags=re.DOTALL)
+    text = re.sub(r'<thinking>.*?</thinking>', '', text, flags=re.DOTALL)
+    return text.strip()
+
+
 def _call_openrouter(messages: list[dict]) -> str | None:
     """Attempt inference via OpenRouter. Returns answer string or None on failure."""
     key = _openrouter_key()
@@ -127,6 +135,9 @@ def _call_openrouter(messages: list[dict]) -> str | None:
         'messages': messages,
         'max_tokens': 600,
         'temperature': 0.7,
+        # Suppress chain-of-thought — Nemotron Super is a reasoning model and
+        # will dump its full internal monologue into content without this flag.
+        'chat_template_kwargs': {'thinking': False},
     }
     req = urllib.request.Request(
         OPENROUTER_ENDPOINT,
@@ -141,7 +152,7 @@ def _call_openrouter(messages: list[dict]) -> str | None:
     try:
         with urllib.request.urlopen(req, timeout=25) as resp:
             result = json.loads(resp.read())
-        return result['choices'][0]['message']['content']
+        return _strip_thinking(result['choices'][0]['message']['content'])
     except (urllib.error.URLError, OSError, KeyError, IndexError, json.JSONDecodeError):
         return None
 
@@ -571,7 +582,7 @@ def ask():
             )
             with urllib.request.urlopen(req, timeout=25) as resp:
                 result = json.loads(resp.read())
-            answer = result['choices'][0]['message']['content']
+            answer = _strip_thinking(result['choices'][0]['message']['content'])
         except (urllib.error.URLError, OSError, RuntimeError) as e:
             nim_error = str(e)
         except (KeyError, IndexError, json.JSONDecodeError):

@@ -47,9 +47,11 @@
   }
 
   /* ─── Page-specific content ──────────────────────────────────── */
+  // Greeting prompts are framed as visitor questions so Nemotron knows it is
+  // answering a person, not generating its own monologue about itself.
   const PAGE_CFG = {
     '/': {
-      greeting: "I'm Nemotron — the AI reasoning layer inside Custodian. This page explains the concept. When you're ready, head to Console where the system explains itself, then Operator where it proves itself live.",
+      greeting: "Hi — I just landed on this page. Who are you, what is Custodian, and what should I do first?",
       suggests: [
         "Why can't you just prompt the AI to stay in budget?",
         "What makes kernel enforcement different from a rate limit?",
@@ -57,8 +59,8 @@
       ],
     },
     '/console': {
-      greeting_first: "This is the Console — your starting point for the tour. I'm the AI reasoning layer. I'll explain what Custodian is, then walk you to the Operator Panel where I prove it works with real money.",
-      greeting_postop: "Welcome back. You just saw the proof in the Operator Panel. Here in the Console you can inspect the audit log and the kernel verdicts from each step you ran. The money moved — and the record is append-only.",
+      greeting_first: "I just opened the Console. What am I looking at and where do I start?",
+      greeting_postop: "I just came back from the Operator Panel where I ran all the steps. What should I look at here now?",
       suggests_first: [
         "What does the Console actually show that the operator panel doesn't?",
         "How does the kernel decide whether to allow or block a spend request?",
@@ -71,7 +73,7 @@
       ],
     },
     '/operator': {
-      greeting: "You're in the Operator Panel — the proof phase. Run Steps 0 through 8 in order: earn revenue, spend autonomously, hit the cap, approve via SMS, engage the kill switch, request a refund. Ask me about any step.",
+      greeting: "I'm on the Operator Panel. What do I do first, and what will I see happen?",
       suggests: [
         "Why does refund always escalate — no autonomous refund path?",
         "What does the kill switch actually block at the kernel level?",
@@ -79,15 +81,15 @@
       ],
     },
     '/triage': {
-      greeting: "Lie-Catch. Type a refund request and lie in it — broken delivery, premium tier, whatever. I'll extract every claim. The verifier checks each one against the real order record. Try to fool me.",
+      greeting: "What is this page and what should I try here?",
       suggests: [
         "What kinds of lies can the verifier actually catch?",
-        "Why can't I (the AI) just approve if I believe the customer?",
+        "Why can't the AI just approve if it believes the customer?",
         "What would it take to fool the verifier rather than the AI?",
       ],
     },
     '/tools': {
-      greeting: "Tools page. 102 governed tools — every external action the agent can take, each one registered and kernel-ruled. This proves the enforcement model isn't just for payment flows; it covers the full surface area of what an AI agent might do.",
+      greeting: "What am I looking at on this page and why does it matter?",
       suggests: [
         "What happens if an agent calls a tool not in the registry?",
         "How are tools categorized — is there a trust tier?",
@@ -95,7 +97,7 @@
       ],
     },
     '/docs': {
-      greeting: "Technical docs — the architecture closeout. Everything you saw in the demo (kernel layers, NemoClaw sandbox, authority bands, the audit log) is documented here with the implementation detail.",
+      greeting: "I've seen the demo — now I want to understand how it actually works. Where do I start?",
       suggests: [
         "How does the kernel actually enforce limits — is it a firewall?",
         "What's NemoClaw and how does it relate to Nemotron?",
@@ -122,7 +124,9 @@
 
   /* ─── Guide-specific state (per-page dismiss + visit tracking) ── */
   const NG_KEY      = 'custodian_ng_v1';
-  const NG_HIST_KEY = 'custodian_ng_hist_v1';
+  // Use the same history key as site-tour.js and operator.html so Nemotron
+  // carries context across all pages (console → operator → triage → tools → docs).
+  const NG_HIST_KEY = 'custodian_nemotron_history';
   const NG_PATH_KEY = 'custodian_ng_last_path'; // sessionStorage — resets on tab close
 
   function getGuideState() {
