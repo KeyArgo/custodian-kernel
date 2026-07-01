@@ -161,6 +161,7 @@
   const EXISTING = {
     '/operator': { panelId: 'op-nemo-panel' },
     '/triage':   { panelId: 'tr-nemo-panel' },
+    '/console':  { panelId: 'nemotron-chat-panel' },
   };
 
   if (EXISTING[currentPath]) {

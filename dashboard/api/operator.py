@@ -185,46 +185,11 @@ def refund():
     amount = float(data.get('amount', 0))
     description = str(data.get('description', 'refund'))[:200]
 
-    # Kernel gate: refunds are self-dealing — agent cannot approve its own outgoing payment.
-    # This always escalates (the kernel catches self-dealing before the script runs).
-    try:
-        from custodian.policy import load_policy
-        from custodian.policy.evaluator import decide
-        from custodian.types import AuthorityState, Band, SpendRequest
-        from pathlib import Path
-        import json as _json
-
-        state_path = Path.home() / '.custodian' / 'authority.json'
-        state = (AuthorityState.from_dict(_json.loads(state_path.read_text()))
-                 if state_path.exists()
-                 else AuthorityState(band=Band.L2, per_action_cap=250.0, session_cap=1000.0))
-
-        ks_path = Path.home() / '.custodian' / 'kill_switch.json'
-        killed = (bool(_json.loads(ks_path.read_text()).get('killed', False))
-                  if ks_path.exists() else False)
-
-        policy_path = Path.home() / '.custodian' / 'policy.yaml'
-        if not policy_path.exists():
-            from pathlib import Path as P
-            policy_path = P(__file__).resolve().parent.parent.parent / 'custodian' / 'policy' / 'presets' / 'default.yaml'
-        policy = load_policy(policy_path)
-
-        req = SpendRequest(amount=amount, description=description)
-        decision = decide(req, state, policy, skill='stripe-refund',
-                         killed=killed,
-                         context={'self_dealing': True})
-
-        if decision.verdict.value != 'autonomous':
-            return jsonify({
-                'ok': False,
-                'kernel_verdict': decision.verdict.value,
-                'reason': decision.reason,
-                'message': 'Refund blocked by kernel — self-dealing detected. Human operator approval required.',
-                'escalated': True,
-            }), 402
-    except Exception:
-        pass  # kernel unavailable — fall through to script
-
+    # refund.py always escalates (self-dealing) and sends the Twilio SMS itself.
+    # The only thing worth catching here is an explicit kill-switch denial — for
+    # that case we let the script run and it will print the denial and exit 3.
+    # Previously this block returned 402 early for ANY non-autonomous verdict,
+    # which prevented refund.py from running and meant no SMS was ever sent.
     result = _run_script('refund.py', '--payment-intent-id', pi_id,
                           '--amount', str(amount), '--description', description)
     _write_reasoning('refund.py', result)

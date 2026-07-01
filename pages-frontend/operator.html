@@ -477,7 +477,7 @@ function renderOut(elId, data) {
     el.classList.add('show');
     const failed = data.error || (data.returncode !== undefined && data.returncode !== 0 && data.returncode !== 2 && data.returncode !== 3);
     el.classList.toggle('err', !!failed);
-    el.textContent = data.error || [data.stdout, data.stderr].filter(Boolean).join('\n');
+    el.textContent = data.error || data.message || [data.stdout, data.stderr].filter(Boolean).join('\n');
 }
 
 function extractPI(text) {
