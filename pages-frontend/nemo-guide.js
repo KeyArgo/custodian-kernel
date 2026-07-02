@@ -385,6 +385,7 @@
     const siteCtx = window.CustodianTour
       ? window.CustodianTour.buildSiteContext({ ng_page: currentPath, ng_post_op: isPostOp })
       : { ng_page: currentPath, ng_post_op: isPostOp };
+    if (window.TourTracker) siteCtx.tracker = TourTracker.buildContext();
 
     fetch('/api/v1/nemotron/ask', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },

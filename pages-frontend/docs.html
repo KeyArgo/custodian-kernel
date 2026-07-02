@@ -780,8 +780,10 @@ class CapturedClient:                # testing / replay
   </main>
 </div>
 
+<script src="/tour-tracker.js"></script>
 <script src="/site-tour.js"></script>
 <script>
+if (window.TourTracker) TourTracker.track('page_visit', '/docs');
 // Sidebar active state on scroll
 const sections = document.querySelectorAll('.doc-section[id]');
 const sbLinks  = document.querySelectorAll('.sb-link');

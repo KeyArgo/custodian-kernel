@@ -636,6 +636,7 @@ async function runCase(caseId, mount, live){
     const p = await r.json();
     if(p.error){mount.innerHTML = `<div class="spin">${esc(p.error)}</div>`;return;}
     lastTriageResult = p;
+    if (window.TourTracker) TourTracker.track('triage_run', { scenario: caseId, verdict: p.adapter_disposition, ai_agreed: p.agent_recommended === p.adapter_disposition, contradictions: p.contradiction_count });
     if (window.CustodianTour) window.CustodianTour.nudgeTools();
     mount.innerHTML = renderPanel(p);
   }catch(e){mount.innerHTML = `<div class="spin">error: ${esc(e.message)}</div>`;}
@@ -779,6 +780,7 @@ async function runCase(caseId, mount, live, pack){
     if(p.error){mount.innerHTML = `<div class="spin">${esc(p.error)}</div>`;return;}
     p.overrode_agent = p.overrode_agent ?? (p.contradiction_count > 0);
     lastTriageResult = p;
+    if (window.TourTracker) TourTracker.track('triage_run', { scenario: caseId, pack, verdict: p.adapter_disposition, ai_agreed: p.agent_recommended === p.adapter_disposition, contradictions: p.contradiction_count });
     if (window.CustodianTour) window.CustodianTour.nudgeTools();
     mount.innerHTML = renderPanel(p);
   }catch(e){mount.innerHTML = `<div class="spin">error: ${esc(e.message)}</div>`;}
@@ -1081,6 +1083,7 @@ async function runCustom() {
     }
     p.overrode_agent = p.overrode_agent ?? (p.contradiction_count > 0);
     lastTriageResult = p;
+    if (window.TourTracker) TourTracker.track('triage_run', { scenario: 'custom', pack: currentPack, verdict: p.adapter_disposition, ai_agreed: p.agent_recommended === p.adapter_disposition, contradictions: p.contradiction_count });
     if (window.CustodianTour) window.CustodianTour.nudgeTools();
     result.innerHTML = renderPanel(p);
   } catch(e) {
@@ -1149,12 +1152,14 @@ async function runCustom() {
   </div>
 </div>
 
+<script src="/tour-tracker.js"></script>
 <script src="/site-tour.js"></script>
 <script>
 (function(){
 const HISTORY_KEY = 'custodian_nemotron_history';
 const siteTour = window.CustodianTour || null;
 if (siteTour) siteTour.onPage('triage');
+if (window.TourTracker) TourTracker.track('page_visit', '/triage');
 const TRIAGE_POOL = [
     "What kinds of lies can the verifier actually catch — and which ones slip through?",
     "How does a contradicted claim physically stop money from moving?",
@@ -1187,7 +1192,9 @@ const closeBtn= document.getElementById('tr-nemo-close');
 let opened = false;
 
 function siteContext(extra){
-    return siteTour ? siteTour.buildSiteContext(extra) : (extra || {});
+    const base = siteTour ? siteTour.buildSiteContext(extra) : (extra || {});
+    if (window.TourTracker) base.tracker = TourTracker.buildContext();
+    return base;
 }
 
 function saveHistory(){

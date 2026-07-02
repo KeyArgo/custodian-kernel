@@ -587,6 +587,27 @@ def ask():
                 "\n\nVISITOR TOUR CONTEXT (shared across pages):\n"
                 f"{json.dumps(safe_site, indent=2)}"
             )
+        # Tracker context: what this specific visitor has actually done on the site.
+        # Use this to guide them toward what they haven't seen yet.
+        tracker = site_context.get('tracker')
+        if tracker and isinstance(tracker, dict):
+            safe_tracker = {k: tracker[k] for k in (
+                'pages_visited', 'pages_not_yet_visited',
+                'console_tabs_seen', 'console_tabs_not_seen',
+                'operator_steps_done', 'operator_steps_remaining', 'operator_complete',
+                'triage_runs_count', 'last_triage',
+                'tools_expanded', 'last_action', 'suggested_next',
+            ) if k in tracker}
+            if safe_tracker:
+                context_block += (
+                    "\n\nTHIS VISITOR'S INTERACTION HISTORY (what they have and have not done):\n"
+                    f"{json.dumps(safe_tracker, indent=2)}\n"
+                    "Use 'suggested_next' to guide them toward unseen parts of the tour. "
+                    "Reference specific things they've done (e.g. 'you just ran the kill switch step') "
+                    "to make the conversation feel continuous. "
+                    "If operator_complete is true and they haven't visited triage, nudge them there. "
+                    "If all pages are visited, congratulate them and offer to go deeper on any topic."
+                )
     page_guidance = _PAGE_GUIDANCE.get(page, '')
     # Lead with the most compelling thing and earn depth one step at a time --
     # the same most-compelling-first ordering the guided dashboard page uses,

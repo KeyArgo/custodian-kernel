@@ -453,12 +453,14 @@
     </div>
 </div>
 
+<script src="/tour-tracker.js"></script>
 <script src="/site-tour.js"></script>
 <script>
 const API = '/api/v1/operator';
 let spendPI = '';
 const siteTour = window.CustodianTour || null;
 if (siteTour) siteTour.onPage('operator');
+if (window.TourTracker) TourTracker.track('page_visit', '/operator');
 
 document.addEventListener('DOMContentLoaded', function () {
 
@@ -528,6 +530,7 @@ document.getElementById('step0-btn').addEventListener('click', async () => {
     const data = await call('/earn', { amount: '1200.00', description: 'Demo: support contract renewal -- customer payment received' });
     renderOut('step0-out', data);
     if (siteTour && !data.error) siteTour.markOperatorStep(0, { completed: true });
+    if (window.TourTracker && !data.error) TourTracker.track('operator_step', 0);
     if (!data.error) nemoNarrate(0);
 });
 
@@ -535,6 +538,7 @@ document.getElementById('step1-btn').addEventListener('click', async () => {
     const data = await call('/spend', { amount: '85.00', description: 'Demo: cloud backup storage renewal' });
     renderOut('step1-out', data);
     if (siteTour && !data.error) siteTour.markOperatorStep(1, { completed: true });
+    if (window.TourTracker && !data.error) TourTracker.track('operator_step', 1);
     if (!data.error) nemoNarrate(1);
     const text = data.error || [data.stdout, data.stderr].filter(Boolean).join('\n');
     const pi = extractPI(text);
@@ -586,6 +590,7 @@ document.getElementById('step2-btn').addEventListener('click', async () => {
     const data = await call('/spend', { amount: '3500.00', description: 'Demo: NAS license renewal' });
     renderOut('step2-out', data);
     if (siteTour && !data.error) siteTour.markOperatorStep(2, { completed: true });
+    if (window.TourTracker && !data.error) TourTracker.track('operator_step', 2);
     const text = data.error || [data.stdout, data.stderr].filter(Boolean).join('\n');
     if (text.includes('TWILIO') || text.includes('approval code') || text.includes('escalation')) {
         const t = smsNow();
@@ -604,6 +609,7 @@ document.getElementById('approve1-btn').addEventListener('click', async () => {
     const data = await call('/approve', { code, approved_by: by });
     renderOut('approve1-out', data);
     if (siteTour && !data.error) siteTour.markOperatorStep(3, { completed: true });
+    if (window.TourTracker && !data.error) TourTracker.track('operator_step', 3);
     if (!data.error) nemoNarrate(3);
 });
 
@@ -612,6 +618,7 @@ document.getElementById('kill-btn').addEventListener('click', async () => {
     const data = await call('/kill', { by: 'Operator', reason });
     renderOut('kill-out', data);
     if (siteTour && !data.error) siteTour.markOperatorStep(4, { completed: true });
+    if (window.TourTracker && !data.error) TourTracker.track('operator_step', 4);
     if (!data.error) nemoNarrate(4);
 });
 
@@ -619,6 +626,7 @@ document.getElementById('step5-btn').addEventListener('click', async () => {
     const data = await call('/spend', { amount: '40.00', description: 'Demo: this should be denied' });
     renderOut('step5-out', data);
     if (siteTour && !data.error) siteTour.markOperatorStep(5, { completed: true });
+    if (window.TourTracker && !data.error) TourTracker.track('operator_step', 5);
     nemoNarrate(5); // always narrate — denial is the point
 });
 
@@ -626,6 +634,7 @@ document.getElementById('resume-btn').addEventListener('click', async () => {
     const data = await call('/resume', { by: 'Operator' });
     renderOut('resume-out', data);
     if (siteTour && !data.error) siteTour.markOperatorStep(6, { completed: true });
+    if (window.TourTracker && !data.error) TourTracker.track('operator_step', 6);
     if (!data.error) nemoNarrate(6);
 });
 
@@ -634,6 +643,7 @@ document.getElementById('refund-btn').addEventListener('click', async () => {
     const data = await call('/refund', { payment_intent_id: pi, amount: '85.00', description: 'Demo: refund -- double-billed' });
     renderOut('refund-out', data);
     if (siteTour && !data.error) siteTour.markOperatorStep(7, { completed: true });
+    if (window.TourTracker && !data.error) TourTracker.track('operator_step', 7);
     const text = data.error || [data.stdout, data.stderr].filter(Boolean).join('\n');
     if (text.includes('TWILIO') || text.includes('approval code') || text.includes('escalation')) {
         const t = smsNow();
@@ -655,6 +665,7 @@ document.getElementById('approve2-btn').addEventListener('click', async () => {
         siteTour.markOperatorStep(8, { completed: true });
         nemoNarrate(8);
     }
+    if (window.TourTracker && !data.error) TourTracker.track('operator_step', 8);
 });
 
 }); // DOMContentLoaded

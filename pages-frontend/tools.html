@@ -286,8 +286,10 @@ footer{
   </div>
 </footer>
 
+<script src="/tour-tracker.js"></script>
 <script src="/site-tour.js"></script>
 <script>
+if (window.TourTracker) TourTracker.track('page_visit', '/tools');
 let allTools = [];
 let activeBand = 'all';
 

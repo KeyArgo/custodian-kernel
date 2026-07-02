@@ -1058,6 +1058,7 @@
                         <path d="M 34 65 Q 50 76 66 65" stroke="currentColor" stroke-width="5" fill="none" stroke-linecap="round"/>
                     </svg></div>
 
+    <script src="/tour-tracker.js"></script>
     <script src="/site-tour.js"></script>
     <script>
         const fmtUSD = (n) => '$' + Number(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -1510,8 +1511,12 @@
                 btn.classList.add('active');
                 document.getElementById('tab-panel-' + btn.dataset.tab).classList.add('active');
                 if (btn.dataset.tab === 'stripe') loadStripePanel();
+                // Track for Nemotron context
+                if (window.TourTracker) TourTracker.track('console_tab', btn.dataset.tab);
             });
         });
+        // Track page arrival
+        if (window.TourTracker) TourTracker.track('page_visit', '/console');
 
         // ---- Stripe live balance tab ----
         let stripeLoaded = false;
@@ -1746,7 +1751,9 @@
         }
 
         function nemotronSiteContext(extra) {
-            return siteTour ? siteTour.buildSiteContext(extra) : (extra || {});
+            const base = siteTour ? siteTour.buildSiteContext(extra) : (extra || {});
+            if (window.TourTracker) base.tracker = TourTracker.buildContext();
+            return base;
         }
 
         function nemotronSaveHistory() {
