@@ -15,6 +15,13 @@ export/
 policy.yaml
 /state/
 /secrets/*.env
-# video project artifacts (separate project, not part of this repo)
+# video project artifacts and media files (not part of this repo)
 video-hf/
+video/
 video-build/*.mp4
+video-build/*.wav
+video-build/*.m4a
+video-build/newaudio
+video-build/" is .wav"
+# delivery/ contains runtime Stripe PaymentIntent IDs — not source
+delivery/

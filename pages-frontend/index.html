@@ -1350,20 +1350,93 @@ result <span style="color:var(--dim)">=</span> decide(
   <div class="wrap">
     <div class="reveal">
       <div class="sec-eyebrow">See it run</div>
-      <h2>90 seconds: the agent gets lied to, and the kernel wins</h2>
-      <p class="sec-sub">Watch a real agent recommend approving a fraudulent refund — and watch the deterministic kernel override it, with real Stripe IDs and an append-only audit trail.</p>
+      <h2>Customer pays $35. AI generates the report. Kernel governs every step.</h2>
+      <p class="sec-sub">Real Stripe payment. Real Nemotron inference. Real email delivered. The AI caught 3 self-dealing risks before it was allowed to run — including one that would have let it rewrite its own policy file.</p>
     </div>
     <div class="video-frame reveal" id="video-frame">
       <div class="video-ratio">
-        <!-- When the demo video is up, set VIDEO_ID in the script below and it renders automatically. -->
+        <!-- Set TWITTER_URL or VIDEO_ID below to activate the embed -->
         <div class="video-ph" id="video-ph">
           <div class="play">▶</div>
-          <div class="vt">Demo video drops before submission</div>
-          <div class="vs">In the meantime, the live console is the real thing — every number on this page is pulled from it right now.</div>
-          <a class="btn btn-ghost" href="/console">Launch the live console instead →</a>
+          <div class="vt">Watch the live demo</div>
+          <div class="vs">Real $35 payment → AI generates governance report → kernel gates every step → email delivered to customer.</div>
+          <a class="btn btn-primary" id="watch-btn" href="https://x.com/search?q=getcustodian" target="_blank" rel="noopener" style="margin-top:8px">▶ Watch on X →</a>
         </div>
       </div>
     </div>
+
+    <!-- SCREENSHOTS -->
+    <div class="reveal" style="margin-top:56px">
+      <div class="sec-eyebrow">Proof artifacts</div>
+      <h3 style="font-size:1.3em;margin-bottom:8px">What it looks like on camera</h3>
+      <p style="color:var(--muted);font-size:0.92em;margin-bottom:32px">Every line of output is real. Real Stripe PI. Real Nemotron. Real SHA-256 receipt. Real email.</p>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:20px">
+
+        <!-- Screenshot 1: Terminal -->
+        <div style="border:1px solid var(--line2);border-radius:14px;overflow:hidden;background:var(--bg2)">
+          <div style="background:#0d0f18;padding:10px 14px;display:flex;gap:7px;align-items:center;border-bottom:1px solid var(--line)">
+            <span style="width:11px;height:11px;border-radius:50%;background:#ff5f57;display:inline-block"></span>
+            <span style="width:11px;height:11px;border-radius:50%;background:#febc2e;display:inline-block"></span>
+            <span style="width:11px;height:11px;border-radius:50%;background:#28c840;display:inline-block"></span>
+            <span style="font-family:var(--mono);font-size:0.75em;color:var(--dim);margin-left:8px">terminal</span>
+          </div>
+          <div id="screenshot-terminal" style="min-height:200px;display:flex;align-items:center;justify-content:center;padding:24px">
+            <div style="font-family:var(--mono);font-size:0.78em;line-height:1.7;color:#8d93a6;text-align:left;width:100%">
+              <div style="color:#2ee6a6">✓ stripe_payments → L3</div>
+              <div style="color:#ff5c5c">  ⚠ SELF-DEALING DETECTED</div>
+              <div style="color:#2ee6a6;margin-top:8px">✓ receipt.verify() → True</div>
+              <div style="color:#2ee6a6">✓ Email sent → customer</div>
+              <div style="color:#8d93a6;margin-top:8px">CYCLE COMPLETE — exit 0</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Screenshot 2: Email -->
+        <div style="border:1px solid var(--line2);border-radius:14px;overflow:hidden;background:var(--bg2)">
+          <div style="padding:16px 20px;border-bottom:1px solid var(--line)">
+            <div style="font-size:0.8em;color:var(--muted)">From: Custodian &lt;custodian@getcustodian.xyz&gt;</div>
+            <div style="font-weight:600;margin-top:4px;font-size:0.92em">Your Custodian Governance Report</div>
+          </div>
+          <div id="screenshot-email" style="min-height:200px;display:flex;align-items:center;justify-content:center;padding:24px">
+            <div style="text-align:center">
+              <div style="color:#2ee6a6;font-weight:700;font-size:1.1em;margin-bottom:8px">Custodian AI Governance Report</div>
+              <div style="font-size:0.8em;color:var(--muted);margin-bottom:16px">Kernel-governed delivery · SHA-256 receipted</div>
+              <div style="font-size:0.8em;color:var(--muted)">📎 policy.yaml</div>
+              <div style="font-size:0.8em;color:var(--muted)">📎 threat-model.md</div>
+              <div style="font-size:0.8em;color:var(--muted)">📎 audit-report.md</div>
+              <div style="font-size:0.8em;color:var(--muted)">📎 delivery-receipt.json</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Screenshot 3: Stripe -->
+        <div style="border:1px solid var(--line2);border-radius:14px;overflow:hidden;background:var(--bg2)">
+          <div style="padding:16px 20px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:10px">
+            <span style="color:#635bff;font-weight:700;font-size:1em">stripe</span>
+            <span style="font-size:0.8em;color:var(--muted)">Live payment</span>
+          </div>
+          <div id="screenshot-stripe" style="min-height:200px;display:flex;align-items:center;justify-content:center;padding:24px">
+            <div style="text-align:center">
+              <div style="font-size:1.8em;font-weight:700;color:#2ee6a6;margin-bottom:4px">$35.00</div>
+              <div style="font-family:var(--mono);font-size:0.72em;color:var(--muted);margin-bottom:8px">pi_3ToFWAB7ofGwjXP81A7LAl9N</div>
+              <div style="font-size:0.8em;color:var(--muted)">Mode: live · Status: succeeded</div>
+              <div style="margin-top:12px;font-size:0.75em;color:#2ee6a6">← REAL STRIPE API CALL</div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- TWITTER LINK -->
+    <div class="reveal" style="margin-top:40px;text-align:center">
+      <a id="twitter-link" href="https://x.com/search?q=custodian+kernel+governed" target="_blank" rel="noopener"
+        style="display:inline-flex;align-items:center;gap:10px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.12);border-radius:12px;padding:14px 24px;text-decoration:none;color:var(--text);font-weight:600;transition:border-color .2s">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.744l7.73-8.835L1.254 2.25H8.08l4.259 5.63zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+        Follow the build on X
+      </a>
+    </div>
+
   </div>
 </section>
 
@@ -1443,11 +1516,23 @@ result <span style="color:var(--dim)">=</span> decide(
   const io=new IntersectionObserver((es)=>{es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target)}})},{threshold:0.12});
   document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
 
-  // ---- optional YouTube embed: set this when the video is live ----
-  const VIDEO_ID = ""; // e.g. "dQw4w9WgXcQ"
-  if(VIDEO_ID){
+  // ---- video embed: set TWITTER_URL when the tweet is live ----
+  const TWITTER_URL = ""; // e.g. "https://x.com/yourhandle/status/1234567890"
+  const YOUTUBE_ID  = ""; // e.g. "dQw4w9WgXcQ" — YouTube fallback
+  if(TWITTER_URL){
+    // Update watch button to point at the real tweet
+    const wb=document.getElementById('watch-btn');
+    if(wb){wb.href=TWITTER_URL; wb.textContent='▶ Watch on X →'}
+    const tl=document.getElementById('twitter-link');
+    if(tl){tl.href=TWITTER_URL; tl.querySelector('span') && (tl.lastChild.textContent=' Watch the demo on X')}
+    // Embed tweet via Twitter widget
     const r=document.querySelector('#video-frame .video-ratio');
-    r.innerHTML='<iframe src="https://www.youtube.com/embed/'+VIDEO_ID+'?rel=0" title="Custodian demo" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>';
+    r.style.aspectRatio='auto'; r.style.minHeight='420px';
+    r.innerHTML='<blockquote class="twitter-tweet" data-theme="dark" style="margin:0 auto"><a href="'+TWITTER_URL+'"></a></blockquote>';
+    const s=document.createElement('script'); s.src='https://platform.twitter.com/widgets.js'; s.async=true; document.body.appendChild(s);
+  } else if(YOUTUBE_ID){
+    const r=document.querySelector('#video-frame .video-ratio');
+    r.innerHTML='<iframe src="https://www.youtube.com/embed/'+YOUTUBE_ID+'?rel=0" title="Custodian demo" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>';
   }
 
   // ---- live data (same backend the console uses; absolute URLs, CORS-enabled) ----

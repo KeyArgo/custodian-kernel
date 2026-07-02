@@ -65,6 +65,10 @@ Purpose:
 - orient the visitor
 - make the big idea legible
 - send them to the best next page
+- offer three paths:
+  - `Quick walkthrough`
+  - `Deep dive`
+  - `Browse freely`
 
 Required outcome:
 - user knows this is not “AI payments”
@@ -222,6 +226,7 @@ Instead:
 - show a small bubble or compact banner
 - greeting only
 - user must opt in
+- keep home lightweight and non-modal
 
 Suggested copy:
 - “Hi, I’m Nemotron. Feel free to ask any questions.”
@@ -230,6 +235,17 @@ The mobile assistant should be:
 - non-blocking
 - dismissible
 - reopenable
+
+## Implemented state model
+
+The guided flow now uses one shared browser state layer:
+
+1. `site-tour.js` stores tour mode and milestone state in `localStorage`
+2. console, operator, triage, tools, and docs all read from the same state
+3. Nemotron history is shared across pages
+4. operator step 8 marks a pending console follow-up
+5. triage completion marks a pending tools follow-up
+6. tools completion marks a pending docs follow-up
 
 ## Tour structure
 
@@ -323,4 +339,3 @@ A first-time hackathon judge should be able to say, after a short visit:
 4. “I understand why this matters for real businesses.”
 
 If those four things happen, the site is doing its job.
-

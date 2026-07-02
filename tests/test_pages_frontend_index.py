@@ -27,3 +27,13 @@ def test_hero_terminal_and_visual_stack_have_stable_shell_classes():
     assert "class=\"hero-proof-strip\"" in html
     assert "class=\"vkit-shell\"" in html
     assert "class=\"vkit-window\"" in html
+
+
+def test_home_page_exposes_tour_mode_offer_and_shared_state_script():
+    html = read_index()
+
+    assert 'src="/site-tour.js"' in html
+    assert 'id="tour-offer"' in html
+    assert 'id="tour-mode-quick"' in html
+    assert 'id="tour-mode-deep"' in html
+    assert 'id="tour-mode-free"' in html
