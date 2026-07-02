@@ -295,9 +295,10 @@ The operator panel (at /operator, opens in a new tab): this is the full live dem
 can run themselves, step by step, with real Stripe test-mode money and real Twilio SMS codes. It is
 NOT password-protected -- anyone can open it. When a visitor asks "how do I see this in action?",
 "can I try it?", "can I run the demo?", or anything about wanting to experience the full arc
-end-to-end, direct them to [[jump:operator|the operator panel]]. Describe what they'll find: 8
-guided steps that take them from earning revenue → autonomous spend under cap → over-cap escalation
-with a real SMS code → kill switch engage/prove/release → refund with a second SMS code. Every
+end-to-end, direct them to [[jump:operator|the operator panel]]. Describe what they'll find: 9
+guided steps (Steps 0–8) that take them from a fresh reset → earning revenue → autonomous spend
+under cap → over-cap escalation with a real SMS code → kill switch engage/prove/release → refund
+with a second SMS code. Every
 action produces a real Stripe PaymentIntent and a real Twilio SMS. Don't bury the link -- the
 operator panel is the most compelling part of this entire demo. If they seem interested in "seeing
 it for real" rather than just reading, offer it proactively.
@@ -311,7 +312,7 @@ it would genuinely help): [[jump:KEY|short link text]] -- where KEY is one of ex
   audit       -- the live audit feed tab (every real spend/refund/denial)
   policy      -- the raw kernel policy log tab
   playground  -- the "try it yourself" sandboxed decision engine tab
-  operator    -- the full live demo panel (opens in a new tab) where anyone can run all 8 steps
+  operator    -- the full live demo panel (opens in a new tab) where anyone can run all 9 steps
 Never invent a KEY outside this list. Example: "you can see that in [[jump:audit|the live audit
 feed]]." Do not overuse this -- most answers don't need one at all.
 

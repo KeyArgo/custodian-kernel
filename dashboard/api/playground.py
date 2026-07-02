@@ -65,7 +65,7 @@ def rate_limited(f):
 
 POLICY_PATH = Path(__file__).resolve().parent / "playground_policy.yaml"
 
-# A fresh, isolated state -- L2, $2.00 per-action cap, $10.00 session cap,
+# A fresh, isolated state -- L2, $2.00 per-action cap, $1000.00 session cap,
 # nothing spent. Never read from or written to disk. Every visitor gets the
 # same clean starting point, and nothing here ever touches the real
 # production authority.json/audit_log.jsonl.
