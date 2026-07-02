@@ -1988,7 +1988,7 @@ function nemotronRenderAnswer(rawText) {
                     body: JSON.stringify({
                         question: nemotronIntroPrompt(),
                         history: nemotronHistory.slice(-4),
-                        page: 'hermes',
+                        page: 'console',
                         site_context: nemotronSiteContext(),
                     }),
                 }).then(r => r.json()).then(data => {
@@ -2048,7 +2048,7 @@ function nemotronRenderAnswer(rawText) {
                 const res = await fetch('/api/v1/nemotron/ask', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ question, history: nemotronHistory.slice(-8), page: 'hermes', site_context: nemotronSiteContext() }),
+                    body: JSON.stringify({ question, history: nemotronHistory.slice(-8), page: 'console', site_context: nemotronSiteContext() }),
                 });
                 const data = await res.json();
                 thinkingMsg.remove();
@@ -2085,9 +2085,10 @@ function nemotronRenderAnswer(rawText) {
         });
         if (siteTour) {
             const tourState = siteTour.getState();
+            // Auto-open for all visitors (any tour mode) — nemo-guide.js resets
+            // assistant_dismissed on navigation so this fires on every page arrival.
             const shouldAutoOpen = !siteTour.isMobile()
-                && !tourState.assistant_dismissed
-                && (tourState.mode === 'quick' || tourState.mode === 'deep' || tourState.pending_console_followup);
+                && !tourState.assistant_dismissed;
             if (shouldAutoOpen) {
                 setTimeout(() => {
                     nemotronFlyin.classList.add('go');

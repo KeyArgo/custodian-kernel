@@ -118,10 +118,31 @@ def _openrouter_key() -> str | None:
 
 
 def _strip_thinking(text: str) -> str:
-    """Strip <think>/<thinking> reasoning tokens that reasoning models leak into content."""
-    import re
+    """Strip reasoning tokens and constraint-echoing preambles that reasoning models leak."""
     text = re.sub(r'<think>.*?</think>', '', text, flags=re.DOTALL)
     text = re.sub(r'<thinking>.*?</thinking>', '', text, flags=re.DOTALL)
+    # Some models (esp. Nemotron Super via OpenRouter) echo their constraints before
+    # answering: "We need to answer: ... Must follow rules: ... Must not mention..."
+    # Detect this and strip everything up to the actual answer.
+    constraint_markers = ('We need to answer:', 'Must follow rules:', 'Must not mention', 'Must include')
+    if any(m in text for m in constraint_markers):
+        paragraphs = re.split(r'\n{2,}', text)
+        clean = []
+        skip = True
+        for p in paragraphs:
+            if skip and any(m in p for m in constraint_markers):
+                continue  # still in rules block
+            skip = False
+            clean.append(p)
+        text = '\n\n'.join(clean) if clean else text
+    # Final safety net: if rule-echoing still bleeds through a single paragraph,
+    # truncate at the first occurrence.
+    for marker in constraint_markers:
+        idx = text.find(marker)
+        if idx > 80:   # allow the marker if it's deep in a real sentence (rare)
+            break
+        if idx != -1:
+            text = text[:idx]
     return text.strip()
 
 
@@ -376,6 +397,23 @@ MANDATORY: output [[suggest:...]] lines at the END of EVERY response. Even if th
 next step."""
 
 
+_CONSOLE_GUIDANCE = """
+PAGE CONTEXT: The visitor is on the CONSOLE (/console) — the live dashboard showing real-time
+kernel decisions, audit log, authority state, and policy log. This is the main explanation
+surface. The visitor may be here for the first time (explain the system) or returning after
+completing the Operator demo (interpret the audit trail they just created).
+
+If site_context.pending_console_followup is true: they just ran all 9 Operator steps. Your
+job is to guide them to read the audit log — show them what got recorded, what the kernel
+decided at each step, and why. Don't re-introduce yourself.
+
+If first visit: explain what the dashboard shows and point them to the Operator Panel
+[[jump:operator|the operator panel]] to see it in action.
+
+The [[jump:KEY|label]] syntax works on this page — use it to point at specific sections.
+The valid keys are: pipeline, verdict, authority, audit, policy, playground, operator.
+"""
+
 _HOME_GUIDANCE = """
 PAGE CONTEXT: The visitor just landed on the HOME page (/). This is their very first impression —
 likely a hackathon judge or first-time visitor. Keep this greeting SHORT (60-90 words max).
@@ -464,6 +502,8 @@ Do offer [[suggest:...]] questions to continue the tour.
 
 _PAGE_GUIDANCE: dict[str, str] = {
     'home': _HOME_GUIDANCE,
+    'console': _CONSOLE_GUIDANCE,
+    'hermes': _CONSOLE_GUIDANCE,   # legacy alias — console.html still sends page:'hermes'
     'operator': _OPERATOR_GUIDANCE,
     'triage': _TRIAGE_GUIDANCE,
     'tools': _TOOLS_GUIDANCE,

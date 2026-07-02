@@ -137,25 +137,29 @@
   function getHistory() { try { return JSON.parse(localStorage.getItem(NG_HIST_KEY) || '[]'); } catch (_) { return []; } }
   function saveHistory(h) { try { localStorage.setItem(NG_HIST_KEY, JSON.stringify((h || []).slice(-16))); } catch (_) {} }
 
-  // Reset the shared assistant_dismissed when the user navigates to a new page,
-  // so operator.html and triage.html's existing auto-open code re-triggers correctly.
-  (function resetSharedDismissOnNavigation() {
-    const lastPath = sessionStorage.getItem(NG_PATH_KEY);
-    if (lastPath !== currentPath) {
-      sessionStorage.setItem(NG_PATH_KEY, currentPath);
-      try {
-        const s = getSiteTourState();
-        s.assistant_dismissed = false;
-        localStorage.setItem('custodian_site_tour_v1', JSON.stringify(s));
-      } catch (_) {}
-    }
-  })();
+  // Detect genuine navigation (tab reuse across pages) vs same-page reload.
+  // sessionStorage survives reload but resets on tab close — perfect nav detector.
+  const _lastPath  = sessionStorage.getItem(NG_PATH_KEY);
+  const _navigated = _lastPath !== currentPath;
+  if (_navigated) {
+    sessionStorage.setItem(NG_PATH_KEY, currentPath);
+    try {
+      // Reset shared dismiss so operator.html / triage.html auto-open again.
+      const s = getSiteTourState();
+      s.assistant_dismissed = false;
+      localStorage.setItem('custodian_site_tour_v1', JSON.stringify(s));
+      // Reset per-page guide dismiss so Nemotron reopens on every navigation.
+      const gs = getGuideState();
+      if (gs.dismissed) delete gs.dismissed[currentPath];
+      saveGuideState(gs);
+    } catch (_) {}
+  }
 
   // Track visit
-  const guideState = getGuideState();
+  const guideState   = getGuideState();
   const isFirstVisit = !(guideState.visited || []).includes(currentPath);
-  // Use isFirstVisit OR isPostOp (Console audit return should feel like new)
-  const isNewArrival = isFirstVisit || isPostOp;
+  // Open on first visit, explicit post-operator return, OR any navigation.
+  const isNewArrival = isFirstVisit || isPostOp || _navigated;
   if (isFirstVisit) {
     guideState.visited = [...(guideState.visited || []), currentPath];
     saveGuideState(guideState);
@@ -298,6 +302,27 @@
   let history  = getHistory();
   let opened   = false;
 
+  // Fallback greetings shown when the API is unreachable.
+  const FALLBACK_GREET = {
+    '/':        "Hi — I'm Nemotron, the AI reasoning layer inside Custodian. This system puts a kernel-enforced authority layer between me and real money. Head to the Operator Panel to try it live.",
+    '/tools':   "You're looking at the full tool registry — every action I can request, all governed by the same kernel authority.",
+    '/docs':    "This is the architecture behind everything you've seen — kernel enforcement, authority bands, the verifier layer, and the audit trail.",
+  };
+
+  // Build the greeting prompt sent to the API.
+  // First contact → intro question. Return visit → short bridging instruction.
+  function buildGreetMsg(path, cfg, hist, postOp) {
+    const PAGE_NAME = { '/': 'the home page', '/tools': 'the Tools page', '/docs': 'the Docs page' };
+    if (postOp) return cfg.greeting_postop;
+    if (hist.length === 0) {
+      // True first contact — use the intro question
+      return path === '/console' ? cfg.greeting_first : cfg.greeting;
+    }
+    // Returning user — bridge from the conversation, no re-introduction
+    return `[TOUR CONTINUATION] The visitor just navigated to ${PAGE_NAME[path] || path}. In 1-2 sentences: ` +
+      `acknowledge the tour so far and tell them what's on this page. Under 50 words. No re-introduction.`;
+  }
+
   // Jump-key → real page path so [[jump:KEY|label]] renders as a real link.
   const JUMP_PAGE_MAP = {
     operator: '/operator',
@@ -384,23 +409,22 @@
     if (!opened) {
       opened = true;
 
-      // Pick greeting text
-      let greetPrompt;
-      if (currentPath === '/console') {
-        greetPrompt = isPostOp ? pageCfg.greeting_postop : pageCfg.greeting_first;
-      } else {
-        greetPrompt = pageCfg.greeting;
-      }
+      const greetMsg = buildGreetMsg(currentPath, pageCfg, history, isPostOp);
 
       const thinking = addMsg('…', 'bot');
       fetch('/api/v1/nemotron/ask', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ question: greetPrompt, history: [], page: currentPath.replace(/^\//, '') || 'home', site_context: { ng_page: currentPath, ng_post_op: isPostOp, first_visit: isFirstVisit } }),
+        body: JSON.stringify({
+          question: greetMsg,
+          history: history.slice(-4),   // carry context from previous pages
+          page: currentPath.replace(/^\//, '') || 'home',
+          site_context: { ng_page: currentPath, ng_post_op: isPostOp, first_visit: isFirstVisit, has_history: history.length > 0 },
+        }),
       })
       .then(r => r.json())
       .then(d => {
         thinking.remove();
-        const raw = d.answer || greetPrompt;
+        const raw = d.answer || FALLBACK_GREET[currentPath] || "Ask me anything about what you're seeing.";
         addMsg(raw, 'bot');
         history.push({ role: 'assistant', content: raw });
         saveHistory(history);
@@ -411,10 +435,7 @@
       })
       .catch(() => {
         thinking.remove();
-        const fallback = currentPath === '/console'
-          ? (isPostOp ? pageCfg.greeting_postop : pageCfg.greeting_first)
-          : pageCfg.greeting;
-        addMsg(fallback, 'bot');
+        addMsg(FALLBACK_GREET[currentPath] || "Ask me anything about what you're seeing here.", 'bot');
         const suggests = currentPath === '/console'
           ? (isPostOp ? pageCfg.suggests_postop : pageCfg.suggests_first)
           : pageCfg.suggests;
