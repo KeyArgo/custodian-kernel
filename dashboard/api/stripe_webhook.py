@@ -63,17 +63,19 @@ def stripe_webhook():
     sig = request.headers.get("Stripe-Signature", "")
     secret = os.environ.get("STRIPE_WEBHOOK_SECRET", "")
 
-    if secret:
-        try:
-            parts = {p.split("=")[0]: p.split("=")[1] for p in sig.split(",") if "=" in p}
-            ts = parts.get("t", "0")
-            v1 = parts.get("v1", "")
-            signed = f"{ts}.".encode() + payload
-            expected = hmac.new(secret.encode(), signed, hashlib.sha256).hexdigest()
-            if not hmac.compare_digest(expected, v1):
-                return jsonify({"error": "invalid signature"}), 400
-        except Exception:
-            return jsonify({"error": "signature check failed"}), 400
+    if not secret:
+        return jsonify({"error": "webhook secret not configured — rejecting unverifiable event"}), 500
+
+    try:
+        parts = {p.split("=")[0]: p.split("=")[1] for p in sig.split(",") if "=" in p}
+        ts = parts.get("t", "0")
+        v1 = parts.get("v1", "")
+        signed = f"{ts}.".encode() + payload
+        expected = hmac.new(secret.encode(), signed, hashlib.sha256).hexdigest()
+        if not hmac.compare_digest(expected, v1):
+            return jsonify({"error": "invalid signature"}), 400
+    except Exception:
+        return jsonify({"error": "signature check failed"}), 400
 
     try:
         event = json.loads(payload)

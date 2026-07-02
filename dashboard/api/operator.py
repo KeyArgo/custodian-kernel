@@ -194,7 +194,12 @@ def spend():
 def refund():
     data = request.get_json(force=True, silent=True) or {}
     pi_id = str(data.get('payment_intent_id', ''))
-    amount = float(data.get('amount', 0))
+    try:
+        amount = float(data.get('amount', 0))
+        if amount <= 0 or amount > _DEMO_AMOUNT_MAX:
+            return jsonify({'error': f'amount must be between 0 and {_DEMO_AMOUNT_MAX}'}), 400
+    except (TypeError, ValueError):
+        return jsonify({'error': 'amount must be a number'}), 400
     description = str(data.get('description', 'refund'))[:200]
 
     # refund.py always escalates (self-dealing) and sends the Twilio SMS itself.
@@ -251,20 +256,28 @@ _STATE_BASE = Path(_os.getenv(
     'HERMES_SKILL_STATE_PATH',
     '/tmp/hermes-mount/sandbox/.hermes/skills/payments/stripe-spend/state',
 ))
-_PENDING_CODE_PATH = _STATE_BASE / 'pending_code.json'
+_PENDING_CODE_PATH = _STATE_BASE / 'pending_approval.json'
 
 
 @bp.route('/pending_code', methods=['GET'])
 def pending_code():
     if not _PENDING_CODE_PATH.exists():
-        return jsonify({'code': None, 'reason': 'no pending code'})
+        return jsonify({'pending': False, 'code': None, 'reason': 'no pending code'})
     try:
         data = _json.loads(_PENDING_CODE_PATH.read_text())
     except (ValueError, OSError):
-        return jsonify({'code': None, 'reason': 'unreadable'})
-    if time.time() > data.get('expires_at', 0):
-        return jsonify({'code': None, 'reason': 'expired'})
-    return jsonify({'code': data.get('code'), 'expires_at': data.get('expires_at')})
+        return jsonify({'pending': False, 'code': None, 'reason': 'unreadable'})
+    # The OTP code is held only by Twilio and the operator's phone — never written
+    # to disk by design (that's what makes self-approval structurally impossible).
+    # Return the escalation metadata so the UI can confirm the SMS was sent.
+    return jsonify({
+        'pending': True,
+        'code': None,
+        'amount': data.get('amount'),
+        'description': data.get('description'),
+        'kind': data.get('kind', 'spend'),
+        'created_at': data.get('created_at'),
+    })
 
 
 _sms_rate: dict = collections.defaultdict(list)  # ip -> [timestamp, ...]
@@ -409,6 +422,10 @@ def reset_demo():
         if _PENDING_CODE_PATH.exists():
             _PENDING_CODE_PATH.unlink()
             steps.append('pending_code cleared')
+
+        # Clear Flask-layer kill switch so post-reset spends aren't silently denied
+        _write_flask_kill_switch(killed=False, by='reset')
+        steps.append('flask kill switch cleared')
 
         return jsonify({'ok': True, 'steps': steps})
     except Exception as e:

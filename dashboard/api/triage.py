@@ -228,7 +228,7 @@ def _envelope_for(data: dict, live: bool, pack_name: str = "refunds"):
         extractor = _EXTRACTORS.get(pack_name, refunds_extract_envelope)
         try:
             return extractor(_case_input(data), client), client.name
-        except (EnvelopeParseError, OSError, KeyError) as e:
+        except (EnvelopeParseError, OSError, KeyError, RuntimeError) as e:
             # fall through to captured, but say so
             return Envelope.from_dict(data["envelope"]), f"captured (live call failed: {e})"
     return Envelope.from_dict(data["envelope"]), "captured agent output"
