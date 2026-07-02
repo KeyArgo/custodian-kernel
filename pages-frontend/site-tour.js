@@ -35,7 +35,7 @@
 
   function getState() {
     try {
-      const raw = JSON.parse(localStorage.getItem(TOUR_KEY) || '{}');
+      const raw = JSON.parse(sessionStorage.getItem(TOUR_KEY) || '{}');
       return Object.assign(defaultState(), raw || {});
     } catch (_) {
       return defaultState();
@@ -44,7 +44,7 @@
 
   function saveState(state) {
     state.updated_at = nowIso();
-    localStorage.setItem(TOUR_KEY, JSON.stringify(state));
+    sessionStorage.setItem(TOUR_KEY, JSON.stringify(state));
     return state;
   }
 
@@ -100,14 +100,14 @@
 
   function getHistory() {
     try {
-      return JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]');
+      return JSON.parse(sessionStorage.getItem(HISTORY_KEY) || '[]');
     } catch (_) {
       return [];
     }
   }
 
   function saveHistory(history) {
-    localStorage.setItem(HISTORY_KEY, JSON.stringify((history || []).slice(-16)));
+    sessionStorage.setItem(HISTORY_KEY, JSON.stringify((history || []).slice(-16)));
   }
 
   function onPage(page) {

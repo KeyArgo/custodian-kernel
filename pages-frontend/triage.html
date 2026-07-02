@@ -1182,7 +1182,7 @@ function nextSuggest(skip){
     return TRIAGE_POOL[0];
 }
 
-const history = (()=>{ if(siteTour) return siteTour.getHistory(); try{return JSON.parse(localStorage.getItem(HISTORY_KEY)||'[]')}catch{return []}})();
+const history = (()=>{ if(siteTour) return siteTour.getHistory(); try{return JSON.parse(sessionStorage.getItem(HISTORY_KEY)||'[]')}catch{return []}})();
 const bubble  = document.getElementById('tr-nemo-bubble');
 const panel   = document.getElementById('tr-nemo-panel');
 const body    = document.getElementById('tr-nemo-body');
@@ -1199,7 +1199,7 @@ function siteContext(extra){
 
 function saveHistory(){
     if(siteTour) siteTour.saveHistory(history);
-    else { try{localStorage.setItem(HISTORY_KEY,JSON.stringify(history.slice(-16)));}catch{} }
+    else { try{sessionStorage.setItem(HISTORY_KEY,JSON.stringify(history.slice(-16)));}catch{} }
 }
 
 function addMsg(text, role){

@@ -113,7 +113,7 @@
 
   /* ─── Site-tour shared state (from site-tour.js) ─────────────── */
   function getSiteTourState() {
-    try { return JSON.parse(localStorage.getItem('custodian_site_tour_v1') || '{}'); }
+    try { return JSON.parse(sessionStorage.getItem('custodian_site_tour_v1') || '{}'); }
     catch (_) { return {}; }
   }
 
@@ -130,12 +130,12 @@
   const NG_PATH_KEY = 'custodian_ng_last_path'; // sessionStorage — resets on tab close
 
   function getGuideState() {
-    try { return Object.assign({ dismissed: {}, visited: [] }, JSON.parse(localStorage.getItem(NG_KEY) || '{}')); }
+    try { return Object.assign({ dismissed: {}, visited: [] }, JSON.parse(sessionStorage.getItem(NG_KEY) || '{}')); }
     catch (_) { return { dismissed: {}, visited: [] }; }
   }
-  function saveGuideState(s) { try { localStorage.setItem(NG_KEY, JSON.stringify(s)); } catch (_) {} return s; }
-  function getHistory() { try { return JSON.parse(localStorage.getItem(NG_HIST_KEY) || '[]'); } catch (_) { return []; } }
-  function saveHistory(h) { try { localStorage.setItem(NG_HIST_KEY, JSON.stringify((h || []).slice(-16))); } catch (_) {} }
+  function saveGuideState(s) { try { sessionStorage.setItem(NG_KEY, JSON.stringify(s)); } catch (_) {} return s; }
+  function getHistory() { try { return JSON.parse(sessionStorage.getItem(NG_HIST_KEY) || '[]'); } catch (_) { return []; } }
+  function saveHistory(h) { try { sessionStorage.setItem(NG_HIST_KEY, JSON.stringify((h || []).slice(-16))); } catch (_) {} }
 
   // Detect genuine navigation (tab reuse across pages) vs same-page reload.
   // sessionStorage survives reload but resets on tab close — perfect nav detector.
@@ -147,7 +147,7 @@
       // Reset shared dismiss so operator.html / triage.html auto-open again.
       const s = getSiteTourState();
       s.assistant_dismissed = false;
-      localStorage.setItem('custodian_site_tour_v1', JSON.stringify(s));
+      sessionStorage.setItem('custodian_site_tour_v1', JSON.stringify(s));
       // Reset per-page guide dismiss so Nemotron reopens on every navigation.
       const gs = getGuideState();
       if (gs.dismissed) delete gs.dismissed[currentPath];

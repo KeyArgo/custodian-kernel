@@ -5,7 +5,7 @@
  * so Nemotron always knows what they've seen, what they've completed, and what
  * to guide them toward next.
  *
- * Storage: localStorage 'custodian_tour_track_v1' (per-browser, per-user).
+ * Storage: sessionStorage 'custodian_tour_track_v1' (resets per tab — visitor-isolated).
  * API:     window.TourTracker — call track(), then pass buildContext() into
  *          any Nemotron API call as tracker_context.
  */
@@ -39,12 +39,12 @@
 
   /* ── Storage helpers ─────────────────────────────────────────────── */
   function get() {
-    try { return JSON.parse(localStorage.getItem(KEY) || '{}'); }
+    try { return JSON.parse(sessionStorage.getItem(KEY) || '{}'); }
     catch (_) { return {}; }
   }
 
   function save(s) {
-    try { localStorage.setItem(KEY, JSON.stringify(s)); } catch (_) {}
+    try { sessionStorage.setItem(KEY, JSON.stringify(s)); } catch (_) {}
   }
 
   /* ── Core track function ─────────────────────────────────────────── */
@@ -149,7 +149,7 @@
   }
 
   function reset() {
-    try { localStorage.removeItem(KEY); } catch (_) {}
+    try { sessionStorage.removeItem(KEY); } catch (_) {}
   }
 
   window.TourTracker = { track, get, buildContext, reset };

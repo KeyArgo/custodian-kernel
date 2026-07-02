@@ -710,14 +710,14 @@ setInterval(refreshOpFeed, 3000);
 const NEMO_HISTORY_KEY = 'custodian_nemotron_history';
 function nemoLoadHistory() {
     if (siteTour) return siteTour.getHistory();
-    try { return JSON.parse(localStorage.getItem(NEMO_HISTORY_KEY) || '[]'); } catch { return []; }
+    try { return JSON.parse(sessionStorage.getItem(NEMO_HISTORY_KEY) || '[]'); } catch { return []; }
 }
 function nemoSaveHistory(h) {
     if (siteTour) {
         siteTour.saveHistory(h);
         return;
     }
-    try { localStorage.setItem(NEMO_HISTORY_KEY, JSON.stringify(h.slice(-16))); } catch {}
+    try { sessionStorage.setItem(NEMO_HISTORY_KEY, JSON.stringify(h.slice(-16))); } catch {}
 }
 
 const opNemoHistory = nemoLoadHistory();

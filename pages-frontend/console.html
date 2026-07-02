@@ -1759,7 +1759,7 @@
         function nemotronSaveHistory() {
             if (siteTour) siteTour.saveHistory(nemotronHistory);
             else {
-                try { localStorage.setItem(NEMO_HISTORY_KEY, JSON.stringify(nemotronHistory.slice(-16))); } catch {}
+                try { sessionStorage.setItem(NEMO_HISTORY_KEY, JSON.stringify(nemotronHistory.slice(-16))); } catch {}
             }
         }
 
@@ -2040,7 +2040,7 @@ function nemotronRenderAnswer(rawText) {
         const NEMO_HISTORY_KEY = 'custodian_nemotron_history';
         const nemotronHistory = (() => {
             if (siteTour) return siteTour.getHistory();
-            try { return JSON.parse(localStorage.getItem(NEMO_HISTORY_KEY) || '[]'); } catch { return []; }
+            try { return JSON.parse(sessionStorage.getItem(NEMO_HISTORY_KEY) || '[]'); } catch { return []; }
         })();
 
         async function nemotronSend() {
