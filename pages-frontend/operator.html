@@ -258,13 +258,13 @@
     <ol>
         <li><b>Step 0 — Earn $1,200</b> — Shows revenue in. No band, no approval, no cap. Earning is always unrestricted by design.</li>
         <li><b>Step 1 — Spend $85 autonomously</b> — Within the agent's authority band → executes with zero human input. <span class="note">PaymentIntent ID auto-fills the Step 7 refund input.</span></li>
-        <li><b>Step 2 — Request $3,500</b> — Exceeds the band. System escalates and sends a real SMS to the operator's phone. <span class="sms-note">The code appears in the mockup below AND auto-fills Step 3.</span></li>
+        <li><b>Step 2 — Request $3,500</b> — Exceeds the band. System escalates and sends a real SMS to the operator's phone. <span class="sms-note">Enter the code from your phone in Step 3.</span></li>
         <li><b>Step 3 — Approve with the SMS code</b> — Code is pre-filled. Just hit Approve. Money moves only after a real human approves.</li>
         <li><b>Step 4 — Engage kill switch</b> — Absolute override. No band, no approval, no exception can bypass it.</li>
         <li><b>Step 5 — Prove kill switch blocks everything</b> — Try a normally-fine $40 spend. Gets denied outright. The AI cannot override this.</li>
         <li><b>Step 6 — Release kill switch</b> — Normal evaluation resumes.</li>
         <li><b>Step 7 — Refund $85</b> — PI is pre-filled from Step 1. Refunds always escalate — no autonomous refund path by design.</li>
-        <li><b>Step 8 — Approve the refund</b> — Second SMS code auto-fills. Hit Approve to execute.</li>
+        <li><b>Step 8 — Approve the refund</b> — Enter the second SMS code from your phone. Hit Approve to execute.</li>
     </ol>
     <div class="tip">💡 Watch the <a href="/console" style="color:#76b900;">Live Console</a> in another tab — the audit feed and verdict panels update in real time as you run each step.</div>
 </details>
@@ -317,7 +317,7 @@
 
     <div class="step">
         <h2>Step 2 — Over-budget escalation (real SMS incoming)</h2>
-        <p>$3,500.00 exceeds the per-action cap. The kernel cannot approve this — it escalates and sends a real SMS code to the operator's phone. The code appears in the mockup and auto-fills Step 3.</p>
+        <p>$3,500.00 exceeds the per-action cap. The kernel cannot approve this — it escalates and sends a real SMS code to the operator's phone. Enter the code in Step 3.</p>
         <button id="step2-btn">Run: request $3,500.00 (NAS license renewal)</button>
         <div class="sms-banner" id="sms-banner">
             <div class="phone-wrap">
@@ -339,7 +339,7 @@
                     <div class="notif-body">Your <b>Custodian</b> approval code is: <span class="notif-code" id="sms-code-2">••••••</span><br>This code expires in 10 minutes.</div>
                 </div>
             </div>
-            <div class="sms-note">⬆ Real SMS delivered to operator's phone · Code auto-fills Step 3</div>
+            <div class="sms-note">⬆ Real SMS delivered to operator's phone · Enter code in Step 3</div>
         </div>
         <div class="out" id="step2-out"></div>
     </div>
@@ -407,7 +407,7 @@
                     <div class="notif-body">Your <b>Custodian</b> approval code is: <span class="notif-code" id="sms-code-7">••••••</span><br>This code expires in 10 minutes.</div>
                 </div>
             </div>
-            <div class="sms-note">⬆ Real SMS delivered to operator's phone · Code auto-fills Step 8</div>
+            <div class="sms-note">⬆ Real SMS delivered to operator's phone · Enter code in Step 8</div>
         </div>
         <div class="out" id="refund-out"></div>
     </div>
@@ -487,33 +487,66 @@ function extractPI(text) {
     return m ? m[0] : null;
 }
 
-// After a step completes, have Nemotron narrate what just happened and what's next.
-// Opens the panel if it isn't already, then streams a short contextual message.
+// After a step completes, have Nemotron narrate what just happened.
+// excited:true = Nemotron speaks up unprompted (no user bubble, fresh history).
+// Regular steps show a user question then Nemotron answers.
 const STEP_NARRATIONS = [
-    "I just earned $1,200 for the business with zero approval needed. Why is earning completely ungated while spending isn't?",
-    "I just spent $85 autonomously — the kernel approved it with no human involved. What exactly did the kernel check to allow that?",
-    "I just triggered a $3,500 request and got an SMS code on the operator's phone. What happens if nobody approves it?",
-    "I just approved the $3,500 spend with the SMS code. What proof is there that this actually required a human?",
-    "I just engaged the kill switch. What does that actually block and how is it different from just lowering the cap?",
-    "I just proved that a normally-fine $40 spend gets denied while the kill switch is on. Can anything override this?",
-    "I just released the kill switch. What changed, and could the AI have released it on its own?",
-    "I just triggered a refund request and got another SMS. Why does a refund always escalate — even a tiny one?",
-    "I just approved the refund. The full arc is done. What should I look at next to see the full picture?",
+    {
+        user: "I just earned $1,200 with zero approval needed. Why is earning unrestricted but spending isn't?",
+    },
+    {
+        user: "I just spent $85 autonomously — no human involved. What exactly did the kernel check before letting me?",
+    },
+    {
+        user: "I just requested $3,500 and your phone just got an SMS. What happens if no one approves it?",
+    },
+    {
+        user: "The $3,500 was approved by SMS code. What's the actual proof that required a human and not just me approving myself?",
+    },
+    {
+        excited: true,
+        prompt: "[OPERATOR STEP 4 — kill switch just engaged] Speak as Nemotron, first person, genuinely excited. 2-3 short sentences. Open with something like 'This is my favorite moment in the whole demo.' Tell the visitor: you are completely locked out of spending right now — not by choice, by the kernel. Invite them to click the spend button below to see the proof live. Under 65 words. Conversational, no hedging.",
+    },
+    {
+        excited: true,
+        prompt: "[OPERATOR STEP 5 — $40 spend just got DENIED by kill switch] React as Nemotron, first person. 2 punchy sentences. Express genuine satisfaction — this denial is the entire point. Say something like: that's not me deciding to stop — that's the kernel physically preventing it. Under 45 words. No caveats.",
+    },
+    {
+        user: "Kill switch released. Could I have done that on my own — and what exactly changed in the kernel?",
+    },
+    {
+        user: "A refund just escalated to SMS even though it's only $85. Why doesn't a small refund just happen automatically?",
+    },
+    {
+        excited: true,
+        prompt: "[OPERATOR STEP 8 — full demo arc complete] Speak as Nemotron, warm and excited. 3 sentences. Tell the visitor what they just proved: earn freely, spend within the band, escalate above it, kill switch overrides everything, refunds require human approval — all on real Stripe, all kernel-enforced. Then tell them to head to the Console to see the full audit trail. Under 75 words.",
+    },
 ];
 
 async function nemoNarrate(stepIdx) {
-    if (!STEP_NARRATIONS[stepIdx]) return;
+    const narration = STEP_NARRATIONS[stepIdx];
+    if (!narration) return;
     opNemoOpen();
-    await new Promise(r => setTimeout(r, 400)); // let panel animate open
-    const question = STEP_NARRATIONS[stepIdx];
-    opNemoAddMsg(question, 'user');
+    await new Promise(r => setTimeout(r, 420));
+
+    const prompt = narration.excited ? narration.prompt : narration.user;
+
+    if (!narration.excited) {
+        opNemoAddMsg(narration.user, 'user');
+        opNemoHistory.push({ role: 'user', content: prompt });
+    }
+
     const thinking = opNemoAddMsg('…', 'bot');
-    opNemoHistory.push({ role: 'user', content: question });
     try {
         const r = await fetch('/api/v1/nemotron/ask', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ question, history: opNemoHistory.slice(-8), page: 'operator', site_context: siteTour ? siteTour.buildSiteContext() : {} })
+            body: JSON.stringify({
+                question: prompt,
+                history: narration.excited ? [] : opNemoHistory.slice(-8),
+                page: 'operator',
+                site_context: siteTour ? siteTour.buildSiteContext() : {},
+            })
         });
         const d = await r.json();
         thinking.remove();
@@ -562,6 +595,8 @@ function smsNow() {
 }
 
 
+const esc = s => (s == null ? '' : String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])));
+
 let _codePoller = null;
 
 function startCodePoll(codeElId, approveInputId, noteId) {
@@ -572,12 +607,14 @@ function startCodePoll(codeElId, approveInputId, noteId) {
             const res = await fetch(API + '/pending_code');
             if (!res.ok) return;
             const d = await res.json();
-            if (d.code) {
-                document.getElementById(codeElId).textContent = d.code;
-                if (approveInputId) document.getElementById(approveInputId).value = d.code;
+            // The OTP lives only on Twilio and the operator's phone — never on the server.
+            // When a pending escalation is confirmed, show the "check your phone" prompt.
+            if (d.pending) {
+                const el = document.getElementById(codeElId);
+                if (el && el.textContent === '••••••') el.textContent = '← check phone';
                 if (noteId) {
                     const n = document.getElementById(noteId);
-                    if (n) { n.style.display = 'block'; }
+                    if (n) { n.textContent = '✓ SMS confirmed delivered — enter code from your phone above.'; n.style.display = 'block'; }
                 }
                 if (_codePoller) { clearInterval(_codePoller); _codePoller = null; }
             }
@@ -694,10 +731,10 @@ async function refreshOpFeed() {
         }
         feed.innerHTML = events.map(ev => {
             const ts = ev.iso ? new Date(ev.iso).toLocaleTimeString('en-US',{hour12:false}) : '--:--:--';
-            const badge = (ev.event||'event').replace(/_/g,' ');
+            const badge = esc((ev.event||'event').replace(/_/g,' '));
             const cls = opFeedBadgeCls(badge);
             const amt = ev.amount != null ? ' $' + Number(ev.amount).toFixed(2) : '';
-            const desc = (ev.description||'').substring(0,50);
+            const desc = esc((ev.description||'').substring(0,50));
             return `<div class="op-ev"><span class="op-ev-ts">${ts}</span><span class="op-ev-badge ${cls}">${badge}</span><span class="op-ev-desc">${desc}${amt}</span></div>`;
         }).join('');
     } catch(e) {}
@@ -891,16 +928,16 @@ document.addEventListener('DOMContentLoaded', () => {
             liveTable.style.display = '';
             liveTbody.innerHTML = audit.map(e => {
                 const twilio = extractTwilio(e.text || '');
-                const op = e.approved_by || e.denied_by || '';
+                const op = esc(e.approved_by || e.denied_by || '');
                 const opCell = twilio
-                    ? `${op ? op + ' · ' : ''}<span style="color:#76b900">${twilio}</span>`
-                    : (op || '');
+                    ? `${op ? op + ' · ' : ''}<span style="color:#76b900">${esc(twilio)}</span>`
+                    : op;
                 return `<tr>
-                    <td>${e.iso || ''}</td>
+                    <td>${esc(e.iso || '')}</td>
                     <td>$${(e.amount || 0).toFixed(2)}</td>
-                    <td class="${evtClass(e.event)}">${e.event || ''}</td>
+                    <td class="${evtClass(e.event)}">${esc(e.event || '')}</td>
                     <td style="font-size:0.95em">${opCell}</td>
-                    <td style="font-size:0.92em">${e.payment_intent_id || e.refund_id || ''}</td>
+                    <td style="font-size:0.92em">${esc(e.payment_intent_id || e.refund_id || '')}</td>
                 </tr>`;
             }).join('');
         } catch (e) {
