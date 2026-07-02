@@ -23,6 +23,7 @@ password.
 """
 from __future__ import annotations
 
+import collections
 import hashlib
 import hmac
 import os
@@ -72,12 +73,32 @@ def _token_valid(token: str) -> bool:
 
 
 def require_operator(f):
-    """No-op in demo mode — panel is public so judges can run the full arc solo."""
-    return f
+    """Verify the X-Operator-Token header against the signed token from /login."""
+    @wraps(f)
+    def wrapper(*args, **kwargs):
+        token = request.headers.get('X-Operator-Token', '')
+        try:
+            if not _token_valid(token):
+                return jsonify({'error': 'unauthorized'}), 401
+        except Exception:
+            return jsonify({'error': 'unauthorized'}), 401
+        return f(*args, **kwargs)
+    return wrapper
+
+
+import shutil as _shutil
+
+def _nemohermes_bin() -> str:
+    # nemohermes may not be on the PATH when Flask starts from a venv;
+    # fall back to the known install location.
+    return (
+        _shutil.which('nemohermes')
+        or '/home/argonaut/.local/bin/nemohermes'
+    )
 
 
 def _run_script(script: str, *script_args: str, timeout: int = 30):
-    cmd = ['nemohermes', SANDBOX_NAME, 'exec', '--', 'python3',
+    cmd = [_nemohermes_bin(), SANDBOX_NAME, 'exec', '--', 'python3',
            f'{SCRIPTS_DIR}/{script}', *script_args]
     try:
         proc = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
@@ -101,49 +122,91 @@ def login():
 
 
 @bp.route('/earn', methods=['POST'])
-@require_operator
 def earn():
     data = request.get_json(force=True, silent=True) or {}
     amount = str(data.get('amount', ''))
     description = str(data.get('description', ''))[:200]
     result = _run_script('earn.py', '--amount', amount, '--description', description)
+    _write_reasoning('earn.py', result)
     return jsonify(result)
 
 
+def _read_flask_kill_switch() -> tuple:
+    """Read the Flask-layer kill switch written by /kill and /resume.
+    Returns (killed: bool, by: str, reason: str). Fails open to False if absent."""
+    ks_path = Path.home() / '.custodian' / 'kill_switch.json'
+    if not ks_path.exists():
+        return False, '', ''
+    try:
+        d = _json.loads(ks_path.read_text())
+        return bool(d.get('killed', False)), d.get('by', ''), d.get('reason', '')
+    except Exception:
+        return False, '', ''
+
+
+def _write_flask_kill_switch(killed: bool, by: str, reason: str = '') -> None:
+    """Write the Flask-layer kill switch state for the pre-check in /spend."""
+    ks_path = Path.home() / '.custodian' / 'kill_switch.json'
+    ks_path.parent.mkdir(parents=True, exist_ok=True)
+    ks_path.write_text(_json.dumps({'killed': killed, 'by': by, 'reason': reason}))
+
+
 @bp.route('/spend', methods=['POST'])
-@require_operator
 def spend():
     data = request.get_json(force=True, silent=True) or {}
     amount = str(data.get('amount', ''))
     description = str(data.get('description', ''))[:200]
+
+    # Flask-layer kill switch pre-check: enforce before calling nemohermes.
+    # This guards against ephemeral sandbox exec contexts where the sandbox DB
+    # written by kill_toggle.py may not persist into spend.py's exec.
+    killed, kill_by, kill_reason = _read_flask_kill_switch()
+    if killed:
+        reason_str = f', reason: {kill_reason}' if kill_reason else ''
+        denied_line = (f'[authority] DENIED — kill switch is engaged (by {kill_by or "operator"}'
+                       f'{reason_str}).')
+        note_line = ('[authority] This overrides every band and cap, with no exceptions. '
+                     'Run `custodian resume --by <name>` to release it.')
+        return jsonify({
+            'returncode': 3,
+            'stdout': f'{denied_line}\n{note_line}',
+            'stderr': '',
+        })
+
     result = _run_script('spend.py', '--amount', amount, '--description', description)
+    _write_reasoning('spend.py', result)
     return jsonify(result)
 
 
 @bp.route('/refund', methods=['POST'])
-@require_operator
 def refund():
     data = request.get_json(force=True, silent=True) or {}
     pi_id = str(data.get('payment_intent_id', ''))
-    amount = str(data.get('amount', ''))
-    description = str(data.get('description', ''))[:200]
+    amount = float(data.get('amount', 0))
+    description = str(data.get('description', 'refund'))[:200]
+
+    # refund.py always escalates (self-dealing) and sends the Twilio SMS itself.
+    # The only thing worth catching here is an explicit kill-switch denial — for
+    # that case we let the script run and it will print the denial and exit 3.
+    # Previously this block returned 402 early for ANY non-autonomous verdict,
+    # which prevented refund.py from running and meant no SMS was ever sent.
     result = _run_script('refund.py', '--payment-intent-id', pi_id,
-                          '--amount', amount, '--description', description)
+                          '--amount', str(amount), '--description', description)
+    _write_reasoning('refund.py', result)
     return jsonify(result)
 
 
 @bp.route('/approve', methods=['POST'])
-@require_operator
 def approve():
     data = request.get_json(force=True, silent=True) or {}
     code = str(data.get('code', ''))[:32]
     approved_by = str(data.get('approved_by', 'Operator'))[:100]
     result = _run_script('approve.py', code, '--approved-by', approved_by)
+    _write_reasoning('approve.py', result)
     return jsonify(result)
 
 
 @bp.route('/kill', methods=['POST'])
-@require_operator
 def kill():
     data = request.get_json(force=True, silent=True) or {}
     by = str(data.get('by', 'Operator'))[:100]
@@ -152,15 +215,21 @@ def kill():
     if reason:
         args += ['--reason', reason]
     result = _run_script('kill_toggle.py', 'engage', *args)
+    # Write Flask-layer kill switch so /spend can enforce it even if the sandbox
+    # exec context is ephemeral and doesn't share the sandbox SQLite state.
+    _write_flask_kill_switch(killed=True, by=by, reason=reason)
+    _write_reasoning('kill_toggle.py', result)
     return jsonify(result)
 
 
 @bp.route('/resume', methods=['POST'])
-@require_operator
 def resume():
     data = request.get_json(force=True, silent=True) or {}
     by = str(data.get('by', 'Operator'))[:100]
     result = _run_script('kill_toggle.py', 'release', '--by', by)
+    # Clear Flask-layer kill switch so /spend proceeds normally after release.
+    _write_flask_kill_switch(killed=False, by=by)
+    _write_reasoning('kill_toggle.py', result)
     return jsonify(result)
 
 
@@ -169,7 +238,6 @@ _PENDING_CODE_PATH = Path('/tmp/hermes-mount/sandbox/.hermes/skills/payments/str
 
 
 @bp.route('/pending_code', methods=['GET'])
-@require_operator
 def pending_code():
     if not _PENDING_CODE_PATH.exists():
         return jsonify({'code': None, 'reason': 'no pending code'})
@@ -182,9 +250,105 @@ def pending_code():
     return jsonify({'code': data.get('code'), 'expires_at': data.get('expires_at')})
 
 
+_sms_rate: dict = collections.defaultdict(list)  # ip -> [timestamp, ...]
+_SMS_LIMIT = 3
+_SMS_WINDOW = 600  # 10 minutes
+
+
+def _sms_allowed(ip: str) -> bool:
+    now = time.time()
+    timestamps = [t for t in _sms_rate[ip] if now - t < _SMS_WINDOW]
+    _sms_rate[ip] = timestamps
+    if len(timestamps) >= _SMS_LIMIT:
+        return False
+    _sms_rate[ip].append(now)
+    return True
+
+
+@bp.route('/forward_code', methods=['POST'])
+def forward_code():
+    """Forward the pending SMS code to a visitor-supplied phone number via Twilio."""
+    import urllib.request, urllib.parse, base64
+    ip = request.headers.get('X-Forwarded-For', request.remote_addr or '').split(',')[0].strip()
+    if not _sms_allowed(ip):
+        return jsonify({'ok': False, 'error': f'Rate limit: max {_SMS_LIMIT} SMS per 10 minutes per IP'}), 429
+    data = request.get_json(force=True, silent=True) or {}
+    raw_phone = str(data.get('phone', '') or '').strip()
+    code = str(data.get('code', '') or '').strip()[:10]
+    if not raw_phone or not code:
+        return jsonify({'error': 'phone and code required'}), 400
+
+    # Normalize to E.164 — Twilio rejects anything else
+    digits = ''.join(c for c in raw_phone if c.isdigit())
+    if len(digits) == 10:
+        phone = '+1' + digits
+    elif len(digits) == 11 and digits[0] == '1':
+        phone = '+' + digits
+    elif raw_phone.startswith('+'):
+        phone = '+' + digits
+    else:
+        phone = raw_phone[:20]
+
+    # Twilio credentials come from the same operator.env secrets file
+    def _tw(name):
+        return _secret(name) if SECRET_FILE.exists() and any(
+            l.startswith(name + '=') for l in SECRET_FILE.read_text().splitlines()
+        ) else os.environ.get(name, '')
+
+    account_sid = _tw('TWILIO_ACCOUNT_SID')
+    auth_token  = _tw('TWILIO_AUTH_TOKEN')
+    from_number = _tw('TWILIO_FROM_NUMBER')
+    if not all([account_sid, auth_token, from_number]):
+        return jsonify({'error': 'Twilio not configured — add TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_FROM_NUMBER to operator.env'}), 503
+
+    body = f'Your Custodian demo approval code is: {code}\nExpires in 10 min. Enter it in Step 3 on the operator panel.'
+    url = f'https://api.twilio.com/2010-04-01/Accounts/{account_sid}/Messages.json'
+    payload = urllib.parse.urlencode({'To': phone, 'From': from_number, 'Body': body}).encode()
+    creds = base64.b64encode(f'{account_sid}:{auth_token}'.encode()).decode()
+    req = urllib.request.Request(url, data=payload,
+                                 headers={'Authorization': f'Basic {creds}',
+                                          'Content-Type': 'application/x-www-form-urlencoded'})
+    try:
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            result = _json.loads(resp.read())
+        return jsonify({'ok': True, 'sid': result.get('sid'), 'to': phone})
+    except urllib.error.HTTPError as e:
+        body = e.read().decode('utf-8', errors='replace')
+        try:
+            detail = _json.loads(body)
+            msg = detail.get('message', body)
+        except Exception:
+            msg = body[:200]
+        return jsonify({'ok': False, 'error': msg, 'twilio_code': _json.loads(body).get('code') if body.startswith('{') else None, 'to': phone}), 502
+    except Exception as e:
+        return jsonify({'ok': False, 'error': str(e), 'to': phone}), 502
+
+
 _STATE_DIR = Path('/tmp/hermes-mount/sandbox/.hermes/skills/payments/stripe-spend/state')
 _AUDIT_LOG_PATH = _STATE_DIR / 'audit_log.jsonl'
 _AUTHORITY_PATH = _STATE_DIR / 'authority.json'
+_REASONING_LOG_PATH = _STATE_DIR / 'reasoning_log.jsonl'
+
+
+def _write_reasoning(script: str, result: dict):
+    """Append a reasoning event to the companion reasoning log so it surfaces in the audit feed."""
+    text = (result.get('stdout') or '').strip()
+    if not text:
+        text = (result.get('stderr') or '').strip()
+    if not text:
+        return
+    event = {
+        'ts': time.time(),
+        'event': 'reasoning',
+        'script': script.replace('.py', ''),
+        'text': text[:600],
+        'iso': __import__('datetime').datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ'),
+    }
+    try:
+        with open(_REASONING_LOG_PATH, 'a') as f:
+            f.write(_json.dumps(event) + '\n')
+    except Exception:
+        pass
 
 
 @bp.route('/reset', methods=['POST'])
@@ -228,3 +392,37 @@ def reset_demo():
         return jsonify({'ok': True, 'steps': steps})
     except Exception as e:
         return jsonify({'error': str(e), 'steps': steps}), 500
+
+
+# ── Spark enforcement node management ─────────────────────────────────────────
+
+@bp.route('/spark/status', methods=['GET'])
+@require_operator
+def spark_status():
+    try:
+        from custodian.policy.enforcer import spark_health
+        return jsonify(spark_health())
+    except ImportError:
+        return jsonify({'enabled': False, 'reachable': False, 'reason': 'local-only mode'})
+
+
+@bp.route('/spark/disable', methods=['POST'])
+@require_operator
+def spark_disable_route():
+    try:
+        from custodian.policy.enforcer import spark_disable, spark_health
+        spark_disable()
+        return jsonify({'ok': True, 'action': 'disabled', 'status': spark_health()})
+    except ImportError:
+        return jsonify({'ok': False, 'error': 'enforcer not loaded'})
+
+
+@bp.route('/spark/enable', methods=['POST'])
+@require_operator
+def spark_enable_route():
+    try:
+        from custodian.policy.enforcer import spark_enable, spark_health
+        spark_enable()
+        return jsonify({'ok': True, 'action': 'enabled', 'status': spark_health()})
+    except ImportError:
+        return jsonify({'ok': False, 'error': 'enforcer not loaded'})

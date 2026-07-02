@@ -68,11 +68,14 @@ def run(args) -> None:
 
     storage.clear_pending_approval()
 
+    authority = storage.load_authority_state()
+    actual_band = authority.band if authority is not None else Band.L2
+
     entry = AuditEntry(
         event="approved",
         amount=pending.amount,
         description=pending.description,
-        band=Band.L2,
+        band=actual_band,
         approved_by=args.approved_by,
         reason=pending.reason,
     )

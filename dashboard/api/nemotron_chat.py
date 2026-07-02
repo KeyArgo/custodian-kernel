@@ -10,6 +10,7 @@ https://integrate.api.nvidia.com/v1 directly. Same model, same provider,
 different credential -- the sandbox's key is deliberately not reusable here.
 """
 import json
+import os
 import re
 import time
 import urllib.error
@@ -23,9 +24,20 @@ from flask import Blueprint, jsonify, request
 import api.hermes as hermes
 from custodian.packs.narration import tour_intro_for_model
 
+NVIDIA_SECRET_FILE = Path(__file__).resolve().parent.parent / 'secrets' / 'nvidia.env'
+OPENROUTER_SECRET_FILE = Path(__file__).resolve().parent.parent / 'secrets' / 'openrouter.env'
+NVIDIA_ENDPOINT = 'https://integrate.api.nvidia.com/v1/chat/completions'
+OPENROUTER_ENDPOINT = 'https://openrouter.ai/api/v1/chat/completions'
+NVIDIA_MODEL = 'nvidia/nemotron-3-super-120b-a12b'
+OPENROUTER_MODEL = os.environ.get('OPENROUTER_FALLBACK_MODEL', 'nvidia/llama-3.3-nemotron-super-49b-v1')
+
 try:
     from custodian.inference.router import NemoClawRouter
-    _nemo_client = NemoClawRouter(timeout=25)
+    _nemo_client = NemoClawRouter(
+        timeout=25,
+        nvidia_api_key_file=NVIDIA_SECRET_FILE,
+        openrouter_key_file=OPENROUTER_SECRET_FILE,
+    )
 except ImportError:
     _nemo_client = None
 
@@ -59,10 +71,6 @@ def _rewrite_markdown_links_to_jumps(text):
         return label
     return _MD_LINK_RE.sub(repl, text)
 
-NVIDIA_SECRET_FILE = Path(__file__).resolve().parent.parent / 'secrets' / 'nvidia.env'
-NVIDIA_ENDPOINT = 'https://integrate.api.nvidia.com/v1/chat/completions'
-NVIDIA_MODEL = 'nvidia/nemotron-3-super-120b-a12b'
-
 # Independent rate-limit bucket from the playground's -- a flood on one
 # endpoint shouldn't silently starve the other's budget for the same visitor.
 _RATE_LIMIT_WINDOW_SECONDS = 60
@@ -93,6 +101,60 @@ def _nvidia_key():
         if line.startswith('NVIDIA_API_KEY='):
             return line.split('=', 1)[1].strip()
     raise RuntimeError('NVIDIA_API_KEY not found in secrets file')
+
+
+def _openrouter_key() -> str | None:
+    """Returns OpenRouter key or None if not configured."""
+    env_key = os.environ.get('OPENROUTER_API_KEY')
+    if env_key:
+        return env_key
+    try:
+        for line in OPENROUTER_SECRET_FILE.read_text().splitlines():
+            if line.startswith('OPENROUTER_API_KEY='):
+                return line.split('=', 1)[1].strip()
+    except (FileNotFoundError, OSError):
+        pass
+    return None
+
+
+def _strip_thinking(text: str) -> str:
+    """Strip <think>/<thinking> reasoning tokens that reasoning models leak into content."""
+    import re
+    text = re.sub(r'<think>.*?</think>', '', text, flags=re.DOTALL)
+    text = re.sub(r'<thinking>.*?</thinking>', '', text, flags=re.DOTALL)
+    return text.strip()
+
+
+def _call_openrouter(messages: list[dict]) -> str | None:
+    """Attempt inference via OpenRouter. Returns answer string or None on failure."""
+    key = _openrouter_key()
+    if not key:
+        return None
+    payload = {
+        'model': OPENROUTER_MODEL,
+        'messages': messages,
+        'max_tokens': 600,
+        'temperature': 0.7,
+        # Suppress chain-of-thought — Nemotron Super is a reasoning model and
+        # will dump its full internal monologue into content without this flag.
+        'chat_template_kwargs': {'thinking': False},
+    }
+    req = urllib.request.Request(
+        OPENROUTER_ENDPOINT,
+        data=json.dumps(payload).encode(),
+        headers={
+            'Authorization': f'Bearer {key}',
+            'Content-Type': 'application/json',
+            'HTTP-Referer': 'https://getcustodian.xyz',
+            'X-Title': 'Custodian',
+        },
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=25) as resp:
+            result = json.loads(resp.read())
+        return _strip_thinking(result['choices'][0]['message']['content'])
+    except (urllib.error.URLError, OSError, KeyError, IndexError, json.JSONDecodeError):
+        return None
 
 
 SYSTEM_PROMPT = """You are Nemotron 3 Super, NVIDIA's reasoning model. In this system you play
@@ -157,7 +219,7 @@ Concretely:
   but dense one.
 - NEVER do your own arithmetic to invent a number. Keep two figures distinct and never mix them:
   (1) per_action_cap is the HARD CEILING on any single transaction I can approve autonomously
-  -- this is always $250 unless the data says otherwise. Quote this when someone asks "what's
+   -- this is always $2.00 unless the data says otherwise. Quote this when someone asks "what's
   your limit per purchase" or "how much can you spend at once."
   (2) autonomous_remaining is how much of the SESSION BUDGET is still available -- cite this
   when someone asks "how much is left this session" or "how much total can you still spend."
@@ -242,6 +304,12 @@ exact entry highlighted, not just the tab. Example: "the operator approved it
 [[entry:1782338698.123456|right here]]." Never guess or round a ts value -- copy it verbatim, or
 don't use this marker at all.
 
+CRITICAL: Only use [[entry:TS|...]] if the MOST RECENT AUDIT LOG ENTRIES section in the data
+below is non-empty and you are referencing a specific ts value visible there. If the audit log
+is empty or shows no entries, do NOT use [[entry:...]] at all -- use [[jump:audit|the live audit
+feed]] instead, which opens the tab cleanly. Generating an entry link when the log is empty
+produces a broken experience for the visitor.
+
 This is a single-page app with no real URLs or routes for its sections. NEVER use ordinary
 Markdown link syntax like [text](url) or [text](/#/something) to point at a part of this page --
 there is no such link and it will not work. The ONLY valid way to link anywhere on this page is
@@ -314,7 +382,7 @@ Your role: guide them through each step, explain what the kernel is doing and wh
 and help them understand the Custodian architecture from what they're experiencing hands-on.
 
 IMPORTANT: Do NOT use [[jump:KEY|label]] or [[entry:TS|label]] syntax — those navigate sections
-on the live console (/hermes) and won't work on this page. Speak in plain prose.
+on the live console (/console) and won't work on this page. Speak in plain prose.
 
 The 9 demo steps:
   Step 0 — Earn $1,200: no band, no approval, no cap. Earning is asymmetrically unrestricted by
@@ -355,9 +423,37 @@ IMPORTANT: Do NOT use [[jump:KEY|label]] syntax — this page has no dashboard s
 Plain prose only. Do offer [[suggest:...]] questions to continue the tour.
 """
 
+_TOOLS_GUIDANCE = """
+PAGE CONTEXT: The visitor is on the TOOLS page (/tools). This page proves that Custodian is not
+just about one refund or one payment demo. The same kernel can govern a growing tool registry:
+email, GitHub, Stripe, cloud provisioning, databases, NVIDIA NIM calls, and more.
+
+Your role here: help the visitor understand the business implication. The key point is that the
+same authority model scales across tools, so teams do not need a separate safety story for every
+integration. Keep answers grounded in that pattern: one kernel, many governed actions.
+
+IMPORTANT: Do NOT use [[jump:KEY|label]] or [[entry:TS|label]] syntax here. This page is a catalog,
+not the console. Plain prose only. Do offer [[suggest:...]] questions to continue the tour.
+"""
+
+_DOCS_GUIDANCE = """
+PAGE CONTEXT: The visitor is on the DOCS page (/docs). They are likely moving from "show me" to
+"how does this actually work?" This page exists to turn the live demo into an understandable
+architecture: kernel, verifier, authority bands, kill switch, human approval, and API surface.
+
+Your role here: answer more directly and technically than on the marketing pages, but keep the
+same core message: the model reasons, the verifier checks facts, and the kernel is the final
+authority. Help the visitor connect what they saw in the demo to the underlying design.
+
+IMPORTANT: Do NOT use [[jump:KEY|label]] or [[entry:TS|label]] syntax here. Plain prose only.
+Do offer [[suggest:...]] questions to continue the tour.
+"""
+
 _PAGE_GUIDANCE: dict[str, str] = {
     'operator': _OPERATOR_GUIDANCE,
     'triage': _TRIAGE_GUIDANCE,
+    'tools': _TOOLS_GUIDANCE,
+    'docs': _DOCS_GUIDANCE,
 }
 
 
@@ -407,7 +503,35 @@ def ask():
         if role in ('user', 'assistant') and content:
             history_msgs.append({'role': role, 'content': content})
 
+    # Optional: last triage case the visitor just ran (from the page JS)
+    triage_context = data.get('triage_context')
+    site_context = data.get('site_context')
+
     context_block = _build_context_block()
+    # Inject triage result when available so Nemotron knows what case was just run
+    if triage_context and isinstance(triage_context, dict) and page == 'triage':
+        safe_ctx = {k: triage_context[k] for k in (
+            'agent_recommended', 'agent_summary', 'agent_confidence',
+            'adapter_disposition', 'kernel_verdict', 'kernel_reason',
+            'contradiction_count', 'why_not_a_script', 'adapter_reasons',
+        ) if k in triage_context}
+        context_block += (
+            f"\n\nMOST RECENTLY RAN TRIAGE CASE (the case the visitor just ran on this page):\n"
+            f"{json.dumps(safe_ctx, indent=2)}"
+        )
+    if site_context and isinstance(site_context, dict):
+        safe_site = {
+            k: site_context[k] for k in (
+                'mode', 'stage', 'assistant_behavior', 'operator_step',
+                'last_completed_action', 'pending_console_followup',
+                'pending_tools_followup', 'pending_docs_followup', 'mobile',
+            ) if k in site_context
+        }
+        if safe_site:
+            context_block += (
+                "\n\nVISITOR TOUR CONTEXT (shared across pages):\n"
+                f"{json.dumps(safe_site, indent=2)}"
+            )
     page_guidance = _PAGE_GUIDANCE.get(page, '')
     # Lead with the most compelling thing and earn depth one step at a time --
     # the same most-compelling-first ordering the guided dashboard page uses,
@@ -429,31 +553,43 @@ def ask():
     else:
         answer = None
 
+    # Shared message list for cloud fallback paths
+    cloud_messages = [
+        {'role': 'system', 'content': system_prompt},
+        *history_msgs,
+        {'role': 'user', 'content': f"{context_block}\n\nVISITOR'S QUESTION: {question}"},
+    ]
+
     if answer is None:
-        payload = {
-            'model': NVIDIA_MODEL,
-            'messages': [
-                {'role': 'system', 'content': system_prompt},
-                *history_msgs,
-                {'role': 'user', 'content': f"{context_block}\n\nVISITOR'S QUESTION: {question}"},
-            ],
-            'max_tokens': 600,
-            'temperature': 0.7,
-            'chat_template_kwargs': {'thinking': False},
-        }
-        req = urllib.request.Request(
-            NVIDIA_ENDPOINT,
-            data=json.dumps(payload).encode(),
-            headers={'Authorization': f'Bearer {_nvidia_key()}', 'Content-Type': 'application/json'},
-        )
+        # Path 2: OpenRouter (primary cloud — faster failover than NIM direct)
+        answer = _call_openrouter(cloud_messages)
+
+    if answer is None:
+        # Path 3: NVIDIA NIM direct (secondary)
+        nim_error = None
         try:
+            payload = {
+                'model': NVIDIA_MODEL,
+                'messages': cloud_messages,
+                'max_tokens': 600,
+                'temperature': 0.7,
+                'chat_template_kwargs': {'thinking': False},
+            }
+            req = urllib.request.Request(
+                NVIDIA_ENDPOINT,
+                data=json.dumps(payload).encode(),
+                headers={'Authorization': f'Bearer {_nvidia_key()}', 'Content-Type': 'application/json'},
+            )
             with urllib.request.urlopen(req, timeout=25) as resp:
                 result = json.loads(resp.read())
-            answer = result['choices'][0]['message']['content']
-        except urllib.error.URLError as e:
-            return jsonify({'error': f'Could not reach Nemotron: {e}'}), 502
+            answer = _strip_thinking(result['choices'][0]['message']['content'])
+        except (urllib.error.URLError, OSError, RuntimeError) as e:
+            nim_error = str(e)
         except (KeyError, IndexError, json.JSONDecodeError):
-            return jsonify({'error': 'Unexpected response shape from Nemotron'}), 502
+            nim_error = 'unexpected response shape from NVIDIA NIM'
+
+    if answer is None:
+        return jsonify({'error': f'All Nemotron endpoints failed. NIM: {nim_error}'}), 502
 
     answer = _rewrite_markdown_links_to_jumps(answer)
     return jsonify({'answer': answer})

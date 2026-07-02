@@ -6,7 +6,11 @@
 <title>Custodian — Operator Panel</title>
 <link rel="icon" type="image/svg+xml" href="/static/favicon-operator.svg">
 <style>
-    body { background: #060606; color: #e8e8e8; font-family: 'Courier New', monospace; padding: 0; max-width: 100%; margin: 0; }
+    body { background:
+        radial-gradient(circle at top left, rgba(118,185,0,0.06), transparent 26%),
+        radial-gradient(circle at top right, rgba(255,176,0,0.08), transparent 22%),
+        linear-gradient(180deg, #06070b 0%, #05060a 100%);
+      color: #e8e8e8; font-family: 'Courier New', monospace; padding: 0; max-width: 100%; margin: 0; }
     .page-wrap { max-width: 800px; margin: 0 auto; padding: 24px; }
     .site-nav { display: flex; align-items: center; gap: 4px; background: #030303;
         border-bottom: 1px solid #1a1a1a; padding: 0 20px; overflow-x: auto; }
@@ -21,33 +25,33 @@
     .site-nav .nav-sep { color: #2a2a2a; margin: 0 2px; }
     h1 { color: #76b900; font-size: 1.3em; margin-bottom: 4px; }
     .warn { color: #ffb000; font-size: 0.82em; margin-bottom: 16px; }
-    .step { background: #0a0a0a; border: 1px solid #2a2a2a; border-top: 2px solid #76b900; padding: 14px 16px; margin-bottom: 14px; }
+    .step { background: linear-gradient(180deg, rgba(18,23,35,0.96), rgba(10,13,20,0.98)); border: 1px solid rgba(255,255,255,0.08); border-top: 2px solid #76b900; padding: 14px 16px; margin-bottom: 14px; border-radius: 12px; box-shadow: 0 10px 22px rgba(0,0,0,0.18); }
     .step h2 { font-size: 0.95em; margin: 0 0 6px 0; color: #76b900; }
     .step p { font-size: 0.8em; color: #999; margin: 0 0 10px 0; line-height: 1.5; }
     .row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; align-items: center; }
-    input { background: #111; border: 1px solid #333; color: #e8e8e8; padding: 6px 8px; font-family: inherit; font-size: 0.85em; }
-    button { background: rgba(118,185,0,0.12); border: 1px solid #76b900; color: #76b900; padding: 7px 14px;
-        cursor: pointer; font-family: inherit; font-size: 0.85em; }
-    button:hover { background: rgba(118,185,0,0.25); }
+    input { background: rgba(0,0,0,0.38); border: 1px solid rgba(255,255,255,0.08); color: #e8e8e8; padding: 6px 8px; font-family: inherit; font-size: 0.85em; border-radius: 10px; box-shadow: inset 0 1px 0 rgba(255,255,255,0.02); }
+    button { background: linear-gradient(180deg, rgba(118,185,0,0.16), rgba(118,185,0,0.08)); border: 1px solid #76b900; color: #76b900; padding: 7px 14px;
+        cursor: pointer; font-family: inherit; font-size: 0.85em; border-radius: 999px; transition: transform .15s, background .15s, border-color .15s, color .15s; }
+    button:hover { background: rgba(118,185,0,0.25); transform: translateY(-1px); }
     button:disabled { opacity: 0.4; cursor: not-allowed; }
     .btn-copy { background: rgba(255,176,0,0.1); border-color: #ffb000; color: #ffb000; font-size: 0.75em; padding: 4px 10px; display: none; }
     .btn-copy.show { display: inline-block; }
     .btn-copy:hover { background: rgba(255,176,0,0.22); }
-    .out { background: #000; border: 1px solid #222; padding: 8px 10px; margin-top: 8px; font-size: 0.78em;
-        white-space: pre-wrap; max-height: 200px; overflow-y: auto; display: none; }
+    .out { background: linear-gradient(180deg, rgba(10,12,18,0.96), rgba(7,8,13,0.98)); border: 1px solid rgba(255,255,255,0.08); padding: 8px 10px; margin-top: 8px; font-size: 0.78em;
+        white-space: pre-wrap; max-height: 200px; overflow-y: auto; display: none; border-radius: 12px; box-shadow: inset 0 1px 0 rgba(255,255,255,0.02); }
     .out.show { display: block; }
     .out.err { border-color: #ff3b3b; color: #ff9b9b; }
     /* ---- SMS phone mockup ---- */
     .sms-banner { display: none; margin-top: 14px; }
     .sms-banner.show { display: block; }
-    .phone-wrap { background: #111; border: 2px solid #333; border-radius: 20px; padding: 12px 10px;
+    .phone-wrap { background: linear-gradient(180deg, rgba(18,23,35,0.98), rgba(10,13,20,0.98)); border: 1px solid rgba(255,255,255,0.08); border-radius: 20px; padding: 12px 10px;
         max-width: 320px; font-family: -apple-system, 'Helvetica Neue', sans-serif; }
     .phone-top { display: flex; align-items: center; justify-content: space-between;
         font-size: 10px; color: #888; padding: 0 4px 8px; border-bottom: 1px solid #222; margin-bottom: 10px; }
     .phone-top .carrier { letter-spacing: 0.05em; }
     .phone-top .signal { display: flex; gap: 2px; align-items: flex-end; }
     .phone-top .signal span { background: #888; border-radius: 1px; width: 3px; display: inline-block; }
-    .notif-card { background: #1c1c1e; border-radius: 12px; padding: 12px 14px; }
+    .notif-card { background: linear-gradient(180deg, rgba(28,30,34,0.98), rgba(17,19,24,0.98)); border-radius: 12px; padding: 12px 14px; border: 1px solid rgba(255,255,255,0.06); }
     .notif-header { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
     .notif-app-icon { width: 22px; height: 22px; border-radius: 6px; background: #2cc64f;
         display: flex; align-items: center; justify-content: center; font-size: 12px; flex-shrink: 0; }
@@ -61,8 +65,8 @@
         padding: 6px 10px; border: 1px solid #1a2a10; border-radius: 6px; background: #050d00; }
 
     /* ---- instructions panel ---- */
-    .instructions { background: #08080a; border: 1px solid #1e1e2a; border-left: 3px solid #5db0ff;
-        padding: 14px 16px; margin-bottom: 20px; font-size: 0.82em; }
+    .instructions { background: linear-gradient(180deg, rgba(14,17,27,0.96), rgba(8,10,16,0.98)); border: 1px solid rgba(255,255,255,0.08); border-left: 3px solid #5db0ff;
+        padding: 14px 16px; margin-bottom: 20px; font-size: 0.82em; border-radius: 12px; box-shadow: 0 10px 22px rgba(0,0,0,0.2); }
     .instructions summary { color: #5db0ff; cursor: pointer; font-weight: 700; letter-spacing: 0.04em;
         text-transform: uppercase; font-size: 0.9em; margin-bottom: 0; list-style: none; }
     .instructions summary::before { content: '▶ '; }
@@ -74,7 +78,11 @@
     .tip { background: #0a0800; border: 1px solid #2a1a00; border-radius: 6px; padding: 8px 12px;
         margin-top: 10px; color: #9a7a40; font-size: 0.88em; line-height: 1.5; }
 
-    #panel { display: block; max-width: 860px; margin: 0 auto; padding: 0 24px 40px; }
+    #panel { display: none; max-width: 860px; margin: 0 auto; padding: 0 24px 40px; }
+    #login-gate { max-width: 400px; margin: 60px auto; padding: 28px; background: #0a0a0a; border: 1px solid #333; border-top: 2px solid #76b900; }
+    #login-gate h2 { color: #76b900; font-size: 1em; margin: 0 0 12px 0; }
+    #login-gate p { font-size: 0.8em; color: #888; margin: 0 0 14px 0; }
+    #login-err { color: #ff5c5c; font-size: 0.82em; margin-top: 8px; display: none; }
 </style>
 </head>
 <body>
@@ -89,7 +97,7 @@
   </a>
   <span class="nav-sep">|</span>
   <a href="https://getcustodian.xyz">Home</a>
-  <a href="/hermes">Live Console</a>
+  <a href="/console">Live Console</a>
   <a href="https://getcustodian.xyz/triage.html">Lie-Catch Demo</a>
   <a href="/operator" class="active">Operator Panel</a>
 </nav>
@@ -110,10 +118,57 @@
         <li><b>Step 7 — Refund $85</b> — <span class="note">Paste the PaymentIntent ID from Step 1 output (starts with pi_3...).</span> Refunds always escalate — there is no autonomous refund path by design.</li>
         <li><b>Step 8 — Approve the refund</b> — Second SMS code from your phone. Refund executes only after human approval.</li>
     </ol>
-    <div class="tip">💡 Watch the <a href="/hermes" style="color:#76b900;">Live Console</a> in another tab — the audit feed and verdict panels update in real time as you run each step.</div>
+    <div class="tip">💡 Watch the <a href="/console" style="color:#76b900;">Live Console</a> in another tab — the audit feed and verdict panels update in real time as you run each step.</div>
 </details>
 
 </div>
+
+<div id="login-gate">
+  <h2>Operator Authentication</h2>
+  <p>Enter the operator panel password to run the live demo arc.</p>
+  <div class="row">
+    <input type="password" id="login-pw" placeholder="Panel password" style="flex:1; width:100%;" autocomplete="current-password">
+    <button id="login-btn">Unlock</button>
+  </div>
+  <div id="login-err">Wrong password — try again.</div>
+</div>
+
+<script>
+(function () {
+  const stored = sessionStorage.getItem('operator_token');
+  if (stored) {
+    document.getElementById('login-gate').style.display = 'none';
+    document.getElementById('panel').style.display = 'block';
+  }
+  document.getElementById('login-btn').addEventListener('click', async () => {
+    const pw = document.getElementById('login-pw').value;
+    const err = document.getElementById('login-err');
+    err.style.display = 'none';
+    try {
+      const res = await fetch('/api/v1/operator/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: pw }),
+      });
+      const data = await res.json();
+      if (res.ok && data.token) {
+        sessionStorage.setItem('operator_token', data.token);
+        document.getElementById('login-gate').style.display = 'none';
+        document.getElementById('panel').style.display = 'block';
+      } else {
+        err.textContent = data.error || 'Login failed.';
+        err.style.display = 'block';
+      }
+    } catch (e) {
+      err.textContent = 'Network error: ' + e.message;
+      err.style.display = 'block';
+    }
+  });
+  document.getElementById('login-pw').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') document.getElementById('login-btn').click();
+  });
+})();
+</script>
 
 <div id="panel">
     <div class="step">
@@ -250,9 +305,10 @@ let spendPI = '';
 document.addEventListener('DOMContentLoaded', function () {
 
 async function call(path, body) {
+    const token = sessionStorage.getItem('operator_token') || '';
     const res = await fetch(API + path, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'X-Operator-Token': token },
         body: JSON.stringify(body || {}),
     });
     const data = await res.json();
@@ -306,7 +362,8 @@ function startCodePoll(codeElId, approveInputId, noteId) {
     if (_codePoller) clearInterval(_codePoller);
     _codePoller = setInterval(async () => {
         try {
-            const res = await fetch(API + '/pending_code', {});
+            const token = sessionStorage.getItem('operator_token') || '';
+            const res = await fetch(API + '/pending_code', { headers: { 'X-Operator-Token': token } });
             if (!res.ok) return;
             const d = await res.json();
             if (d.code) {
@@ -378,6 +435,53 @@ document.getElementById('approve2-btn').addEventListener('click', async () => {
 });
 
 }); // DOMContentLoaded
+</script>
+
+<!-- SPARK MANAGEMENT PANEL -->
+<div class="step" style="margin-top:48px; border-color:#76b900; background:rgba(118,185,0,0.04)">
+  <h2 style="color:#76b900">⬡ DGX Spark Enforcement Node</h2>
+  <p>The Spark (192.168.50.56) is the primary enforcement trust anchor. argobox-lite enforces locally if Spark is unreachable. Use these controls to manage the Spark's role without touching code or restarting anything.</p>
+  <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px">
+    <button id="spark-status-btn" style="background:#76b900;color:#000">Check Spark health</button>
+    <button id="spark-enable-btn" style="background:#2a3a1a;border-color:#76b900;color:#76b900">Enable Spark routing</button>
+    <button id="spark-disable-btn" style="background:#3a1a1a;border-color:#ff5c5c;color:#ff5c5c">Disable Spark (use local only)</button>
+  </div>
+  <div class="out" id="spark-out"></div>
+  <p style="font-size:0.82em;color:#8d93a6;margin-top:12px">
+    Disabling is instant and non-destructive — enforcement continues locally. Re-enabling reconnects to Spark on the next request.
+    Changes survive until Flask restarts. After the hackathon, remove the Spark permanently via <code>DEPLOYMENT.md</code>.
+  </p>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  const token = sessionStorage.getItem('operator_token') || '';
+  const sparkHeaders = { 'Content-Type': 'application/json', 'X-Operator-Token': token };
+
+  async function sparkCall(path, method = 'GET') {
+    try {
+      const r = await fetch(`/api/v1/operator${path}`, { method, headers: sparkHeaders });
+      return await r.json();
+    } catch(e) { return { error: e.message }; }
+  }
+
+  function renderSpark(data) {
+    const el = document.getElementById('spark-out');
+    el.classList.add('show');
+    el.classList.toggle('err', !!(data.error || data.reachable === false));
+    el.textContent = JSON.stringify(data, null, 2);
+  }
+
+  document.getElementById('spark-status-btn').addEventListener('click', async () => {
+    renderSpark(await sparkCall('/spark/status'));
+  });
+  document.getElementById('spark-enable-btn').addEventListener('click', async () => {
+    renderSpark(await sparkCall('/spark/enable', 'POST'));
+  });
+  document.getElementById('spark-disable-btn').addEventListener('click', async () => {
+    renderSpark(await sparkCall('/spark/disable', 'POST'));
+  });
+});
 </script>
 </div><!-- /page-wrap -->
 </body>

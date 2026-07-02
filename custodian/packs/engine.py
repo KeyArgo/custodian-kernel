@@ -16,7 +16,10 @@ from custodian.packs.base import (
 )
 from custodian.policy.schema import Policy
 from custodian.types import AuthorityState, SpendRequest
-from custodian.policy.evaluator import decide
+try:
+    from custodian.policy.enforcer import decide
+except ImportError:
+    from custodian.policy.evaluator import decide
 
 
 def triage(
@@ -56,7 +59,7 @@ def triage(
     # the kernel saying "the amount is fine" can never, by itself, release a
     # payment the domain layer flagged.
     final_action = _final_action(
-        disposition, decision.verdict.value, pack.autonomous_dispositions
+        disposition, decision.verdict.value, pack.autonomous_dispositions, decision.reason
     )
 
     return TriageResult(
@@ -72,9 +75,11 @@ def triage(
     )
 
 
-def _final_action(disposition: str, kernel_verdict: str, autonomous_dispositions) -> str:
+def _final_action(
+    disposition: str, kernel_verdict: str, autonomous_dispositions, kernel_reason: str = ""
+) -> str:
     if kernel_verdict == "denied":
-        return "blocked_kill_switch"
+        return "blocked_kill_switch" if "kill switch" in kernel_reason else "blocked"
     eligible = disposition in autonomous_dispositions
     if eligible and kernel_verdict == "autonomous":
         return "executed_autonomously"

@@ -144,6 +144,20 @@ def get_audit_log(limit=50):
                 events.append(json.loads(line))
             except json.JSONDecodeError:
                 continue
+
+    # Merge reasoning trace events written by the dashboard's operator endpoints.
+    # These live in a companion file so they never collide with sandbox writes.
+    reasoning_raw = _read_remote_file('reasoning_log.jsonl')
+    if reasoning_raw:
+        for line in reasoning_raw.strip().splitlines():
+            try:
+                ev = json.loads(line)
+                if ev.get('event') == 'reasoning':
+                    events.append(ev)
+            except json.JSONDecodeError:
+                continue
+
+    events.sort(key=lambda e: e.get('ts', 0))
     events = events[-limit:][::-1]  # most recent first
     _cache[f'audit_{limit}'] = (events, time.time())
     return events
