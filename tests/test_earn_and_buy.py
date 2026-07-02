@@ -53,43 +53,43 @@ def _run(args: list[str] | None = None, env: dict | None = None, tmp_path: Path 
 
 # ── Core behavior (no credentials → graceful fallback) ────────────────────────
 
-def test_earn_and_buy_completes_successfully():
+def test_earn_and_buy_completes_successfully(tmp_path):
     """The cycle exits 0 even without inference credentials."""
-    r = _run()
+    r = _run(tmp_path=tmp_path)
     assert r.returncode == 0, (
         f"earn-and-buy exited {r.returncode}\n"
         f"stdout: {r.stdout}\nstderr: {r.stderr}"
     )
 
 
-def test_earn_and_buy_prints_all_four_phases():
+def test_earn_and_buy_prints_all_four_phases(tmp_path):
     """All four phase headers must appear in the output."""
-    r = _run()
+    r = _run(tmp_path=tmp_path)
     assert "[1/4] EARNING" in r.stdout
     assert "[2/4] KERNEL GATES THE SPEND" in r.stdout
     assert "[3/4] AI GENERATES THE GOVERNANCE REPORT" in r.stdout
     assert "[4/4] CYCLE CLOSED" in r.stdout
 
 
-def test_earn_and_buy_shows_verified_earn():
+def test_earn_and_buy_shows_verified_earn(tmp_path):
     """Earn side must show VERIFIED and $35.00 inbound."""
-    r = _run()
+    r = _run(tmp_path=tmp_path)
     assert "VERIFIED" in r.stdout
     assert "Inbound:   $35.00" in r.stdout
 
 
-def test_earn_and_buy_shows_kernel_decision():
+def test_earn_and_buy_shows_kernel_decision(tmp_path):
     """Kernel gate must show band, cap, and AUTONOMOUS verdict."""
-    r = _run()
+    r = _run(tmp_path=tmp_path)
     assert "Single cap:" in r.stdout
     assert "Daily envelope:" in r.stdout
     assert "kernel evaluator" in r.stdout
     assert "AUTONOMOUS" in r.stdout
 
 
-def test_earn_and_buy_shows_cycle_complete():
+def test_earn_and_buy_shows_cycle_complete(tmp_path):
     """Output must contain CYCLE COMPLETE."""
-    r = _run()
+    r = _run(tmp_path=tmp_path)
     assert "CYCLE COMPLETE" in r.stdout
 
 
@@ -104,7 +104,7 @@ def test_earn_and_buy_refuses_live_mode():
     assert "test mode" in r.stderr.lower() or "refusing" in r.stderr.lower()
 
 
-def test_earn_and_buy_no_credentials_required():
+def test_earn_and_buy_no_credentials_required(tmp_path):
     """Must exit 0 with NO env vars at all."""
     env = {
         k: v for k, v in os.environ.items()
@@ -114,25 +114,25 @@ def test_earn_and_buy_no_credentials_required():
                        "OPENROUTER")
         )
     }
-    r = subprocess.run(CLI, capture_output=True, text=True, timeout=60, env=env)
+    r = subprocess.run(CLI, capture_output=True, text=True, timeout=30, env=env, cwd=str(tmp_path))
     assert r.returncode == 0, f"failed without creds: {r.stderr}\n{r.stdout}"
     assert "CYCLE COMPLETE" in r.stdout
 
 
 # ── Inference fallback path ────────────────────────────────────────────────────
 
-def test_earn_and_buy_inference_unavailable_still_exits_zero():
+def test_earn_and_buy_inference_unavailable_still_exits_zero(tmp_path):
     """Without inference keys, cycle exits 0 and earn+kernel gate still run."""
-    r = _run()
+    r = _run(tmp_path=tmp_path)
     assert r.returncode == 0
     assert "[1/4] EARNING" in r.stdout
     assert "[2/4] KERNEL GATES" in r.stdout
     assert "CYCLE COMPLETE" in r.stdout
 
 
-def test_earn_and_buy_shows_kernel_gate_before_inference():
+def test_earn_and_buy_shows_kernel_gate_before_inference(tmp_path):
     """Kernel must evaluate the inference spend before AI is allowed to run."""
-    r = _run()
+    r = _run(tmp_path=tmp_path)
     # Kernel gate section must appear before the AI section
     gate_pos = r.stdout.find("[2/4] KERNEL GATES")
     ai_pos = r.stdout.find("[3/4] AI GENERATES")
