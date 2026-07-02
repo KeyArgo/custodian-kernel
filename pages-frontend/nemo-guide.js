@@ -298,10 +298,35 @@
   let history  = getHistory();
   let opened   = false;
 
+  // Jump-key → real page path so [[jump:KEY|label]] renders as a real link.
+  const JUMP_PAGE_MAP = {
+    operator: '/operator',
+    pipeline: '/console', verdict: '/console', authority: '/console',
+    audit: '/console',   policy:  '/console', playground: '/console',
+  };
+
   function addMsg(text, role) {
     const el = document.createElement('div');
     el.className = role === 'user' ? 'ng-usr' : 'ng-bot';
-    el.textContent = text;
+    if (role !== 'user') {
+      // Render [[jump:KEY|label]] as real page links; strip other markers cleanly.
+      const parts = text.split(/(\[\[jump:\w+\|[^\]]+\]\])/);
+      parts.forEach(part => {
+        const m = part.match(/^\[\[jump:(\w+)\|([^\]]+)\]\]$/);
+        if (m) {
+          const a = document.createElement('a');
+          a.href = JUMP_PAGE_MAP[m[1]] || '/console';
+          a.textContent = m[2];
+          a.style.cssText = 'color:#9fd968;text-decoration:underline;cursor:pointer';
+          el.appendChild(a);
+        } else {
+          const clean = part.replace(/\[\[(?:entry|suggest):[^\]]*\]\]/g, '');
+          if (clean) el.appendChild(document.createTextNode(clean));
+        }
+      });
+    } else {
+      el.textContent = text;
+    }
     body.appendChild(el); body.scrollTop = body.scrollHeight;
     return el;
   }
@@ -343,7 +368,7 @@
     .then(r => r.json())
     .then(d => {
       thinking.remove();
-      const ans = (d.answer || "Ask me anything about what you're seeing.").replace(/\[\[(?:jump|entry|suggest):[^\]]*\]\]/g, '').trim();
+      const ans = d.answer || "Ask me anything about what you're seeing.";
       addMsg(ans, 'bot');
       history.push({ role: 'assistant', content: ans });
       saveHistory(history);
@@ -376,7 +401,7 @@
       .then(d => {
         thinking.remove();
         const raw = d.answer || greetPrompt;
-        addMsg(raw.replace(/\[\[(?:jump|entry|suggest):[^\]]*\]\]/g, '').trim(), 'bot');
+        addMsg(raw, 'bot');
         history.push({ role: 'assistant', content: raw });
         saveHistory(history);
         const suggests = currentPath === '/console'

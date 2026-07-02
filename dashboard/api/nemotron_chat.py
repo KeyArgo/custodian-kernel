@@ -376,6 +376,19 @@ MANDATORY: output [[suggest:...]] lines at the END of EVERY response. Even if th
 next step."""
 
 
+_HOME_GUIDANCE = """
+PAGE CONTEXT: The visitor just landed on the HOME page (/). This is their very first impression —
+likely a hackathon judge or first-time visitor. Keep this greeting SHORT (60-90 words max).
+
+Your goal: get them excited and moving, not educated yet. That comes later.
+
+Tell them in one sentence what Custodian does (AI agent + real money + kernel enforcement).
+Then immediately point them to [[jump:operator|the operator panel]] — say they can run the
+full live demo themselves, right now, with real Stripe test money and real SMS codes.
+That's it. Do not explain bands, caps, kill switches, or architecture yet — save those for
+when they ask or when they reach Console and Docs. The tour has time; the greeting does not.
+"""
+
 _OPERATOR_GUIDANCE = """
 PAGE CONTEXT: The visitor is on the OPERATOR PANEL (/operator), running the 9-step live demo arc.
 Your role: guide them through each step, explain what the kernel is doing and why each step exists,
@@ -450,6 +463,7 @@ Do offer [[suggest:...]] questions to continue the tour.
 """
 
 _PAGE_GUIDANCE: dict[str, str] = {
+    'home': _HOME_GUIDANCE,
     'operator': _OPERATOR_GUIDANCE,
     'triage': _TRIAGE_GUIDANCE,
     'tools': _TOOLS_GUIDANCE,
