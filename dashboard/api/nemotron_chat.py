@@ -118,32 +118,65 @@ def _openrouter_key() -> str | None:
 
 
 def _strip_thinking(text: str) -> str:
-    """Strip reasoning tokens and constraint-echoing preambles that reasoning models leak."""
+    """Strip reasoning tokens and constraint-echoing preambles that reasoning models leak.
+
+    Nemotron Super via OpenRouter echoes its system-prompt rules before answering,
+    producing blobs like:
+        'We need to respond with first person... Must include... We must not...'
+        [followed by the actual answer]
+
+    We scan line by line: skip every line that starts with a constraint prefix,
+    then keep everything once real prose begins.
+    """
+    if not text:
+        return text
+
+    # Strip explicit reasoning blocks first.
     text = re.sub(r'<think>.*?</think>', '', text, flags=re.DOTALL)
     text = re.sub(r'<thinking>.*?</thinking>', '', text, flags=re.DOTALL)
-    # Some models (esp. Nemotron Super via OpenRouter) echo their constraints before
-    # answering: "We need to answer: ... Must follow rules: ... Must not mention..."
-    # Detect this and strip everything up to the actual answer.
-    constraint_markers = ('We need to answer:', 'Must follow rules:', 'Must not mention', 'Must include')
-    if any(m in text for m in constraint_markers):
-        paragraphs = re.split(r'\n{2,}', text)
-        clean = []
-        skip = True
-        for p in paragraphs:
-            if skip and any(m in p for m in constraint_markers):
-                continue  # still in rules block
-            skip = False
-            clean.append(p)
-        text = '\n\n'.join(clean) if clean else text
-    # Final safety net: if rule-echoing still bleeds through a single paragraph,
-    # truncate at the first occurrence.
-    for marker in constraint_markers:
-        idx = text.find(marker)
-        if idx > 80:   # allow the marker if it's deep in a real sentence (rare)
-            break
-        if idx != -1:
-            text = text[:idx]
-    return text.strip()
+
+    # Prefixes that mark self-instruction lines (never appear in a real reply).
+    CONSTRAINT_PREFIXES = (
+        'We need to', 'We must', 'We can say', 'We can mention', 'We can just',
+        'We should', 'We have data', 'We will ', 'We are producing',
+        'Must ', 'Do not ', 'Should ', 'HARD RULES',
+        "Now count", "Now produce", "Now craft", "Now let",
+        "Let's craft", "Let's draft", "Let's do", "Let's count",
+        'First paragraph', 'Second paragraph', 'Third paragraph',
+        'Make sure', "That's okay", "That's fine", "That's correct",
+        "It's okay", "It's fine", 'Safer:', 'IMPORTANT:', 'Remember:',
+        'For example:', 'Example:', 'Probably okay', 'Actually',
+    )
+
+    # Fast path: if the response doesn't start with constraint language, return as-is.
+    head = text.lstrip()
+    if not any(head.startswith(p) for p in ('We need to', 'We must', 'Must ')):
+        return text.strip()
+
+    # Line-by-line scan: skip constraint lines, keep everything once real prose starts.
+    lines = text.splitlines()
+    result: list[str] = []
+    in_constraint_block = True
+
+    for line in lines:
+        stripped = line.strip()
+        if not stripped:
+            if not in_constraint_block:
+                result.append(line)
+            continue
+
+        is_constraint = any(stripped.startswith(p) for p in CONSTRAINT_PREFIXES)
+
+        if in_constraint_block:
+            if not is_constraint:
+                in_constraint_block = False
+                result.append(line)
+            # else: still in constraint block, skip
+        else:
+            result.append(line)
+
+    cleaned = '\n'.join(result).strip()
+    return cleaned if cleaned else text.strip()
 
 
 def _call_openrouter(messages: list[dict]) -> str | None:
