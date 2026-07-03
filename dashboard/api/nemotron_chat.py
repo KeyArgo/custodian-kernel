@@ -129,7 +129,10 @@ def _strip_thinking(text: str) -> str:
         [followed by the actual answer]
 
     We scan line by line: skip every line that starts with a constraint prefix,
-    then keep everything once real prose begins.
+    then keep everything once real prose begins. If the entire response is
+    just the constraint preamble (no actual answer), we return an empty
+    string so the caller can show "Nemotron returned an empty response"
+    instead of leaking the model talking to itself. (Bug-hunt 2026-07-03.)
     """
     if not text:
         return text
@@ -179,7 +182,12 @@ def _strip_thinking(text: str) -> str:
             result.append(line)
 
     cleaned = '\n'.join(result).strip()
-    return cleaned if cleaned else text.strip()
+    # If every line was constraint preamble (nothing useful came through),
+    # return empty string. Previously this returned the original text,
+    # which leaked the model's self-talk to the user. (Bug-hunt 2026-07-03.)
+    if not cleaned:
+        return ''
+    return cleaned
 
 
 def _call_openrouter(messages: list[dict]) -> str | None:
