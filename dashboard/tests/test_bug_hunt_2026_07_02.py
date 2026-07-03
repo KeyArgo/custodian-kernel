@@ -180,3 +180,87 @@ def test_nemonarrate_does_not_push_user_message_before_fetch():
         f"await fetch (L{body[:fetch_pos].count(chr(10))+1}). Found push at line "
         f"{body[:push_pos].count(chr(10))+1}, fetch at line {body[:fetch_pos].count(chr(10))+1}."
     )
+
+
+# ── nemotron blank-answer / fallback text bug (bug-hunt 2026-07-03) ──────────
+
+def test_nemo_narrate_does_not_show_input_placeholder_as_fallback():
+    """Regression: nemoNarrate() in operator.html used to fall back to the
+    literal text 'Ask me anything about what just happened.' (which is the
+    input field's placeholder) when Nemotron returned an empty/error response.
+
+    That made the operator think the model was ignoring them — every
+    blank-answer looked like a useless 'nothing' reply, but it was actually
+    a backend 502/503 or an empty model response. (Bug-hunt 2026-07-03.)
+
+    Fix: distinguish three cases — real answer, error, empty — and show
+    a clearly-marked status for the failure cases (with the ⚠ prefix).
+    """
+    src = read_text("pages-frontend/operator.html")
+    # Find nemoNarrate
+    m = re.search(r"async function nemoNarrate\(.*?\n\}\n", src, re.DOTALL)
+    assert m, "nemoNarrate not found"
+    body = m.group(0)
+    # Must not contain the misleading fallback text as a literal answer default
+    assert "d.answer || 'Ask me anything about what just happened.'" not in body, (
+        "nemoNarrate must not fall back to the input placeholder text. "
+        "It should show a ⚠-prefixed status when the answer is empty or the "
+        "request fails."
+    )
+    # Must have an explicit empty-answer branch
+    assert "Nemotron returned an empty response" in body, (
+        "nemoNarrate must have an explicit branch for empty answers with a "
+        "clear status message"
+    )
+    # Must have an explicit error branch
+    assert "Nemotron backend error" in body, (
+        "nemoNarrate must have an explicit error branch that surfaces the "
+        "HTTP status code"
+    )
+    # Catch block must surface the network error message
+    assert "Network error calling Nemotron" in body, (
+        "nemoNarrate's catch block must surface network error details"
+    )
+
+
+def test_op_nemo_open_does_not_show_input_placeholder_as_fallback():
+    """Same fallback bug in opNemoOpen() — the panel-open greeting used to
+    fall back to 'I'm Nemotron — ask me about any of the demo steps.' when
+    the API returned empty, which made the chat look broken at first open.
+
+    Fix: same three-way distinction (real answer / error / empty) with
+    a ⚠-prefixed status for failures.
+    """
+    src = read_text("pages-frontend/operator.html")
+    m = re.search(r"function opNemoOpen\(.*?opNemoInput\.focus\(\);\s*\}", src, re.DOTALL)
+    assert m, "opNemoOpen not found"
+    body = m.group(0)
+    # Must not contain the misleading fallback as a literal default
+    assert 'd.answer || "I\'m Nemotron' not in body, (
+        "opNemoOpen must not fall back to a placeholder-looking greeting when "
+        "the API returns empty. Show a ⚠-prefixed status instead."
+    )
+    # Must have an explicit empty-answer branch
+    assert "Live inference just returned empty" in body, (
+        "opNemoOpen must have an explicit branch for empty responses"
+    )
+    # Catch block must surface the network error
+    assert "Couldn't reach Nemotron" in body, (
+        "opNemoOpen's catch block must surface the network error"
+    )
+
+
+def test_console_nemotron_send_handles_empty_answer():
+    """console.html's nemotronSend() used to throw TypeError when
+    data.answer was undefined (because it called .replace on undefined),
+    which would fall into the catch block and show 'Couldn't reach Nemotron
+    right now' — misleading the user into thinking there was a network
+    issue when really the model just returned empty.
+
+    Fix: explicit empty-answer branch between error and success cases.
+    """
+    src = read_text("pages-frontend/console.html")
+    # Look for the empty-answer check
+    assert "Nemotron returned an empty response" in src, (
+        "console.html's nemotronSend must have an explicit empty-answer branch"
+    )

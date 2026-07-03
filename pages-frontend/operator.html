@@ -552,7 +552,26 @@ async function nemoNarrate(stepIdx) {
         });
         const d = await r.json();
         thinking.remove();
-        const ans = (d.answer || 'Ask me anything about what just happened.').replace(/\[\[(?:jump|entry|suggest):[^\]]*\]\]/g, '').trim();
+        // Distinguish three cases clearly so the operator can tell what's
+        // happening instead of seeing the input placeholder text repeated
+        // back as a "blank answer":
+        //   1. r.ok && d.answer        — real answer, show it
+        //   2. r.ok && !d.answer       — model returned empty (rare)
+        //   3. !r.ok                   — backend error, show the error
+        // Previously: any of (2)/(3) showed the input placeholder text
+        // ('Ask me anything about what just happened.'), which made the
+        // operator think the model was ignoring them. (Bug-hunt 2026-07-03.)
+        let ans;
+        if (!r.ok) {
+            ans = `⚠ Nemotron backend error (${r.status}): ${d.error || 'unknown'} — try again in a moment.`;
+        } else if (d.error) {
+            ans = `⚠ Nemotron error: ${d.error}`;
+        } else if (!d.answer || d.answer.trim() === '') {
+            ans = '⚠ Nemotron returned an empty response. The reasoning model may have hit a token cap or the prompt was filtered. Try clicking the step again.';
+        } else {
+            ans = d.answer;
+        }
+        ans = ans.replace(/\[\[(?:jump|entry|suggest):[^\]]*\]\]/g, '').trim();
         // Only NOW do we commit the user message + assistant reply to history.
         // (Previously the user message was pushed BEFORE the fetch, so a
         // 502/503/network error would leave an orphaned user message in
@@ -565,8 +584,9 @@ async function nemoNarrate(stepIdx) {
         opNemoAddMsg(ans, 'bot');
         opNemoHistory.push({ role: 'assistant', content: ans });
         nemoSaveHistory(opNemoHistory);
-    } catch (_) {
+    } catch (e) {
         thinking.remove();
+        opNemoAddMsg(`⚠ Network error calling Nemotron: ${e.message || e}`, 'bot');
     }
 }
 
@@ -808,14 +828,24 @@ function opNemoOpen() {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ question: greeting, history: opNemoHistory.slice(-6), page: 'operator', site_context: siteTour ? siteTour.buildSiteContext() : {} })
-        }).then(r=>r.json()).then(d => {
+        }).then(r => r.json()).then(d => {
             thinking.remove();
-            const raw = d.answer || "I'm Nemotron — ask me about any of the demo steps.";
-            const ans = raw.replace(/\[\[(?:jump|entry|suggest):[^\]]*\]\]/g, '').trim();
+            // Same error-path logic as nemoNarrate — distinguish error /
+            // empty / real answer so the operator sees a clear status, not
+            // a placeholder-looking "I'm Nemotron…" string. (Bug-hunt 2026-07-03.)
+            let ans;
+            if (d.error) {
+                ans = `⚠ Nemotron error: ${d.error}`;
+            } else if (!d.answer || d.answer.trim() === '') {
+                ans = "I'm Nemotron — ask me about any of the demo steps. (Live inference just returned empty — your typed questions will still reach the model.)";
+            } else {
+                ans = d.answer;
+            }
+            ans = ans.replace(/\[\[(?:jump|entry|suggest):[^\]]*\]\]/g, '').trim();
             opNemoAddMsg(ans, 'bot');
-        }).catch(() => {
+        }).catch((e) => {
             thinking.remove();
-            opNemoAddMsg("I'm Nemotron — ask me about any of the demo steps.", 'bot');
+            opNemoAddMsg(`⚠ Couldn't reach Nemotron: ${e.message || e} — your typed questions should still work once the connection is back.`, 'bot');
         });
     }
     opNemoInput.focus();
