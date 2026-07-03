@@ -2052,12 +2052,24 @@ function nemotronRenderAnswer(rawText) {
             _seenQuestions.add(_normQ(question));
             const thinkingMsg = nemotronAddThinkingMessage();
             try {
-                const res = await fetch('/api/v1/nemotron/ask', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ question, history: nemotronHistory.slice(-8), page: 'console', site_context: nemotronSiteContext() }),
-                });
-                const data = await res.json();
+                // The Worker in front of this endpoint occasionally returns
+                // "Backend unavailable" on an edge-routing hiccup that has
+                // nothing to do with whether the backend actually answered
+                // (see pages-frontend/_worker.js for the full story). One
+                // silent client-side retry catches that case instead of
+                // showing a real visitor an error for a transient blip.
+                let data;
+                for (let attempt = 0; attempt < 2; attempt++) {
+                    const res = await fetch('/api/v1/nemotron/ask', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ question, history: nemotronHistory.slice(-8), page: 'console', site_context: nemotronSiteContext() }),
+                    });
+                    data = await res.json();
+                    const isInfraBlip = data.error && /unavailable|unreachable/i.test(data.error);
+                    if (!isInfraBlip || attempt === 1) break;
+                    await new Promise(r => setTimeout(r, 800));
+                }
                 thinkingMsg.remove();
                 if (data.error) {
                     nemotronAddMessage(`(couldn't get an answer: ${data.error})`, 'bot');

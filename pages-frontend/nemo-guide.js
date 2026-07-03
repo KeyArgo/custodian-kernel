@@ -377,6 +377,24 @@
     body.appendChild(a); body.scrollTop = body.scrollHeight;
   }
 
+  // The Worker in front of /api/v1/nemotron/ask occasionally returns
+  // "Backend unavailable" on an edge-routing hiccup unrelated to whether the
+  // backend actually answered (see pages-frontend/_worker.js). One silent
+  // retry catches that case instead of falling straight to a generic
+  // fallback message when a real answer was one retry away.
+  async function askNemotron(body) {
+    for (let attempt = 0; attempt < 2; attempt++) {
+      const r = await fetch('/api/v1/nemotron/ask', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      const d = await r.json();
+      const isInfraBlip = d.error && /unavailable|unreachable/i.test(d.error);
+      if (!isInfraBlip || attempt === 1) return d;
+      await new Promise(res => setTimeout(res, 800));
+    }
+  }
+
   function sendQ(q) {
     addMsg(q, 'user');
     history.push({ role: 'user', content: q });
@@ -387,11 +405,7 @@
       : { ng_page: currentPath, ng_post_op: isPostOp };
     if (window.TourTracker) siteCtx.tracker = TourTracker.buildContext();
 
-    fetch('/api/v1/nemotron/ask', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ question: q, history: history.slice(-6), page: currentPath.replace(/^\//, '') || 'home', site_context: siteCtx }),
-    })
-    .then(r => r.json())
+    askNemotron({ question: q, history: history.slice(-6), page: currentPath.replace(/^\//, '') || 'home', site_context: siteCtx })
     .then(d => {
       thinking.remove();
       const ans = d.answer || "Ask me anything about what you're seeing.";
@@ -413,16 +427,12 @@
       const greetMsg = buildGreetMsg(currentPath, pageCfg, history, isPostOp);
 
       const thinking = addMsg('…', 'bot');
-      fetch('/api/v1/nemotron/ask', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          question: greetMsg,
-          history: history.slice(-4),   // carry context from previous pages
-          page: currentPath.replace(/^\//, '') || 'home',
-          site_context: { ng_page: currentPath, ng_post_op: isPostOp, first_visit: isFirstVisit, has_history: history.length > 0 },
-        }),
+      askNemotron({
+        question: greetMsg,
+        history: history.slice(-4),   // carry context from previous pages
+        page: currentPath.replace(/^\//, '') || 'home',
+        site_context: { ng_page: currentPath, ng_post_op: isPostOp, first_visit: isFirstVisit, has_history: history.length > 0 },
       })
-      .then(r => r.json())
       .then(d => {
         thinking.remove();
         const raw = d.answer || FALLBACK_GREET[currentPath] || "Ask me anything about what you're seeing.";
