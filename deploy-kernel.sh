@@ -55,11 +55,13 @@ if [[ "${SKIP_LITE:-}" != "1" ]]; then
       "$REPO/custodian/" "$LITE_HOST:$LITE_APP_DIR/custodian/"
     rsync -a --exclude='__pycache__' --exclude='*.pyc' --exclude='secrets' \
       "$REPO/dashboard/" "$LITE_HOST:$LITE_APP_DIR/dashboard/"
+    # Restart the production gunicorn service (NOT the argonaut-owned nohup
+    # python3 process, which is not what serves production traffic).
+    # custodian-dashboard.service runs gunicorn listening on :8094 — that's
+    # the process the CF Worker proxies to. Without restarting it, gunicorn
+    # serves stale .pyc files from its previous boot. (Bug-hunt 2026-07-03.)
     ssh "$LITE_HOST" "
-      PID=\$(ss -tlnp 2>/dev/null | grep ':8094' | grep -oP 'pid=\K[0-9]+' | head -1 || true)
-      [ -n \"\$PID\" ] && kill \$PID && sleep 1
-      cd $LITE_APP_DIR/dashboard
-      nohup /tmp/hermes-dash-venv/bin/python3 app.py > /tmp/hermes-dash.log 2>&1 &
+      sudo systemctl restart custodian-dashboard.service
       sleep 2
       curl -sf http://localhost:8094/api/v1/hermes/summary > /dev/null && echo 'api ok' || echo 'API HEALTH CHECK FAILED'
     "
