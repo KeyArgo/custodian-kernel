@@ -100,24 +100,25 @@ export default {
 
     // SECONDARY is a Tailscale CGNAT address (100.64.0.0/10) — not publicly
     // routable, so it can never actually be reached from Cloudflare's edge.
-    // On fast paths, retry PRIMARY several times with short timeouts before
-    // giving up: PRIMARY (rein-local.argobox.com) is itself a Cloudflare-
-    // proxied hostname, and a Worker calling fetch() on another proxied
-    // hostname on the same account intermittently hits Cloudflare's own
-    // edge-to-edge request handling — observed ~25% single-attempt failure
-    // rate even with a corrected Host header, confirmed independent of
-    // tunnel/origin health (direct curl to the same hostname was 100%
-    // reliable across 30+ requests). Each retry is fast (observed sub-200ms
-    // fail-fast), so several attempts is far cheaper than one trip to a
-    // SECONDARY that is guaranteed to fail. 6 attempts was chosen empirically
-    // after 3 attempts still left ~7.5% failures live-tested against
-    // getcustodian.xyz. Skip on slow paths — a real failure there is more
-    // likely a genuine timeout than this specific edge-routing flake, and
-    // retrying would multiply an already-long wait.
-    if (!isSlow) {
-      for (let attempt = 0; !response && attempt < 6; attempt++) {
-        response = await tryFetch(primaryUrl, makeInit(primaryUrl), 2000);
-      }
+    // Retry PRIMARY several times with a SHORT timeout before giving up:
+    // PRIMARY (rein-local.argobox.com) is itself a Cloudflare-proxied
+    // hostname, and a Worker calling fetch() on another proxied hostname on
+    // the same account intermittently hits Cloudflare's own edge-to-edge
+    // request handling — observed ~25% single-attempt failure rate even with
+    // a corrected Host header, confirmed independent of tunnel/origin health
+    // (direct curl to the same hostname was 100% reliable across 30+
+    // requests). Each failure is fast (observed sub-200ms fail-fast), so
+    // several short retries is far cheaper than one trip to a SECONDARY that
+    // is guaranteed to fail. 6 attempts was chosen empirically after 3
+    // attempts still left ~7.5% failures live-tested against
+    // getcustodian.xyz. This retry runs on slow paths too — the first
+    // attempt above already used the full slow timeout, so a real slow
+    // inference call already had its fair chance; a failure THIS fast
+    // (sub-200ms) is the edge-routing bug, not a real timeout, and 6 * 2s of
+    // retry is a small cost next to leaving live Nemotron chat completely
+    // exposed to a bug that hits every path equally.
+    for (let attempt = 0; !response && attempt < 6; attempt++) {
+      response = await tryFetch(primaryUrl, makeInit(primaryUrl), 2000);
     }
 
     // Fall back to secondary
