@@ -18,9 +18,10 @@ policy.yaml
 # video project artifacts and media files (not part of this repo)
 video-hf/
 video/
-video-build/*.mp4
-video-build/*.wav
-video-build/*.m4a
+video-build/**/*.mp4
+video-build/**/*.wav
+video-build/**/*.m4a
+video-build/**/*.aup3
 video-build/newaudio
 video-build/" is .wav"
 # delivery/ contains runtime Stripe PaymentIntent IDs — not source
