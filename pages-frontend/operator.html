@@ -688,15 +688,27 @@ async function opNemoSend() {
         });
         const d = await r.json();
         thinking.remove();
-        // Strip hermes-specific [[...]] markers before displaying
-        const ans = (d.answer || d.error || 'No answer.').replace(/\[\[(?:jump|entry|suggest):[^\]]*\]\]/g, '').trim();
+        // Distinguish real answer / backend error / empty answer so a
+        // blank or errored response doesn't look like the model silently
+        // ignored the question. (Ported from hermes-hackathon-2026 bug-hunt 2026-07-03.)
+        let ans;
+        if (!r.ok) {
+            ans = `⚠ Nemotron backend error (${r.status}): ${d.error || 'unknown'} — try again in a moment.`;
+        } else if (d.error) {
+            ans = `⚠ Nemotron error: ${d.error}`;
+        } else if (!d.answer || d.answer.trim() === '') {
+            ans = '⚠ Nemotron returned an empty response. The reasoning model may have hit a token cap or the prompt was filtered. Try again.';
+        } else {
+            ans = d.answer;
+        }
+        ans = ans.replace(/\[\[(?:jump|entry|suggest):[^\]]*\]\]/g, '').trim();
         opNemoAddMsg(ans, 'bot');
         opNemoHistory.push({ role: 'user', content: q });
         opNemoHistory.push({ role: 'assistant', content: ans });
         nemoSaveHistory(opNemoHistory);
     } catch(e) {
         thinking.remove();
-        opNemoAddMsg('Could not reach Nemotron right now.', 'bot');
+        opNemoAddMsg(`⚠ Network error calling Nemotron: ${e.message || e}`, 'bot');
     } finally {
         opNemoSendBtn.disabled = false;
         opNemoInput.focus();
