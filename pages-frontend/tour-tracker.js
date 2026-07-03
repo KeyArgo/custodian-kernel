@@ -80,6 +80,10 @@
         const runs = s.triage_runs || [];
         runs.push({ ...(typeof detail === 'object' ? detail : { scenario: detail }), ts: now });
         s.triage_runs = runs.slice(-20);
+        // Track the total count separately so `triage_runs_count` reflects
+        // the user's lifetime-in-this-tab run count, not just the last 20
+        // we keep in the array. (Bug-hunt 2026-07-02.)
+        s.triage_runs_total = (s.triage_runs_total || 0) + 1;
         break;
       }
       case 'tool_expand': {
@@ -137,7 +141,7 @@
       operator_steps_remaining: steps_remain_labels,
       operator_complete,
       // Triage
-      triage_runs_count:       runs.length,
+      triage_runs_count:       s.triage_runs_total || runs.length,
       last_triage:             runs.length > 0 ? runs[runs.length - 1] : null,
       // Tools
       tools_expanded:          s.tools_expanded || [],

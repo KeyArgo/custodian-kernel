@@ -125,7 +125,34 @@ def test_demo_earn_validates_amount():
     assert "[:200]" in body or ".slice(" in body, "demo_earn must cap description length"
 
 
-# ── operator.html ────────────────────────────────────────────────────────────
+# ── tour-tracker.js ──────────────────────────────────────────────────────────
+
+def test_tour_tracker_triage_runs_count_uses_total_not_array_length():
+    """`triage_runs_count` in buildContext() must reflect the user's
+    total-in-tab run count, not just the last 20 kept in `s.triage_runs`.
+
+    Previously: `triage_runs_count: runs.length` — but `runs` is already
+    sliced to the last 20. After 21 runs, the count would freeze at 20
+    forever, breaking Nemotron's "if (runs.length === 0) nudge to /triage"
+    logic.
+    """
+    src = read_text("pages-frontend/tour-tracker.js")
+    # The track() function for 'triage_run' must increment a separate counter
+    assert "s.triage_runs_total" in src, (
+        "tour-tracker.js must track a separate triage_runs_total counter that "
+        "increments on every run, not just the array length"
+    )
+    # buildContext must use the total, not runs.length
+    m = re.search(r"triage_runs_count:\s*([^,\n]+)", src)
+    assert m, "triage_runs_count not found in buildContext"
+    expr = m.group(1).strip()
+    # Should reference the total, not bare `runs.length`
+    assert expr != "runs.length", (
+        "triage_runs_count must not use runs.length (which is capped at 20)"
+    )
+    assert "triage_runs_total" in expr or "s.triage_runs_total" in expr, (
+        f"triage_runs_count should use triage_runs_total, got: {expr!r}"
+    )
 
 def test_nemonarrate_does_not_push_user_message_before_fetch():
     """Regression: nemoNarrate() in operator.html used to push the user
