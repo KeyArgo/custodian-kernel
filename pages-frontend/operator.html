@@ -472,13 +472,30 @@ const esc = s => (s == null ? '' : String(s).replace(/[&<>"']/g, c => ({'&':'&am
 document.addEventListener('DOMContentLoaded', function () {
 
 async function call(path, body) {
-    const res = await fetch(API + path, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body || {}),
-    });
-    const data = await res.json();
-    return data;
+    // No error handling here used to mean any hiccup (a stray non-2xx, a
+    // non-JSON body, a network blip) threw inside an unhandled async click
+    // handler -- the button would silently do nothing with zero visible
+    // feedback, which read as "the page stopped responding to clicks."
+    // Always resolve to a renderable {error: ...} shape instead of rejecting.
+    try {
+        const res = await fetch(API + path, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body || {}),
+        });
+        let data;
+        try {
+            data = await res.json();
+        } catch (_) {
+            return { error: `Backend returned a non-JSON response (HTTP ${res.status}). Try again.` };
+        }
+        if (!res.ok && !data.error) {
+            data.error = `Backend error (HTTP ${res.status}).`;
+        }
+        return data;
+    } catch (e) {
+        return { error: `Network error: ${e.message || e}` };
+    }
 }
 
 function renderOut(elId, data) {
