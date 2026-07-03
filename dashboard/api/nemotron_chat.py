@@ -99,11 +99,11 @@ def rate_limited(f):
     return wrapper
 
 
-def _nvidia_key():
+def _nvidia_key() -> str | None:
     for line in NVIDIA_SECRET_FILE.read_text().splitlines():
         if line.startswith('NVIDIA_API_KEY='):
             return line.split('=', 1)[1].strip()
-    raise RuntimeError('NVIDIA_API_KEY not found in secrets file')
+    return None
 
 
 def _openrouter_key() -> str | None:
@@ -160,6 +160,10 @@ def _strip_thinking(text: str) -> str:
         """True if the paragraph looks like model meta-instruction."""
         s = p.strip()
         if len(s) < 20:
+            # Short text is meta ONLY if it doesn't look like a complete
+            # short reply (e.g. "Approved.", "Denied.", "Go ahead.").
+            if len(s) >= 3 and re.match(r'^[A-Z].*[.!?]', s):
+                return False
             return True
         META_PATTERNS = (
             r'^\s*We need to\b', r'^\s*We must\b', r'^\s*We should\b',
@@ -728,7 +732,7 @@ def ask():
             payload = {
                 'model': NVIDIA_MODEL,
                 'messages': cloud_messages,
-                'max_tokens': 600,
+                'max_tokens': 4000,
                 'temperature': 0.7,
                 'chat_template_kwargs': {'thinking': False},
             }
@@ -740,7 +744,7 @@ def ask():
             with urllib.request.urlopen(req, timeout=25) as resp:
                 result = json.loads(resp.read())
             answer = _strip_thinking(result['choices'][0]['message']['content'])
-        except (urllib.error.URLError, OSError, RuntimeError) as e:
+        except (urllib.error.URLError, urllib.error.HTTPError, OSError, RuntimeError) as e:
             nim_error = str(e)
         except (KeyError, IndexError, json.JSONDecodeError):
             nim_error = 'unexpected response shape from NVIDIA NIM'
