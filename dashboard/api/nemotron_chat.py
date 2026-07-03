@@ -133,19 +133,19 @@ def _strip_thinking(text: str) -> str:
     of token budget on the preamble, the actual reply never appears and the
     user sees the model talking to itself.
 
-    Strategy:
+    Strategy (v5):
     1. Strip <think>...</think> blocks.
-    2. If the response contains NO `[[jump:` token, the model never
-       produced a real reply — return ''. (The system prompt requires
-       the model to include a jump link in every reply.)
-    3. Otherwise, drop paragraphs that start with a meta-instruction
-       prefix. Also drop trailing meta paragraphs.
+    2. Split into paragraphs (line-by-line on the raw text).
+    3. Score each paragraph: a paragraph is "meta" if it starts with
+       a known constraint prefix (We need to, Must, Let's draft, etc.).
+       A paragraph is "real reply" if it passes all meta checks.
+    4. If there are any real-reply paragraphs, return them.
+    5. Otherwise, if the response has a quoted draft (model talking to
+       itself about what to write, e.g. Let's draft: "the reply text..."),
+       extract the longest quoted string and return it.
+    6. If nothing works, return '' — the model never produced a real reply.
 
-    Result: a clean response with just the actual reply (including its
-    [[jump:...]] markers, which the link rewriter will turn into real
-    navigation links).
-
-    (Bug-hunt 2026-07-03.)
+    (Bug-hunt 2026-07-03, v5.)
     """
     if not text:
         return text
@@ -155,79 +155,48 @@ def _strip_thinking(text: str) -> str:
     text = re.sub(r'<thinking>.*?</thinking>', '', text, flags=re.DOTALL)
     text = text.strip()
 
-    # If the response has no jump marker, the model never reached the
-    # actual reply — every line was constraint echo or meta-instruction.
-    if '[[jump:' not in text and '<jump:' not in text:
-        return ''
+    # Heuristic: is a paragraph model self-talk vs. real reply?
+    def _is_meta(p: str) -> bool:
+        """True if the paragraph looks like model meta-instruction."""
+        s = p.strip()
+        if len(s) < 20:
+            return True
+        META_PATTERNS = (
+            r'^\s*We need to\b', r'^\s*We must\b', r'^\s*We should\b',
+            r'^\s*We can say\b', r'^\s*We can mention\b', r'^\s*We can just\b',
+            r'^\s*We have data\b', r'^\s*We will\b', r'^\s*We are\b',
+            r'^\s*Must\b', r'^\s*Do not\b', r'^\s*Should\b',
+            r'^\s*Now count\b', r'^\s*Now produce\b', r'^\s*Now craft\b',
+            r'^\s*Now let\b', r'^\s*Now add\b', r'^\s*Now look\b',
+            r"^\s*Let's craft\b", r"^\s*Let's draft\b", r"^\s*Let's do\b",
+            r'^\s*First paragraph\b', r'^\s*Second paragraph\b',
+            r'^\s*First line\b', r'^\s*First,\s*glance\b',
+            r'^\s*Let me\b', r'^\s*Now let me\b',
+            r'^\s*Check word count\b', r'^\s*Count words\b',
+            r'^\s*Count roughly\b', r'^\s*Word count\b',
+            r'^\s*Add:', r'^\s*Note:', r'^\s*End:',
+        )
+        for pat in META_PATTERNS:
+            if re.match(pat, p):
+                return True
+        return False
 
-    # Meta-instruction prefixes. A line that starts with one of these is
-    # the model talking to itself about how to write the reply, not the
-    # reply itself. Cover the original constraint prefixes PLUS all the
-    # "Now ...", "Let's ...", "First ...", "Add:" patterns the model
-    # actually emits.
-    META_PATTERNS = (
-        r'^\s*We need to\b',
-        r'^\s*We must\b',
-        r'^\s*We should\b',
-        r'^\s*We can say\b',
-        r'^\s*We can mention\b',
-        r'^\s*We can just\b',
-        r'^\s*We have data\b',
-        r'^\s*We will\b',
-        r'^\s*We are producing\b',
-        r'^\s*Must\b',
-        r'^\s*Do not\b',
-        r'^\s*Should\b',
-        r'^\s*HARD RULES\b',
-        r'^\s*Now count\b',
-        r'^\s*Now produce\b',
-        r'^\s*Now craft\b',
-        r'^\s*Now let\b',
-        r'^\s*Now add\b',
-        r'^\s*Now look\b',
-        r"^\s*Let's craft\b",
-        r"^\s*Let's draft\b",
-        r"^\s*Let's do\b",
-        r"^\s*Let's count\b",
-        r"^\s*Let's just\b",
-        r"^\s*Let's see\b",
-        r'^\s*First paragraph\b',
-        r'^\s*Second paragraph\b',
-        r'^\s*Third paragraph\b',
-        r'^\s*First line\b',
-        r'^\s*First,\s*glance\b',
-        r'^\s*Let me\b',
-        r'^\s*Now let me\b',
-        r'^\s*Check word count\b',
-        r'^\s*Count words\b',
-        r'^\s*Count roughly\b',
-        r'^\s*Word count\b',
-        r'^\s*Add:',
-        r'^\s*Note:',
-        r'^\s*End:',
-        r'^\s*Make sure\b',
-    )
-
-    # Drop paragraphs that are entirely meta-instruction. Preserve
-    # paragraphs that contain real prose even if they have meta words
-    # in them.
+    # Strategy 1: find paragraphs that look like real replies
     paragraphs = text.split('\n')
-    result: list[str] = []
-    for p in paragraphs:
-        is_meta = any(re.match(pat, p) for pat in META_PATTERNS)
-        if not is_meta:
-            result.append(p)
-    cleaned = '\n'.join(result).strip()
+    real_paragraphs = [p for p in paragraphs if not _is_meta(p)]
 
-    if not cleaned:
-        return ''
+    if real_paragraphs:
+        return '\n'.join(real_paragraphs).strip()
 
-    # Strip trailing meta-instruction paragraphs (they come after the
-    # actual reply in the captured pattern).
-    lines = cleaned.split('\n')
-    while lines and any(re.match(pat, lines[-1]) for pat in META_PATTERNS):
-        lines.pop()
-    return '\n'.join(lines).strip()
+    # Strategy 2: no real paragraphs — the model only produced meta-instruction.
+    # If the response contains a quoted draft (model talking to itself about
+    # what to write), extract the longest one as a fallback.
+    quoted = re.findall(r'"([^"]{50,})"', text)
+    if quoted:
+        return max(quoted, key=len).strip()
+
+    # Strategy 3: nothing usable — the model never produced a real reply.
+    return ''
 
 
 def _call_openrouter(messages: list[dict]) -> str | None:
