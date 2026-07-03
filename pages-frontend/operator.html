@@ -462,6 +462,13 @@ const siteTour = window.CustodianTour || null;
 if (siteTour) siteTour.onPage('operator');
 if (window.TourTracker) TourTracker.track('page_visit', '/operator');
 
+// Top-level HTML escaper. Must be at script-block scope (NOT inside the
+// DOMContentLoaded callback below) because refreshOpFeed() and refreshLive()
+// run at script-eval time and need it. Previously this was inside the
+// DOMContentLoaded closure, which caused the live audit feed to show
+// "⚠ Live feed unreachable: esc is not defined" — the exact error you saw.
+const esc = s => (s == null ? '' : String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])));
+
 document.addEventListener('DOMContentLoaded', function () {
 
 async function call(path, body) {
@@ -594,8 +601,6 @@ function smsNow() {
     return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 }
 
-
-const esc = s => (s == null ? '' : String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])));
 
 let _codePoller = null;
 
