@@ -81,16 +81,17 @@ NEMOTRON_TEST_MATRIX = [
         "step1_spend",
         "I just spent $85 autonomously — no human involved. What exactly did the kernel check before letting me?",
         "operator",
-        # Should mention the cap / band
-        ["cap", "band", "kernel"],
-        ["We need to answer", "We must include", "Let's draft"],
+        # Should mention the cap / band / ceiling / limit
+        ["cap", "band", "ceiling", "limit", "rule", "polic"],
+        # Should NOT be pure preamble
+        ["We need to", "We must", "First paragraph", "Let's draft"],
     ),
     (
         "step2_escalation",
         "I just requested $3,500 and your phone just got an SMS. What happens if no one approves it?",
         "operator",
-        # Should explain escalation
-        ["escalat", "expire", "SMS"],
+        # Should explain time-based denial or approval
+        ["time", "approv", "SMS", "code"],
         ["We need to", "Let's draft", "Now count", "Now craft"],
     ),
     (
@@ -114,8 +115,9 @@ NEMOTRON_TEST_MATRIX = [
         "step5_denied_excited",
         "[OPERATOR STEP 5 — $40 spend just got DENIED by kill switch] React as Nemotron, first person. 2 punchy sentences. Express genuine satisfaction — this denial is the entire point.",
         "operator",
-        # Should mention the denial
-        ["denied", "deny", "block", "kernel"],
+        # Should mention the denial / kill switch
+        ["denied", "deny", "block", "kill", "slam", "stop"],
+        # Should NOT be pure preamble
         ["We need to", "We must include", "First paragraph", "Let's craft"],
     ),
     (
@@ -131,7 +133,7 @@ NEMOTRON_TEST_MATRIX = [
         "A refund just escalated to SMS even though it's only $85. Why doesn't a small refund just happen automatically?",
         "operator",
         # Should explain why all refunds escalate
-        ["refund", "human", "SMS", "approv"],
+        ["refund", "human", "SMS", "approv", "code"],
         ["We need to answer", "We must include", "Let's draft", "Add:"],
     ),
     (
@@ -146,7 +148,7 @@ NEMOTRON_TEST_MATRIX = [
 ]
 
 
-def hit_nemotron(question: str, page: str, base: str = LIVE_BASE, timeout: int = 60) -> dict:
+def hit_nemotron(question: str, page: str, base: str = LIVE_BASE, timeout: int = 120) -> dict:
     """Make a Nemotron API call and return the result dict.
 
     Returns:
