@@ -125,7 +125,11 @@ def get_authority_state():
     # explicitly so the model cites a real, verifiable figure instead of
     # answering a "how much is left?" question with the amount already spent.
     session_cap = state.get('session_cap', 0) or 0
-    state['autonomous_remaining'] = round(max(session_cap - autonomous, 0.0), 2)
+    # Use spent_this_session from authority.json (includes both autonomous and
+    # approved-override spends) to match what the enforcement engine checks.
+    # autonomous-only subtraction produced a misleading figure after override spends.
+    total_spent = state.get('spent_this_session', autonomous + approved_override)
+    state['autonomous_remaining'] = round(max(session_cap - total_spent, 0.0), 2)
 
     _cache['authority'] = (state, time.time())
     return state

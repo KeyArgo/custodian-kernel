@@ -204,13 +204,13 @@
     <ol>
         <li><b>Step 0 — Earn $1,200</b> — Shows revenue in. No band, no approval, no cap. Earning is always unrestricted by design.</li>
         <li><b>Step 1 — Spend $85 autonomously</b> — Within the agent's authority band → executes with zero human input. <span class="note">PaymentIntent ID auto-fills the Step 7 refund input.</span></li>
-        <li><b>Step 2 — Request $3,500</b> — Exceeds the band. System escalates and sends a real SMS to the operator's phone. <span class="sms-note">The code appears in the mockup below AND auto-fills Step 3.</span></li>
+        <li><b>Step 2 — Request $3,500</b> — Exceeds the band. System escalates and sends a real SMS to the operator's phone. <span class="sms-note">Enter the code from your phone in Step 3.</span></li>
         <li><b>Step 3 — Approve with the SMS code</b> — Code is pre-filled. Just hit Approve. Money moves only after a real human approves.</li>
         <li><b>Step 4 — Engage kill switch</b> — Absolute override. No band, no approval, no exception can bypass it.</li>
         <li><b>Step 5 — Prove kill switch blocks everything</b> — Try a normally-fine $40 spend. Gets denied outright. The AI cannot override this.</li>
         <li><b>Step 6 — Release kill switch</b> — Normal evaluation resumes.</li>
         <li><b>Step 7 — Refund $85</b> — PI is pre-filled from Step 1. Refunds always escalate — no autonomous refund path by design.</li>
-        <li><b>Step 8 — Approve the refund</b> — Second SMS code auto-fills. Hit Approve to execute.</li>
+        <li><b>Step 8 — Approve the refund</b> — Enter the second SMS code from your phone. Hit Approve to execute.</li>
     </ol>
     <div class="tip">💡 Watch the <a href="/hermes" style="color:#76b900;">Live Console</a> in another tab — the audit feed and verdict panels update in real time as you run each step.</div>
 </details>
@@ -263,7 +263,7 @@
 
     <div class="step">
         <h2>Step 2 — Over-budget escalation (real SMS incoming)</h2>
-        <p>$3,500.00 exceeds the per-action cap. The kernel cannot approve this — it escalates and sends a real SMS code to the operator's phone. The code appears in the mockup and auto-fills Step 3.</p>
+        <p>$3,500.00 exceeds the per-action cap. The kernel cannot approve this — it escalates and sends a real SMS code to the operator's phone. Enter the code in Step 3.</p>
         <button id="step2-btn">Run: request $3,500.00 (NAS license renewal)</button>
         <div class="sms-banner" id="sms-banner">
             <div class="phone-wrap">
@@ -285,7 +285,7 @@
                     <div class="notif-body">Your <b>Custodian</b> approval code is: <span class="notif-code" id="sms-code-2">••••••</span><br>This code expires in 10 minutes.</div>
                 </div>
             </div>
-            <div class="sms-note">⬆ Real SMS delivered to operator's phone · Code auto-fills Step 3</div>
+            <div class="sms-note">⬆ Real SMS delivered to operator's phone · Enter code in Step 3</div>
         </div>
         <div class="out" id="step2-out"></div>
     </div>
@@ -353,7 +353,7 @@
                     <div class="notif-body">Your <b>Custodian</b> approval code is: <span class="notif-code" id="sms-code-7">••••••</span><br>This code expires in 10 minutes.</div>
                 </div>
             </div>
-            <div class="sms-note">⬆ Real SMS delivered to operator's phone · Code auto-fills Step 8</div>
+            <div class="sms-note">⬆ Real SMS delivered to operator's phone · Enter code in Step 8</div>
         </div>
         <div class="out" id="refund-out"></div>
     </div>
@@ -457,6 +457,8 @@ function smsNow() {
     return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 }
 
+const esc = s => (s == null ? '' : String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])));
+
 let _codePoller = null;
 function startCodePoll(codeElId, approveInputId, noteId) {
     if (_codePoller) clearInterval(_codePoller);
@@ -465,12 +467,14 @@ function startCodePoll(codeElId, approveInputId, noteId) {
             const res = await fetch(API + '/pending_code', {});
             if (!res.ok) return;
             const d = await res.json();
-            if (d.code) {
-                document.getElementById(codeElId).textContent = d.code;
-                if (approveInputId) document.getElementById(approveInputId).value = d.code;
+            // The OTP lives only on Twilio and the operator's phone — never on the server.
+            // When a pending escalation is confirmed, show the "check your phone" prompt.
+            if (d.pending) {
+                const el = document.getElementById(codeElId);
+                if (el && el.textContent === '••••••') el.textContent = '← check phone';
                 if (noteId) {
                     const n = document.getElementById(noteId);
-                    if (n) { n.style.display = 'block'; }
+                    if (n) { n.textContent = '✓ SMS confirmed delivered — enter code from your phone above.'; n.style.display = 'block'; }
                 }
                 if (_codePoller) { clearInterval(_codePoller); _codePoller = null; }
             }
@@ -564,10 +568,10 @@ async function refreshOpFeed() {
         }
         feed.innerHTML = events.map(ev => {
             const ts = ev.iso ? new Date(ev.iso).toLocaleTimeString('en-US',{hour12:false}) : '--:--:--';
-            const badge = (ev.event||'event').replace(/_/g,' ');
+            const badge = esc((ev.event||'event').replace(/_/g,' '));
             const cls = opFeedBadgeCls(badge);
             const amt = ev.amount != null ? ' $' + Number(ev.amount).toFixed(2) : '';
-            const desc = (ev.description||'').substring(0,50);
+            const desc = esc((ev.description||'').substring(0,50));
             return `<div class="op-ev"><span class="op-ev-ts">${ts}</span><span class="op-ev-badge ${cls}">${badge}</span><span class="op-ev-desc">${desc}${amt}</span></div>`;
         }).join('');
     } catch(e) {}
