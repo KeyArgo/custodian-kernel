@@ -9,3 +9,11 @@ build/
 *.db-shm
 secrets/*.env
 state-snapshot/
+custodian/custodian/
+export/
+# custodian workspace artifacts (created by `custodian init`)
+policy.yaml
+/state/
+/secrets/*.env
+# delivery/ contains runtime Stripe PaymentIntent IDs — not source
+delivery/

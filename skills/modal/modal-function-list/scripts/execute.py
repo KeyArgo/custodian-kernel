@@ -1,28 +1,36 @@
 #!/usr/bin/env python3
-"""Stub execute script for modal-function-list.
-
-Replace this with a real implementation.
-OpenCode prompt: custodian/opencode-prompts/modal-tools.md
-"""
 import argparse, json, os, sys
+TOOL = "modal-function-list"
+
+def _use_sdk():
+    import modal
+    apps = modal.apps.list_apps()
+    return [{"app_id": a.app_id, "app_name": a.description, "state": str(a.state)} for a in apps]
+
+def _use_rest():
+    import requests
+    tid, tsec = os.environ["MODAL_TOKEN_ID"], os.environ["MODAL_TOKEN_SECRET"]
+    r = requests.get("https://api.modal.com/v1/apps",
+                     headers={"Authorization": f"Token {tid}:{tsec}"}, timeout=15)
+    r.raise_for_status()
+    data = r.json()
+    return [{"app_id": a["app_id"], "app_name": a.get("description",""), "state": str(a.get("state",0))}
+            for a in data.get("apps", data if isinstance(data, list) else [])]
 
 def main():
-    p = argparse.ArgumentParser()
-    p.add_argument("--dry-run", action="store_true")
-    args, rest = p.parse_known_args()
-
-    configured = bool(os.environ.get("MODAL_FUNCTION_LIST_CONFIGURED"))
-    if not configured:
-        print(json.dumps({
-            "ok": False,
-            "stub": True,
-            "tool": "modal-function-list",
-            "message": "Set MODAL_FUNCTION_LIST_CONFIGURED=1 (and required credentials) to enable.",
-        }))
+    argparse.ArgumentParser().parse_args()  # handles --help
+    if not os.environ.get("MODAL_TOKEN_ID") or not os.environ.get("MODAL_TOKEN_SECRET"):
+        print(json.dumps({"ok": False, "stub": True, "tool": TOOL,
+                          "message": "Set MODAL_TOKEN_ID and MODAL_TOKEN_SECRET to enable"}))
         sys.exit(0)
-
-    # TODO: real implementation
-    print(json.dumps({"ok": True, "tool": "modal-function-list", "result": "stub"}))
+    try:
+        try:
+            apps = _use_sdk()
+        except Exception:
+            apps = _use_rest()
+        print(json.dumps({"ok": True, "tool": TOOL, "apps": apps}))
+    except Exception as e:
+        print(json.dumps({"ok": False, "tool": TOOL, "error": str(e)}))
 
 if __name__ == "__main__":
     main()
