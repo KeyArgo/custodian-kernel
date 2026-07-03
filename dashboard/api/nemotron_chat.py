@@ -29,7 +29,10 @@ OPENROUTER_SECRET_FILE = Path(__file__).resolve().parent.parent / 'secrets' / 'o
 NVIDIA_ENDPOINT = 'https://integrate.api.nvidia.com/v1/chat/completions'
 OPENROUTER_ENDPOINT = 'https://openrouter.ai/api/v1/chat/completions'
 NVIDIA_MODEL = 'nvidia/nemotron-3-super-120b-a12b'
-OPENROUTER_MODEL = os.environ.get('OPENROUTER_FALLBACK_MODEL', 'nvidia/llama-3.3-nemotron-super-49b-v1')
+# Previous default `nvidia/llama-3.3-nemotron-super-49b-v1` was 404 on
+# OpenRouter (no `.5` suffix; see openrouter.ai/api/v1/models as of 2026-07-02).
+# The free tier super model is the one that actually returns 200.
+OPENROUTER_MODEL = os.environ.get('OPENROUTER_FALLBACK_MODEL', 'nvidia/nemotron-3-super-120b-a12b:free')
 
 try:
     from custodian.inference.router import NemoClawRouter
@@ -118,11 +121,82 @@ def _openrouter_key() -> str | None:
 
 
 def _strip_thinking(text: str) -> str:
-    """Strip <think>/<thinking> reasoning tokens that reasoning models leak into content."""
-    import re
+    """Strip reasoning tokens, constraint preambles, and self-instruction
+    lines that reasoning models leak.
+
+    Nemotron Super 120B has a recurring pattern: it produces a long
+    preamble of constraint echoes ("We need to respond in first person...",
+    "We must include the operator panel link...") and meta-instructions to
+    itself ("First line: the operator panel then maybe a space then sentence.",
+    "Let's draft:", "Now add suggest chips: maybe three chips.", "Add: ...")
+    before (sometimes) producing the actual reply. When the model runs out
+    of token budget on the preamble, the actual reply never appears and the
+    user sees the model talking to itself.
+
+    Strategy (v5):
+    1. Strip <think>...</think> blocks.
+    2. Split into paragraphs (line-by-line on the raw text).
+    3. Score each paragraph: a paragraph is "meta" if it starts with
+       a known constraint prefix (We need to, Must, Let's draft, etc.).
+       A paragraph is "real reply" if it passes all meta checks.
+    4. If there are any real-reply paragraphs, return them.
+    5. Otherwise, if the response has a quoted draft (model talking to
+       itself about what to write, e.g. Let's draft: "the reply text..."),
+       extract the longest quoted string and return it.
+    6. If nothing works, return '' — the model never produced a real reply.
+
+    (Bug-hunt 2026-07-03, v5. Ported from hermes-hackathon-2026.)
+    """
+    if not text:
+        return text
+
+    # Strip explicit reasoning blocks
     text = re.sub(r'<think>.*?</think>', '', text, flags=re.DOTALL)
     text = re.sub(r'<thinking>.*?</thinking>', '', text, flags=re.DOTALL)
-    return text.strip()
+    text = text.strip()
+
+    # Heuristic: is a paragraph model self-talk vs. real reply?
+    def _is_meta(p: str) -> bool:
+        """True if the paragraph looks like model meta-instruction."""
+        s = p.strip()
+        if len(s) < 20:
+            return True
+        META_PATTERNS = (
+            r'^\s*We need to\b', r'^\s*We must\b', r'^\s*We should\b',
+            r'^\s*We can say\b', r'^\s*We can mention\b', r'^\s*We can just\b',
+            r'^\s*We have data\b', r'^\s*We will\b', r'^\s*We are\b',
+            r'^\s*Must\b', r'^\s*Do not\b', r'^\s*Should\b',
+            r'^\s*Now count\b', r'^\s*Now produce\b', r'^\s*Now craft\b',
+            r'^\s*Now let\b', r'^\s*Now add\b', r'^\s*Now look\b',
+            r"^\s*Let's craft\b", r"^\s*Let's draft\b", r"^\s*Let's do\b",
+            r'^\s*First paragraph\b', r'^\s*Second paragraph\b',
+            r'^\s*First line\b', r'^\s*First,\s*glance\b',
+            r'^\s*Let me\b', r'^\s*Now let me\b',
+            r'^\s*Check word count\b', r'^\s*Count words\b',
+            r'^\s*Count roughly\b', r'^\s*Word count\b',
+            r'^\s*Add:', r'^\s*Note:', r'^\s*End:',
+        )
+        for pat in META_PATTERNS:
+            if re.match(pat, p):
+                return True
+        return False
+
+    # Strategy 1: find paragraphs that look like real replies
+    paragraphs = text.split('\n')
+    real_paragraphs = [p for p in paragraphs if not _is_meta(p)]
+
+    if real_paragraphs:
+        return '\n'.join(real_paragraphs).strip()
+
+    # Strategy 2: no real paragraphs — the model only produced meta-instruction.
+    # If the response contains a quoted draft (model talking to itself about
+    # what to write), extract the longest one as a fallback.
+    quoted = re.findall(r'"([^"]{50,})"', text)
+    if quoted:
+        return max(quoted, key=len).strip()
+
+    # Strategy 3: nothing usable — the model never produced a real reply.
+    return ''
 
 
 def _call_openrouter(messages: list[dict]) -> str | None:
@@ -133,11 +207,14 @@ def _call_openrouter(messages: list[dict]) -> str | None:
     payload = {
         'model': OPENROUTER_MODEL,
         'messages': messages,
-        'max_tokens': 600,
+        # Reasoning model needs room for CoT + a real answer. Previous 600
+        # truncated the answer to a single sentence. (See bug-hunt 2026-07-02.)
+        'max_tokens': 4000,
         'temperature': 0.7,
-        # Suppress chain-of-thought — Nemotron Super is a reasoning model and
-        # will dump its full internal monologue into content without this flag.
-        'chat_template_kwargs': {'thinking': False},
+        # NOTE: do NOT send `chat_template_kwargs.thinking: false` here —
+        # that's a NIM-specific param and OpenRouter returns 422 for unknown
+        # fields. OpenRouter routes reasoning models to the `:free` variant
+        # which already suppresses CoT in content.
     }
     req = urllib.request.Request(
         OPENROUTER_ENDPOINT,
@@ -548,7 +625,21 @@ def ask():
             answer = _nemo_client.complete(
                 merged_system,
                 f"{context_block}\n\nVISITOR'S QUESTION: {question}",
+                # Reasoning models burn hundreds of tokens on CoT before the
+                # first content token. The previous default of 1200 caused
+                # answers to be truncated to a few words. 4000 leaves room
+                # for ~3-4K tokens of actual answer after the model's
+                # internal reasoning. (See bug-hunt session 2026-07-02.)
+                max_tokens=4000,
             )
+            # NemoClawRouter only strips <think> tags -- it doesn't know about
+            # this app's meta-instruction preamble pattern (see _strip_thinking
+            # above). Apply the same v5 cleanup here so a degenerate response
+            # from the router's path gets the same treatment as the OpenRouter/
+            # NIM fallback paths below, instead of leaking raw self-talk.
+            answer = _strip_thinking(answer)
+            if not answer:
+                answer = None
         except RuntimeError:
             answer = None
     else:

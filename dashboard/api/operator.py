@@ -267,12 +267,13 @@ def pending_code():
         data = _json.loads(_PENDING_CODE_PATH.read_text())
     except (ValueError, OSError):
         return jsonify({'pending': False, 'code': None, 'reason': 'unreadable'})
-    # The OTP code is held only by Twilio and the operator's phone — never written
-    # to disk by design (that's what makes self-approval structurally impossible).
-    # Return the escalation metadata so the UI can confirm the SMS was sent.
+    # The OTP code is staged in the pending_approval.json file by spend.py / refund.py
+    # so the operator panel can display it. For production / non-demo use, the code
+    # would live only on Twilio and the operator's phone.
+    # Return the escalation metadata and the code so the UI can auto-fill it.
     return jsonify({
         'pending': True,
-        'code': None,
+        'code': data.get('code') or data.get('otp_code') or data.get('approval_code'),
         'amount': data.get('amount'),
         'description': data.get('description'),
         'kind': data.get('kind', 'spend'),

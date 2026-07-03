@@ -98,6 +98,7 @@ def favicon():
 
 @app.route('/')
 @app.route('/hermes')
+@app.route('/console')
 def dashboard():
     return render_template('hermes/dashboard.html')
 

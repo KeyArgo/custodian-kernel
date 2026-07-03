@@ -407,16 +407,13 @@ def run_report(
 
 def run(args) -> None:
     """Standalone CLI entry point: custodian generate-report --input FILE --out DIR"""
-    import argparse
-    p = argparse.ArgumentParser(description="Generate AI governance package")
-    p.add_argument("--input", default=None, help="JSON file with customer inputs")
-    p.add_argument("--out", default="./delivery", help="Output directory")
-    p.add_argument("--pi-id", default="pi_demo_standalone", help="Stripe PaymentIntent ID")
-    p.add_argument("--amount", type=float, default=35.00, help="Earn amount")
-    parsed_args = p.parse_args(args)
+    input_file = getattr(args, "input", None)
+    out_dir    = getattr(args, "out", "./delivery")
+    pi_id      = getattr(args, "pi_id", "pi_demo_standalone")
+    amount     = getattr(args, "amount", 35.00)
 
-    if parsed_args.input:
-        inputs = json.loads(Path(parsed_args.input).read_text())
+    if input_file:
+        inputs = json.loads(Path(input_file).read_text())
     else:
         # demo fixture
         inputs = {
@@ -428,9 +425,9 @@ def run(args) -> None:
 
     receipt = run_report(
         inputs=inputs,
-        pi_id=parsed_args.pi_id,
-        earn_amount=parsed_args.amount,
-        out_dir=Path(parsed_args.out),
+        pi_id=pi_id,
+        earn_amount=amount,
+        out_dir=Path(out_dir),
     )
     if not receipt:
         sys.exit(1)

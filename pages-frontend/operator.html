@@ -403,6 +403,14 @@
 const API = '/api/v1/operator';
 let spendPI = '';
 
+// Top-level HTML escaper. Must be at script-block scope (NOT inside the
+// DOMContentLoaded callback below) because refreshOpFeed() and refreshLive()
+// run at script-eval time and need it. Previously this was inside the
+// DOMContentLoaded closure, which caused the live audit feed to show
+// "⚠ Live feed unreachable: esc is not defined" — the exact error reported.
+// (Ported from hermes-hackathon-2026 bug-hunt 2026-07-03.)
+const esc = s => (s == null ? '' : String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])));
+
 document.addEventListener('DOMContentLoaded', function () {
 
 async function call(path, body) {
@@ -456,8 +464,6 @@ function smsNow() {
     const d = new Date();
     return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 }
-
-const esc = s => (s == null ? '' : String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])));
 
 let _codePoller = null;
 function startCodePoll(codeElId, approveInputId, noteId) {
@@ -622,11 +628,22 @@ function opNemoOpen() {
             body: JSON.stringify({ question: greeting, history: opNemoHistory.slice(-6), page: 'operator' })
         }).then(r=>r.json()).then(d => {
             thinking.remove();
-            const ans = d.answer || "I'm Nemotron — ask me about any of the demo steps.";
+            // Distinguish real answer / error / empty so the operator sees a
+            // clear status instead of a placeholder-looking "I'm Nemotron…"
+            // string when the backend actually failed or returned empty.
+            // (Ported from hermes-hackathon-2026 bug-hunt 2026-07-03.)
+            let ans;
+            if (d.error) {
+                ans = `⚠ Nemotron error: ${d.error}`;
+            } else if (!d.answer || d.answer.trim() === '') {
+                ans = "I'm Nemotron — ask me about any of the demo steps. (Live inference just returned empty — your typed questions will still reach the model.)";
+            } else {
+                ans = d.answer;
+            }
             opNemoAddMsg(ans, 'bot');
-        }).catch(() => {
+        }).catch((e) => {
             thinking.remove();
-            opNemoAddMsg("I'm Nemotron — ask me about any of the demo steps.", 'bot');
+            opNemoAddMsg(`⚠ Couldn't reach Nemotron: ${e.message || e} — your typed questions should still work once the connection is back.`, 'bot');
         });
     }
     opNemoInput.focus();
