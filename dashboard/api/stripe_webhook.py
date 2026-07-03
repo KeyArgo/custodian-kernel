@@ -42,8 +42,13 @@ def _read_all() -> list[dict]:
 @bp.route("/demo-earn", methods=["POST"])
 def demo_earn():
     body = request.get_json(silent=True) or {}
-    amount = float(body.get("amount", 25.00))
-    description = body.get("description", "Customer payment for AI service")
+    try:
+        amount = float(body.get("amount", 25.00))
+    except (TypeError, ValueError):
+        return jsonify({"error": "amount must be a number"}), 400
+    if amount <= 0 or amount > 10_000:
+        return jsonify({"error": "amount must be between 0 and 10000"}), 400
+    description = str(body.get("description", "Customer payment for AI service"))[:200]
     entry = {
         "ts": time.time(),
         "event": "earned",

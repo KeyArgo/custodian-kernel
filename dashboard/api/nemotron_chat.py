@@ -29,7 +29,10 @@ OPENROUTER_SECRET_FILE = Path(__file__).resolve().parent.parent / 'secrets' / 'o
 NVIDIA_ENDPOINT = 'https://integrate.api.nvidia.com/v1/chat/completions'
 OPENROUTER_ENDPOINT = 'https://openrouter.ai/api/v1/chat/completions'
 NVIDIA_MODEL = 'nvidia/nemotron-3-super-120b-a12b'
-OPENROUTER_MODEL = os.environ.get('OPENROUTER_FALLBACK_MODEL', 'nvidia/llama-3.3-nemotron-super-49b-v1')
+# Previous default `nvidia/llama-3.3-nemotron-super-49b-v1` was 404 on
+# OpenRouter (no `.5` suffix; see openrouter.ai/api/v1/models as of 2026-07-02).
+# The free tier super model is the one that actually returns 200.
+OPENROUTER_MODEL = os.environ.get('OPENROUTER_FALLBACK_MODEL', 'nvidia/nemotron-3-super-120b-a12b:free')
 
 try:
     from custodian.inference.router import NemoClawRouter
@@ -187,11 +190,14 @@ def _call_openrouter(messages: list[dict]) -> str | None:
     payload = {
         'model': OPENROUTER_MODEL,
         'messages': messages,
-        'max_tokens': 600,
+        # Reasoning model needs room for CoT + a real answer. Previous 600
+        # truncated the answer to a single sentence. (See bug-hunt 2026-07-02.)
+        'max_tokens': 4000,
         'temperature': 0.7,
-        # Suppress chain-of-thought — Nemotron Super is a reasoning model and
-        # will dump its full internal monologue into content without this flag.
-        'chat_template_kwargs': {'thinking': False},
+        # NOTE: do NOT send `chat_template_kwargs.thinking: false` here —
+        # that's a NIM-specific param and OpenRouter returns 422 for unknown
+        # fields. OpenRouter routes reasoning models to the `:free` variant
+        # which already suppresses CoT in content.
     }
     req = urllib.request.Request(
         OPENROUTER_ENDPOINT,
@@ -667,6 +673,12 @@ def ask():
             answer = _nemo_client.complete(
                 merged_system,
                 f"{context_block}\n\nVISITOR'S QUESTION: {question}",
+                # Reasoning models burn hundreds of tokens on CoT before the
+                # first content token. The previous default of 1200 caused
+                # answers to be truncated to a few words. 4000 leaves room
+                # for ~3-4K tokens of actual answer after the model's
+                # internal reasoning. (See bug-hunt session 2026-07-02.)
+                max_tokens=4000,
             )
         except RuntimeError:
             answer = None

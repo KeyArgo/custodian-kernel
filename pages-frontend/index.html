@@ -1867,6 +1867,7 @@ result <span style="color:var(--dim)">=</span> decide(
     tour.onPage('home');
 
     function choose(mode){
+      tour.resetSession();
       tour.setMode(mode);
       tour.markHomeOfferSeen();
       if(mode === 'free'){

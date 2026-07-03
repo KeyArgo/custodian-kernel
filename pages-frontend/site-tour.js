@@ -1,6 +1,14 @@
 (function () {
   const TOUR_KEY = 'custodian_site_tour_v1';
   const HISTORY_KEY = 'custodian_nemotron_history';
+  const RESET_KEYS = [
+    TOUR_KEY,
+    HISTORY_KEY,
+    'custodian_ng_v1',
+    'custodian_ng_last_path',
+    'custodian_tour_track_v1',
+    '_op_nudge_sent',
+  ];
 
   function isMobile() {
     return window.matchMedia('(max-width: 680px)').matches;
@@ -110,6 +118,14 @@
     sessionStorage.setItem(HISTORY_KEY, JSON.stringify((history || []).slice(-16)));
   }
 
+  function resetSession() {
+    RESET_KEYS.forEach((key) => {
+      try {
+        sessionStorage.removeItem(key);
+      } catch (_) {}
+    });
+  }
+
   function onPage(page) {
     setStage(page);
     recordEvent('page_view', { page });
@@ -190,6 +206,7 @@
     recordEvent,
     getHistory,
     saveHistory,
+    resetSession,
     onPage,
     markOperatorStep,
     completeConsoleFollowup,
