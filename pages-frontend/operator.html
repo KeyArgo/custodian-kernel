@@ -205,7 +205,7 @@
         <li><b>Step 0 — Earn $1,200</b> — Shows revenue in. No band, no approval, no cap. Earning is always unrestricted by design.</li>
         <li><b>Step 1 — Spend $85 autonomously</b> — Within the agent's authority band → executes with zero human input. <span class="note">PaymentIntent ID auto-fills the Step 7 refund input.</span></li>
         <li><b>Step 2 — Request $3,500</b> — Exceeds the band. System escalates and sends a real SMS to the operator's phone. <span class="sms-note">Enter the code from your phone in Step 3.</span></li>
-        <li><b>Step 3 — Approve with the SMS code</b> — Code is pre-filled. Just hit Approve. Money moves only after a real human approves.</li>
+        <li><b>Step 3 — Approve with the SMS code</b> — Enter the code from your phone. Just hit Approve. Money moves only after a real human approves.</li>
         <li><b>Step 4 — Engage kill switch</b> — Absolute override. No band, no approval, no exception can bypass it.</li>
         <li><b>Step 5 — Prove kill switch blocks everything</b> — Try a normally-fine $40 spend. Gets denied outright. The AI cannot override this.</li>
         <li><b>Step 6 — Release kill switch</b> — Normal evaluation resumes.</li>
@@ -292,7 +292,7 @@
 
     <div class="step">
         <h2>Step 3 — Approve with the real code</h2>
-        <p>The code is pre-filled from the SMS — shown as asterisks so it stays off-screen. Click Approve.</p>
+        <p>The code lives only on Twilio's servers and the operator's phone — enter code from your phone above. Click Approve.</p>
         <div class="row">
             <input type="text" id="approve1-code" placeholder="6-digit code" maxlength="6" style="width:160px;">
             <input type="text" id="approve1-by" placeholder="Approved by" value="Operator" style="width:120px;">
@@ -360,7 +360,7 @@
 
     <div class="step">
         <h2>Step 8 — Approve the refund</h2>
-        <p>Code is pre-filled from the SMS — masked for security. Click Approve refund to execute.</p>
+        <p>The code lives only on Twilio's servers and the operator's phone — enter code from your phone above. Click Approve refund to execute.</p>
         <div class="row">
             <input type="text" id="approve2-code" placeholder="6-digit code" maxlength="6" style="width:160px;">
             <input type="text" id="approve2-by" placeholder="Approved by" value="Operator" style="width:120px;">
@@ -414,13 +414,31 @@ const esc = s => (s == null ? '' : String(s).replace(/[&<>"']/g, c => ({'&':'&am
 document.addEventListener('DOMContentLoaded', function () {
 
 async function call(path, body) {
-    const res = await fetch(API + path, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body || {}),
-    });
-    const data = await res.json();
-    return data;
+    // No error handling here used to mean any hiccup (a stray non-2xx, a
+    // non-JSON body, a network blip) threw inside an unhandled async click
+    // handler -- the button would silently do nothing with zero visible
+    // feedback, which read as "the page stopped responding to clicks."
+    // Always resolve to a renderable {error: ...} shape instead of rejecting.
+    // (Ported from hermes-hackathon-2026 bug-hunt 2026-07-03.)
+    try {
+        const res = await fetch(API + path, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body || {}),
+        });
+        let data;
+        try {
+            data = await res.json();
+        } catch (_) {
+            return { error: `Backend returned a non-JSON response (HTTP ${res.status}). Try again.` };
+        }
+        if (!res.ok && !data.error) {
+            data.error = `Backend error (HTTP ${res.status}).`;
+        }
+        return data;
+    } catch (e) {
+        return { error: `Network error: ${e.message || e}` };
+    }
 }
 
 function renderOut(elId, data) {
