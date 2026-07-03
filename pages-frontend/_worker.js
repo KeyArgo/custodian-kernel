@@ -83,6 +83,18 @@ export default {
     // Try primary
     let response = await tryFetch(new URL(upstreamPath, PRIMARY).toString(), makeInit(), primaryTimeout);
 
+    // SECONDARY is a Tailscale CGNAT address (100.64.0.0/10) — not publicly
+    // routable, so it can never actually be reached from Cloudflare's edge.
+    // On fast paths, retry PRIMARY once with a short timeout first: a real
+    // transient blip usually clears in under a second, and that's strictly
+    // faster than burning the full secondaryTimeout on an address that is
+    // guaranteed to fail. Skip the retry on slow paths — a real failure
+    // there is more likely a genuine timeout than a blip, and doubling to
+    // ~50s would make a failing request feel broken rather than just slow.
+    if (!response && !isSlow) {
+      response = await tryFetch(new URL(upstreamPath, PRIMARY).toString(), makeInit(), 2000);
+    }
+
     // Fall back to secondary
     if (!response) {
       response = await tryFetch(new URL(upstreamPath, SECONDARY).toString(), makeInit(), secondaryTimeout);
