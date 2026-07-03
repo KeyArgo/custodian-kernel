@@ -127,6 +127,23 @@
   .lede b{color:var(--text); font-weight:500}
   .hero-cta{display:flex; gap:14px; justify-content:center; flex-wrap:wrap; margin-bottom:46px}
   .hero-cta .btn{padding:13px 24px; font-size:1em}
+  .tour-offer{margin:20px auto 0;max-width:760px;padding:16px 18px;border:1px solid rgba(255,176,0,0.22);border-radius:16px;background:rgba(11,13,20,0.78);backdrop-filter:blur(10px);display:none;text-align:left}
+  .tour-offer.show{display:block}
+  .tour-offer-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;margin-bottom:10px}
+  .tour-offer-kicker{font-family:var(--mono);font-size:0.72em;letter-spacing:0.12em;text-transform:uppercase;color:var(--amber2);margin-bottom:6px}
+  .tour-offer p{color:var(--muted);font-size:0.94em}
+  .tour-offer-actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px}
+  .tour-pill{all:unset;cursor:pointer;padding:10px 14px;border-radius:10px;border:1px solid var(--line2);color:var(--text);font-size:0.9em;font-weight:600;background:rgba(255,255,255,0.03)}
+  .tour-pill:hover{border-color:var(--amber);transform:translateY(-1px)}
+  .tour-pill.primary{background:rgba(255,176,0,0.12);border-color:rgba(255,176,0,0.4);color:var(--amber2)}
+  .tour-dismiss{all:unset;cursor:pointer;color:var(--dim);font-size:0.82em;padding:3px 0}
+  .tour-dismiss:hover{color:var(--text)}
+  @media(max-width:600px){
+    .tour-offer{padding:14px}
+    .tour-offer-head{display:block}
+    .tour-offer-actions{flex-direction:column}
+    .tour-pill{width:100%;box-sizing:border-box;text-align:center}
+  }
 
   /* live spec strip */
   .specs{display:inline-flex; flex-wrap:wrap; gap:0; border:1px solid var(--line2); border-radius:14px;
@@ -342,6 +359,20 @@
     <div class="hero-cta" style="margin-top:28px">
       <a class="btn btn-primary" href="/operator" target="_blank" rel="noopener">▶ Run the live demo</a>
       <a class="btn btn-ghost" href="/hermes">Watch it spend real money →</a>
+    </div>
+    <div class="tour-offer" id="tour-offer" aria-live="polite">
+      <div class="tour-offer-head">
+        <div>
+          <div class="tour-offer-kicker">Nemotron guide</div>
+          <p>Need the fast version? Start in the console and let the AI walk you through what Custodian is, then hand you into the operator flow when it matters.</p>
+        </div>
+        <button class="tour-dismiss" id="tour-offer-dismiss" type="button">Not now</button>
+      </div>
+      <div class="tour-offer-actions">
+        <button class="tour-pill primary" id="tour-mode-quick" type="button">Quick walkthrough</button>
+        <button class="tour-pill" id="tour-mode-deep" type="button">Deep dive</button>
+        <button class="tour-pill" id="tour-mode-free" type="button">Browse freely</button>
+      </div>
     </div>
     <div class="specs" id="specs" style="margin-top:8px">
       <div class="spec"><div class="k">Authority band</div><div class="v" id="s-band">—</div></div>
@@ -846,6 +877,45 @@
   });
 </script>
   <script src="/site-tour.js"></script>
+  <script>
+  (function(){
+    if(!window.CustodianTour) return;
+    const tour = window.CustodianTour;
+    const offer = document.getElementById('tour-offer');
+    if (!offer) return;
+    const state = tour.getState();
+    tour.onPage('home');
+
+    function choose(mode){
+      tour.resetSession();
+      tour.setMode(mode);
+      tour.markHomeOfferSeen();
+      if(mode === 'free'){
+        offer.classList.remove('show');
+        return;
+      }
+      window.location.href = '/hermes';
+    }
+
+    document.getElementById('tour-mode-quick').addEventListener('click', ()=>choose('quick'));
+    document.getElementById('tour-mode-deep').addEventListener('click', ()=>choose('deep'));
+    document.getElementById('tour-mode-free').addEventListener('click', ()=>choose('free'));
+    document.getElementById('tour-offer-dismiss').addEventListener('click', ()=>{
+      offer.classList.remove('show');
+      tour.patchState({ home_offer_dismissed: true, home_offer_seen: true });
+    });
+
+    if (state.mode && state.mode !== 'free') {
+      offer.classList.add('show');
+    }
+    if (!tour.isMobile() && !state.home_offer_seen && !state.home_offer_dismissed) {
+      setTimeout(() => {
+        offer.classList.add('show');
+        tour.markHomeOfferSeen();
+      }, 60000);
+    }
+  })();
+  </script>
   <script src="/tour-tracker.js"></script>
   <script src="/nemo-guide.js"></script>
 </body>
