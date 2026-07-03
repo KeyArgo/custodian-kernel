@@ -121,73 +121,113 @@ def _openrouter_key() -> str | None:
 
 
 def _strip_thinking(text: str) -> str:
-    """Strip reasoning tokens and constraint-echoing preambles that reasoning models leak.
+    """Strip reasoning tokens, constraint preambles, and self-instruction
+    lines that reasoning models leak.
 
-    Nemotron Super via OpenRouter echoes its system-prompt rules before answering,
-    producing blobs like:
-        'We need to respond with first person... Must include... We must not...'
-        [followed by the actual answer]
+    Nemotron Super 120B has a recurring pattern: it produces a long
+    preamble of constraint echoes ("We need to respond in first person...",
+    "We must include the operator panel link...") and meta-instructions to
+    itself ("First line: the operator panel then maybe a space then sentence.",
+    "Let's draft:", "Now add suggest chips: maybe three chips.", "Add: ...")
+    before (sometimes) producing the actual reply. When the model runs out
+    of token budget on the preamble, the actual reply never appears and the
+    user sees the model talking to itself.
 
-    We scan line by line: skip every line that starts with a constraint prefix,
-    then keep everything once real prose begins. If the entire response is
-    just the constraint preamble (no actual answer), we return an empty
-    string so the caller can show "Nemotron returned an empty response"
-    instead of leaking the model talking to itself. (Bug-hunt 2026-07-03.)
+    Strategy:
+    1. Strip <think>...</think> blocks.
+    2. If the response contains NO `[[jump:` token, the model never
+       produced a real reply — return ''. (The system prompt requires
+       the model to include a jump link in every reply.)
+    3. Otherwise, drop paragraphs that start with a meta-instruction
+       prefix. Also drop trailing meta paragraphs.
+
+    Result: a clean response with just the actual reply (including its
+    [[jump:...]] markers, which the link rewriter will turn into real
+    navigation links).
+
+    (Bug-hunt 2026-07-03.)
     """
     if not text:
         return text
 
-    # Strip explicit reasoning blocks first.
+    # Strip explicit reasoning blocks
     text = re.sub(r'<think>.*?</think>', '', text, flags=re.DOTALL)
     text = re.sub(r'<thinking>.*?</thinking>', '', text, flags=re.DOTALL)
+    text = text.strip()
 
-    # Prefixes that mark self-instruction lines (never appear in a real reply).
-    CONSTRAINT_PREFIXES = (
-        'We need to', 'We must', 'We can say', 'We can mention', 'We can just',
-        'We should', 'We have data', 'We will ', 'We are producing',
-        'Must ', 'Do not ', 'Should ', 'HARD RULES',
-        "Now count", "Now produce", "Now craft", "Now let",
-        "Let's craft", "Let's draft", "Let's do", "Let's count",
-        'First paragraph', 'Second paragraph', 'Third paragraph',
-        'Make sure', "That's okay", "That's fine", "That's correct",
-        "It's okay", "It's fine", 'Safer:', 'IMPORTANT:', 'Remember:',
-        'For example:', 'Example:', 'Probably okay', 'Actually',
+    # If the response has no jump marker, the model never reached the
+    # actual reply — every line was constraint echo or meta-instruction.
+    if '[[jump:' not in text and '<jump:' not in text:
+        return ''
+
+    # Meta-instruction prefixes. A line that starts with one of these is
+    # the model talking to itself about how to write the reply, not the
+    # reply itself. Cover the original constraint prefixes PLUS all the
+    # "Now ...", "Let's ...", "First ...", "Add:" patterns the model
+    # actually emits.
+    META_PATTERNS = (
+        r'^\s*We need to\b',
+        r'^\s*We must\b',
+        r'^\s*We should\b',
+        r'^\s*We can say\b',
+        r'^\s*We can mention\b',
+        r'^\s*We can just\b',
+        r'^\s*We have data\b',
+        r'^\s*We will\b',
+        r'^\s*We are producing\b',
+        r'^\s*Must\b',
+        r'^\s*Do not\b',
+        r'^\s*Should\b',
+        r'^\s*HARD RULES\b',
+        r'^\s*Now count\b',
+        r'^\s*Now produce\b',
+        r'^\s*Now craft\b',
+        r'^\s*Now let\b',
+        r'^\s*Now add\b',
+        r'^\s*Now look\b',
+        r"^\s*Let's craft\b",
+        r"^\s*Let's draft\b",
+        r"^\s*Let's do\b",
+        r"^\s*Let's count\b",
+        r"^\s*Let's just\b",
+        r"^\s*Let's see\b",
+        r'^\s*First paragraph\b',
+        r'^\s*Second paragraph\b',
+        r'^\s*Third paragraph\b',
+        r'^\s*First line\b',
+        r'^\s*First,\s*glance\b',
+        r'^\s*Let me\b',
+        r'^\s*Now let me\b',
+        r'^\s*Check word count\b',
+        r'^\s*Count words\b',
+        r'^\s*Count roughly\b',
+        r'^\s*Word count\b',
+        r'^\s*Add:',
+        r'^\s*Note:',
+        r'^\s*End:',
+        r'^\s*Make sure\b',
     )
 
-    # Fast path: if the response doesn't start with constraint language, return as-is.
-    head = text.lstrip()
-    if not any(head.startswith(p) for p in ('We need to', 'We must', 'Must ')):
-        return text.strip()
-
-    # Line-by-line scan: skip constraint lines, keep everything once real prose starts.
-    lines = text.splitlines()
+    # Drop paragraphs that are entirely meta-instruction. Preserve
+    # paragraphs that contain real prose even if they have meta words
+    # in them.
+    paragraphs = text.split('\n')
     result: list[str] = []
-    in_constraint_block = True
-
-    for line in lines:
-        stripped = line.strip()
-        if not stripped:
-            if not in_constraint_block:
-                result.append(line)
-            continue
-
-        is_constraint = any(stripped.startswith(p) for p in CONSTRAINT_PREFIXES)
-
-        if in_constraint_block:
-            if not is_constraint:
-                in_constraint_block = False
-                result.append(line)
-            # else: still in constraint block, skip
-        else:
-            result.append(line)
-
+    for p in paragraphs:
+        is_meta = any(re.match(pat, p) for pat in META_PATTERNS)
+        if not is_meta:
+            result.append(p)
     cleaned = '\n'.join(result).strip()
-    # If every line was constraint preamble (nothing useful came through),
-    # return empty string. Previously this returned the original text,
-    # which leaked the model's self-talk to the user. (Bug-hunt 2026-07-03.)
+
     if not cleaned:
         return ''
-    return cleaned
+
+    # Strip trailing meta-instruction paragraphs (they come after the
+    # actual reply in the captured pattern).
+    lines = cleaned.split('\n')
+    while lines and any(re.match(pat, lines[-1]) for pat in META_PATTERNS):
+        lines.pop()
+    return '\n'.join(lines).strip()
 
 
 def _call_openrouter(messages: list[dict]) -> str | None:
