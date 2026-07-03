@@ -5,15 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Custodian — Autonomous Spend Authority</title>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="apple-touch-icon" href="/favicon.svg">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
 
         body {
-            font-family: var(--mono);
-            background: var(--bg);
+            font-family: 'JetBrains Mono', 'SF Mono', 'Cascadia Code', Consolas, monospace;
+            background: #000;
             color: #d4d4d4;
             min-height: 100vh;
             padding: 0;
@@ -21,21 +19,10 @@
 
         /* ---- semantic colors: amber = active/in-progress, green = pass/connected/verified, red = blocked/escalated/error ---- */
         :root {
-            --bg:     #06070b;
-            --bg2:    #0a0c13;
-            --panel:  #0e1018;
-            --line:   rgba(255,176,0,0.10);
-            --text:   #eceef5;
-            --muted:  #8d93a6;
-            --dim:    #5d6273;
-            --amber:  #ffb000;
-            --amber2: #ffd060;
-            --green:  #2ee6a6;
-            --red:    #ff5c5c;
-            --nvidia: #76b900;
-            --mono:   'JetBrains Mono', 'Fira Code', monospace;
-            /* legacy aliases kept for existing JS/CSS refs */
+            --amber: #ffb000;
+            --green: #2ee6a6;
             --nvidia-green: #76b900;
+            --red: #ff3b3b;
             --gray: #5a5a5a;
         }
 
@@ -209,10 +196,7 @@
         .process-step.is-active .process-title { color: var(--amber); }
         .process-step.is-blocked .process-title { color: var(--red); }
         .process-step.is-skipped { opacity: 0.45; }
-        .process-desc { display: block; font-size: 0.78em; color: #4a5a4a; margin-top: 2px; }
-        .process-step.is-active .process-desc,
-        .process-step.is-complete .process-desc,
-        .process-step.is-blocked .process-desc { color: #8a9a8a; }
+        .process-desc { display: none; }
         .process-status {
             margin-top: 6px;
             font-size: 0.74em;
@@ -289,74 +273,7 @@
         .conn-dot.live { background: var(--green); box-shadow: 0 0 6px var(--green); }
         .conn-dot.down { background: var(--red); box-shadow: 0 0 6px var(--red); }
 
-        /* ── kernel nav ─────────────────────────────────────────── */
-        .k-nav {
-          position: sticky; top: 0; z-index: 100;
-          display: flex; align-items: center;
-          height: 52px; padding: 0 24px;
-          background: rgba(6,7,11,0.95);
-          border-bottom: 1px solid rgba(255,176,0,0.12);
-          backdrop-filter: blur(14px);
-          font-family: var(--mono);
-          font-size: 14px;
-          gap: 0;
-        }
-        .k-brand {
-          display: flex; align-items: center; gap: 8px;
-          color: var(--amber); text-decoration: none;
-          font-size: 0.8em; font-weight: 700;
-          letter-spacing: 0.1em; text-transform: uppercase;
-          margin-right: 20px; flex-shrink: 0;
-        }
-        .k-brand svg { width: 20px; height: 20px; }
-        .k-links { display: flex; align-items: center; gap: 2px; flex: 1; }
-        .k-links a {
-          color: var(--muted); text-decoration: none;
-          font-size: 0.72em; font-weight: 600;
-          letter-spacing: 0.1em; text-transform: uppercase;
-          padding: 6px 12px;
-          border-bottom: 2px solid transparent;
-          transition: color 0.15s, border-color 0.15s;
-        }
-        .k-links a:hover { color: var(--text); }
-        .k-links a.active { color: var(--amber); border-bottom-color: var(--amber); }
-        .k-status {
-          display: flex; align-items: center; gap: 6px;
-          font-size: 0.65em; letter-spacing: 0.12em; text-transform: uppercase;
-          color: var(--green);
-          border: 1px solid rgba(46,230,166,0.25);
-          padding: 4px 10px; border-radius: 4px; flex-shrink: 0;
-        }
-        .k-dot {
-          width: 6px; height: 6px; border-radius: 50%;
-          background: var(--green);
-          animation: k-pulse 2s infinite; flex-shrink: 0;
-        }
-        @keyframes k-pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
-        @media(max-width:720px){
-          .k-links a { font-size: 0.65em; padding: 6px 8px; }
-          .k-brand span { display: none; }
-        }
-        @media(max-width:480px){
-          .k-links a:not(.active) { display: none; }
-          .k-brand span { display: inline; }
-        }
-
-        /* ── P&L bar ───────────────────────────────────────────── */
-        .pnl-bar {
-          display: flex; align-items: center; justify-content: center; gap: 20px;
-          padding: 9px 24px; background: var(--bg2);
-          border-bottom: 1px solid rgba(255,176,0,0.08);
-          font-family: var(--mono); font-size: 0.72em; flex-wrap: wrap;
-        }
-        .pnl-stat { display: flex; flex-direction: column; align-items: center; gap: 1px; }
-        .pnl-label { color: var(--dim); font-size: 0.72em; letter-spacing: 0.12em; text-transform: uppercase; }
-        .pnl-val { font-weight: 700; font-size: 1.05em; color: var(--text); }
-        .pnl-earn { color: var(--green); }
-        .pnl-spend { color: var(--red); }
-        .pnl-net-pos { color: var(--green); }
-        .pnl-net-neg { color: var(--red); }
-        .pnl-sep { color: var(--dim); font-size: 1.2em; }
+        .nav-links, .nav-link { display: none; }
 
         /* ---- tabs ---- */
         .tabs-section { margin-bottom: 28px; }
@@ -377,29 +294,54 @@
         }
         .tab-btn:hover { color: #aaa; }
         .tab-btn.active { color: var(--amber); border-bottom-color: var(--amber); }
+        .tab-btn.stripe-tab { color: #8a86d6; }
+        .tab-btn.stripe-tab.active { color: #a39bff; border-bottom-color: #635bff; }
+        /* ---- Stripe live panel ---- */
+        .stripe-mode {
+            display: inline-block; font-size: 0.5em; font-weight: 700; letter-spacing: 0.08em;
+            vertical-align: middle; margin-left: 10px; padding: 3px 8px; border-radius: 3px;
+            background: rgba(99,91,255,0.14); color: #a39bff; border: 1px solid rgba(99,91,255,0.5);
+        }
+        .stripe-balance-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0; }
+        @media (max-width: 760px) { .stripe-balance-row { grid-template-columns: 1fr; } }
+        .stripe-balance-card { background: #0a0a0a; border: 1px solid #2a2a2a; padding: 16px 18px; margin-right: -1px; }
+        .stripe-balance-label { color: #6b6b6b; font-size: 0.7em; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 8px; }
+        .stripe-balance-val { color: #e0e0e0; font-size: 1.1em; font-weight: 700; word-break: break-word; }
+        .stripe-row { display: flex; align-items: center; gap: 12px; padding: 11px 14px; border-bottom: 1px solid #1a1a1a; font-size: 0.82em; }
+        .stripe-row:last-child { border-bottom: none; }
+        .stripe-row .s-status { font-size: 0.72em; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; padding: 2px 7px; border-radius: 3px; }
+        .stripe-row .s-status.succeeded { background: rgba(46,230,166,0.1); color: var(--green); }
+        .stripe-row .s-status.requires_payment_method, .stripe-row .s-status.canceled { background: rgba(255,59,59,0.1); color: var(--red); }
+        .stripe-row .s-desc { flex: 1; color: #c4c4c4; min-width: 0; }
+        .stripe-row .s-date { color: #6f6f6f; font-size: 0.85em; white-space: nowrap; }
+        .stripe-row .s-amt { color: #e0e0e0; font-weight: 700; white-space: nowrap; }
+        .stripe-row a.s-id { color: #8a86d6; text-decoration: none; font-size: 0.82em; word-break: break-all; }
+        .stripe-row a.s-id:hover { text-decoration: underline; color: #a39bff; }
+        .stripe-powered { color: #a39bff; }
+        /* ---- Built-with logos row ---- */
+        /* Compact "built with" credit, now living in the top bar's empty middle. */
+        .builtwith {
+            display: flex; align-items: center; flex-wrap: wrap; gap: 6px 16px;
+        }
+        .builtwith-label {
+            color: #5f5f5f; font-size: 0.6em; font-weight: 700; letter-spacing: 0.16em;
+            text-transform: uppercase; white-space: nowrap;
+        }
+        .builtwith a {
+            display: inline-flex; align-items: center; text-decoration: none;
+            opacity: 0.82; transition: opacity 0.15s ease; line-height: 1;
+        }
+        .builtwith a:hover { opacity: 1; }
+        .logo-nvidia { color: var(--nvidia-green); font-weight: 800; font-size: 0.9em; letter-spacing: 0.02em; }
+        .logo-nvidia .nv-eye { font-weight: 400; }
+        .logo-stripe { color: #635bff; font-weight: 800; font-size: 0.95em; letter-spacing: -0.02em; }
+        .logo-nous { display: inline-flex; align-items: center; gap: 6px; color: #e6e6e6; font-weight: 700; font-size: 0.82em; }
+        .logo-nous .nous-mark { width: 13px; height: 13px; }
+        .top-bar { flex-wrap: wrap; gap: 12px 20px; }
+        .top-bar-center { flex: 1; display: flex; justify-content: center; }
+        @media (max-width: 880px) { .top-bar-center { order: 3; flex-basis: 100%; justify-content: flex-start; } }
         .tab-panel { display: none; }
         .tab-panel.active { display: block; }
-
-        /* ---- Stripe tab ---- */
-        .stripe-mode-badge { display: inline-block; background: #fff3cd; color: #7a5c00; border: 1px solid #f0c040; padding: 2px 8px; font-size: 0.75em; letter-spacing: 0.05em; border-radius: 2px; margin-left: 8px; vertical-align: middle; font-weight: 700; }
-        .stripe-stat-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin: 18px 0; }
-        @media (max-width: 700px) { .stripe-stat-grid { grid-template-columns: repeat(2, 1fr); } }
-        .stripe-stat { background: #0a0a0a; border: 1px solid #2a2a2a; padding: 14px 16px; }
-        .stripe-stat-label { font-size: 0.68em; color: #5a5a5a; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 6px; }
-        .stripe-stat-value { font-size: 1.35em; font-weight: 700; color: #f2f2f2; }
-        .stripe-pi-table { width: 100%; border-collapse: collapse; font-size: 0.78em; margin-top: 14px; }
-        .stripe-pi-table th { color: #5a5a5a; text-align: left; padding: 6px 8px; border-bottom: 1px solid #2a2a2a; font-size: 0.85em; text-transform: uppercase; letter-spacing: 0.06em; font-weight: 600; }
-        .stripe-pi-table td { padding: 7px 8px; border-bottom: 1px solid #111; vertical-align: middle; }
-        .stripe-pi-table tr:last-child td { border-bottom: none; }
-        .stripe-status-succeeded { color: var(--green); font-weight: 700; }
-        .stripe-status-other { color: #ffb000; }
-        .stripe-pi-link { color: #888; text-decoration: none; font-size: 0.9em; }
-        .stripe-pi-link:hover { color: #ffb000; }
-        .stripe-footer { margin-top: 18px; font-size: 0.75em; color: #5a5a5a; }
-        .stripe-footer a { color: #888; text-decoration: none; }
-        .stripe-footer a:hover { color: #ffb000; }
-        .stripe-error { color: var(--red); font-size: 0.85em; margin-top: 12px; }
-        .stripe-loading { color: #5a5a5a; font-size: 0.85em; margin-top: 12px; }
 
         .section-title { color: #ffb000; font-size: 0.85em; letter-spacing: 0.05em; text-transform: uppercase; margin-bottom: 10px; font-weight: 700; }
         .section-title::before { content: "// "; color: #5a5a5a; }
@@ -426,10 +368,6 @@
             100% { background: transparent; outline: 2px solid transparent; }
         }
         .event .amount { color: #d4d4d4; min-width: 64px; text-align: right; }
-        .entry-ask-btn { all: unset; cursor: pointer; font-size: 0.72em; color: #555; border: 1px solid #2a2a2a; border-radius: 5px; padding: 2px 7px; margin-left: 4px; white-space: nowrap; transition: color .15s, border-color .15s; }
-        .entry-ask-btn:hover:not(:disabled) { color: var(--amber); border-color: var(--amber); }
-        .entry-ask-btn:disabled { opacity: 0.5; cursor: default; }
-        .entry-reason { flex-basis: 100%; font-size: 0.83em; color: #888; line-height: 1.55; padding: 6px 0 2px 0; font-style: italic; border-top: 1px solid #1a1a1a; margin-top: 4px; }
 
         .empty-state { padding: 24px; text-align: center; color: #5a5a5a; font-size: 0.85em; }
 
@@ -496,6 +434,18 @@
             cursor: pointer;
         }
         .tour-btn:hover { background: rgba(255,176,0,0.1); }
+        .walkthrough-hint {
+            margin-top: 10px; color: #8a8a8a; font-size: 0.82em; line-height: 1.55; max-width: 640px;
+        }
+        .walkthrough-hint strong { color: var(--nvidia-green); font-weight: 700; }
+        .walkthrough-btn {
+            display: inline-block; margin-top: 16px; margin-left: 10px;
+            background: none; border: 1px solid var(--nvidia-green); color: var(--nvidia-green);
+            border-radius: 0; padding: 8px 16px; font-family: inherit; font-size: 0.8em;
+            font-weight: 700; letter-spacing: 0.03em; cursor: pointer; text-decoration: none;
+        }
+        .walkthrough-btn:hover { background: rgba(118,185,0,0.1); }
+        @media (max-width: 600px) { .walkthrough-btn { margin-left: 0; } }
 
         /* ---- nemotron chat: a friendly, cartoony robot you can actually talk to ---- */
         .nemotron-launcher {
@@ -552,14 +502,13 @@
             display: none;
             position: fixed;
             bottom: 24px;
-            right: 0;
+            right: 24px;
             width: 380px;
-            min-height: 520px;
-            max-height: calc(100vh - 80px);
+            max-height: 560px;
             background: #0d0f0a;
             border: 2px solid var(--nvidia-green);
-            border-radius: 16px 0 0 16px;
-            box-shadow: -4px 8px 40px rgba(0,0,0,0.6);
+            border-radius: 16px;
+            box-shadow: 0 8px 40px rgba(0,0,0,0.6);
             z-index: 900;
             flex-direction: column;
             overflow: hidden;
@@ -600,32 +549,19 @@
         }
         .nemotron-jump-link:hover { background: rgba(118,185,0,0.32); }
         .nemotron-chat-panel.panel-left { right: auto; left: 24px; }
-        /* When the chat is open on a wide screen, reserve a right-hand gutter so
-           the fixed 380px panel never sits on top of the dashboard content.
-           (It used to flip to the left side to dodge a jump-target, but a fixed
-           panel always covers ~380px of *something* -- flipping just moved the
-           blocking onto the cards and the Try-It table. Shifting the content out
-           from under it is the real fix.) */
-        @media (min-width: 601px) {
-            body.nemotron-chat-open .page-grid {
-                margin-right: 388px;   /* exact panel width + 8px breathing room */
-                max-width: none;
-                transition: margin 0.18s ease;
-            }
-        }
-        .nemotron-suggest-row { display: flex; flex-direction: column; gap: 7px; align-self: flex-start; max-width: 94%; margin-top: 6px; }
-        .nemotron-suggest-label { font-size: 0.7em; letter-spacing: 0.1em; text-transform: uppercase; color: rgba(118,185,0,0.45); margin-bottom: 2px; font-family: 'JetBrains Mono', monospace; }
+        /* The chat is a floating bottom-right overlay (it sits visually below the
+           right-hand live column). It deliberately does NOT reserve a side gutter
+           or push the page content over -- that left an ugly empty band. */
+        .nemotron-suggest-row { display: flex; flex-direction: column; gap: 6px; align-self: flex-start; max-width: 92%; }
         .nemotron-suggest-chip {
-            background: rgba(118,185,0,0.07); border: 1px solid rgba(118,185,0,0.35); color: #9fd968;
-            border-radius: 10px; padding: 9px 13px; font-family: inherit; font-size: 0.88em; text-align: left;
-            cursor: pointer; transition: background 0.15s, border-color 0.15s; line-height: 1.4;
-            display: flex; align-items: flex-start; gap: 8px;
+            background: rgba(118,185,0,0.06); border: 1px dashed rgba(118,185,0,0.4); color: #9fd968;
+            border-radius: 8px; padding: 6px 10px; font-family: inherit; font-size: 0.78em; text-align: left;
+            cursor: pointer;
         }
-        .nemotron-suggest-chip::before { content: '→'; color: rgba(118,185,0,0.5); flex-shrink: 0; }
-        .nemotron-suggest-chip:hover { background: rgba(118,185,0,0.15); border-color: rgba(118,185,0,0.6); color: #c0ff88; }
+        .nemotron-suggest-chip:hover { background: rgba(118,185,0,0.16); border-style: solid; }
         .nemotron-bubble {
             display: none;
-            position: fixed; bottom: 24px; right: 12px; width: 52px; height: 52px;
+            position: fixed; bottom: 24px; right: 24px; width: 52px; height: 52px;
             border-radius: 50%; background: var(--nvidia-green); border: none; cursor: pointer;
             font-size: 1.5em; box-shadow: 0 4px 20px rgba(0,0,0,0.5); z-index: 899;
             align-items: center; justify-content: center;
@@ -675,55 +611,32 @@
     </style>
 </head>
 <body>
-    <nav class="k-nav">
-      <a href="/" class="k-brand">
-        <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M32 6 L54 14 V30 C54 44.5 44.2 54 32 58 C19.8 54 10 44.5 10 30 V14 Z" stroke="#ffb000" stroke-width="5" stroke-linejoin="round"/>
-          <circle cx="32" cy="29" r="6" stroke="#ffb000" stroke-width="4"/>
-          <rect x="30" y="32" width="4" height="10" rx="1" fill="#ffb000"/>
-        </svg>
-        <span>CUSTODIAN</span>
-      </a>
-      <div class="k-links">
-        <a href="/">Home</a>
-        <a href="/hermes" class="active">Console</a>
-        <a href="/operator">Operator</a>
-        <a href="/triage">Triage</a>
-        <a href="/tools">Tools</a>
-        <a href="/docs">Docs</a>
-      </div>
-      <div class="k-status">
-        <span class="k-dot"></span>
-        <span>Kernel Live</span>
-      </div>
-    </nav>
-    <div class="pnl-bar" id="pnl-bar">
-      <div class="pnl-stat">
-        <span class="pnl-label">Earned</span>
-        <span class="pnl-val pnl-earn" id="pnl-earned">$0.00</span>
-      </div>
-      <span class="pnl-sep">·</span>
-      <div class="pnl-stat">
-        <span class="pnl-label">Spent</span>
-        <span class="pnl-val pnl-spend" id="pnl-spent">$0.00</span>
-      </div>
-      <span class="pnl-sep">·</span>
-      <div class="pnl-stat">
-        <span class="pnl-label">Net</span>
-        <span class="pnl-val" id="pnl-net">$0.00</span>
-      </div>
-      <span class="pnl-sep">·</span>
-      <div class="pnl-stat">
-        <span class="pnl-label">Margin</span>
-        <span class="pnl-val pnl-earn" id="pnl-margin">—</span>
-      </div>
-    </div>
     <div class="top-bar">
-        <div class="top-bar-brand">
+        <a class="top-bar-brand" href="/" style="text-decoration:none;" title="Back to home">
             <div class="top-bar-logo">C</div>
             <div>
                 <div class="top-bar-name">CUSTODIAN</div>
-                <div class="top-bar-tag">Autonomous Spend Authority</div>
+                <div class="top-bar-tag">← Home · Live Console</div>
+            </div>
+        </a>
+        <div class="top-bar-center">
+            <div class="builtwith">
+                <span class="builtwith-label">Built with</span>
+                <a href="https://www.nvidia.com/" target="_blank" rel="noopener" title="NVIDIA Nemotron — reasoning model behind the agent">
+                    <span class="logo-nvidia"><span class="nv-eye">&#9673;</span>NVIDIA <span style="font-weight:400; color:#9fce4d;">Nemotron</span></span>
+                </a>
+                <a href="https://nousresearch.com/" target="_blank" rel="noopener" title="Nous Research — Hermes agent runtime">
+                    <span class="logo-nous">
+                        <svg class="nous-mark" viewBox="0 0 100 100" aria-hidden="true">
+                            <path d="M50 4 L92 50 L50 96 L8 50 Z" fill="none" stroke="#e6e6e6" stroke-width="8"/>
+                            <path d="M50 30 L70 50 L50 70 L30 50 Z" fill="#e6e6e6"/>
+                        </svg>
+                        Nous Research <span style="font-weight:400; color:#9a9a9a;">· Hermes</span>
+                    </span>
+                </a>
+                <a href="https://stripe.com/" target="_blank" rel="noopener" title="Stripe — real PaymentIntents (test mode)">
+                    <span class="logo-stripe">stripe</span>
+                </a>
             </div>
         </div>
         <div class="top-bar-badges">
@@ -760,25 +673,29 @@
                         <path d="M 34 65 Q 50 76 66 65" stroke="currentColor" stroke-width="5" fill="none" stroke-linecap="round"/>
                     </svg> Ask Nemotron about this
                 </button>
+                <a class="walkthrough-btn" href="/triage" target="_blank" rel="noopener">▶ Watch the agent get lied to — and caught</a>
+                <div class="walkthrough-hint">
+                    <strong>Interactive 60-second walkthrough.</strong> A real refund-fraud case: a customer
+                    invents a story to get money back, the AI agent recommends <em>approve</em> — and the kernel
+                    overrides it anyway. It runs the live decision engine (flip on real Nemotron in the page if you
+                    want to watch the model reason in real time). Opens in a new tab.
+                </div>
             </div>
 
-            <div style="background:#080a06;border:1px solid #1a2a10;border-radius:10px;padding:14px 16px;margin-bottom:18px;font-size:0.82em;color:#8a9a80;line-height:1.6;">
-                <b style="color:#76b900;">How the kernel actually stops the AI:</b> Nemotron 3 Super has no direct access to Stripe or any payment API. The only way money moves is through <code style="color:#b0d080;">spend.py</code> — a script the kernel controls. Before touching Stripe, <code style="color:#b0d080;">spend.py</code> checks: Is the amount within the band? Is the kill switch off? Is the session cap intact? If any check fails, it returns DENIED and exits. The AI can think about spending $10,000 all it wants — without passing those checks, nothing happens. The door is the only path, and the door checks the rules before opening.
-            </div>
             <div class="flow-diagram">
                 <div class="flow-box">
-                    <div class="flow-label">AGENT (Nemotron)</div>
-                    <div class="flow-desc">Decides to act. Calls spend.py — the only door to real money. Cannot call Stripe directly.</div>
+                    <div class="flow-label">AGENT</div>
+                    <div class="flow-desc">Requests money movement. Can never approve its own escalation.</div>
                 </div>
                 <div class="flow-arrow">→</div>
                 <div class="flow-box">
-                    <div class="flow-label">KERNEL (spend.py)</div>
-                    <div class="flow-desc">Checks band, cap, kill switch. If any fails → DENIED, no exceptions. No prompt or plea changes this.</div>
+                    <div class="flow-label">KERNEL</div>
+                    <div class="flow-desc">Deterministic policy decides. No prompt, no plea, ever changes the verdict.</div>
                 </div>
                 <div class="flow-arrow">→</div>
                 <div class="flow-box">
-                    <div class="flow-label">HUMAN (SMS code)</div>
-                    <div class="flow-desc">Over-budget requests need a real one-time code from a separate device. The kernel cannot generate or intercept it.</div>
+                    <div class="flow-label">HUMAN</div>
+                    <div class="flow-desc">Real out-of-band code, on a separate device, is the only way past the agent's limit.</div>
                 </div>
             </div>
 
@@ -803,7 +720,7 @@
                         <div class="verdict-lens">OPS / INFRA — would this break something?</div>
                         <div class="verdict-headline" id="verdict-ops-headline">—</div>
                         <div class="verdict-fact-row"><span class="verdict-fact-key">signal:</span><span class="verdict-fact-val" id="verdict-ops-signal">—</span></div>
-                        <div class="verdict-fact-row"><span class="verdict-fact-key">source:</span><span class="verdict-fact-val">live infrastructure API</span></div>
+                        <div class="verdict-fact-row"><span class="verdict-fact-key">source:</span><span class="verdict-fact-val">10.0.0.199:8093 (real infra API)</span></div>
                         <span class="verdict-badge idle" id="verdict-ops-badge">—</span>
                     </div>
                     <div class="verdict-card" id="verdict-finance">
@@ -856,33 +773,30 @@
             <div class="pending-banner" id="pending-banner"></div>
 
             <div class="tabs-section">
+                <div class="section-label">Explore it live</div>
+                <div class="footer-note" style="text-align:left; margin: 4px 0 14px;">
+                    Four live views of the same system — the real <strong>audit feed</strong>, the raw
+                    <strong>kernel policy</strong> log, a <strong>sandbox you can drive yourself</strong>, and the
+                    real <strong>Stripe account</strong> the agent pays into. Click a tab:
+                </div>
                 <div class="tab-bar">
                     <button class="tab-btn active" id="tab-btn-audit" data-tab="audit">Audit Feed</button>
                     <button class="tab-btn" id="tab-btn-policy" data-tab="policy">Kernel Policy</button>
                     <button class="tab-btn" id="tab-btn-try" data-tab="try">Try It Yourself</button>
-                    <button class="tab-btn" id="tab-btn-stripe" data-tab="stripe">💳 Stripe — Live Balance</button>
+                    <button class="tab-btn stripe-tab" id="tab-btn-stripe" data-tab="stripe">💳 Stripe — live balance</button>
                 </div>
 
                 <div class="tab-panel active" id="tab-panel-audit">
-                    <div class="section-title">Live Audit Feed — Every spend, earn, refund, and kill-switch the AI agent triggers</div>
-                    <div style="background:#0a0800;border:1px solid #2a2000;border-radius:8px;padding:12px 14px;margin-bottom:10px;font-size:0.8em;color:#9a8a60;line-height:1.5;">
-                        <b style="color:#ffb000;">What fills this feed:</b> Every time the AI agent earns revenue, requests a spend, gets escalated for human approval, or hits the kill switch — each event lands here with a timestamp and the kernel's verdict. It's an append-only record; nothing can be edited or deleted after the fact.<br>
-                        <b style="color:#ffb000;margin-top:6px;display:inline-block;">To see it live:</b> Open the Operator Panel and run through the steps — earn, spend, escalate, kill-switch, refund. Each action writes a real entry here within seconds.
-                        <br><a href="/operator" target="_blank" rel="noopener" style="color:#76b900;font-weight:700;margin-top:6px;display:inline-block;">⚡ Open Operator Panel →</a>
-                    </div>
+                    <div class="section-title">Live Audit Feed — Ops Decisions &amp; Spend</div>
                     <div class="feed" id="feed">
-                        <div class="empty-state">No events yet — run the operator demo to populate this feed.</div>
+                        <div class="empty-state">Waiting for events…</div>
                     </div>
                 </div>
 
                 <div class="tab-panel" id="tab-panel-policy">
-                    <div class="section-title">Kernel-Level Policy Log — What the enforcement layer actually decided (zero AI in this path)</div>
-                    <div style="background:#080a06;border:1px solid #1a2a10;border-radius:8px;padding:12px 14px;margin-bottom:10px;font-size:0.8em;color:#7a9a60;line-height:1.5;">
-                        <b style="color:#76b900;">What this is:</b> Raw output from the deterministic enforcement kernel (NemoClaw / OpenShell). Every spend request goes through this layer <em>before</em> money moves — no AI involved. The kernel checks the amount against the agent's authority band, the session cap, and the kill-switch state, then logs ALLOW or DENY with a reason. The AI can't see this log, can't override it, and can't rewrite it.<br>
-                        <b style="color:#76b900;margin-top:6px;display:inline-block;">Why it matters:</b> This is proof that the guardrail is deterministic. Same request, same band, same answer — every time. An AI that lies about its intentions still gets the right verdict here.
-                    </div>
+                    <div class="section-title">Kernel-Level Policy Enforcement — Raw OCSF Log (NemoClaw / OpenShell)</div>
                     <div class="feed policy-feed" id="policy-feed">
-                        <div class="empty-state">No kernel activity yet — run a spend or kill-switch from the Operator Panel to see enforcement decisions logged here.</div>
+                        <div class="empty-state">Waiting for sandbox activity…</div>
                     </div>
                 </div>
 
@@ -933,18 +847,48 @@
                 </div>
 
                 <div class="tab-panel" id="tab-panel-stripe">
-                    <div class="section-title">Stripe — Live Account <span class="stripe-mode-badge" id="stripe-mode-badge">TEST MODE</span></div>
-                    <div class="footer-note" style="margin-bottom:14px;">
-                        Real Stripe PaymentIntents — every autonomous spend and escalation on this page shows up here.
-                        The agent is authorized to create charges up to $100; anything above routes through the
-                        approval kernel. Data is fetched live from the Stripe API — no mock, no sample data.
+                    <div class="section-title">Stripe — Live Account <span id="stripe-mode-badge" class="stripe-mode">TEST MODE</span></div>
+                    <div class="footer-note" style="margin-bottom:14px; text-align:left;">
+                        Every spend on this page is a <strong>real Stripe PaymentIntent</strong> created against
+                        Stripe's actual API — same API, same objects, same dashboard a production integration uses.
+                        <strong>Test mode</strong> means no real funds settle; everything else is real. Click any
+                        payment ID to open the exact object on Stripe's own dashboard and verify it yourself.
                     </div>
-                    <div id="stripe-panel-body">
-                        <div class="stripe-loading">Fetching live Stripe data…</div>
+                    <div class="stripe-balance-row" id="stripe-stats-row">
+                        <div class="stripe-balance-card">
+                            <div class="stripe-balance-label">Total processed</div>
+                            <div class="stripe-balance-val" id="stripe-processed">—</div>
+                        </div>
+                        <div class="stripe-balance-card">
+                            <div class="stripe-balance-label">Payments succeeded</div>
+                            <div class="stripe-balance-val" id="stripe-paycount">—</div>
+                        </div>
+                        <div class="stripe-balance-card">
+                            <div class="stripe-balance-label">Largest single payment</div>
+                            <div class="stripe-balance-val" id="stripe-largest">—</div>
+                        </div>
                     </div>
-                    <div class="stripe-footer">
-                        Powered by Stripe ·
-                        <a id="stripe-dashboard-link" href="https://dashboard.stripe.com/test/payments" target="_blank" rel="noopener">Open full account on Stripe ↗</a>
+                    <div class="stripe-balance-row" id="stripe-balance-row" style="margin-top:-1px;">
+                        <div class="stripe-balance-card">
+                            <div class="stripe-balance-label">Account</div>
+                            <div class="stripe-balance-val" id="stripe-account">—</div>
+                        </div>
+                        <div class="stripe-balance-card">
+                            <div class="stripe-balance-label">Balance — available</div>
+                            <div class="stripe-balance-val" id="stripe-available">—</div>
+                        </div>
+                        <div class="stripe-balance-card">
+                            <div class="stripe-balance-label">Balance — pending</div>
+                            <div class="stripe-balance-val" id="stripe-pending">—</div>
+                        </div>
+                    </div>
+                    <div class="section-title" style="font-size:0.8em; margin-top:22px;">Recent PaymentIntents</div>
+                    <div class="feed" id="stripe-feed">
+                        <div class="empty-state">Loading real Stripe data…</div>
+                    </div>
+                    <div class="footer-note" style="margin-top:12px; text-align:left;">
+                        <span class="stripe-powered">Powered by <strong>Stripe</strong></span> ·
+                        <a id="stripe-dash-link" href="https://dashboard.stripe.com/test/payments" target="_blank" rel="noopener">Open the full account on Stripe ↗</a>
                     </div>
                 </div>
             </div>
@@ -952,9 +896,6 @@
 
         <aside class="pipeline-rail">
             <div class="section-label">What's happening right now, live</div>
-            <div id="pipeline-idle-hint" style="display:none;font-size:0.75em;color:#5a7a5a;border:1px dashed #2a3a2a;border-radius:8px;padding:8px 10px;margin-bottom:12px;line-height:1.4;">
-                ↓ Scroll to <b style="color:#76b900">Try It Yourself</b> to fire a real decision and watch this pipeline animate step-by-step.
-            </div>
             <div class="process-diagram">
                 <div class="process-step" id="stage-observe">
                     <div class="step-marker"><span class="stage-dot"></span></div>
@@ -1061,11 +1002,13 @@
 
     <script>
         const fmtUSD = (n) => '$' + Number(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-        const fmtTime = (iso) => {
-            if (!iso) return '';
-            const d = new Date(iso);
-            return d.toLocaleString([], { year: 'numeric', month: '2-digit', day: '2-digit',
-                hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
+        const fmtTime = (iso) => iso ? iso.replace('T', ' ').replace('Z', '') : '';
+        // Stripe returns `created` as a unix timestamp (seconds) -- show a short,
+        // human local date+time so the live feed visibly reads as real and recent.
+        const fmtStripeTime = (unix) => {
+            if (!unix) return '';
+            const d = new Date(unix * 1000);
+            return d.toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
         };
         // Any string that ends up inside an innerHTML template literal must go
         // through this first -- some of these strings ultimately trace back to
@@ -1084,7 +1027,7 @@
             const key = context + ':' + message;
             if (key === _lastReportedError) return; // don't spam identical repeats every 3s
             _lastReportedError = key;
-            fetch('/api/v1/debug/report-error', {
+            fetch('https://rein-local.argobox.com/api/v1/debug/report-error', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ message, stack: stack || '', url: location.href, context }),
@@ -1097,9 +1040,6 @@
             reportError(String(e.reason), e.reason && e.reason.stack, 'unhandledrejection');
         });
 
-        // Nemotron explanations cached by entry ts so poll re-renders preserve them
-        const _entryExplanations = new Map();
-
         function renderEvent(ev) {
             const badgeClass = ev.event || 'unknown';
             const label = (ev.event || 'unknown').replace(/_/g, ' ');
@@ -1109,39 +1049,13 @@
                     ? `denied by ${ev.denied_by}`
                     : '';
             const whoHtml = who ? `<div class="who">${escapeHtml(who)}</div>` : '';
-            const tsKey = String(ev.ts);
-            const cached = _entryExplanations.get(tsKey);
-            const evMini = JSON.stringify({event:ev.event,amount:ev.amount,description:ev.description,band:ev.band,reason:ev.reason,iso:ev.iso});
-            const reasonHtml = cached
-                ? `<div class="entry-reason">${escapeHtml(cached)}</div>`
-                : `<button class="entry-ask-btn" data-ts="${escapeHtml(tsKey)}"
-                     data-ev="${escapeHtml(evMini).replace(/"/g,'&quot;')}"
-                     title="Ask Nemotron to explain this decision">Why?</button>
-                   <div class="entry-reason" data-ts="${escapeHtml(tsKey)}" style="display:none"></div>`;
-            return `<div class="event" data-ts="${escapeHtml(tsKey)}">
+            return `<div class="event" data-ts="${escapeHtml(String(ev.ts))}">
                 <div class="ts">${escapeHtml(fmtTime(ev.iso))}</div>
                 <div class="badge ${escapeHtml(badgeClass)}">${escapeHtml(label)}</div>
                 <div class="desc">${escapeHtml(ev.description || '')}${whoHtml}</div>
                 <div class="amount">${ev.amount != null ? fmtUSD(ev.amount) : ''}</div>
-                ${reasonHtml}
             </div>`;
         }
-
-        // Delegated "Why?" click handler — open Nemotron chat and ask about this specific entry.
-        // Routing through the chat panel avoids a race with the 3-second poll that replaces
-        // feed.innerHTML: answers that arrive mid-render were getting swallowed silently.
-        document.addEventListener('click', (e) => {
-            const btn = e.target.closest('.entry-ask-btn');
-            if (!btn) return;
-            let evData = {};
-            try { evData = JSON.parse(btn.dataset.ev || '{}'); } catch (_) {}
-            const eventLabel = (evData.event || 'event').replace(/_/g, ' ');
-            const amtStr = evData.amount != null ? ` of $${evData.amount}` : '';
-            const q = `Why did the "${evData.description || eventLabel}"${amtStr} entry ${evData.event === 'escalation_required' ? 'get escalated' : evData.event === 'executed' ? 'execute autonomously' : 'happen'}? Explain what the kernel decided and why, in plain English.`;
-            nemotronOpen(false);
-            nemotronInput.value = q;
-            nemotronSend();
-        });
 
         function renderPolicyLine(line) {
             let cls = 'other';
@@ -1154,7 +1068,7 @@
 
         async function poll() {
             try {
-                const res = await fetch('/api/v1/hermes/summary');
+                const res = await fetch('https://rein-local.argobox.com/api/v1/hermes/summary');
                 const data = await res.json();
 
                 const auth = data.authority || {};
@@ -1246,15 +1160,8 @@
                     : '<div class="empty-state">No kernel activity yet.</div>';
 
                 const pendingRecForVerdict = codes.length > 0 ? pending[codes[0]] : null;
-                const prevLatestTs = window._lastEventTs || null;
-                const newLatestTs = events.length ? (events[0].ts || null) : null;
                 renderPipelineStage(events, pendingRecForVerdict);
                 renderVerdictPanel(events, policyLines, pendingRecForVerdict);
-                // Track latest event ts but do NOT auto-scroll — let the visitor
-                // read the page where they left it; they can scroll themselves.
-                if (newLatestTs && newLatestTs !== prevLatestTs) {
-                    window._lastEventTs = newLatestTs;
-                }
             } catch (e) {
                 document.getElementById('conn-dot').className = 'conn-dot down';
                 document.getElementById('conn-text').textContent = 'Error';
@@ -1275,19 +1182,14 @@
 
             if (!events.length && !pendingRec) {
                 setStage('observe', 'is-active', 'watching real signals…');
-                setStage('judge', '', 'waiting for a decision to judge');
-                setStage('act', '', 'will execute or escalate once judged');
-                setStage('verify', '', 'only needed if escalated');
-                setStage('prove', '', 'logged after every action');
+                setStage('judge', '', '');
+                setStage('act', '', '');
+                setStage('verify', '', '');
+                setStage('prove', '', '');
                 titleAct.textContent = 'ACT or ESCALATE';
                 descAct.textContent = 'In-band: executes autonomously via real Stripe. Over-band: blocked at the kernel level, a one-time code goes to a human.';
-                // Show a hint on the pipeline pointing to Try It Yourself
-                const hint = document.getElementById('pipeline-idle-hint');
-                if (hint) hint.style.display = 'block';
                 return;
             }
-            const hint = document.getElementById('pipeline-idle-hint');
-            if (hint) hint.style.display = 'none';
 
             setStage('observe', 'is-complete', 'real signals read');
             setStage('judge', 'is-complete', 'judgment made');
@@ -1468,104 +1370,55 @@
         poll();
         setInterval(poll, 3000);
 
-        // ── P&L bar ─────────────────────────────────────────────
-        async function pollPnl() {
-            try {
-                const r = await fetch('/api/v1/pnl/summary');
-                if (!r.ok) return;
-                const d = await r.json();
-                document.getElementById('pnl-earned').textContent = '$' + (d.earned||0).toFixed(2);
-                document.getElementById('pnl-spent').textContent  = '$' + (d.spent||0).toFixed(2);
-                const net = d.net||0;
-                const netEl = document.getElementById('pnl-net');
-                netEl.textContent = (net >= 0 ? '+$' : '-$') + Math.abs(net).toFixed(2);
-                netEl.className = 'pnl-val ' + (net >= 0 ? 'pnl-net-pos' : 'pnl-net-neg');
-                const m = d.margin_pct||0;
-                document.getElementById('pnl-margin').textContent = m > 0 ? m.toFixed(1) + '%' : '—';
-            } catch(_) {}
-        }
-        pollPnl();
-        setInterval(pollPnl, 5000);
-
         document.querySelectorAll('.tab-btn').forEach(btn => {
             btn.addEventListener('click', () => {
                 document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
                 document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
                 btn.classList.add('active');
                 document.getElementById('tab-panel-' + btn.dataset.tab).classList.add('active');
-                if (btn.dataset.tab === 'stripe') loadStripePanel();
+                if (btn.dataset.tab === 'stripe') loadStripe();
             });
         });
 
-        // ---- Stripe live balance tab ----
-        let stripeLoaded = false;
-        function fmtStripeUSD(cents, currency) {
-            const amt = (cents / 100).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-            return (currency || 'USD').toUpperCase() === 'USD' ? '$' + amt : amt + ' ' + (currency || '').toUpperCase();
-        }
-        function fmtStripeDate(ts) {
-            return new Date(ts * 1000).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
-        }
-        async function loadStripePanel() {
-            if (stripeLoaded) return;
-            const body = document.getElementById('stripe-panel-body');
+        // ---- Stripe live panel: real, read-only account data from the backend ----
+        let stripeLoadedAt = 0;
+        async function loadStripe() {
+            // throttle: the data changes slowly and the backend already caches 10s
+            if (Date.now() - stripeLoadedAt < 8000) return;
+            stripeLoadedAt = Date.now();
+            const feed = document.getElementById('stripe-feed');
             try {
-                const res = await fetch('/api/v1/stripe/overview');
+                const res = await fetch('https://rein-local.argobox.com/api/v1/stripe/overview');
                 const d = await res.json();
-                if (!d.ok) { body.innerHTML = `<div class="stripe-error">Could not reach the Stripe panel API: ${d.error || 'unknown error'}</div>`; return; }
-
-                document.getElementById('stripe-mode-badge').textContent = d.mode_label || 'TEST MODE';
-                if (d.dashboard_url) document.getElementById('stripe-dashboard-link').href = d.dashboard_url;
-
-                const payments = d.payments || [];
-                const succeeded = payments.filter(p => p.status === 'succeeded');
-                const totalProcessed = succeeded.reduce((s, p) => s + (p.amount || 0), 0);
-                const largest = succeeded.length ? Math.max(...succeeded.map(p => p.amount || 0)) : 0;
-                const currency = (d.balance && d.balance.currency) ? d.balance.currency : 'USD';
-
-                body.innerHTML = `
-                    <div class="stripe-stat-grid">
-                        <div class="stripe-stat">
-                            <div class="stripe-stat-label">Total Processed</div>
-                            <div class="stripe-stat-value">${fmtStripeUSD(totalProcessed, currency)}</div>
-                        </div>
-                        <div class="stripe-stat">
-                            <div class="stripe-stat-label">Payments Succeeded</div>
-                            <div class="stripe-stat-value">${succeeded.length}</div>
-                        </div>
-                        <div class="stripe-stat">
-                            <div class="stripe-stat-label">Largest Single Payment</div>
-                            <div class="stripe-stat-value">${fmtStripeUSD(largest, currency)}</div>
-                        </div>
-                        <div class="stripe-stat">
-                            <div class="stripe-stat-label">Account</div>
-                            <div class="stripe-stat-value" style="font-size:0.85em;word-break:break-all;">${d.account_name || d.account_id || '—'}</div>
-                        </div>
-                        <div class="stripe-stat">
-                            <div class="stripe-stat-label">Balance — Available</div>
-                            <div class="stripe-stat-value">${d.balance ? fmtStripeUSD(d.balance.available * 100, currency) : '—'}</div>
-                        </div>
-                        <div class="stripe-stat">
-                            <div class="stripe-stat-label">Balance — Pending</div>
-                            <div class="stripe-stat-value">${d.balance ? fmtStripeUSD(d.balance.pending * 100, currency) : '—'}</div>
-                        </div>
-                    </div>
-                    <div class="section-title" style="margin-top:20px;">Recent PaymentIntents</div>
-                    <table class="stripe-pi-table">
-                        <thead><tr><th>ID</th><th>Amount</th><th>Status</th><th>Description</th><th>Date</th></tr></thead>
-                        <tbody>${payments.slice(0, 10).map(p => `
-                        <tr>
-                            <td><a class="stripe-pi-link" href="${p.dashboard_url || '#'}" target="_blank" rel="noopener">${p.id || '—'}</a></td>
-                            <td>${fmtStripeUSD(p.amount || 0, p.currency || currency)}</td>
-                            <td class="${p.status === 'succeeded' ? 'stripe-status-succeeded' : 'stripe-status-other'}">${p.status || '—'}</td>
-                            <td style="color:#8a8a8a;font-size:0.9em;">${p.description || '—'}</td>
-                            <td style="color:#5a5a5a;">${p.created ? fmtStripeDate(p.created) : '—'}</td>
-                        </tr>`).join('')}
-                        </tbody>
-                    </table>`;
-                stripeLoaded = true;
+                if (!d.ok) {
+                    feed.innerHTML = `<div class="empty-state">Stripe data unavailable: ${d.error || 'unknown error'}</div>`;
+                    return;
+                }
+                document.getElementById('stripe-mode-badge').textContent = d.mode_label;
+                document.getElementById('stripe-account').textContent = d.account_name || '—';
+                document.getElementById('stripe-available').textContent = fmtUSD(d.balance.available);
+                document.getElementById('stripe-pending').textContent = fmtUSD(d.balance.pending);
+                if (d.stats) {
+                    document.getElementById('stripe-processed').textContent = fmtUSD(d.stats.total_processed);
+                    document.getElementById('stripe-paycount').textContent = d.stats.success_count;
+                    document.getElementById('stripe-largest').textContent = fmtUSD(d.stats.largest_payment);
+                }
+                if (d.dashboard_url) document.getElementById('stripe-dash-link').href = d.dashboard_url;
+                if (!d.payments.length) {
+                    feed.innerHTML = '<div class="empty-state">No PaymentIntents yet.</div>';
+                    return;
+                }
+                feed.innerHTML = d.payments.map(p => `
+                    <div class="stripe-row">
+                        <span class="s-status ${p.status}">${p.status}</span>
+                        <span class="s-desc">${(p.description || '(no description)').replace(/</g,'&lt;')}</span>
+                        <span class="s-date">${fmtStripeTime(p.created)}</span>
+                        <span class="s-amt">${fmtUSD(p.amount)}</span>
+                        <a class="s-id" href="${p.dashboard_url}" target="_blank" rel="noopener" title="Open on Stripe's dashboard">${p.id} ↗</a>
+                    </div>`).join('');
             } catch (e) {
-                body.innerHTML = `<div class="stripe-error">Could not reach the Stripe panel API: ${e.message}</div>`;
+                feed.innerHTML = `<div class="empty-state">Could not reach the Stripe panel API: ${e.message}</div>`;
+                reportError(e.message, e.stack, 'loadStripe()');
             }
         }
 
@@ -1637,7 +1490,7 @@
             resultBox.className = 'try-result show';
             resultBox.textContent = 'Deciding…';
             try {
-                const res = await fetch('/api/v1/playground/decide', {
+                const res = await fetch('https://rein-local.argobox.com/api/v1/playground/decide', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ amount, description, critical, kill_switch: killSwitch }),
@@ -1667,7 +1520,7 @@
             resultBox.className = 'try-result show';
             resultBox.textContent = 'Checking…';
             try {
-                const res = await fetch('/api/v1/playground/try-approve', {
+                const res = await fetch('https://rein-local.argobox.com/api/v1/playground/try-approve', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ code }),
@@ -1738,39 +1591,6 @@
             playground: { selector: '#tab-panel-try', tab: 'try' },
         };
 
-        // Branch pool for fallback suggests — rotated so the user always sees
-        // something they haven't covered yet (cheap client-side diversification)
-        const _TOUR_POOL = [
-            "What makes self-approval structurally impossible — not just policy?",
-            "What kinds of lies can the verifier actually catch?",
-            "Who can engage the kill switch, and how fast does it take effect?",
-            "Why kernel-level enforcement instead of a well-coded approval API?",
-            "Why is earning completely unrestricted when spending has all these gates?",
-            "What would it take to swap in a different model — say Gemini or a local one?",
-            "Walk me through step by step what the kernel checks on a $180 request.",
-            "What does the SMS code prove that a software approval can't?",
-            "Can I see what happens when the kill switch proves itself mid-request?",
-            "How does Landlock LSM physically prevent a bad network request?",
-            "What happens to an in-flight request when the kill switch engages?",
-            "What would it take to actually break through the enforcement layer?",
-            "How would this work differently if inference ran locally on a DGX Spark?",
-            "What's the LLMClient Protocol and why doesn't the kernel care which model is plugged in?",
-            "Why do refunds always escalate — even tiny ones?",
-            "What happens if the AI claims something the verifier can't confirm either way?",
-        ];
-        let _tourPoolIdx = 0;
-        function _nextFallbackSuggest(skip) {
-            // Cycle through, skipping any that appear verbatim in the skip set
-            let tries = 0;
-            while (tries < _TOUR_POOL.length) {
-                const q = _TOUR_POOL[_tourPoolIdx % _TOUR_POOL.length];
-                _tourPoolIdx++;
-                tries++;
-                if (!skip.has(q)) return q;
-            }
-            return _TOUR_POOL[0]; // shouldn't happen
-        }
-
 function nemotronRenderAnswer(rawText) {
             // Suggestions live on their own trailing lines -- pull them out first so
             // the main message body only ever contains prose + jump links.
@@ -1813,27 +1633,14 @@ function nemotronRenderAnswer(rawText) {
             div.appendChild(document.createTextNode(text.slice(lastIndex)));
             nemotronBody.appendChild(div);
 
-            {
-                // Always show at least 2 path chips. If the model returned fewer,
-                // pad from the fallback pool so there's never a dead end.
-                const skipSet = new Set(suggestions);
-                while (suggestions.length < 2) {
-                    suggestions.push(_nextFallbackSuggest(skipSet));
-                    skipSet.add(suggestions[suggestions.length - 1]);
-                }
+            if (suggestions.length) {
                 const chipRow = document.createElement('div');
                 chipRow.className = 'nemotron-suggest-row';
-                const label = document.createElement('div');
-                label.className = 'nemotron-suggest-label';
-                label.textContent = 'Explore next →';
-                chipRow.appendChild(label);
                 for (const q of suggestions.slice(0, 3)) {
                     const chip = document.createElement('button');
                     chip.className = 'nemotron-suggest-chip';
                     chip.textContent = q;
                     chip.addEventListener('click', () => {
-                        chip.disabled = true;
-                        chip.style.opacity = '0.45';
                         nemotronInput.value = q;
                         nemotronSend();
                     });
@@ -1853,10 +1660,9 @@ function nemotronRenderAnswer(rawText) {
         // few px -- that's not real blocking, so we measure actual overlap AREA and
         // only switch sides once a meaningful chunk (>15% of the panel) is covered.
         function nemotronCheckOverlap(target) {
-            // The panel now stays pinned right and the page reserves a gutter for
-            // it (body.nemotron-chat-open), so the content is never under the panel
-            // and there is nothing to dodge. Keep it on the right always; flipping
-            // sides only moved the blocking onto the left-hand content.
+            // The open panel now reserves its own right-hand gutter (the page grid
+            // is inset via body.nemotron-chat-open), so content never sits under the
+            // panel and there is nothing to dodge. Keep the panel pinned right.
             nemotronPanel.classList.remove('panel-left');
         }
 
@@ -1916,34 +1722,12 @@ function nemotronRenderAnswer(rawText) {
             nemotronBubble.classList.remove('show');
             if (!nemotronOpenedOnce) {
                 nemotronOpenedOnce = true;
-                // Fire a real tour intro from the actual model so the visitor gets
-                // live context, clickable [[jump:]] section links, and suggested
-                // questions — not a hardcoded string that never updates.
-                const thinkingMsg = nemotronAddThinkingMessage();
-                fetch('/api/v1/nemotron/ask', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        question: "You just opened for a new visitor. In 2-3 sentences: who you are and " +
-                            "what this dashboard watches. Then tell them the MOST IMPORTANT thing is to " +
-                            "try the live demo themselves — include [[jump:operator|the operator panel]] " +
-                            "as a clickable link RIGHT IN THE BODY of your response. Mention the audit " +
-                            "feed as secondary. End with 2-3 [[suggest:...]] chips.",
-                        history: nemotronHistory.slice(-4),
-                        page: 'hermes'
-                    }),
-                }).then(r => r.json()).then(data => {
-                    thinkingMsg.remove();
-                    if (data.answer) { nemotronRenderAnswer(data.answer); }
-                    else { nemotronAddMessage(data.error || "I'm Nemotron 3 Super — ask me anything about what you're seeing.", 'bot'); }
-                }).catch(() => {
-                    thinkingMsg.remove();
-                    nemotronAddMessage(
-                        "I'm Nemotron 3 Super — the intelligence layer that reads customer requests and proposes " +
-                        "dispositions. Ask me what just happened, why something escalated, or what the kernel did.",
-                        'bot'
-                    );
-                });
+                nemotronAddMessage(
+                    "Beep boop. I'm Nemotron 3 Super — the actual model running this agent, not a scripted FAQ. " +
+                    "Ask me what just happened, why a request got escalated, or why NVIDIA letting a model touch real money " +
+                    "(safely) is a big deal.",
+                    'bot'
+                );
             }
             if (focusInput) nemotronInput.focus();
         }
@@ -1971,11 +1755,6 @@ function nemotronRenderAnswer(rawText) {
             }, 1100);
         }, 2500);
 
-        const NEMO_HISTORY_KEY = 'custodian_nemotron_history';
-        const nemotronHistory = (() => {
-            try { return JSON.parse(sessionStorage.getItem(NEMO_HISTORY_KEY) || '[]'); } catch { return []; }
-        })();
-
         async function nemotronSend() {
             const question = nemotronInput.value.trim();
             if (!question) return;
@@ -1983,22 +1762,28 @@ function nemotronRenderAnswer(rawText) {
             nemotronSendBtn.disabled = true;
             nemotronAddMessage(question, 'user');
             const thinkingMsg = nemotronAddThinkingMessage();
-            try {
-                const res = await fetch('/api/v1/nemotron/ask', {
+            // The model very occasionally returns an empty body (upstream/tunnel
+            // timeout). Rather than show a judge a blank reply, transparently
+            // retry once before falling back to a graceful message.
+            async function askOnce() {
+                const res = await fetch('https://rein-local.argobox.com/api/v1/nemotron/ask', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ question, history: nemotronHistory.slice(-8), page: 'hermes' }),
+                    body: JSON.stringify({ question }),
                 });
-                const data = await res.json();
+                return res.json();
+            }
+            try {
+                let data = await askOnce();
+                const empty = d => !d || (!d.error && (!d.answer || !d.answer.trim()));
+                if (empty(data)) data = await askOnce();
                 thinkingMsg.remove();
                 if (data.error) {
                     nemotronAddMessage(`(couldn't get an answer: ${data.error})`, 'bot');
+                } else if (empty(data)) {
+                    nemotronAddMessage("That one came back empty — mind asking again? (the model occasionally times out)", 'bot');
                 } else {
                     nemotronRenderAnswer(data.answer);
-                    const clean = data.answer.replace(/\[\[(jump|entry|suggest):[^\]]*\]\]/g, '').trim();
-                    nemotronHistory.push({role: 'user', content: question});
-                    nemotronHistory.push({role: 'assistant', content: clean});
-                    try { sessionStorage.setItem(NEMO_HISTORY_KEY, JSON.stringify(nemotronHistory.slice(-16))); } catch {}
                 }
             } catch (e) {
                 thinkingMsg.remove();
@@ -2014,8 +1799,5 @@ function nemotronRenderAnswer(rawText) {
             if (e.key === 'Enter') nemotronSend();
         });
     </script>
-  <script src="/site-tour.js"></script>
-  <script src="/tour-tracker.js"></script>
-  <script src="/nemo-guide.js"></script>
 </body>
 </html>

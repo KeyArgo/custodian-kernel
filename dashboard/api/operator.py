@@ -24,7 +24,6 @@ password.
 from __future__ import annotations
 
 import collections
-import datetime
 import hashlib
 import hmac
 import os
@@ -87,12 +86,13 @@ def require_operator(f):
     return wrapper
 
 
+import shutil as _shutil
 
 def _nemohermes_bin() -> str:
     # nemohermes may not be on the PATH when Flask starts from a venv;
     # fall back to the known install location.
     return (
-        shutil.which('nemohermes')
+        _shutil.which('nemohermes')
         or '/home/argonaut/.local/bin/nemohermes'
     )
 
@@ -249,6 +249,9 @@ def resume():
     _write_reasoning('kill_toggle.py', result)
     return jsonify(result)
 
+
+import json
+import os
 _STATE_BASE = Path(os.getenv(
     'HERMES_SKILL_STATE_PATH',
     '/tmp/hermes-mount/sandbox/.hermes/skills/payments/stripe-spend/state',

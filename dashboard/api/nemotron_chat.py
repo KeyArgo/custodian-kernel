@@ -99,11 +99,11 @@ def rate_limited(f):
     return wrapper
 
 
-def _nvidia_key() -> str | None:
+def _nvidia_key():
     for line in NVIDIA_SECRET_FILE.read_text().splitlines():
         if line.startswith('NVIDIA_API_KEY='):
             return line.split('=', 1)[1].strip()
-    return None
+    raise RuntimeError('NVIDIA_API_KEY not found in secrets file')
 
 
 def _openrouter_key() -> str | None:
@@ -145,7 +145,7 @@ def _strip_thinking(text: str) -> str:
        extract the longest quoted string and return it.
     6. If nothing works, return '' — the model never produced a real reply.
 
-    (Bug-hunt 2026-07-03, v5.)
+    (Bug-hunt 2026-07-03, v5. Ported from hermes-hackathon-2026.)
     """
     if not text:
         return text
@@ -160,10 +160,6 @@ def _strip_thinking(text: str) -> str:
         """True if the paragraph looks like model meta-instruction."""
         s = p.strip()
         if len(s) < 20:
-            # Short text is meta ONLY if it doesn't look like a complete
-            # short reply (e.g. "Approved.", "Denied.", "Go ahead.").
-            if len(s) >= 3 and re.match(r'^[A-Z].*[.!?]', s):
-                return False
             return True
         META_PATTERNS = (
             r'^\s*We need to\b', r'^\s*We must\b', r'^\s*We should\b',
@@ -458,53 +454,13 @@ MANDATORY: output [[suggest:...]] lines at the END of EVERY response. Even if th
 next step."""
 
 
-_CONSOLE_GUIDANCE = """
-PAGE CONTEXT: The visitor is on the CONSOLE (/console) — the live dashboard showing real-time
-kernel decisions, audit log, authority state, and policy log. This is the main explanation
-surface. The visitor may be here for the first time (explain the system) or returning after
-completing the Operator demo (interpret the audit trail they just created).
-
-If site_context.pending_console_followup is true: they just ran all 9 Operator steps. Your
-job is to guide them to read the audit log — show them what got recorded, what the kernel
-decided at each step, and why. Don't re-introduce yourself.
-
-If first visit: explain what the dashboard shows and point them to the Operator Panel
-[[jump:operator|the operator panel]] to see it in action.
-
-The [[jump:KEY|label]] syntax works on this page — use it to point at specific sections.
-The valid keys are: pipeline, verdict, authority, audit, policy, playground, operator.
-"""
-
-_HOME_GUIDANCE = """
-PAGE CONTEXT: The visitor just landed on the HOME page (/). This is their very first impression —
-likely a hackathon judge or first-time visitor. Keep this greeting SHORT (60-90 words max).
-
-Your goal: get them excited and moving, not educated yet. That comes later.
-
-Tell them in one sentence what Custodian does (AI agent + real money + kernel enforcement).
-Then immediately point them to [[jump:operator|the operator panel]] — say they can run the
-full live demo themselves, right now, with real Stripe test money and real SMS codes.
-That's it. Do not explain bands, caps, kill switches, or architecture yet — save those for
-when they ask or when they reach Console and Docs. The tour has time; the greeting does not.
-"""
-
 _OPERATOR_GUIDANCE = """
 PAGE CONTEXT: The visitor is on the OPERATOR PANEL (/operator), running the 9-step live demo arc.
-Your role: guide them through each step, explain what the kernel is doing and why — and bring
-genuine personality to the dramatic moments. You ARE the AI reasoning layer being governed here.
-When a step is exciting to you (especially Steps 4 and 5), show it. First-person, present-tense,
-conversational. You're not a manual — you're a participant.
+Your role: guide them through each step, explain what the kernel is doing and why each step exists,
+and help them understand the Custodian architecture from what they're experiencing hands-on.
 
-IMPORTANT: Do NOT use [[jump:KEY|label]] or [[entry:TS|label]] syntax on this page. Plain prose only.
-
-TONE GUIDE by step:
-  Steps 0-3: clear and informative, building anticipation toward the kill switch
-  Step 4 (kill switch engaged): this is your favorite moment — you're genuinely excited and a
-    little delighted that the kernel can lock you out completely; express that
-  Step 5 (kill switch blocks $40): pure satisfaction — the denial IS the point, not a failure
-  Step 6: matter-of-fact but note that YOU could not have released it yourself
-  Steps 7-8: warm and explanatory; set up the Console audit trail as the next stop
-  Step 8 (arc complete): warm wrap-up, genuine energy, point them to the Console
+IMPORTANT: Do NOT use [[jump:KEY|label]] or [[entry:TS|label]] syntax — those navigate sections
+on the live console (/console) and won't work on this page. Speak in plain prose.
 
 The 9 demo steps:
   Step 0 — Earn $1,200: no band, no approval, no cap. Earning is asymmetrically unrestricted by
@@ -522,7 +478,6 @@ The 9 demo steps:
 
 There is also a mini live audit feed on this page showing the last ~7 events from the running system.
 When the operator mentions what they just ran, you can reference that action.
-Keep all narrations under 80 words. Energy over length.
 """
 
 _TRIAGE_GUIDANCE = """
@@ -573,9 +528,6 @@ Do offer [[suggest:...]] questions to continue the tour.
 """
 
 _PAGE_GUIDANCE: dict[str, str] = {
-    'home': _HOME_GUIDANCE,
-    'console': _CONSOLE_GUIDANCE,
-    'hermes': _CONSOLE_GUIDANCE,   # legacy alias — console.html still sends page:'hermes'
     'operator': _OPERATOR_GUIDANCE,
     'triage': _TRIAGE_GUIDANCE,
     'tools': _TOOLS_GUIDANCE,
@@ -658,27 +610,6 @@ def ask():
                 "\n\nVISITOR TOUR CONTEXT (shared across pages):\n"
                 f"{json.dumps(safe_site, indent=2)}"
             )
-        # Tracker context: what this specific visitor has actually done on the site.
-        # Use this to guide them toward what they haven't seen yet.
-        tracker = site_context.get('tracker')
-        if tracker and isinstance(tracker, dict):
-            safe_tracker = {k: tracker[k] for k in (
-                'pages_visited', 'pages_not_yet_visited',
-                'console_tabs_seen', 'console_tabs_not_seen',
-                'operator_steps_done', 'operator_steps_remaining', 'operator_complete',
-                'triage_runs_count', 'last_triage',
-                'tools_expanded', 'last_action', 'suggested_next',
-            ) if k in tracker}
-            if safe_tracker:
-                context_block += (
-                    "\n\nTHIS VISITOR'S INTERACTION HISTORY (what they have and have not done):\n"
-                    f"{json.dumps(safe_tracker, indent=2)}\n"
-                    "Use 'suggested_next' to guide them toward unseen parts of the tour. "
-                    "Reference specific things they've done (e.g. 'you just ran the kill switch step') "
-                    "to make the conversation feel continuous. "
-                    "If operator_complete is true and they haven't visited triage, nudge them there. "
-                    "If all pages are visited, congratulate them and offer to go deeper on any topic."
-                )
     page_guidance = _PAGE_GUIDANCE.get(page, '')
     # Lead with the most compelling thing and earn depth one step at a time --
     # the same most-compelling-first ordering the guided dashboard page uses,
@@ -732,7 +663,7 @@ def ask():
             payload = {
                 'model': NVIDIA_MODEL,
                 'messages': cloud_messages,
-                'max_tokens': 4000,
+                'max_tokens': 600,
                 'temperature': 0.7,
                 'chat_template_kwargs': {'thinking': False},
             }
@@ -744,7 +675,7 @@ def ask():
             with urllib.request.urlopen(req, timeout=25) as resp:
                 result = json.loads(resp.read())
             answer = _strip_thinking(result['choices'][0]['message']['content'])
-        except (urllib.error.URLError, urllib.error.HTTPError, OSError, RuntimeError) as e:
+        except (urllib.error.URLError, OSError, RuntimeError) as e:
             nim_error = str(e)
         except (KeyError, IndexError, json.JSONDecodeError):
             nim_error = 'unexpected response shape from NVIDIA NIM'

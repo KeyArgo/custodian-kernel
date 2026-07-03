@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Custodian — Kernel-Enforced Authority for AI Agents</title>
 <meta name="description" content="Give your AI agent a company card with Custodian. Under the limit it spends autonomously. Over the limit it calls you first. If a customer lies to get a refund, the kernel catches it — enforced at the OS level, not promised in a prompt.">
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
@@ -63,8 +63,7 @@
 
   /* ---------- nav ---------- */
   nav{position:sticky; top:0; z-index:50; backdrop-filter:blur(14px);
-    -webkit-backdrop-filter:blur(14px); background:rgba(6,7,11,0.85);
-    border-bottom:1px solid var(--line); will-change:transform; transform:translateZ(0)}
+    background:rgba(6,7,11,0.72); border-bottom:1px solid var(--line)}
   .nav-in{display:flex; align-items:center; justify-content:space-between; height:64px}
   .brand{display:flex; align-items:center; gap:11px; text-decoration:none; font-weight:600}
   .brand svg{width:30px; height:30px}
@@ -81,55 +80,14 @@
   .btn-primary:hover{transform:translateY(-2px); box-shadow:0 14px 30px -8px rgba(255,176,0,0.7)}
   .btn-ghost{color:var(--text); border-color:var(--line2); background:rgba(255,255,255,0.02)}
   .btn-ghost:hover{border-color:var(--amber); transform:translateY(-2px)}
-  /* hamburger */
-  .nav-burger{display:none;flex-direction:column;justify-content:center;gap:5px;
-    background:none;border:none;cursor:pointer;padding:8px 6px;margin-left:8px;flex-shrink:0}
-  .nav-burger span{display:block;width:22px;height:2px;background:var(--muted);
-    border-radius:2px;transition:transform .2s,opacity .2s}
-  .nav-burger.open span:nth-child(1){transform:translateY(7px) rotate(45deg)}
-  .nav-burger.open span:nth-child(2){opacity:0}
-  .nav-burger.open span:nth-child(3){transform:translateY(-7px) rotate(-45deg)}
-  /* mobile nav panel */
-  .nav-panel{display:none;position:fixed;top:64px;left:0;right:0;z-index:49;
-    background:rgba(6,7,11,0.97);border-bottom:1px solid rgba(255,176,0,0.15);
-    backdrop-filter:blur(16px);padding:10px 24px 20px;flex-direction:column}
-  .nav-panel.open{display:flex}
-  .nav-panel a{color:var(--muted);text-decoration:none;padding:11px 0;font-size:0.95em;
-    border-bottom:1px solid rgba(255,255,255,0.05);transition:color .12s;font-weight:500}
-  .nav-panel a:last-child{border-bottom:none}
-  .nav-panel a:hover{color:var(--text)}
-  .nav-panel .np-cta{display:block;margin-top:12px;text-align:center;padding:13px;
-    background:linear-gradient(135deg,var(--amber2),var(--amber));color:#100b00;
-    font-weight:700;border-radius:10px;font-size:0.95em;text-decoration:none}
-  /* responsive */
-  @media(max-width:820px){
-    .nav-links a:not(.btn){display:none}
-    .nav-links .btn{font-size:0.82em;padding:8px 14px}
-    .nav-burger{display:flex}
-  }
-  @media(max-width:560px){
-    .nav-links .btn{display:none}
-    .nav-in{gap:12px}
-    .brand .nm{font-size:0.98em}
-  }
-  @media(max-width:680px){
-    .tour-offer{padding:14px}
-    .tour-offer-head{display:block}
-    .tour-offer-actions{flex-direction:column}
-    .tour-pill{width:100%;box-sizing:border-box;text-align:center}
-    .tour-mobile-note{display:block}
-  }
-  @media(max-width:420px){
-    .nav-links .btn{display:none} /* burger has it */
-  }
+  @media(max-width:820px){.nav-links a:not(.btn){display:none}}
 
   /* ---------- hero ---------- */
   .hero{padding:96px 0 60px; text-align:center; position:relative}
   .eyebrow{display:inline-flex; align-items:center; gap:9px; font-family:'JetBrains Mono',monospace;
     font-size:0.74em; letter-spacing:0.14em; text-transform:uppercase; color:var(--amber2);
     border:1px solid rgba(255,176,0,0.3); background:rgba(255,176,0,0.06);
-    padding:7px 15px; border-radius:100px; margin-bottom:28px; max-width:100%;
-    flex-wrap:wrap; justify-content:center; text-align:center; line-height:1.5}
+    padding:7px 15px; border-radius:100px; margin-bottom:28px}
 
   /* employee + company card visual */
   .card-metaphor{display:flex; gap:14px; justify-content:center; align-items:stretch;
@@ -180,9 +138,12 @@
   .tour-pill.primary{background:rgba(255,176,0,0.12);border-color:rgba(255,176,0,0.4);color:var(--amber2)}
   .tour-dismiss{all:unset;cursor:pointer;color:var(--dim);font-size:0.82em;padding:3px 0}
   .tour-dismiss:hover{color:var(--text)}
-  .tour-mobile-note{display:none;margin-top:14px;padding:12px 14px;border-radius:12px;border:1px solid rgba(118,185,0,0.18);background:rgba(118,185,0,0.06);text-align:left}
-  .tour-mobile-note strong{color:#b8eb7d}
-  .tour-mobile-note p{color:var(--muted);font-size:0.9em}
+  @media(max-width:600px){
+    .tour-offer{padding:14px}
+    .tour-offer-head{display:block}
+    .tour-offer-actions{flex-direction:column}
+    .tour-pill{width:100%;box-sizing:border-box;text-align:center}
+  }
 
   /* live spec strip */
   .specs{display:inline-flex; flex-wrap:wrap; gap:0; border:1px solid var(--line2); border-radius:14px;
@@ -213,8 +174,8 @@
     text-transform:uppercase; color:var(--amber); margin-bottom:14px}
   h2{font-size:clamp(1.7em,3.6vw,2.6em); font-weight:600; letter-spacing:-0.015em; line-height:1.12; margin-bottom:18px}
   .sec-sub{color:var(--muted); font-size:1.06em; max-width:680px; line-height:1.65}
-  .reveal{opacity:0; transform:translateY(26px); transition:opacity .7s cubic-bezier(.2,.7,.2,1), transform .7s cubic-bezier(.2,.7,.2,1); will-change:opacity,transform}
-  .reveal.in{opacity:1; transform:none; will-change:auto}
+  .reveal{opacity:0; transform:translateY(26px); transition:opacity .7s cubic-bezier(.2,.7,.2,1), transform .7s cubic-bezier(.2,.7,.2,1)}
+  .reveal.in{opacity:1; transform:none}
 
   /* contrast / wedge */
   .wedge{display:grid; grid-template-columns:1fr 1fr; gap:22px; margin-top:46px}
@@ -336,192 +297,6 @@
   footer{border-top:1px solid var(--line); padding:40px 0; color:var(--dim); font-size:0.86em}
   .foot-in{display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:14px}
   .foot-in .mono{color:var(--muted)}
-
-  /* ── Global mobile / tablet ─────────────────────────────── */
-  /* gpu-backed blur elements (add -webkit- for Safari) */
-  .card,.nemo-card,.table-wrap,.final-card{-webkit-backdrop-filter:blur(8px)}
-  /* disable expensive blur on mobile to prevent scroll jank */
-  @media(max-width:820px){
-    .card,.nemo-card,.table-wrap,.final-card{backdrop-filter:none;-webkit-backdrop-filter:none}
-    nav{background:rgba(6,7,11,0.97)} /* solid on mobile — no blur needed */
-  }
-  /* utility: 2-col grid that stacks on small screens */
-  .g2{display:grid;grid-template-columns:1fr 1fr;gap:24px}
-  .g2b{display:grid;grid-template-columns:1fr 1fr;gap:28px}
-  .g3diagram{display:grid;grid-template-columns:1fr auto 1fr;gap:0;align-items:center}
-  @media(max-width:860px){
-    .wrap{padding:0 18px}
-    .metrics{grid-template-columns:1fr}
-  }
-  @media(max-width:680px){
-    .wrap{padding:0 12px}
-    .final-card{padding:36px 20px}
-    .final{padding:60px 0}
-    .g2,.g2b{grid-template-columns:1fr}
-    .g3diagram{grid-template-columns:1fr}
-    .g3diagram .g3-arrow{display:none}
-    .reveal{margin-left:0 !important;margin-right:0 !important}
-  }
-  @media(max-width:420px){
-    .wrap{padding:0 10px}
-    h1,h2{word-break:break-word}
-  }
-  @supports(padding:env(safe-area-inset-bottom)){
-    footer{padding-bottom:calc(40px + env(safe-area-inset-bottom))}
-  }
-
-  /* ── Hero split layout ──────────────────────────────────────── */
-  .hero{padding:30px 0 42px;position:relative;overflow:hidden}
-  #star-field{position:absolute;inset:0;pointer-events:none;z-index:0}
-  .hero-split{display:grid;grid-template-columns:55% 1fr;gap:64px;align-items:center;position:relative;z-index:1}
-  .hero-left{text-align:left}
-  .hero-left .eyebrow{justify-content:flex-start}
-  .hero-left h1{text-align:left;font-size:clamp(2.8em,5.5vw,4.2em);margin-bottom:20px}
-  .hero-left .lede{text-align:left;margin-left:0;max-width:560px;margin-right:0}
-  .hero-left .hero-cta{justify-content:flex-start}
-  .hero-left .specs{display:inline-flex}
-  .hero-right{display:flex;flex-direction:column;gap:10px;align-items:stretch;min-width:0}
-  .hero-chip-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:22px}
-  .hero-chip{
-    display:inline-flex;align-items:center;gap:6px;border-radius:8px;padding:5px 12px;
-    font-size:0.78em;font-weight:700;font-family:var(--mono)
-  }
-  .hero-chip.is-nvidia{background:rgba(118,185,0,0.15);border:1px solid rgba(118,185,0,0.4);color:#76b900}
-  .hero-chip.is-kernel{background:rgba(118,185,0,0.1);border:1px solid rgba(118,185,0,0.3);color:#76b900}
-  .hero-chip.is-model{background:rgba(118,185,0,0.1);border:1px solid rgba(118,185,0,0.3);color:#76b900}
-  .hero-chip.is-agent{background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.15);color:var(--text)}
-  .hero-chip.is-stripe{background:rgba(99,91,255,0.1);border:1px solid rgba(99,91,255,0.3);color:#a78bfa}
-  .hero-proof-strip{display:flex;gap:16px;flex-wrap:wrap;margin:16px 0 22px;font-family:var(--mono);font-size:0.77em}
-  .hero-proof-strip .proof-item{color:#2ee6a6;font-weight:700}
-  .hero-proof-strip .proof-dot{color:var(--dim)}
-  .hero-visual-stack{
-    position:relative;
-    width:100%;
-    padding:20px 18px 18px;
-    border-radius:24px;
-    border:1px solid rgba(255,176,0,0.14);
-    background:
-      linear-gradient(180deg, rgba(255,255,255,0.035), rgba(255,255,255,0.015)),
-      radial-gradient(circle at top, rgba(255,176,0,0.1), transparent 52%);
-    box-shadow:0 24px 60px -34px rgba(0,0,0,0.92), inset 0 1px 0 rgba(255,255,255,0.04);
-    overflow:hidden
-  }
-  .hero-visual-stack::before{
-    content:"";
-    position:absolute;
-    inset:0;
-    background:
-      linear-gradient(135deg, rgba(255,176,0,0.07), transparent 26%),
-      linear-gradient(0deg, rgba(46,230,166,0.035), transparent 40%);
-    pointer-events:none
-  }
-  .hero-visual-stack > *{position:relative;z-index:1}
-  .ring-wrap{position:relative;width:100%;max-width:440px;margin:0 auto}
-  /* terminal must not overflow hero-right */
-  #vkit-wrap{min-width:0;width:100%}
-  #vkit-wrap pre{white-space:pre-wrap;word-break:break-word;overflow-x:hidden}
-  .kernel-ticker{
-    min-width:0;width:100%;height:42px;overflow:clip;border:1px solid rgba(255,176,0,0.18);
-    border-radius:10px;background:rgba(0,0,0,0.58);display:grid;grid-template-columns:minmax(150px,max-content) minmax(0,1fr);
-    align-items:stretch
-  }
-  .kernel-status{
-    display:flex;align-items:center;justify-content:center;gap:6px;padding:0 12px;height:100%;
-    font-family:var(--mono);font-size:0.66em;font-weight:800;letter-spacing:.1em;color:#ffb000;
-    text-transform:uppercase;border-right:1px solid rgba(255,176,0,0.18);white-space:nowrap;
-    min-width:0;overflow:visible
-  }
-  .kernel-status strong{font-size:0.95em;color:#fff2c7;letter-spacing:.08em}
-  .kernel-message{
-    min-width:0;padding:0 14px;display:flex;align-items:center;gap:10px;font-family:var(--mono);
-    font-size:0.72em;color:#aaa;white-space:nowrap;overflow:hidden
-  }
-  /* topology row — shows where the kernel actually runs vs where NemoClaw lives */
-  .kernel-topology{
-    display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;
-    margin:10px 0 12px;padding:10px 12px;
-    border:1px dashed rgba(255,176,0,0.22);border-radius:8px;
-    background:rgba(255,176,0,0.03);font-family:var(--mono);font-size:0.7em
-  }
-  .kernel-topology .node{
-    display:flex;flex-direction:column;gap:2px;padding:6px 10px;
-    border:1px solid rgba(255,255,255,0.08);border-radius:6px;background:rgba(0,0,0,0.4);
-    min-width:0;line-height:1.3
-  }
-  .kernel-topology .node .name{color:#ffcf57;font-weight:800;letter-spacing:.08em;font-size:1em}
-  .kernel-topology .node .where{color:#8d93a6;font-size:.86em;letter-spacing:.04em}
-  .kernel-topology .node.airgap{border-color:rgba(255,176,0,0.45);background:rgba(255,176,0,0.06)}
-  .kernel-topology .node.airgap .name{color:#ffb000}
-  .kernel-topology .arrow{color:#5d6273;font-size:0.9em;text-align:center;white-space:nowrap}
-  .kernel-topology .arrow .link{color:#2ee6a6;font-weight:700;letter-spacing:.08em}
-  .kernel-topology .arrow .why{color:#5d6273;display:block;font-size:.82em;margin-top:2px}
-  @media(max-width:720px){
-    .kernel-topology{grid-template-columns:1fr;gap:6px;font-size:0.66em}
-    .kernel-topology .arrow{padding:0 0 4px}
-  }
-  .kernel-message-label{flex:0 0 auto;font-weight:800}
-  .kernel-message-text{min-width:0;overflow:hidden;text-overflow:ellipsis}
-  .vkit-shell{
-    text-align:left;background:#0a0a0a;border:1px solid #222;border-radius:14px;overflow:hidden;
-    font-family:var(--mono);font-size:0.78em;box-shadow:inset 0 1px 0 rgba(255,255,255,0.04)
-  }
-  .vkit-window{
-    display:flex;align-items:center;gap:7px;padding:8px 14px;background:#111;border-bottom:1px solid #1e1e1e
-  }
-  .vkit-window-title{color:#5a5a5a;font-size:0.9em;margin-left:4px}
-  #vkit-body{padding:12px 16px;line-height:1.75;white-space:pre;color:#aaa;height:240px;overflow:hidden;margin:0}
-  @keyframes ring-pulse{0%,100%{stroke-opacity:1}50%{stroke-opacity:0.45}}
-  @keyframes core-pulse{0%,100%{opacity:1;r:12}50%{opacity:0.55;r:16}}
-  /* ring label classes — used to hide on small screens */
-  .ring-lbl{}
-  .ring-bands-legend{display:none}
-  @media(max-width:860px){
-    .hero-split{grid-template-columns:1fr;gap:32px}
-    .hero-left{text-align:center;order:1}
-    .hero-left .eyebrow{justify-content:center}
-    .hero-left h1{text-align:center;font-size:clamp(2.4em,7vw,3.2em)}
-    .hero-left .lede{text-align:center;margin:0 auto 28px}
-    .hero-left .hero-cta{justify-content:center}
-    .hero-chip-row,.hero-proof-strip{justify-content:center}
-    /* ring below headline on tablet */
-    .hero-right{order:2;max-width:360px;margin:0 auto;width:100%}
-    .hero-visual-stack{padding:18px 16px 16px}
-    .ring-wrap{max-width:320px}
-  }
-  @media(max-width:560px){
-    .wrap{padding:0 12px}
-    .hero{padding:72px 0 48px}
-    .eyebrow{font-size:0.66em;padding:7px 12px;letter-spacing:0.12em}
-    .hero-left h1{font-size:clamp(1.75em,7.8vw,2.45em);line-height:1.08}
-    .hero-left .lede{font-size:0.98em}
-    .hero-chip-row{gap:6px;margin-bottom:18px}
-    .hero-chip{justify-content:center;flex:1 1 calc(50% - 6px);min-width:134px;padding:6px 10px;font-size:0.73em}
-    .hero-proof-strip{
-      display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:18px 0 20px;font-size:0.72em
-    }
-    .hero-proof-strip .proof-item{
-      padding:9px 10px;border-radius:10px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);
-      text-align:center
-    }
-    .hero-proof-strip .proof-dot{display:none}
-    .hero-visual-stack{padding:16px 14px 14px;border-radius:20px}
-    .ring-wrap{max-width:260px}
-    /* hide verbose ring labels — keep only L2 ACTIVE and center KERNEL */
-    .ring-lbl-l4,.ring-lbl-l3,.ring-lbl-l1,.ring-lbl-l0,.ring-lbl-allow{display:none}
-    /* show a compact HTML band legend instead */
-    .ring-bands-legend{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;
-      margin-top:8px;font-family:'JetBrains Mono',monospace;font-size:0.68em}
-    .kernel-ticker{grid-template-columns:120px minmax(0,1fr);height:46px}
-    .kernel-status{font-size:0.6em;letter-spacing:.08em;padding:0 8px}
-    .kernel-message{padding:0 10px;font-size:0.68em}
-    #vkit-body{height:176px;font-size:0.95em}
-    /* shrink specs table on phone */
-    .specs{display:grid !important;grid-template-columns:1fr 1fr;width:100%}
-    .spec{min-width:0;padding:14px 16px}
-    /* hero-cta stacks on very small screens */
-    .hero-cta{flex-direction:column;align-items:center;gap:10px}
-    .hero-cta .btn{width:100%;max-width:none;justify-content:center}
-  }
 </style>
 </head>
 <body>
@@ -532,382 +307,89 @@
 <nav>
   <div class="wrap nav-in">
     <a class="brand" href="/">
-      <svg viewBox="0 0 64 64" aria-hidden="true" fill="none">
-        <polygon points="56,42 42,56 22,56 8,42 8,22 22,8 42,8 56,22" stroke="#ffb000" stroke-width="2.5" stroke-linejoin="round"/>
-        <path d="M 40.5,23.5 A 12,12 0 1,0 40.5,40.5" stroke="#ffb000" stroke-width="2.5" stroke-linecap="round"/>
-      </svg>
+      <svg viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" fill="none"/>
+        <path d="M32 6 L54 14 V30 C54 44.5 44.2 54 32 58 C19.8 54 10 44.5 10 30 V14 Z" fill="none" stroke="#ffb000" stroke-width="4" stroke-linejoin="round"/>
+        <circle cx="32" cy="29" r="6" fill="none" stroke="#ffb000" stroke-width="4"/>
+        <rect x="30" y="32" width="4" height="12" rx="1" fill="#ffb000"/></svg>
       <span class="nm">CUSTO<b>DIAN</b></span>
     </a>
     <div class="nav-links">
       <a href="#how">How it works</a>
       <a href="#proof">Live proof</a>
-      <a href="#install">Install</a>
       <a href="#compare">Compare</a>
+      <a href="#video">Demo</a>
       <a href="/triage">Lie-Catch</a>
-      <a href="/tools">Tools</a>
       <a href="/docs">Docs</a>
-      <a class="btn btn-primary" href="/console">Launch live console →</a>
-      <button class="nav-burger" id="nav-burger" aria-label="Open menu" aria-expanded="false">
-        <span></span><span></span><span></span>
-      </button>
+      <a class="btn btn-primary" href="/hermes">Launch live console →</a>
     </div>
   </div>
 </nav>
-<div class="nav-panel" id="nav-panel" role="navigation" aria-label="Mobile menu">
-  <a href="#how">How it works</a>
-  <a href="#proof">Live proof</a>
-  <a href="#install">Install</a>
-  <a href="#compare">Compare</a>
-  <a href="/triage">Lie-Catch Demo</a>
-  <a href="/tools">Tools</a>
-  <a href="/docs">Docs</a>
-  <a href="/console" class="np-cta">Launch live console →</a>
-</div>
 
 <!-- HERO -->
 <header class="hero">
-  <canvas id="star-field"></canvas>
   <div class="wrap">
-    <div class="hero-split">
+    <div class="eyebrow"><span class="pulse"></span> NVIDIA · Nous Research · Stripe · Hackathon 2026</div>
+    <h1>Give your AI a company card.<br><span class="grad">With a kernel that actually enforces it.</span></h1>
+    <p class="lede">A new employee gets a company card with a spending limit. They can buy what they need — but can't approve their own expense reports, and can't lie about a receipt once it's in the ledger. <b>Custodian is that card, that limit, and that ledger — for AI agents.</b> Enforced at the OS level, not promised in a prompt.</p>
 
-      <!-- LEFT: headline + CTAs -->
-      <div class="hero-left">
-        <div class="eyebrow"><span class="pulse"></span> NVIDIA · Nous Research · Stripe · Hackathon 2026</div>
-        <div class="hero-chip-row">
-          <span class="hero-chip is-nvidia">⬡ DGX Spark GB10</span>
-          <span class="hero-chip is-kernel">🛡 NemoClaw</span>
-          <span class="hero-chip is-model">◉ Nemotron Super 120B</span>
-          <span class="hero-chip is-agent">◆ Hermes</span>
-          <span class="hero-chip is-stripe">stripe</span>
-        </div>
-        <h1>Give AI a real wallet.<br><span class="grad">Without the risk.</span></h1>
-        <p class="lede">Most businesses won't deploy AI near money because there's no way to verify it actually followed the rules. Custodian is the enforcement kernel that changes that — <b>define limits in code, the OS enforces them, the agent cannot lie or self-approve.</b> Every action produces a SHA-256 fingerprinted receipt — tamper with it, the kernel knows. Deployed with the kernel on a separate physical host, enforcing in real time. Ships as a pip package.</p>
-        <div class="hero-proof-strip">
-          <span class="proof-item">✓ 3/3 planted lies caught</span>
-          <span class="proof-dot">·</span>
-          <span class="proof-item">✓ $0 unauthorized spend</span>
-          <span class="proof-dot">·</span>
-          <span class="proof-item">✓ 1,350 tests pass</span>
-          <span class="proof-dot">·</span>
-          <span class="proof-item" style="color:#a39fff">✓ real Stripe PI on record</span>
-          <span class="proof-dot">·</span>
-          <span class="proof-item" style="color:#76b900">✓ SHA-256 receipt on every action</span>
-        </div>
-        <div class="hero-cta">
-          <a class="btn btn-primary" href="/operator" target="_blank" rel="noopener">▶ Run the live demo</a>
-          <a class="btn btn-ghost" href="/console">Watch it request a real PaymentIntent →</a>
-          <a class="btn btn-ghost" href="https://buy.stripe.com/test_4gMeVffdb4dSgTB8Ht2B200" target="_blank" rel="noopener" style="border-color:#635bff;color:#a39fff">💳 Safety Review — $25</a>
-        </div>
-        <div class="tour-offer" id="tour-offer" aria-live="polite">
-          <div class="tour-offer-head">
-            <div>
-              <div class="tour-offer-kicker">Nemotron guide</div>
-              <p>Need the fast version? Start in the console and let the AI walk you through what Custodian is, then hand you into the operator flow when it matters.</p>
-            </div>
-            <button class="tour-dismiss" id="tour-offer-dismiss" type="button">Not now</button>
-          </div>
-          <div class="tour-offer-actions">
-            <button class="tour-pill primary" id="tour-mode-quick" type="button">Quick walkthrough</button>
-            <button class="tour-pill" id="tour-mode-deep" type="button">Deep dive</button>
-            <button class="tour-pill" id="tour-mode-free" type="button">Browse freely</button>
-          </div>
-        </div>
-        <div class="tour-mobile-note" id="tour-mobile-note">
-          <strong>Nemotron stays lightweight on mobile.</strong>
-          <p>It won’t auto-cover the page. Open Console if you want the guided tour, or keep browsing and ask questions only when you need them.</p>
-        </div>
-        <div class="specs" id="specs" style="margin-top:22px">
-          <div class="spec"><div class="k">Authority band</div><div class="v" id="s-band">—</div></div>
-          <div class="spec live"><div class="k">Session budget left</div><div class="v" id="s-remaining">—</div></div>
-          <div class="spec"><div class="k">AI brain</div><div class="v">Nous Hermes (Nemotron)</div></div>
-          <div class="spec"><div class="k">Live tools</div><div class="v">102</div></div>
-          <div class="spec"><div class="k">Boundary</div><div class="v enf">ENFORCED AT KERNEL</div></div>
+    <!-- employee + company card visual -->
+    <div class="card-metaphor">
+      <div class="cc cc-employee">
+        <div class="chip"></div>
+        <div class="name">AGENT</div>
+        <div class="val">Nemotron 3 Super</div>
+        <div class="limit-row">
+          <span class="limit-key">ROLE</span>
+          <span class="limit-val">REQUESTS ONLY</span>
         </div>
       </div>
-
-      <!-- RIGHT: SVG kernel authority ring + ticker + terminal -->
-      <div class="hero-right">
-        <div class="hero-visual-stack">
-        <!-- kernel authority ring diagram -->
-        <div class="ring-wrap">
-          <svg viewBox="0 0 400 400" width="100%" height="auto" aria-hidden="true" style="overflow:visible">
-            <defs>
-              <filter id="gl-amber" x="-50%" y="-50%" width="200%" height="200%">
-                <feGaussianBlur stdDeviation="5" result="b"/>
-                <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
-              </filter>
-              <filter id="gl-green" x="-50%" y="-50%" width="200%" height="200%">
-                <feGaussianBlur stdDeviation="3" result="b"/>
-                <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
-              </filter>
-              <radialGradient id="bg-glow" cx="50%" cy="50%" r="50%">
-                <stop offset="0%" stop-color="rgba(255,176,0,0.07)"/>
-                <stop offset="100%" stop-color="transparent"/>
-              </radialGradient>
-            </defs>
-
-            <!-- background ambient glow -->
-            <circle cx="200" cy="200" r="190" fill="url(#bg-glow)"/>
-
-            <!-- L4 outer ring (grey, locked) -->
-            <circle cx="200" cy="200" r="178" fill="none" stroke="#2a2d3a" stroke-width="1.5" stroke-dasharray="6 5"/>
-            <text class="ring-lbl ring-lbl-l4" x="200" y="22" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9" fill="#3d4055" letter-spacing="1.5">L4 · HUMAN REQUIRED · UNLIMITED</text>
-
-            <!-- L3 ring (red threshold) -->
-            <circle cx="200" cy="200" r="148" fill="none" stroke="#ff5c5c" stroke-width="1.5" stroke-opacity="0.3" stroke-dasharray="5 4"/>
-            <text class="ring-lbl ring-lbl-l3" x="200" y="50" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9" fill="#ff5c5c" fill-opacity="0.55" letter-spacing="1">L3 · ALWAYS ESCALATES</text>
-
-            <!-- L2 ring (amber, ACTIVE — main ring) -->
-            <circle cx="200" cy="200" r="115" fill="none" stroke="#ffb000" stroke-width="2.5" filter="url(#gl-amber)" style="animation:ring-pulse 3.5s ease-in-out infinite"/>
-            <text class="ring-lbl ring-lbl-l2" x="200" y="82" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9.5" fill="#ffcf57" font-weight="700" letter-spacing="1.5">L2 · AUTONOMOUS UP TO CAP ▶ ACTIVE</text>
-
-            <!-- L1 ring (green) -->
-            <circle cx="200" cy="200" r="80" fill="none" stroke="#2ee6a6" stroke-width="1.5" stroke-opacity="0.55" filter="url(#gl-green)"/>
-            <text class="ring-lbl ring-lbl-l1" x="200" y="120" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9" fill="#2ee6a6" fill-opacity="0.7" letter-spacing="1">L1 · FREE / TRIVIAL SIDE-EFFECTS</text>
-
-            <!-- L0 ring (green, innermost) -->
-            <circle cx="200" cy="200" r="50" fill="none" stroke="#2ee6a6" stroke-width="1.5" stroke-opacity="0.8"/>
-            <text class="ring-lbl ring-lbl-l0" x="200" y="150" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9" fill="#2ee6a6" letter-spacing="1">L0 · READ-ONLY</text>
-
-            <!-- center kernel core -->
-            <circle cx="200" cy="200" r="22" fill="rgba(255,176,0,0.08)" stroke="#ffb000" stroke-width="1.5"/>
-            <circle cx="200" cy="200" r="22" fill="none" stroke="#ffcf57" stroke-width="1" stroke-opacity="0.4" style="animation:ring-pulse 2s ease-in-out infinite 0.5s"/>
-            <circle cx="200" cy="200" r="10" fill="rgba(255,176,0,0.25)" style="animation:core-pulse 2s ease-in-out infinite"/>
-            <circle cx="200" cy="200" r="5" fill="#ffb000"/>
-            <text x="200" y="205" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#ffcf57" font-weight="800" letter-spacing="2">KERNEL</text>
-
-            <!-- orbiting request dot on L2 ring (radius 115) -->
-            <g>
-              <animateTransform attributeName="transform" type="rotate" from="0 200 200" to="360 200 200" dur="7s" repeatCount="indefinite"/>
-              <circle cx="315" cy="200" r="7" fill="#ffb000" filter="url(#gl-amber)"/>
-              <text x="324" y="204" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#ffcf57" font-weight="700">REQ</text>
-            </g>
-
-            <!-- Sector label: ALLOW zone -->
-            <text class="ring-lbl ring-lbl-allow" x="200" y="240" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" fill="#2ee6a6" fill-opacity="0.45" letter-spacing="1">VERIFIED · ALLOW</text>
-          </svg>
+      <div class="cc-vs">+</div>
+      <div class="cc cc-company">
+        <div class="chip"></div>
+        <div class="name">AUTHORITY</div>
+        <div class="val">Custodian Kernel</div>
+        <div class="limit-row">
+          <span class="limit-key">PER-ACTION CAP</span>
+          <span class="limit-val" id="s-cap">$250</span>
         </div>
-
-        <!-- mobile-only band legend (desktop shows labels in SVG) -->
-        <div class="ring-bands-legend">
-          <span style="color:#5d6273">L4 locked</span>
-          <span style="color:var(--dim)">·</span>
-          <span style="color:rgba(255,92,92,0.7)">L3 escalate</span>
-          <span style="color:var(--dim)">·</span>
-          <span style="color:#ffcf57;font-weight:700">L2 ▶ ACTIVE</span>
-          <span style="color:var(--dim)">·</span>
-          <span style="color:#2ee6a6">L1 free</span>
-          <span style="color:var(--dim)">·</span>
-          <span style="color:#2ee6a6">L0 read</span>
-        </div>
-
-        <!-- live kernel decision ticker -->
-        <div class="kernel-topology" aria-label="Deployment topology">
-          <div class="node">
-            <span class="name">NemoClaw</span>
-            <span class="where">agent host · not on Spark</span>
-          </div>
-          <div class="arrow">
-            <span class="link">──── Tailscale mesh ────</span>
-            <span class="why">encrypted · identity-bound</span>
-          </div>
-          <div class="node airgap">
-            <span class="name">⬡ KERNEL</span>
-            <span class="where">DGX Spark · 128GB · separate host</span>
-          </div>
-        </div>
-
-        <div class="kernel-ticker">
-          <div class="kernel-status">⬡ KERNEL <strong id="kt-status">BOOT</strong></div>
-          <div class="kernel-message">
-            <span class="kernel-message-label" id="kt-label" style="color:#ffb000">BOOT</span>
-            <span class="kernel-message-text" id="kt-message">initializing…</span>
-          </div>
-        </div>
-
-        <!-- verify_kit terminal (compact) -->
-        <div id="vkit-wrap" style="text-align:left">
-          <div class="vkit-shell">
-            <div class="vkit-window">
-              <span style="width:11px;height:11px;border-radius:50%;background:#ff5f57;display:inline-block"></span>
-              <span style="width:11px;height:11px;border-radius:50%;background:#febc2e;display:inline-block"></span>
-              <span style="width:11px;height:11px;border-radius:50%;background:#28c840;display:inline-block"></span>
-              <span class="vkit-window-title">verify_kit.py — self-verifying proof</span>
-            </div>
-            <pre id="vkit-body"><span style="color:#ffb000">$ python3 verify_kit.py</span>
-</pre>
-          </div>
-        </div>
-        </div>
-      </div><!-- end hero-right -->
-
-    </div><!-- end hero-split -->
-  </div><!-- end wrap -->
-</header>
-
-<script src="/tour-tracker.js"></script>
-<script src="/site-tour.js"></script>
-<script>
-if (window.TourTracker) TourTracker.track('page_visit', '/');
-/* particle starfield */
-(function(){
-  var c=document.getElementById('star-field');
-  if(!c)return;
-  function resize(){c.width=window.innerWidth;c.height=c.parentElement.offsetHeight||800}
-  resize();
-  window.addEventListener('resize',resize);
-  var ctx=c.getContext('2d');
-  var N=110;
-  var stars=[];
-  for(var i=0;i<N;i++){stars.push({x:Math.random()*c.width,y:Math.random()*c.height,r:Math.random()*1.1+0.2,o:Math.random()*0.45+0.05,d:Math.random()*0.18+0.04,dir:Math.random()>0.5?1:-1})}
-  var amber={r:255,g:176,b:0};
-  function draw(){
-    ctx.clearRect(0,0,c.width,c.height);
-    for(var i=0;i<N;i++){
-      var s=stars[i];
-      s.o+=s.d*s.dir;
-      if(s.o>0.55||s.o<0.04)s.dir*=-1;
-      var col=i%8===0?'rgba('+amber.r+','+amber.g+','+amber.b+','+s.o+')':'rgba(200,210,255,'+s.o+')';
-      ctx.beginPath();ctx.arc(s.x,s.y,s.r,0,6.283);ctx.fillStyle=col;ctx.fill();
-    }
-    requestAnimationFrame(draw);
-  }
-  draw();
-})();
-/* kernel ticker */
-(function(){
-  var statusEl=document.getElementById('kt-status');
-  var labelEl=document.getElementById('kt-label');
-  var messageEl=document.getElementById('kt-message');
-  if(!statusEl||!labelEl||!messageEl)return;
-  var events=[
-    {v:'ALLOW',   c:'#2ee6a6', msg:'refund_request($45.00) · within authority band · session cap ok'},
-    {v:'DENY',    c:'#ff5f57', msg:'bulk_purchase($1,240.00) · exceeds per-action limit $250'},
-    {v:'ESCALATE',c:'#ffb000', msg:'vendor_payment($189.00) · new counterparty — escalating to human'},
-    {v:'ALLOW',   c:'#2ee6a6', msg:'refund_request($12.00) · 4 s latency · Stripe PI created'},
-    {v:'DENY',    c:'#ff5f57', msg:'self_approve($80.00) · agent cannot approve own spend'},
-    {v:'ALLOW',   c:'#2ee6a6', msg:'procurement($199.00) · pre-authorized vendor · cap ok'},
-    {v:'DENY',    c:'#ff5f57', msg:'killswitch check · killswitch=OFF · request blocked'},
-    {v:'ESCALATE',c:'#ffb000', msg:'invoice_payment($2,500.00) · over-band · paging human'},
-    {v:'ALLOW',   c:'#2ee6a6', msg:'refund_request($67.50) · Landlock enforced · allowed'},
-    {v:'DENY',    c:'#ff5f57', msg:'direct_api_call() · no kernel path · denied at OS'},
-  ];
-  var i=0;
-  function tick(){
-    var e=events[i%events.length];
-    i++;
-    statusEl.textContent=e.v;
-    statusEl.style.color=e.c;
-    labelEl.textContent=e.v;
-    labelEl.style.color=e.c;
-    messageEl.textContent=e.msg;
-  }
-  tick();setInterval(tick,2800);
-})();
-/* verify_kit terminal */
-(function(){
-  var body=document.getElementById('vkit-body');
-  if(!body)return;
-  var lines=[
-    {t:'',p:300},
-    {t:'[1/4] REGRESSION — self-approval bug reintroduced',c:'#888',p:400},
-    {t:'  Result: CAUGHT BY TEST SUITE  ✓',c:'#2ee6a6',p:700},
-    {t:'',p:200},
-    {t:'[2/4] TEST SUITE — 1,350 tests',c:'#888',p:400},
-    {t:'  Result: ALL PASS  ✓',c:'#2ee6a6',p:800},
-    {t:'',p:200},
-    {t:'[3/4] LIVE STRIPE — real PaymentIntent',c:'#888',p:400},
-    {t:'  Result: STRIPE CONFIRMED  ✓',c:'#2ee6a6',p:700},
-    {t:'',p:200},
-    {t:'[4/4] KILL SWITCH — instant halt',c:'#888',p:400},
-    {t:'  Result: KILL SWITCH VERIFIED  ✓',c:'#2ee6a6',p:1600},
-    {t:'',p:200},
-    {t:'CUSTODIAN PROVEN — exit 0',c:'#2ee6a6',p:2200},
-  ];
-  var li=0;
-  var cursor=document.createElement('span');
-  cursor.innerHTML='█';cursor.style.cssText='color:#ffb000;animation:vkblink 1s step-end infinite';
-  var st=document.createElement('style');
-  st.textContent='@keyframes vkblink{0%,100%{opacity:1}50%{opacity:0}}';
-  document.head.appendChild(st);
-  body.innerHTML='<span style="color:#ffb000">$ python3 verify_kit.py</span>\n';
-  body.appendChild(cursor);
-  function next(){
-    if(li>=lines.length){setTimeout(function(){body.innerHTML='<span style="color:#ffb000">$ python3 verify_kit.py</span>\n';body.appendChild(cursor);li=0;next();},3000);return;}
-    var l=lines[li++];var span=document.createElement('span');
-    if(l.c)span.style.color=l.c;span.textContent=l.t;
-    body.insertBefore(span,cursor);body.insertBefore(document.createTextNode('\n'),cursor);
-    setTimeout(next,l.p);
-  }
-  setTimeout(next,500);
-})();
-</script>
-
-<!-- BUSINESS OWNERS -->
-<section id="for-business" style="padding:70px 0;background:rgba(0,0,0,0.2)">
-  <div class="wrap">
-    <div class="reveal" style="text-align:center;max-width:760px;margin:0 auto">
-      <div class="sec-eyebrow" style="color:var(--green)">What this unlocks</div>
-      <h2>AI that handles money. Finally.</h2>
-      <p class="sec-sub">AI is finally capable enough to handle refunds, spend, and purchasing decisions — Nemotron Super 120B makes that reasoning possible. Custodian is the deployment layer that makes it production-safe: kernel-level enforcement that gives you full control without constraining what the model can do. Set your limits. The kernel enforces them. Ship.</p>
+      </div>
     </div>
+    <div class="cc-enforced">LIMITS ENFORCED BELOW THE AGENT · OS-LEVEL · NOT A PROMPT · NOT A PROMISE</div>
 
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(270px,1fr));gap:18px;margin-top:40px">
-
-      <div class="card reveal" style="padding:26px 24px;border-color:rgba(46,230,166,0.2)">
-        <div style="font-family:'JetBrains Mono',monospace;font-size:0.65em;letter-spacing:0.12em;text-transform:uppercase;color:var(--green);margin-bottom:12px">E-commerce · Refund automation</div>
-        <h3 style="font-size:1.05em;margin:0 0 10px;line-height:1.35">Handle refund requests 24/7 — without the fraud risk</h3>
-        <p style="color:var(--muted);font-size:0.88em;line-height:1.6;margin:0 0 16px">Your AI reviews every refund request. Custodian's claim verifier checks the customer's story against your actual order data — if they're lying, it's CONTRADICTED before the refund executes. You only see the genuine edge cases.</p>
-        <div style="font-family:'JetBrains Mono',monospace;font-size:0.75em;padding:8px 12px;background:rgba(46,230,166,0.08);border-radius:6px;color:var(--green)">✓ 3 planted lies caught · 0 false positives</div>
-      </div>
-
-      <div class="card reveal" style="padding:26px 24px;border-color:rgba(255,176,0,0.2)">
-        <div style="font-family:'JetBrains Mono',monospace;font-size:0.65em;letter-spacing:0.12em;text-transform:uppercase;color:var(--amber);margin-bottom:12px">SaaS · Autonomous spend</div>
-        <h3 style="font-size:1.05em;margin:0 0 10px;line-height:1.35">Let AI spend autonomously — within the limits you set</h3>
-        <p style="color:var(--muted);font-size:0.88em;line-height:1.6;margin:0 0 16px">Set a $2 per-action cap and $50 session budget. Your agent runs inference jobs, makes API calls, spins up resources — fully autonomously. The moment it hits the limit, it escalates to you via SMS and stops. No surprise bills.</p>
-        <div style="font-family:'JetBrains Mono',monospace;font-size:0.75em;padding:8px 12px;background:rgba(255,176,0,0.08);border-radius:6px;color:var(--amber)">✓ Kill switch: one command halts the agent instantly</div>
-      </div>
-
-      <div class="card reveal" style="padding:26px 24px;border-color:rgba(163,159,255,0.2)">
-        <div style="font-family:'JetBrains Mono',monospace;font-size:0.65em;letter-spacing:0.12em;text-transform:uppercase;color:#a39fff;margin-bottom:12px">Operations · Purchasing</div>
-        <h3 style="font-size:1.05em;margin:0 0 10px;line-height:1.35">Automate purchasing your finance team can actually approve</h3>
-        <p style="color:var(--muted);font-size:0.88em;line-height:1.6;margin:0 0 16px">The self-approval problem is why finance won't sign off on AI purchasing. Custodian makes self-approval structurally impossible — the agent submits, the kernel decides, humans approve anything above the cap. The agent never holds both sides of the decision.</p>
-        <div style="font-family:'JetBrains Mono',monospace;font-size:0.75em;padding:8px 12px;background:rgba(163,159,255,0.08);border-radius:6px;color:#a39fff">✓ L3 band: all payments above threshold require human sign-off</div>
-      </div>
-
+    <div class="hero-cta" style="margin-top:28px">
+      <a class="btn btn-primary" href="/operator" target="_blank" rel="noopener">▶ Run the live demo</a>
+      <a class="btn btn-ghost" href="/hermes">Watch it spend real money →</a>
     </div>
-
-    <div class="reveal g2" style="margin-top:40px;max-width:860px;margin-left:auto;margin-right:auto">
-      <div>
-        <div style="font-family:'JetBrains Mono',monospace;font-size:0.7em;color:var(--dim);margin-bottom:10px">Your rules. One file.</div>
-        <pre style="background:#0a0c12;border:1px solid var(--line);border-radius:8px;padding:16px 18px;font-size:0.8em;line-height:1.8;color:#c8ccd8;margin:0"><span style="color:var(--dim)"># policy.yaml — kernel-enforced</span>
-<span style="color:var(--green)">default_band</span>: L2      <span style="color:var(--dim)"># autonomous to $2/action</span>
-<span style="color:var(--green)">per_action_cap</span>: 2.00
-<span style="color:var(--green)">session_cap</span>: 50.00    <span style="color:var(--dim)"># SMS you at $50, then stops</span>
-<span style="color:var(--green)">bands</span>:
-  <span style="color:var(--green)">L3</span>:
-    <span style="color:var(--green)">approval_backend</span>: twilio_verify</pre>
-      </div>
-      <div style="display:flex;flex-direction:column;justify-content:center;gap:14px">
-        <a class="btn btn-primary" href="/operator" target="_blank" rel="noopener" style="text-align:center">▶ Try the live demo — no install needed</a>
-        <div style="text-align:center;font-family:'JetBrains Mono',monospace;font-size:0.75em;color:var(--dim)">or</div>
-        <div style="position:relative">
-          <code id="install-cmd" style="display:block;text-align:center;font-size:0.78em;color:var(--amber);background:rgba(255,176,0,0.06);border:1px solid rgba(255,176,0,0.15);border-radius:6px;padding:10px 36px 10px 10px">curl -fsSL https://getcustodian.xyz/install.sh | bash</code>
-          <button onclick="(function(b){navigator.clipboard.writeText('curl -fsSL https://getcustodian.xyz/install.sh | bash').then(function(){var o=b.textContent;b.textContent='✓';setTimeout(function(){b.textContent=o;},1500);})})(this)" title="Copy" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--amber);opacity:0.6;font-size:0.9em;padding:2px 4px;line-height:1">⎘</button>
+    <div class="tour-offer" id="tour-offer" aria-live="polite">
+      <div class="tour-offer-head">
+        <div>
+          <div class="tour-offer-kicker">Nemotron guide</div>
+          <p>Need the fast version? Start in the console and let the AI walk you through what Custodian is, then hand you into the operator flow when it matters.</p>
         </div>
-        <div style="text-align:center;font-size:0.82em;color:var(--dim)">or clone the repo and run <code style="color:var(--amber)">python3 verify_kit.py</code> — proves the security guarantee in 90 seconds, no credentials needed</div>
+        <button class="tour-dismiss" id="tour-offer-dismiss" type="button">Not now</button>
       </div>
+      <div class="tour-offer-actions">
+        <button class="tour-pill primary" id="tour-mode-quick" type="button">Quick walkthrough</button>
+        <button class="tour-pill" id="tour-mode-deep" type="button">Deep dive</button>
+        <button class="tour-pill" id="tour-mode-free" type="button">Browse freely</button>
+      </div>
+    </div>
+    <div class="specs" id="specs" style="margin-top:8px">
+      <div class="spec"><div class="k">Authority band</div><div class="v" id="s-band">—</div></div>
+      <div class="spec live"><div class="k">Session budget left</div><div class="v" id="s-remaining">—</div></div>
+      <div class="spec"><div class="k">Decision modules</div><div class="v" id="s-packs">3</div></div>
+      <div class="spec"><div class="k">Governed tools</div><div class="v">100</div></div>
+      <div class="spec"><div class="k">Boundary</div><div class="v enf">ENFORCED AT KERNEL</div></div>
     </div>
   </div>
-</section>
+</header>
 
 <!-- TRUST -->
 <div class="trust">
   <div class="wrap trust-in">
     <span class="trust-label">Built with</span>
-    <a class="trust-logo" href="#architecture"><span class="nv">⬡ NVIDIA DGX Spark</span> · GB10 Grace Blackwell</a>
     <a class="trust-logo" href="#nemoclaw"><span class="nv">🛡 NemoClaw</span> · NVIDIA OpenShell Kernel Sandbox</a>
-    <a class="trust-logo" href="https://www.nvidia.com/" target="_blank" rel="noopener"><span class="nv">◉ NVIDIA</span> Nemotron Super 120B</a>
+    <a class="trust-logo" href="https://www.nvidia.com/" target="_blank" rel="noopener"><span class="nv">◉ NVIDIA</span> Nemotron 3 Super</a>
     <a class="trust-logo" href="https://nousresearch.com/" target="_blank" rel="noopener">◆ Nous Research · Hermes Agent Framework</a>
     <a class="trust-logo" href="https://stripe.com/" target="_blank" rel="noopener"><span class="st">stripe</span></a>
   </div>
@@ -919,7 +401,7 @@ if (window.TourTracker) TourTracker.track('page_visit', '/');
     <div class="reveal">
       <div class="sec-eyebrow">Why Custodian is different</div>
       <h2>Everyone gives the agent a wallet.<br>We give it a kernel.</h2>
-      <p class="sec-sub">Spend caps and approval flows are commodities now. The hard problem is that AI output is probabilistic by nature — and probabilistic recommendations should never directly authorize money movement. The kernel is deterministic. It's not a limitation on the model; it's how responsible deployment at this level works.</p>
+      <p class="sec-sub">Spend caps and approval flows are commodities now. The hard problem isn't limiting a number — it's that the agent can be wrong, or can lie, and that it shouldn't be <em>trusted</em> to route money through an approved path in the first place.</p>
     </div>
     <div class="wedge">
       <div class="card them reveal">
@@ -949,8 +431,8 @@ if (window.TourTracker) TourTracker.track('page_visit', '/');
         <div class="num">01 · AI JUDGMENT</div>
         <div class="ic">🤖</div>
         <h4>The intelligence layer</h4>
-        <p>We chose Nemotron for exactly this — reading messy, unstructured customer messages and extracting structured claims: was it delivered? in the return window? defective? It assigns confidence and proposes a disposition it has zero power to act on. Everything after that is deterministic code.</p>
-        <span class="role">best-in-class NLU · sandboxed from final execution</span>
+        <p>Nemotron reads messy, unstructured customer messages and extracts structured claims — was it delivered? in the return window? defective? — assigns confidence, and proposes a disposition it has zero power to act on. Everything after that is deterministic code.</p>
+        <span class="role">can be wrong · can lie · doesn't matter</span>
       </div>
       <div class="stage s2 reveal">
         <div class="num">02 · VERIFIER</div>
@@ -971,7 +453,7 @@ if (window.TourTracker) TourTracker.track('page_visit', '/');
     </div>
     <div class="liecatch reveal">
       <span class="badge">CLAIM CHECK</span>
-      <p><b>A customer's claim may be fabricated. Money still can't move wrong.</b> When a customer invents a story to get a refund and Nemotron recommends <em>approve</em>, the verifier checks every extracted claim against your actual order data — contradicted claims are blocked before anything executes. No competitor can demonstrate this because their approach is "agent asks, check the limit" not "verify every claim the agent extracted before it moves money."</p>
+      <p><b>The agent can lie. Money still can't move wrong.</b> When a customer invents a story to get a refund and the AI recommends <em>approve</em>, the verifier catches that the claim is contradicted by the ledger and the kernel overrides the AI. No competitor can demonstrate this because their model is "agent asks, check the limit" not "agent asks, check if the agent is lying."</p>
     </div>
 
   </div>
@@ -1014,7 +496,7 @@ if (window.TourTracker) TourTracker.track('page_visit', '/');
       <div id="nemo-log-feed"><div class="nemo-empty">Connecting to kernel sandbox…</div></div>
     </div>
     <div style="margin-top:28px; text-align:center">
-      <a class="btn btn-ghost" href="/console" style="margin-right:12px">Watch the live console →</a>
+      <a class="btn btn-ghost" href="/hermes" style="margin-right:12px">Watch the live console →</a>
       <a class="btn btn-ghost" href="/triage">See the lie-catch demo →</a>
     </div>
   </div>
@@ -1026,15 +508,14 @@ if (window.TourTracker) TourTracker.track('page_visit', '/');
     <div class="reveal">
       <div class="sec-eyebrow">Not a mockup</div>
       <h2>Everything here is real, and live right now</h2>
-      <p class="sec-sub">A real Nous Hermes agent, in a real kernel sandbox, making real Stripe API calls in test mode — protecting ArgoBox, a production AI infrastructure platform. The enforcement is production-grade. The Stripe transactions are test-mode so no real money moves during the demo. These numbers are pulled live from the running system as you read this.</p>
+      <p class="sec-sub">A real Nous Hermes agent, in a real kernel sandbox, paying real Stripe PaymentIntents — protecting ArgoBox, a production AI infrastructure platform. These numbers are pulled live from the running system as you read this.</p>
     </div>
     <div class="proof">
       <div class="metrics reveal">
         <div class="metric"><div class="mv g" id="m-remaining">—</div><div class="ml">Autonomous budget remaining</div><div class="mlive"><span class="pulse"></span>LIVE</div></div>
-        <div class="metric"><div class="mv" id="m-governed">—</div><div class="ml">Cases governed by kernel</div><div class="mlive"><span class="pulse"></span>LIVE</div></div>
-        <div class="metric"><div class="mv" id="m-payments">—</div><div class="ml">Stripe test-mode PaymentIntents created</div></div>
-        <div class="metric"><div class="mv">3/3</div><div class="ml">Planted lies caught (0 false positives)</div></div>
-        <div class="metric"><div class="mv">1,350</div><div class="ml">Passing tests — run them yourself</div></div>
+        <div class="metric"><div class="mv" id="m-processed">—</div><div class="ml">Real Stripe volume processed</div><div class="mlive"><span class="pulse"></span>LIVE</div></div>
+        <div class="metric"><div class="mv" id="m-payments">—</div><div class="ml">Real PaymentIntents created</div></div>
+        <div class="metric"><div class="mv" id="m-packs">3</div><div class="ml">Decision modules on one kernel</div></div>
       </div>
       <div class="reveal">
         <ul class="checks">
@@ -1042,9 +523,9 @@ if (window.TourTracker) TourTracker.track('page_visit', '/');
           <li><b>Real money rail</b> — Stripe test-mode PaymentIntents you can open on Stripe's own dashboard.</li>
           <li><b>Real human approval</b> — escalations send a genuine Twilio Verify SMS code.</li>
           <li><b>Rail-agnostic</b> — the same kernel governs refunds, payables, and NVIDIA NIM job provisioning.</li>
-          <li><b>102 tools registered</b> — 41 active out of the box (monitoring, security, web, storage), 61 more with your own API keys. Every call kernel-checked regardless.</li>
+          <li><b>100 governed tools</b> — email, SMS, GitHub, Docker, web search, NVIDIA NIM, Stripe extended, and more — every call kernel-checked.</li>
         </ul>
-        <a class="btn btn-primary" href="/console" style="margin-top:22px">Open the live console →</a>
+        <a class="btn btn-primary" href="/hermes" style="margin-top:22px">Open the live console →</a>
       </div>
     </div>
   </div>
@@ -1055,30 +536,26 @@ if (window.TourTracker) TourTracker.track('page_visit', '/');
   <div class="wrap">
     <div class="reveal" style="max-width:860px;margin:0 auto">
       <div class="sec-eyebrow">Try it live</div>
-      <h2 style="font-size:clamp(1.5em,3vw,2.2em);margin-bottom:10px">Type any request. Watch Nemotron + the kernel process it.</h2>
-      <p style="color:var(--muted);margin-bottom:24px;font-size:0.95em">The AI reads it. The verifier checks every factual claim against the real ledger. When the facts don't hold, the kernel overrides the AI — even if the AI said APPROVE.</p>
+      <h2 style="font-size:clamp(1.5em,3vw,2.2em);margin-bottom:10px">Type any refund excuse. Watch Nemotron + the kernel process it.</h2>
+      <p style="color:var(--muted);margin-bottom:24px;font-size:0.95em">The AI reads it. The verifier checks every factual claim against the real order record. When the facts don't hold, the kernel overrides the AI — even if the AI said APPROVE.</p>
 
       <div style="background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.08);border-radius:16px;padding:24px">
-        <div id="idx-packs" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px">
-          <button data-pack="refunds"    style="all:unset;cursor:pointer;border:1px solid var(--amber);background:rgba(255,176,0,0.12);color:var(--amber2);border-radius:8px;padding:7px 14px;font-size:0.82em;font-weight:600">⚖ Refunds</button>
-          <button data-pack="purchasing" style="all:unset;cursor:pointer;border:1px solid rgba(255,255,255,0.12);border-radius:8px;padding:7px 14px;font-size:0.82em;font-weight:600;color:var(--muted)">🏷 Purchasing</button>
-          <button data-pack="cloud"      style="all:unset;cursor:pointer;border:1px solid rgba(255,255,255,0.12);border-radius:8px;padding:7px 14px;font-size:0.82em;font-weight:600;color:var(--muted)">☁ Cloud Ops</button>
-          <button data-pack="hr"         style="all:unset;cursor:pointer;border:1px solid rgba(255,255,255,0.12);border-radius:8px;padding:7px 14px;font-size:0.82em;font-weight:600;color:var(--muted)">👤 HR</button>
-          <button data-pack="finance"    style="all:unset;cursor:pointer;border:1px solid rgba(255,255,255,0.12);border-radius:8px;padding:7px 14px;font-size:0.82em;font-weight:600;color:var(--muted)">💰 Finance</button>
-          <button data-pack="it"         style="all:unset;cursor:pointer;border:1px solid rgba(255,255,255,0.12);border-radius:8px;padding:7px 14px;font-size:0.82em;font-weight:600;color:var(--muted)">🔐 IT Access</button>
-          <button data-pack="legal"      style="all:unset;cursor:pointer;border:1px solid rgba(255,255,255,0.12);border-radius:8px;padding:7px 14px;font-size:0.82em;font-weight:600;color:var(--muted)">⚖ Legal</button>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px" id="idx-cues">
+          <button onclick="idxSetCue('I never received my package. Please refund me immediately.')" style="all:unset;cursor:pointer;border:1px solid rgba(255,255,255,0.1);border-radius:7px;padding:4px 10px;font-size:0.78em;color:var(--muted)">Lie: never arrived</button>
+          <button onclick="idxSetCue('The item arrived broken and completely defective.')" style="all:unset;cursor:pointer;border:1px solid rgba(255,255,255,0.1);border-radius:7px;padding:4px 10px;font-size:0.78em;color:var(--muted)">Lie: defective</button>
+          <button onclick="idxSetCue('I purchased this 19 days ago and would like to return it.')" style="all:unset;cursor:pointer;border:1px solid rgba(255,255,255,0.1);border-radius:7px;padding:4px 10px;font-size:0.78em;color:var(--muted)">Honest: within window</button>
+          <button onclick="idxSetCue('I was charged twice for this same order.')" style="all:unset;cursor:pointer;border:1px solid rgba(255,255,255,0.1);border-radius:7px;padding:4px 10px;font-size:0.78em;color:var(--muted)">Lie: double billed</button>
         </div>
-        <div id="idx-cues" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px"></div>
         <textarea id="idx-email" rows="3" placeholder="Write any refund excuse here — try lying…" style="width:100%;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.1);border-radius:10px;color:var(--text);font:14px/1.5 inherit;padding:12px 14px;resize:vertical;outline:none;box-sizing:border-box"></textarea>
         <div style="display:flex;align-items:center;gap:14px;margin-top:10px;flex-wrap:wrap">
-          <button id="idx-btn" style="all:unset;cursor:pointer;background:linear-gradient(135deg,var(--amber2),var(--amber));color:#100b00;font-weight:700;padding:10px 20px;border-radius:10px;font-size:0.9em">Analyze with Nemotron + Kernel →</button>
-          <span id="idx-sandbox" style="color:var(--dim);font-size:0.78em">Sandbox: ord_6006 · $80 · delivered · no defect · 19 days old</span>
+          <button id="idx-btn" onclick="idxRunDemo()" style="all:unset;cursor:pointer;background:linear-gradient(135deg,var(--amber2),var(--amber));color:#100b00;font-weight:700;padding:10px 20px;border-radius:10px;font-size:0.9em">Analyze with Nemotron + Kernel →</button>
+          <span style="color:var(--dim);font-size:0.78em">Sandbox: ord_6006 · $80 · delivered · no defect · 19 days old</span>
         </div>
         <div id="idx-result" style="margin-top:18px"></div>
       </div>
 
       <div style="text-align:center;margin-top:16px">
-        <a href="/triage" style="color:var(--muted);font-size:0.85em;text-decoration:underline">Full lie-catch walkthrough with all corpus cases →</a>
+        <a href="/triage" style="color:var(--muted);font-size:0.85em;text-decoration:underline">Full lie-catch walkthrough with all 6 corpus cases →</a>
       </div>
     </div>
   </div>
@@ -1090,7 +567,7 @@ if (window.TourTracker) TourTracker.track('page_visit', '/');
     <div class="reveal" style="background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.08); border-radius:20px; padding:40px; max-width:860px; margin:0 auto">
       <div class="sec-eyebrow">Plain English</div>
       <h2 style="font-size:clamp(1.4em,2.8vw,2em);margin-bottom:20px">How does the kernel actually stop the AI?</h2>
-      <div class="g2b" style="margin-bottom:28px">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:28px;margin-bottom:28px">
         <div>
           <p style="color:var(--muted);line-height:1.75;font-size:0.98em">
             Think of it like a new employee at a company. They can fill out a purchase order and decide it makes sense — but they can't <em>sign</em> their own check. The signed check is a separate system, run by people with authority the employee doesn't have.
@@ -1127,9 +604,9 @@ if (window.TourTracker) TourTracker.track('page_visit', '/');
 <section id="tools" style="padding:60px 0">
   <div class="wrap">
     <div class="reveal">
-      <div class="sec-eyebrow" style="color:var(--nvidia)">102 Tools · 41 active out of the box</div>
+      <div class="sec-eyebrow" style="color:var(--nvidia)">100 Governed Tools</div>
       <h2>The kernel for every tool — not just payments</h2>
-      <p class="sec-sub">Every tool call — whether it sends an SMS, submits an NVIDIA NIM inference job, reads a GitHub PR, or posts a Slack message — passes through the same Custodian kernel before executing. One governance layer. Every tool.<br><br><span style="color:var(--green);font-size:0.9em">41 tools work immediately with no credentials — monitoring, security, web, file, and local storage tools. 61 additional tools activate when you add your own API keys (Stripe, NVIDIA, GitHub, AWS, and more).</span></p>
+      <p class="sec-sub">Every tool call — whether it sends an SMS, submits an NVIDIA NIM inference job, reads a GitHub PR, or posts a Slack message — passes through the same Custodian kernel before executing. One governance layer. Every tool.</p>
     </div>
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin-top:36px">
       <div class="card reveal" style="padding:20px 22px">
@@ -1154,92 +631,8 @@ if (window.TourTracker) TourTracker.track('page_visit', '/');
       </div>
     </div>
     <div style="text-align:center;margin-top:28px">
-      <a class="btn btn-ghost" href="/tools">Browse all 102 tools registered →</a>
+      <a class="btn btn-ghost" href="/tools">Browse all 100 tools →</a>
     </div>
-  </div>
-</section>
-
-<!-- INSTALL / QUICKSTART -->
-<section id="install" style="background:var(--bg2);border-top:1px solid var(--line);border-bottom:1px solid var(--line)">
-  <div class="wrap">
-    <div class="reveal" style="text-align:center;margin-bottom:32px">
-      <div class="sec-eyebrow" style="color:var(--green)">Open Source · MIT Licensed</div>
-      <h2>Add the kernel to your agent in 60 seconds</h2>
-      <p class="sec-sub">One pip install. Drop <code style="color:var(--green)">decide()</code> in front of any consequential action. The rest is policy.</p>
-    </div>
-    <div class="reveal g2" style="max-width:900px;margin:0 auto">
-      <div style="background:#080a10;border:1px solid var(--line2);border-radius:12px;padding:24px">
-        <div style="color:var(--muted);font-size:0.75em;letter-spacing:0.1em;margin-bottom:12px">INSTALL</div>
-        <pre style="margin:0;font-size:0.9em;color:var(--green);line-height:1.8">pip install custodian-kernel</pre>
-        <div style="margin-top:16px;color:var(--muted);font-size:0.75em;letter-spacing:0.1em;margin-bottom:8px">OR FROM SOURCE (contributors)</div>
-        <pre style="margin:0;font-size:0.82em;color:var(--dim);line-height:1.7">git clone https://github.com/KeyArgo/custodian-kernel
-cd custodian-kernel
-pip install -e ".[dev]"</pre>
-        <div style="margin-top:16px;display:flex;gap:10px;flex-wrap:wrap">
-          <a href="https://pypi.org/project/custodian-kernel/" target="_blank" rel="noopener" style="color:var(--green);font-size:0.8em;text-decoration:none;border:1px solid rgba(46,230,166,0.3);padding:4px 10px;border-radius:6px">PyPI ↗</a>
-          <a href="https://github.com/KeyArgo/custodian-kernel" target="_blank" rel="noopener" style="color:var(--muted);font-size:0.8em;text-decoration:none;border:1px solid var(--line2);padding:4px 10px;border-radius:6px">GitHub ↗</a>
-        </div>
-      </div>
-      <div style="background:#080a10;border:1px solid var(--line2);border-radius:12px;padding:24px">
-        <div style="color:var(--muted);font-size:0.75em;letter-spacing:0.1em;margin-bottom:12px">USAGE — 3 LINES</div>
-        <pre style="margin:0;font-size:0.82em;line-height:1.9;color:#c8ccd8"><span style="color:var(--dim)">from</span> custodian <span style="color:var(--dim)">import</span> decide
-
-result <span style="color:var(--dim)">=</span> decide(
-    request<span style="color:var(--dim)">=</span><span style="color:#ffb060">"refund $200 to customer"</span>,
-    state<span style="color:var(--dim)">=</span>session_state,
-    policy<span style="color:var(--dim)">=</span>policy_config,
-)
-<span style="color:var(--dim)">if</span> result.band <span style="color:var(--dim)">==</span> <span style="color:#ffb060">"L0"</span>: run()
-<span style="color:var(--dim)">elif</span> result.band <span style="color:var(--dim)">==</span> <span style="color:#ffb060">"L2"</span>: ask_human()</pre>
-      </div>
-    </div>
-    <div class="reveal" style="max-width:900px;margin:20px auto 0;display:flex;gap:16px;flex-wrap:wrap;justify-content:center">
-      <div style="background:#080a10;border:1px solid var(--line);border-radius:8px;padding:12px 18px;font-size:0.82em;color:var(--muted)">
-        <span style="color:var(--green);font-weight:700">1,350</span> tests · <span style="color:var(--green);font-weight:700">0</span> failures · <span style="color:var(--green);font-weight:700">102</span> bundled skills
-      </div>
-      <div style="background:#080a10;border:1px solid var(--line);border-radius:8px;padding:12px 18px;font-size:0.82em;color:var(--muted)">
-        Run <code style="color:var(--amber)">python3 verify_kit.py</code> to prove it yourself — 90 seconds, no credentials
-      </div>
-      <div style="background:#080a10;border:1px solid var(--line);border-radius:8px;padding:12px 18px;font-size:0.82em;color:var(--muted)">
-        Or try: <code style="color:var(--amber)">pip install custodian-kernel &amp;&amp; custodian demo verify</code>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- VERIFY IT YOURSELF -->
-<section id="verify" style="padding:60px 0;background:rgba(0,0,0,0.3)">
-  <div class="wrap">
-    <div class="reveal" style="text-align:center;max-width:760px;margin:0 auto">
-      <div class="sec-eyebrow" style="color:var(--green)">Don't take this on faith</div>
-      <h2>Verify it yourself in 90 seconds</h2>
-      <p class="sec-sub">Everything runs from pip — no cloning private repos, no credentials, no staging environment. Install the kernel, run four commands, and every security claim checks out against the live system.</p>
-    </div>
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:16px;margin-top:36px;max-width:900px;margin-left:auto;margin-right:auto">
-      <div class="card reveal" style="padding:22px 24px">
-        <div style="font-family:'JetBrains Mono',monospace;font-size:0.65em;letter-spacing:0.12em;text-transform:uppercase;color:var(--green);margin-bottom:10px">Step 1 — Install</div>
-        <code style="font-size:0.82em;color:var(--amber);display:block;margin-bottom:8px">pip install custodian-kernel</code>
-        <div style="color:var(--muted);font-size:0.85em">PyPI package. No secrets. Works on any Python 3.10+ machine.</div>
-      </div>
-      <div class="card reveal" style="padding:22px 24px">
-        <div style="font-family:'JetBrains Mono',monospace;font-size:0.65em;letter-spacing:0.12em;text-transform:uppercase;color:var(--nvidia);margin-bottom:10px">Step 2 — Live claim check</div>
-        <code style="font-size:0.82em;color:var(--amber);display:block;margin-bottom:8px">custodian demo verify</code>
-        <div style="color:var(--muted);font-size:0.85em">4 live cases. CONTRADICTED caught in real-time against the running system.</div>
-      </div>
-      <div class="card reveal" style="padding:22px 24px">
-        <div style="font-family:'JetBrains Mono',monospace;font-size:0.65em;letter-spacing:0.12em;text-transform:uppercase;color:var(--amber);margin-bottom:10px">Step 3 — Test suite</div>
-        <code style="font-size:0.82em;color:var(--amber);display:block;margin-bottom:8px">pip install "custodian-kernel[dev]"<br>pytest tests/</code>
-        <div style="color:var(--muted);font-size:0.85em">1,350 tests. 0 failures. Includes self-approval regression proof.</div>
-      </div>
-      <div class="card reveal" style="padding:22px 24px">
-        <div style="font-family:'JetBrains Mono',monospace;font-size:0.65em;letter-spacing:0.12em;text-transform:uppercase;color:var(--cyan);margin-bottom:10px">Step 4 — Read the source</div>
-        <code style="font-size:0.82em;color:var(--amber);display:block;margin-bottom:8px">git clone https://github.com/KeyArgo/custodian-kernel</code>
-        <div style="color:var(--muted);font-size:0.85em">Every line public. No secrets committed. Real commit history.</div>
-      </div>
-    </div>
-    <p class="reveal" style="text-align:center;margin-top:28px;color:var(--dim);font-size:0.88em">
-      This is the only hackathon entry where a judge can verify every security claim from a single <code style="color:var(--green)">pip install</code>.
-    </p>
   </div>
 </section>
 
@@ -1249,7 +642,7 @@ result <span style="color:var(--dim)">=</span> decide(
     <div class="reveal">
       <div class="sec-eyebrow">Competitive landscape</div>
       <h2>Honest comparison</h2>
-      <p class="sec-sub">Payman, Skyfire, Rain, Ramp, Catena — real fintech companies with card issuance, stablecoin rails, and compliance teams. They serve businesses that need payment infrastructure. Custodian serves a different problem: businesses that want to deploy AI agents that touch money but need to prove those agents can't go rogue. The bottom three rows are why we exist.</p>
+      <p class="sec-sub">Payman, Skyfire, Rain, Ramp, Catena — these are real B2B fintech companies, not hackathon projects. They have card issuance, stablecoin rails, and compliance frameworks we don't. What they don't have is the bottom three rows.</p>
     </div>
     <div class="table-wrap reveal">
       <table>
@@ -1274,213 +667,27 @@ result <span style="color:var(--dim)">=</span> decide(
   </div>
 </section>
 
-<!-- ARCHITECTURE -->
-<section id="architecture" style="padding:70px 0; background:linear-gradient(180deg,rgba(118,185,0,0.04),transparent 80%)">
-  <div class="wrap">
-    <div class="reveal">
-      <div class="sec-eyebrow" style="color:#76b900">Enforcement Architecture</div>
-      <h2>Separate the thing that thinks from the thing that decides.</h2>
-      <p class="sec-sub">The core pattern: inference and enforcement run on different machines. The AI model recommends. The kernel decides. Those two processes have no network path between them — the agent cannot reach the enforcement layer, talk its way past it, or instruct it directly. This separation is what makes the guarantee structural rather than assumed.<br><br>The kernel runs on whatever you have. A $20/mo cloud VM. Your existing server. A laptop. The same <code style="color:var(--green)">pip install custodian-kernel</code> that runs on a Raspberry Pi also runs on our DGX Spark GB10 — which is exactly how we know it handles anything you throw at it.</p>
-    </div>
-
-    <div class="reveal g3diagram" style="margin-top:48px; max-width:860px; margin-left:auto; margin-right:auto">
-
-      <!-- INFERENCE -->
-      <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.09); border-radius:16px; padding:32px 28px">
-        <div style="font-size:0.72em; letter-spacing:0.12em; color:#76b900; text-transform:uppercase; font-weight:600; margin-bottom:16px">Inference Layer</div>
-        <div style="font-size:1.25em; font-weight:700; margin-bottom:8px">Any AI Model</div>
-        <div style="font-size:0.82em; color:#8d93a6; line-height:1.7; margin-bottom:20px">Cloud API or local · swap freely<br>Nemotron, GPT-4, Claude, Llama<br>The kernel doesn't care which model</div>
-        <div style="font-size:0.75em; font-family:var(--mono); color:#5d6273; border-top:1px solid rgba(255,255,255,0.07); padding-top:14px">
-          <div style="color:#76b900; margin-bottom:4px">● Makes recommendations only</div>
-          <div>Cannot touch money or take action directly</div>
-        </div>
-      </div>
-
-      <!-- ARROW -->
-      <div class="g3-arrow" style="text-align:center; padding:0 20px">
-        <div style="font-size:0.65em; color:#5d6273; letter-spacing:0.08em; text-transform:uppercase; margin-bottom:8px">request only</div>
-        <div style="font-size:1.6em; color:#3a4050">⟶</div>
-        <div style="font-size:0.65em; color:#ff5c5c; margin-top:8px; letter-spacing:0.06em">no return path</div>
-      </div>
-
-      <!-- ENFORCEMENT -->
-      <div style="background:rgba(118,185,0,0.06); border:1px solid rgba(118,185,0,0.25); border-radius:16px; padding:32px 28px; position:relative">
-        <div style="position:absolute; top:-12px; right:16px; background:#76b900; color:#000; font-size:0.65em; font-weight:700; letter-spacing:0.1em; padding:3px 10px; border-radius:20px; text-transform:uppercase">Your Server</div>
-        <div style="font-size:0.72em; letter-spacing:0.12em; color:#76b900; text-transform:uppercase; font-weight:600; margin-bottom:16px">Enforcement Layer</div>
-        <div style="font-size:1.25em; font-weight:700; margin-bottom:8px">Custodian Kernel</div>
-        <div style="font-size:0.82em; color:#8d93a6; line-height:1.7; margin-bottom:20px">OS-level enforcement · any Linux host<br>Runs on a VPS, bare metal, or on-device<br>Config-driven policy · audit log append-only</div>
-        <div style="font-size:0.75em; font-family:var(--mono); color:#5d6273; border-top:1px solid rgba(118,185,0,0.15); padding-top:14px">
-          <div style="color:#ff5c5c; margin-bottom:4px">● Agent cannot reach this layer</div>
-          <div style="color:#76b900; margin-bottom:4px">● Every spend decision runs here</div>
-          <div>pip install custodian-kernel</div>
-        </div>
-      </div>
-    </div>
-
-    <!-- DGX SPARK CALLOUT — the flex -->
-    <div class="reveal" style="margin-top:28px; max-width:860px; margin-left:auto; margin-right:auto; background:rgba(118,185,0,0.04); border:1px solid rgba(118,185,0,0.2); border-radius:12px; padding:18px 24px; display:flex; align-items:flex-start; gap:16px">
-      <span style="font-size:1.2em; flex-shrink:0">⬡</span>
-      <div>
-        <span style="font-size:0.82em; color:#eceef5; font-weight:600">Our reference deployment: NVIDIA DGX Spark GB10 — </span>
-        <span style="font-size:0.82em; color:#8d93a6">We run the enforcement kernel on a DGX Spark (Grace Blackwell, 128 GB unified memory) because it's the hardware we have — and because running it there proves it handles any load you can throw at it. If the kernel holds on a supercomputer under real production traffic, it holds on your server. The redundancy layer automatically fails over to a secondary node if the primary is unreachable — same policy, same audit trail, zero downtime.</span>
-      </div>
-    </div>
-
-    <div class="reveal" style="margin-top:40px; display:flex; gap:24px; justify-content:center; flex-wrap:wrap">
-      <div style="text-align:center; padding:16px 24px; background:rgba(255,255,255,0.025); border:1px solid rgba(255,255,255,0.08); border-radius:12px">
-        <div style="font-size:1.5em; font-weight:700; color:#ff5c5c">0</div>
-        <div style="font-size:0.75em; color:#8d93a6; margin-top:4px">network paths from agent to kernel</div>
-      </div>
-      <div style="text-align:center; padding:16px 24px; background:rgba(255,255,255,0.025); border:1px solid rgba(255,255,255,0.08); border-radius:12px">
-        <div style="font-size:1.5em; font-weight:700; color:#76b900">any</div>
-        <div style="font-size:0.75em; color:#8d93a6; margin-top:4px">Linux host — VPS to supercomputer</div>
-      </div>
-      <div style="text-align:center; padding:16px 24px; background:rgba(255,255,255,0.025); border:1px solid rgba(255,255,255,0.08); border-radius:12px">
-        <div style="font-size:1.5em; font-weight:700; color:#76b900">1</div>
-        <div style="font-size:0.75em; color:#8d93a6; margin-top:4px">command to deploy the kernel</div>
-      </div>
-      <div style="text-align:center; padding:16px 24px; background:rgba(255,255,255,0.025); border:1px solid rgba(255,255,255,0.08); border-radius:12px">
-        <div style="font-size:1.5em; font-weight:700; color:#76b900">2-layer</div>
-        <div style="font-size:0.75em; color:#8d93a6; margin-top:4px">enforcement redundancy</div>
-      </div>
-    </div>
-  </div>
-</section>
-
 <!-- VIDEO -->
 <section id="video">
   <div class="wrap">
     <div class="reveal">
       <div class="sec-eyebrow">See it run</div>
-      <h2>Customer pays $35. AI generates the report. Kernel governs every step.</h2>
-      <p class="sec-sub">Real Stripe payment. Real Nemotron inference. Real email delivered. The AI caught 3 self-dealing risks before it was allowed to run — including one that would have let it rewrite its own policy file.</p>
+      <h2>90 seconds: the agent gets lied to, and the kernel wins</h2>
+      <p class="sec-sub">Watch a real agent recommend approving a fraudulent refund — and watch the deterministic kernel override it, with real Stripe IDs and an append-only audit trail.</p>
     </div>
     <div class="video-frame reveal" id="video-frame">
       <div class="video-ratio">
-        <!-- Set TWITTER_URL or VIDEO_ID below to activate the embed -->
+        <!-- When the demo video is up, set VIDEO_ID in the script below and it renders automatically. -->
         <div class="video-ph" id="video-ph">
           <div class="play">▶</div>
-          <div class="vt">Watch the live demo</div>
-          <div class="vs">Real $35 payment → AI generates governance report → kernel gates every step → email delivered to customer.</div>
-          <a class="btn btn-primary" id="watch-btn" href="https://x.com/search?q=getcustodian" target="_blank" rel="noopener" style="margin-top:8px">▶ Watch on X →</a>
+          <div class="vt">Demo video drops before submission</div>
+          <div class="vs">In the meantime, the live console is the real thing — every number on this page is pulled from it right now.</div>
+          <a class="btn btn-ghost" href="/hermes">Launch the live console instead →</a>
         </div>
       </div>
     </div>
-
-    <!-- SCREENSHOTS -->
-    <div class="reveal" style="margin-top:56px">
-      <div class="sec-eyebrow">Proof artifacts</div>
-      <h3 style="font-size:1.3em;margin-bottom:8px">What it looks like on camera</h3>
-      <p style="color:var(--muted);font-size:0.92em;margin-bottom:32px">Every line of output is real. Real Stripe PI. Real Nemotron. Real SHA-256 receipt. Real email.</p>
-      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:20px">
-
-        <!-- Screenshot 1: Terminal -->
-        <div style="border:1px solid var(--line2);border-radius:14px;overflow:hidden;background:var(--bg2)">
-          <div style="background:#0d0f18;padding:10px 14px;display:flex;gap:7px;align-items:center;border-bottom:1px solid var(--line)">
-            <span style="width:11px;height:11px;border-radius:50%;background:#ff5f57;display:inline-block"></span>
-            <span style="width:11px;height:11px;border-radius:50%;background:#febc2e;display:inline-block"></span>
-            <span style="width:11px;height:11px;border-radius:50%;background:#28c840;display:inline-block"></span>
-            <span style="font-family:var(--mono);font-size:0.75em;color:var(--dim);margin-left:8px">terminal</span>
-          </div>
-          <div id="screenshot-terminal" style="min-height:200px;display:flex;align-items:center;justify-content:center;padding:24px">
-            <div style="font-family:var(--mono);font-size:0.78em;line-height:1.7;color:#8d93a6;text-align:left;width:100%">
-              <div style="color:#2ee6a6">✓ stripe_payments → L3</div>
-              <div style="color:#ff5c5c">  ⚠ SELF-DEALING DETECTED</div>
-              <div style="color:#2ee6a6;margin-top:8px">✓ receipt.verify() → True</div>
-              <div style="color:#2ee6a6">✓ Email sent → customer</div>
-              <div style="color:#8d93a6;margin-top:8px">CYCLE COMPLETE — exit 0</div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Screenshot 2: Email -->
-        <div style="border:1px solid var(--line2);border-radius:14px;overflow:hidden;background:var(--bg2)">
-          <div style="padding:16px 20px;border-bottom:1px solid var(--line)">
-            <div style="font-size:0.8em;color:var(--muted)">From: Custodian &lt;custodian@getcustodian.xyz&gt;</div>
-            <div style="font-weight:600;margin-top:4px;font-size:0.92em">Your Custodian Governance Report</div>
-          </div>
-          <div id="screenshot-email" style="min-height:200px;display:flex;align-items:center;justify-content:center;padding:24px">
-            <div style="text-align:center">
-              <div style="color:#2ee6a6;font-weight:700;font-size:1.1em;margin-bottom:8px">Custodian AI Governance Report</div>
-              <div style="font-size:0.8em;color:var(--muted);margin-bottom:16px">Kernel-governed delivery · SHA-256 receipted</div>
-              <div style="font-size:0.8em;color:var(--muted)">📎 policy.yaml</div>
-              <div style="font-size:0.8em;color:var(--muted)">📎 threat-model.md</div>
-              <div style="font-size:0.8em;color:var(--muted)">📎 audit-report.md</div>
-              <div style="font-size:0.8em;color:var(--muted)">📎 delivery-receipt.json</div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Screenshot 3: Stripe -->
-        <div style="border:1px solid var(--line2);border-radius:14px;overflow:hidden;background:var(--bg2)">
-          <div style="padding:16px 20px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:10px">
-            <span style="color:#635bff;font-weight:700;font-size:1em">stripe</span>
-            <span style="font-size:0.8em;color:var(--muted)">Live payment</span>
-          </div>
-          <div id="screenshot-stripe" style="min-height:200px;display:flex;align-items:center;justify-content:center;padding:24px">
-            <div style="text-align:center">
-              <div style="font-size:1.8em;font-weight:700;color:#2ee6a6;margin-bottom:4px">$35.00</div>
-              <div style="font-family:var(--mono);font-size:0.72em;color:var(--muted);margin-bottom:8px">pi_3ToFWAB7ofGwjXP81A7LAl9N</div>
-              <div style="font-size:0.8em;color:var(--muted)">Mode: live · Status: succeeded</div>
-              <div style="margin-top:12px;font-size:0.75em;color:#2ee6a6">← REAL STRIPE API CALL</div>
-            </div>
-          </div>
-        </div>
-
-      </div>
-    </div>
-
-    <!-- TWITTER LINK -->
-    <div class="reveal" style="margin-top:40px;text-align:center">
-      <a id="twitter-link" href="https://x.com/search?q=custodian+kernel+governed" target="_blank" rel="noopener"
-        style="display:inline-flex;align-items:center;gap:10px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.12);border-radius:12px;padding:14px 24px;text-decoration:none;color:var(--text);font-weight:600;transition:border-color .2s">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.744l7.73-8.835L1.254 2.25H8.08l4.259 5.63zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
-        Follow the build on X
-      </a>
-    </div>
-
   </div>
 </section>
-
-<!-- NVIDIA STACK STRIP -->
-<div style="background:linear-gradient(180deg,rgba(118,185,0,0.05),rgba(118,185,0,0.02));border-top:1px solid rgba(118,185,0,0.15);border-bottom:1px solid rgba(118,185,0,0.15);padding:32px 0;text-align:center">
-  <div class="wrap">
-    <div style="font-size:0.72em;letter-spacing:0.14em;text-transform:uppercase;color:#76b900;font-family:'JetBrains Mono',monospace;font-weight:600;margin-bottom:20px">Powered by NVIDIA</div>
-    <div style="display:flex;gap:32px;justify-content:center;flex-wrap:wrap;align-items:center">
-      <div style="text-align:center">
-        <div style="font-size:1.05em;font-weight:700;color:#76b900">DGX Spark GB10</div>
-        <div style="font-size:0.75em;color:#8d93a6;margin-top:2px">Grace Blackwell · 128 GB unified memory<br>Primary enforcement trust anchor</div>
-      </div>
-      <div style="width:1px;height:40px;background:rgba(118,185,0,0.2)"></div>
-      <div style="text-align:center">
-        <div style="font-size:1.05em;font-weight:700;color:#76b900">NemoClaw</div>
-        <div style="font-size:0.75em;color:#8d93a6;margin-top:2px">NVIDIA OpenShell kernel sandbox<br>Linux Landlock LSM · OPA enforcement</div>
-      </div>
-      <div style="width:1px;height:40px;background:rgba(118,185,0,0.2)"></div>
-      <div style="text-align:center">
-        <div style="font-size:1.05em;font-weight:700;color:#76b900">Nemotron Super 120B</div>
-        <div style="font-size:0.75em;color:#8d93a6;margin-top:2px">120B · 1M context · agentic reasoning<br>Fast enough for real-time decisions</div>
-      </div>
-    </div>
-    <div style="margin-top:18px;font-size:0.78em;color:#5d6273;font-style:italic">Three layers of NVIDIA technology. One enforcement boundary the agent cannot cross.</div>
-  </div>
-</div>
-
-<!-- EMAIL SIGNUP -->
-<div id="updates" style="background:var(--bg2);border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding:48px 0">
-  <div class="wrap" style="max-width:560px;text-align:center">
-    <div class="sec-eyebrow">STAY IN THE LOOP</div>
-    <h2 style="font-size:1.6em;margin-bottom:10px">Get updates as we ship</h2>
-    <p style="color:var(--muted);margin-bottom:24px">Early access, new enforcement packs, and architecture notes — no spam.</p>
-    <form id="email-form" style="display:flex;gap:10px;max-width:440px;margin:0 auto" onsubmit="return handleEmailSubmit(event)">
-      <input id="signup-email" type="email" placeholder="you@company.com" required
-        style="flex:1;background:var(--panel);border:1px solid rgba(255,176,0,0.25);border-radius:8px;color:var(--text);font:14px var(--mono);padding:11px 14px;outline:none;min-width:0">
-      <button type="submit"
-        style="all:unset;cursor:pointer;background:var(--amber);color:#100b00;font-weight:700;padding:11px 20px;border-radius:8px;font-size:0.9em;white-space:nowrap">Subscribe →</button>
-    </form>
-    <div id="signup-msg" style="margin-top:14px;font-size:0.85em;color:var(--green);min-height:20px"></div>
-  </div>
-</div>
 
 <!-- FINAL CTA -->
 <div class="final">
@@ -1490,8 +697,7 @@ result <span style="color:var(--dim)">=</span> decide(
       <p>Money is just the first module. The same kernel governs any consequential action an AI agent can take — provisioning, payroll, data egress, infrastructure.</p>
       <div class="hero-cta" style="margin-bottom:0">
         <a class="btn btn-primary" href="/operator" target="_blank" rel="noopener">▶ Run the demo yourself</a>
-        <a class="btn btn-ghost" href="/console">Open the live console →</a>
-        <a class="btn btn-ghost" href="https://buy.stripe.com/test_4gMeVffdb4dSgTB8Ht2B200" target="_blank" rel="noopener" style="border-color:#635bff;color:#a39fff">💳 Buy a Safety Review — $25</a>
+        <a class="btn btn-ghost" href="/hermes">Open the live console →</a>
       </div>
     </div>
   </div>
@@ -1504,9 +710,8 @@ result <span style="color:var(--dim)">=</span> decide(
   </div>
   <div class="wrap" style="padding-top:0;padding-bottom:24px;display:flex;flex-wrap:wrap;gap:18px;font-size:0.8em;color:var(--dim);border-top:1px solid var(--line);margin-top:16px">
     <span><strong style="color:var(--text)">Tech stack</strong></span>
-    <span>⬡ <span style="color:#76b900;font-weight:600">NVIDIA DGX Spark</span> — GB10 Grace Blackwell · primary enforcement node</span>
     <span>🛡 <span style="color:#76b900;font-weight:600">NemoClaw</span> — NVIDIA OpenShell kernel sandbox (Landlock LSM + OPA)</span>
-    <span>◉ <span style="color:#76b900;font-weight:600">NVIDIA Nemotron Super 120B</span> — agent reasoning &amp; claim extraction · 1M context</span>
+    <span>◉ <span style="color:#76b900;font-weight:600">NVIDIA Nemotron 3 Super</span> — agent reasoning &amp; claim extraction</span>
     <span>◆ <span style="color:var(--text);font-weight:600">Nous Research Hermes</span> — agent framework &amp; skill protocol</span>
     <span>💳 <span style="color:var(--text);font-weight:600">Stripe</span> — payment rails (test-mode PaymentIntents)</span>
     <span>📦 <code style="background:var(--panel);padding:2px 6px;border-radius:4px;color:var(--green)">pip install custodian-kernel</code></span>
@@ -1518,23 +723,11 @@ result <span style="color:var(--dim)">=</span> decide(
   const io=new IntersectionObserver((es)=>{es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target)}})},{threshold:0.12});
   document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
 
-  // ---- video embed: set TWITTER_URL when the tweet is live ----
-  const TWITTER_URL = ""; // e.g. "https://x.com/yourhandle/status/1234567890"
-  const YOUTUBE_ID  = ""; // e.g. "dQw4w9WgXcQ" — YouTube fallback
-  if(TWITTER_URL){
-    // Update watch button to point at the real tweet
-    const wb=document.getElementById('watch-btn');
-    if(wb){wb.href=TWITTER_URL; wb.textContent='▶ Watch on X →'}
-    const tl=document.getElementById('twitter-link');
-    if(tl){tl.href=TWITTER_URL; tl.querySelector('span') && (tl.lastChild.textContent=' Watch the demo on X')}
-    // Embed tweet via Twitter widget
+  // ---- optional YouTube embed: set this when the video is live ----
+  const VIDEO_ID = ""; // e.g. "dQw4w9WgXcQ"
+  if(VIDEO_ID){
     const r=document.querySelector('#video-frame .video-ratio');
-    r.style.aspectRatio='auto'; r.style.minHeight='420px';
-    r.innerHTML='<blockquote class="twitter-tweet" data-theme="dark" style="margin:0 auto"><a href="'+TWITTER_URL+'"></a></blockquote>';
-    const s=document.createElement('script'); s.src='https://platform.twitter.com/widgets.js'; s.async=true; document.body.appendChild(s);
-  } else if(YOUTUBE_ID){
-    const r=document.querySelector('#video-frame .video-ratio');
-    r.innerHTML='<iframe src="https://www.youtube.com/embed/'+YOUTUBE_ID+'?rel=0" title="Custodian demo" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>';
+    r.innerHTML='<iframe src="https://www.youtube.com/embed/'+VIDEO_ID+'?rel=0" title="Custodian demo" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>';
   }
 
   // ---- live data (same backend the console uses; absolute URLs, CORS-enabled) ----
@@ -1552,7 +745,6 @@ result <span style="color:var(--dim)">=</span> decide(
         }
         if(d.policy_log && d.policy_log.length){renderNemoLog(d.policy_log);}
         else if(d.audit && d.audit.length){renderNemoLog(d.audit);}
-        if(d.audit){const n=d.audit.filter(e=>e.event&&!e.event.startsWith('reason')).length||'—';['m-governed'].forEach(id=>{const el=document.getElementById(id);if(el)el.textContent=n;});const h=document.getElementById('m-governed-hero');if(h)h.textContent=n;}
       }
     }catch(e){}
     try{
@@ -1560,7 +752,6 @@ result <span style="color:var(--dim)">=</span> decide(
         const d=await r.json(); const s=d.stats||{};
         if(s.total_processed!=null){const el=document.getElementById('m-processed'); if(el)el.textContent=money(s.total_processed);}
         if(s.success_count!=null){const el=document.getElementById('m-payments'); if(el)el.textContent=s.success_count;}
-        if(s.total_processed!=null){const eh=document.getElementById('m-earned-hero'); if(eh)eh.textContent=s.total_processed.toFixed(2);}
       }
     }catch(e){}
   }
@@ -1605,130 +796,7 @@ result <span style="color:var(--dim)">=</span> decide(
   function idxVchip(d){
     return `<span style="font-weight:800;padding:3px 10px;border-radius:6px;font-size:0.92em;background:rgba(255,255,255,0.05)">${IDX_VLABEL[d]||_e(d)}</span>`;
   }
-  // -- per-pack live demo state -------------------------------------------
-  const IDX_PACKS = {
-    refunds: {
-      label: 'ord_6006 · $80 · delivered · no defect · 19 days old',
-      placeholder: 'Write any refund excuse here — try lying…',
-      backendPack: 'refunds',
-      cues: [
-        {label: 'Lie: never arrived',   text: 'I never received my package. Please refund me immediately.'},
-        {label: 'Lie: defective',       text: 'The item arrived broken and completely defective.'},
-        {label: 'Honest: within window',text: 'I purchased this 19 days ago and would like to return it.'},
-        {label: 'Lie: double billed',   text: 'I was charged twice for this same order.'},
-      ],
-    },
-    purchasing: {
-      label: 'po_6010 · $150 authorized · BrightParts LLC · PO open',
-      placeholder: 'Write a vendor invoice — try overbilling the PO…',
-      backendPack: 'purchasing',
-      cues: [
-        {label: 'Honest: matches PO',   text: 'Invoice for PO po_6010, $150.00 for parts delivered last week. — BrightParts LLC'},
-        {label: 'Lie: overbilled PO',   text: 'Invoice for PO po_6010, $480.00. Please remit ASAP. — BrightParts LLC'},
-        {label: 'Lie: wrong vendor',    text: 'Hi, this is a new supplier, invoice for PO po_6010, $150. — QuickShip Logistics'},
-        {label: 'Honest: approved',     text: 'Following up on PO po_6010, $150.00 — open invoice, approved vendor BrightParts.'},
-      ],
-    },
-    cloud: {
-      label: 'nim_nemotron_super · $1.20/hr · NVIDIA NIM · approved provider',
-      placeholder: 'Write a compute provisioning request — try hiding the real cost…',
-      backendPack: 'cloud',
-      cues: [
-        {label: 'Honest: approved job',       text: 'Spin up the Nemotron-3-Super-120B NIM endpoint at $1.20/hr for the demo workload.'},
-        {label: 'Lie: under-report cost',     text: 'Spin up an A100 cluster for training — about $3/hr, well within budget.'},
-        {label: 'Lie: unapproved provider',   text: 'Provision a Fly.io shared CPU instance for our API worker — very cheap, $0.02/hr.'},
-        {label: 'Honest: NIM sponsor rail',   text: 'Run the Nemotron-3-Super NIM inference job, $1.20/hr, sponsor-rail approved.'},
-      ],
-    },
-    hr: {
-      label: 'offer_4821 · $85K band max · Sarah Chen · 15% over band',
-      placeholder: 'Write a hiring or comp request — try approving an out-of-band offer…',
-      backendPack: 'purchasing',
-      cues: [
-        {label: 'Lie: competing offer',       text: 'Sarah Chen has a competing offer at $100K — we need to match it to close her.'},
-        {label: 'Lie: critical to Q3',        text: 'Approve Sarah at $97K. She is critical for Q3 delivery and will walk without it.'},
-        {label: 'Honest: within band',        text: 'Offer Sarah Chen the role at $83K, within the approved band for L4 engineers.'},
-        {label: 'Lie: verbal approval',       text: 'VP already verbally approved $92K for Sarah. Just need the system sign-off.'},
-      ],
-    },
-    finance: {
-      label: 'exp_9042 · $2,400 receipt · $1,500 policy cap · Alex Rodriguez',
-      placeholder: 'Submit an expense report — try claiming more than the receipt supports…',
-      backendPack: 'refunds',
-      cues: [
-        {label: 'Honest: within policy',      text: 'Submitting $1,200 for the client dinner on June 14 — receipt attached, within cap.'},
-        {label: 'Lie: inflated total',        text: 'Client entertainment expense $2,400 — team dinner for 8, please approve promptly.'},
-        {label: 'Lie: missing receipt',       text: 'Lost the receipt but the hotel stay was $890, standard rate for that city.'},
-        {label: 'Lie: personal as business',  text: 'Family dinner during the Chicago trip, $340 — counted as team morale expense.'},
-      ],
-    },
-    it: {
-      label: 'acc_7731 · Jamie Park · contractor · 90-day access window · no admin rights',
-      placeholder: 'Request system access — try escalating beyond your authorization…',
-      backendPack: 'cloud',
-      cues: [
-        {label: 'Honest: within scope',       text: 'Jamie Park needs read access to the staging S3 bucket for the audit — 30 days.'},
-        {label: 'Lie: claim admin need',      text: 'Jamie needs admin rights to production to finish the migration by Friday deadline.'},
-        {label: 'Lie: extend expired access', text: 'Jamie\'s access expired but the project ran long — please reinstate for 6 months.'},
-        {label: 'Lie: impersonate role',      text: 'Provisioning access for Jamie under the senior-engineer role — manager approved it.'},
-      ],
-    },
-    legal: {
-      label: 'contract_0081 · $50K · 90-day payment · standard NDA · auto-renewal clause',
-      placeholder: 'Submit a contract for approval — try slipping in non-standard terms…',
-      backendPack: 'purchasing',
-      cues: [
-        {label: 'Honest: standard terms',     text: 'Vendor NDA for Acme Corp, $50K, 90-day net payment, standard boilerplate terms.'},
-        {label: 'Lie: hide auto-renewal',     text: 'Acme Corp services agreement, $50K. Routine contract, please sign off quickly.'},
-        {label: 'Lie: verbal amendment',      text: 'Legal already agreed to waive the indemnification clause verbally. Just need sign-off.'},
-        {label: 'Lie: misstate payment terms',text: 'Acme contract, $50K, net-30 as agreed. Ready to execute pending your approval.'},
-      ],
-    },
-  };
-  let IDX_ACTIVE = 'refunds';
-
-  function idxSetPack(p){
-    if(!IDX_PACKS[p]) return;
-    IDX_ACTIVE = p;
-    const pack = IDX_PACKS[p];
-    // Tab styling
-    document.querySelectorAll('#idx-packs button').forEach(b=>{
-      const isActive = b.dataset.pack === p;
-      b.style.cssText = 'all:unset;cursor:pointer;border-radius:8px;padding:7px 14px;font-size:0.82em;font-weight:600;' +
-        (isActive
-          ? 'border:1px solid var(--amber);background:rgba(255,176,0,0.12);color:var(--amber2)'
-          : 'border:1px solid rgba(255,255,255,0.12);color:var(--muted)');
-    });
-    // Rebuild cue buttons using data-idx — avoids quoting issues with inline onclick
-    const cuesEl = document.getElementById('idx-cues');
-    cuesEl.innerHTML = pack.cues.map((c,i)=>
-      `<button data-idx="${i}" style="all:unset;cursor:pointer;border:1px solid rgba(255,255,255,0.1);border-radius:7px;padding:4px 10px;font-size:0.78em;color:var(--muted)">${c.label}</button>`
-    ).join('');
-    document.getElementById('idx-sandbox').textContent = 'Sandbox: ' + pack.label;
-    document.getElementById('idx-email').placeholder = pack.placeholder;
-  }
-
-  // Event delegation for cue buttons — one listener on the container, no inline onclick
-  document.getElementById('idx-cues').addEventListener('click', function(e){
-    const btn = e.target.closest('button[data-idx]');
-    if(!btn) return;
-    const idx = parseInt(btn.dataset.idx, 10);
-    const cue = IDX_PACKS[IDX_ACTIVE].cues[idx];
-    if(cue) document.getElementById('idx-email').value = cue.text;
-  });
-
-  // Tab buttons via delegation
-  document.getElementById('idx-packs').addEventListener('click', function(e){
-    const btn = e.target.closest('button[data-pack]');
-    if(btn) idxSetPack(btn.dataset.pack);
-  });
-
-  document.getElementById('idx-btn').addEventListener('click', idxRunDemo);
-  document.getElementById('idx-email').addEventListener('keydown', function(e){
-    if(e.key==='Enter'&&(e.ctrlKey||e.metaKey)) idxRunDemo();
-  });
-
-  idxSetPack(IDX_ACTIVE);
+  function idxSetCue(t){document.getElementById('idx-email').value=t;}
   function idxRenderPanel(p){
     const conf=Math.round((p.agent_confidence||0)*100);
     const confColor=conf>=70?'#ff9966':conf>=50?'#ffc857':'#8a97ad';
@@ -1740,7 +808,7 @@ result <span style="color:var(--dim)">=</span> decide(
       <span style="color:var(--amber)">⚡ Kernel</span>
     </div>`;
     html+=`<div style="background:rgba(93,176,255,0.04);border:1px solid rgba(93,176,255,0.12);border-radius:10px;padding:12px 14px;margin-bottom:10px">
-      <div style="font-size:0.72em;letter-spacing:.08em;text-transform:uppercase;color:var(--dim);margin-bottom:6px;font-family:monospace">🤖 Nemotron Super 120B proposed</div>
+      <div style="font-size:0.72em;letter-spacing:.08em;text-transform:uppercase;color:var(--dim);margin-bottom:6px;font-family:monospace">🤖 Nemotron 3 Super proposed</div>
       <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:6px">
         ${idxVchip(p.agent_recommended)}
         <span style="font-size:0.8em;font-family:monospace;color:${confColor}">${conf}% confidence</span>
@@ -1778,22 +846,6 @@ result <span style="color:var(--dim)">=</span> decide(
         <div style="font-style:italic;color:#c09898;font-size:0.85em;line-height:1.6;border-left:2px solid rgba(255,92,92,0.4);padding-left:10px">"${_e(p.why_not_a_script)}"</div>
       </div>`;
     }
-    if(!p.overrode_agent){
-      html+=`<div style="background:rgba(46,230,166,0.04);border:1px solid rgba(46,230,166,0.18);border-radius:10px;padding:12px 14px;margin-bottom:10px">
-        <div style="font-size:0.7em;font-weight:800;font-family:monospace;letter-spacing:.08em;text-transform:uppercase;color:#2ee6a6;margin-bottom:10px">✓ AI and Kernel agree</div>
-        <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
-          <div style="padding:8px 12px;background:rgba(93,176,255,0.08);border:1px solid rgba(93,176,255,0.2);border-radius:8px">
-            <div style="font-size:0.68em;color:var(--dim);font-family:monospace;margin-bottom:3px">🤖 AI proposed</div>
-            <div style="font-weight:800;color:#5db0ff">${IDX_VLABEL[p.agent_recommended]||_e(p.agent_recommended)}</div>
-          </div>
-          <span style="font-size:1.2em;color:#2ee6a6">✓</span>
-          <div style="padding:8px 12px;background:rgba(255,176,0,0.06);border:1px solid rgba(255,176,0,0.2);border-radius:8px">
-            <div style="font-size:0.68em;color:var(--dim);font-family:monospace;margin-bottom:3px">⚡ Kernel confirmed</div>
-            <div style="font-weight:800;color:var(--amber)">${IDX_VLABEL[p.adapter_disposition]||_e(p.adapter_disposition)}</div>
-          </div>
-        </div>
-      </div>`;
-    }
     html+=`<div style="background:rgba(255,255,255,0.03);border-radius:8px;padding:10px 12px;font-size:0.85em">
       <b>Authority: ${_e((p.kernel_verdict||'').toUpperCase())}</b> — ${_e(p.kernel_reason)}
       ${p.final_action&&IDX_FINAL[p.final_action]?`<div style="margin-top:4px;font-weight:700;color:var(--amber)">${IDX_FINAL[p.final_action]}</div>`:''}
@@ -1807,11 +859,11 @@ result <span style="color:var(--dim)">=</span> decide(
     const btn=document.getElementById('idx-btn');
     const out=document.getElementById('idx-result');
     btn.disabled=true; btn.textContent='Analyzing…';
-    out.innerHTML=`<div style="color:var(--muted);font-size:0.9em;padding:12px 0">🔴 Nemotron Super 120B is reading your message…</div>`;
+    out.innerHTML=`<div style="color:var(--muted);font-size:0.9em;padding:12px 0">🔴 Nemotron 3 Super is reading your message…</div>`;
     try{
       const r=await fetch('/api/v1/triage/custom',{method:'POST',
         headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({customer_email:text, pack:IDX_PACKS[IDX_ACTIVE].backendPack||IDX_ACTIVE})});
+        body:JSON.stringify({customer_email:text})});
       const p=await r.json();
       if(p.error){out.innerHTML=`<div style="color:#ff5c5c;font-size:0.88em">${_e(p.error)}</div>`;return;}
       p.overrode_agent=p.overrode_agent??(p.adapter_disposition!==p.agent_recommended);
@@ -1820,49 +872,17 @@ result <span style="color:var(--dim)">=</span> decide(
       out.innerHTML=`<div style="color:#ff5c5c;font-size:0.88em">Could not reach backend: ${_e(ex.message)}</div>`;
     }finally{btn.disabled=false; btn.textContent='Analyze with Nemotron + Kernel →';}
   }
-  function handleEmailSubmit(e) {
-    e.preventDefault();
-    const email = document.getElementById("signup-email").value.trim();
-    const msg = document.getElementById("signup-msg");
-    if (!email) return false;
-    document.getElementById("signup-email").value = "";
-    msg.textContent = "✓ Got it — we will reach out to " + email;
-    // mailto fallback: opens email client as backup
-    // For a production list use Mailchimp/Resend here
-    return false;
-  }
-
-  // ── hamburger nav ──────────────────────────────────────
-  (function(){
-    var burger = document.getElementById('nav-burger');
-    var panel  = document.getElementById('nav-panel');
-    if(!burger || !panel) return;
-    burger.addEventListener('click', function(){
-      var open = panel.classList.toggle('open');
-      burger.classList.toggle('open', open);
-      burger.setAttribute('aria-expanded', open);
-    });
-    panel.querySelectorAll('a').forEach(function(a){
-      a.addEventListener('click', function(){
-        panel.classList.remove('open');
-        burger.classList.remove('open');
-        burger.setAttribute('aria-expanded', 'false');
-      });
-    });
-    // close on outside click
-    document.addEventListener('click', function(e){
-      if(!burger.contains(e.target) && !panel.contains(e.target)){
-        panel.classList.remove('open');
-        burger.classList.remove('open');
-        burger.setAttribute('aria-expanded', 'false');
-      }
-    });
-  })();
-
+  document.getElementById('idx-email').addEventListener('keydown',e=>{
+    if(e.key==='Enter'&&(e.ctrlKey||e.metaKey))idxRunDemo();
+  });
+</script>
+  <script src="/site-tour.js"></script>
+  <script>
   (function(){
     if(!window.CustodianTour) return;
     const tour = window.CustodianTour;
     const offer = document.getElementById('tour-offer');
+    if (!offer) return;
     const state = tour.getState();
     tour.onPage('home');
 
@@ -1874,7 +894,7 @@ result <span style="color:var(--dim)">=</span> decide(
         offer.classList.remove('show');
         return;
       }
-      window.location.href = '/console';
+      window.location.href = '/hermes';
     }
 
     document.getElementById('tour-mode-quick').addEventListener('click', ()=>choose('quick'));
@@ -1895,7 +915,8 @@ result <span style="color:var(--dim)">=</span> decide(
       }, 60000);
     }
   })();
-</script>
-<script src="/nemo-guide.js"></script>
+  </script>
+  <script src="/tour-tracker.js"></script>
+  <script src="/nemo-guide.js"></script>
 </body>
 </html>

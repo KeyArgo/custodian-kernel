@@ -16,7 +16,7 @@
 
   const ALL_CONSOLE_TABS  = ['audit', 'policy', 'try', 'stripe'];
   const ALL_OPERATOR_STEPS = [0, 1, 2, 3, 4, 5, 6, 7, 8];
-  const TOUR_PAGES = ['/', '/console', '/operator', '/triage', '/tools', '/docs'];
+  const TOUR_PAGES = ['/', '/hermes', '/operator', '/triage', '/tools', '/docs'];
 
   const OPERATOR_STEP_LABELS = {
     0: 'Earn $1200 (uncapped revenue)',
@@ -120,10 +120,10 @@
     // Derive what to suggest next
     let suggested_next;
     if (!pages.includes('/'))         suggested_next = 'home page (start of tour)';
-    else if (!pages.includes('/console'))  suggested_next = '/console — explain the system';
+    else if (!pages.includes('/hermes'))  suggested_next = '/console — explain the system';
     else if (!pages.includes('/operator')) suggested_next = '/operator — run the live demo';
     else if (!operator_complete)           suggested_next = `/operator — complete remaining steps (${operator_steps_remaining.join(', ')})`;
-    else if (!pages.includes('/console'))  suggested_next = '/console — audit return (see what was recorded)';
+    else if (!pages.includes('/hermes'))  suggested_next = '/console — audit return (see what was recorded)';
     else if (runs.length === 0)            suggested_next = '/triage — prove AI alone is not enough';
     else if (!pages.includes('/tools'))    suggested_next = '/tools — see scope beyond payments';
     else if (!pages.includes('/docs'))     suggested_next = '/docs — understand the architecture';

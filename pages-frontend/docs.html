@@ -34,11 +34,7 @@
 *{box-sizing:border-box;margin:0;padding:0}
 html{scroll-behavior:smooth}
 body{
-  background:
-    radial-gradient(circle at top left, rgba(93,176,255,0.07), transparent 28%),
-    radial-gradient(circle at top right, rgba(255,176,0,0.07), transparent 24%),
-    linear-gradient(180deg, #06070b 0%, #05060a 100%);
-  color:var(--text);
+  background:var(--bg);color:var(--text);
   font:15px/1.7 var(--mono);
   display:flex;flex-direction:column;min-height:100vh;
 }
@@ -82,11 +78,9 @@ h1,h2,h3,h4{font-weight:700;letter-spacing:-0.01em;color:var(--text)}
 /* sidebar */
 .sidebar{
   width:240px;flex-shrink:0;
-  background:linear-gradient(180deg, rgba(9,12,20,0.98), rgba(7,9,15,0.98));
-  border-right:1px solid rgba(255,176,0,0.12);
+  background:var(--sidebar);border-right:1px solid var(--line);
   position:sticky;top:52px;height:calc(100vh - 52px);
   overflow-y:auto;padding:28px 0 60px;
-  box-shadow:inset -1px 0 0 rgba(255,255,255,0.03)
 }
 .sidebar::-webkit-scrollbar{width:4px}
 .sidebar::-webkit-scrollbar-track{background:transparent}
@@ -105,17 +99,11 @@ h1,h2,h3,h4{font-weight:700;letter-spacing:-0.01em;color:var(--text)}
 @media(max-width:900px){.content{padding:32px 24px 60px}}
 
 /* sections */
-.doc-section{
-  margin-bottom:56px;padding:20px 20px 8px;
-  background:linear-gradient(180deg, rgba(18,23,35,0.92), rgba(10,13,20,0.96));
-  border:1px solid rgba(255,255,255,0.08);
-  border-radius:16px;
-  box-shadow:0 14px 30px rgba(0,0,0,0.22), inset 0 1px 0 rgba(255,255,255,0.03)
-}
+.doc-section{margin-bottom:56px;padding-top:8px}
 .doc-section:first-child{padding-top:0}
 .section-eyebrow{font-family:var(--mono);font-size:0.65em;letter-spacing:0.14em;
   text-transform:uppercase;color:var(--nv);margin-bottom:8px;font-weight:700}
-.doc-section h2{font-size:1.75em;margin-bottom:14px;border-bottom:1px solid rgba(255,255,255,0.08);
+.doc-section h2{font-size:1.75em;margin-bottom:14px;border-bottom:1px solid var(--line);
   padding-bottom:10px}
 .doc-section h3{font-size:1.15em;margin:28px 0 10px;color:var(--text)}
 .doc-section h4{font-size:0.95em;margin:20px 0 8px;color:var(--muted);
@@ -125,27 +113,16 @@ h1,h2,h3,h4{font-weight:700;letter-spacing:-0.01em;color:var(--text)}
 .doc-section ul,.doc-section ol{color:var(--muted);padding-left:22px;margin-bottom:14px}
 .doc-section li{margin-bottom:6px;line-height:1.7}
 .doc-section li strong{color:var(--text)}
-.docs-guide{
-  margin:0 0 28px;padding:16px 18px;
-  border:1px solid rgba(255,176,0,0.22);border-radius:14px;
-  background:linear-gradient(180deg, rgba(22,16,5,0.98), rgba(12,8,2,0.98));
-  box-shadow:0 12px 24px rgba(0,0,0,0.18)
-}
-.docs-guide-kicker{font-size:0.72em;letter-spacing:0.12em;text-transform:uppercase;color:var(--amber2);margin-bottom:8px}
-.docs-guide-copy{color:var(--muted);font-size:0.92em;line-height:1.7}
 
 /* callout boxes */
-.callout{
-  border-radius:12px;padding:14px 18px;margin:18px 0;font-size:0.92em;line-height:1.7;
-  box-shadow:0 10px 22px rgba(0,0,0,0.16)
-}
-.callout-green{background:linear-gradient(180deg, rgba(14,24,20,0.98), rgba(8,13,11,0.98));border:1px solid rgba(46,230,166,0.2)}
+.callout{border-radius:10px;padding:14px 18px;margin:18px 0;font-size:0.92em;line-height:1.7}
+.callout-green{background:rgba(46,230,166,0.06);border:1px solid rgba(46,230,166,0.2)}
 .callout-green .callout-label{color:var(--green);font-weight:700;margin-bottom:4px;font-size:0.82em;letter-spacing:0.06em}
-.callout-amber{background:linear-gradient(180deg, rgba(24,18,8,0.98), rgba(13,10,4,0.98));border:1px solid rgba(255,176,0,0.2)}
+.callout-amber{background:rgba(255,176,0,0.06);border:1px solid rgba(255,176,0,0.2)}
 .callout-amber .callout-label{color:var(--amber);font-weight:700;margin-bottom:4px;font-size:0.82em;letter-spacing:0.06em}
-.callout-blue{background:linear-gradient(180deg, rgba(11,19,26,0.98), rgba(7,11,16,0.98));border:1px solid rgba(93,176,255,0.2)}
+.callout-blue{background:rgba(93,176,255,0.06);border:1px solid rgba(93,176,255,0.2)}
 .callout-blue .callout-label{color:var(--blue);font-weight:700;margin-bottom:4px;font-size:0.82em;letter-spacing:0.06em}
-.callout-red{background:linear-gradient(180deg, rgba(25,11,14,0.98), rgba(13,7,9,0.98));border:1px solid rgba(255,77,77,0.2)}
+.callout-red{background:rgba(255,77,77,0.06);border:1px solid rgba(255,77,77,0.2)}
 .callout-red .callout-label{color:var(--red);font-weight:700;margin-bottom:4px;font-size:0.82em;letter-spacing:0.06em}
 .callout p{margin:0;color:var(--muted)}
 
@@ -161,13 +138,10 @@ h1,h2,h3,h4{font-weight:700;letter-spacing:-0.01em;color:var(--text)}
 .badge-auto{color:var(--green)} .badge-esc{color:var(--amber)} .badge-deny{color:var(--red)} .badge-kill{color:var(--red)}
 
 /* api block */
-.api-block{
-  background:linear-gradient(180deg, rgba(18,23,35,0.96), rgba(10,13,20,0.98));
-  border:1px solid rgba(255,255,255,0.08);border-radius:12px;
-  margin:18px 0;overflow:hidden;box-shadow:0 12px 24px rgba(0,0,0,0.16)
-}
+.api-block{background:var(--panel2);border:1px solid var(--line2);border-radius:10px;
+  margin:18px 0;overflow:hidden}
 .api-block-head{display:flex;align-items:center;gap:10px;padding:12px 18px;
-  border-bottom:1px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.02)}
+  border-bottom:1px solid var(--line);background:rgba(255,255,255,0.02)}
 .api-method{font-family:var(--mono);font-size:0.78em;font-weight:700;
   padding:3px 8px;border-radius:5px;letter-spacing:0.04em}
 .method-post{background:rgba(46,230,166,0.1);color:var(--green);border:1px solid rgba(46,230,166,0.25)}
@@ -179,18 +153,14 @@ h1,h2,h3,h4{font-weight:700;letter-spacing:-0.01em;color:var(--text)}
 .api-block-body p:last-child{margin-bottom:0}
 
 /* faq */
-.faq-item{
-  border:1px solid rgba(255,255,255,0.08);border-radius:12px;margin-bottom:10px;overflow:hidden;
-  background:linear-gradient(180deg, rgba(18,23,35,0.92), rgba(10,13,20,0.96));
-  box-shadow:0 10px 22px rgba(0,0,0,0.14)
-}
+.faq-item{border:1px solid var(--line);border-radius:10px;margin-bottom:10px;overflow:hidden}
 .faq-q{all:unset;display:flex;align-items:center;justify-content:space-between;
   width:100%;cursor:pointer;padding:14px 18px;font-size:0.95em;font-weight:600;
   color:var(--text);gap:12px}
-.faq-q:hover{background:rgba(255,255,255,0.03)}
+.faq-q:hover{background:rgba(255,255,255,0.02)}
 .faq-q .faq-chevron{font-size:0.8em;color:var(--dim);flex-shrink:0;transition:transform .2s}
 .faq-item.open .faq-chevron{transform:rotate(90deg)}
-.faq-a{display:none;padding:0 18px 16px;color:var(--muted);font-size:0.9em;line-height:1.75;border-top:1px solid rgba(255,255,255,0.06)}
+.faq-a{display:none;padding:0 18px 16px;color:var(--muted);font-size:0.9em;line-height:1.75;border-top:1px solid var(--line)}
 .faq-item.open .faq-a{display:block}
 .faq-a p{margin:12px 0 0}
 .faq-a p:first-child{margin-top:12px}
@@ -216,14 +186,15 @@ h1,h2,h3,h4{font-weight:700;letter-spacing:-0.01em;color:var(--text)}
 <nav class="k-nav">
   <a href="/" class="k-brand">
     <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <polygon points="56,42 42,56 22,56 8,42 8,22 22,8 42,8 56,22" stroke="#ffb000" stroke-width="2.5" stroke-linejoin="round"/>
-      <path d="M 40.5,23.5 A 12,12 0 1,0 40.5,40.5" stroke="#ffb000" stroke-width="2.5" stroke-linecap="round"/>
+      <path d="M32 6 L54 14 V30 C54 44.5 44.2 54 32 58 C19.8 54 10 44.5 10 30 V14 Z" stroke="#ffb000" stroke-width="5" stroke-linejoin="round"/>
+      <circle cx="32" cy="29" r="6" stroke="#ffb000" stroke-width="4"/>
+      <rect x="30" y="32" width="4" height="10" rx="1" fill="#ffb000"/>
     </svg>
     <span>CUSTODIAN</span>
   </a>
   <div class="k-links">
     <a href="/">Home</a>
-    <a href="/console">Console</a>
+    <a href="/hermes">Console</a>
     <a href="/operator">Operator</a>
     <a href="/triage">Triage</a>
     <a href="/tools">Tools</a>
@@ -242,8 +213,7 @@ h1,h2,h3,h4{font-weight:700;letter-spacing:-0.01em;color:var(--text)}
   <aside class="sidebar" id="sidebar">
     <div class="sb-section">
       <div class="sb-heading">Start here</div>
-      <a href="#quickstart" class="sb-link active">Quick start</a>
-      <a href="#overview" class="sb-link">What is Custodian?</a>
+      <a href="#overview" class="sb-link active">Overview</a>
       <a href="#architecture" class="sb-link">Architecture</a>
     </div>
     <div class="sb-section">
@@ -266,89 +236,6 @@ h1,h2,h3,h4{font-weight:700;letter-spacing:-0.01em;color:var(--text)}
 
   <!-- CONTENT -->
   <main class="content">
-    <div class="docs-guide">
-      <div class="docs-guide-kicker">From demo to architecture</div>
-      <div class="docs-guide-copy" id="docs-guide-copy">If the live demo made sense, this page is the translation layer: what the model does, what the verifier does, and what the kernel alone is allowed to decide.</div>
-    </div>
-
-    <!-- QUICK START -->
-    <section class="doc-section" id="quickstart">
-      <div class="section-eyebrow">Start here</div>
-      <h2>Quick start</h2>
-      <p>Custodian ships as a single pip package. You need Python 3.10+ and a Linux host (or WSL2). The enforcement kernel runs locally; the Nemotron intelligence layer calls NVIDIA's hosted API.</p>
-
-      <h3>1 · Install the kernel</h3>
-      <pre><code>pip install custodian-kernel</code></pre>
-      <p>This installs the <code>custodian</code> CLI plus the enforcement kernel, verifier, OPA policy engine, and OCSF audit logger. No Docker required.</p>
-
-      <h3>2 · Verify the installation</h3>
-      <pre><code>custodian demo verify</code></pre>
-      <p>Runs a self-test against the sandbox order record (<code>ord_6006</code>) with a pre-captured Nemotron response. No API key needed. You should see:</p>
-      <pre><code>✓  Intelligence layer      — captured response loaded
-✓  Verifier                — 3 claims extracted, 1 CONTRADICTED
-✓  Kernel authority check  — DENY (contradiction override)
-✓  Audit log               — OCSF event written
-All checks passed.</code></pre>
-
-      <h3>3 · Run the full demo cycle</h3>
-      <pre><code>custodian demo cycle</code></pre>
-      <p>Runs six canonical cases back-to-back — honest claim, delivery lie, double-billing lie, within-window return, defective claim, and an amount above the autonomous cap. Each case shows the AI recommendation, the verifier's claim-by-claim check, and the kernel's final disposition.</p>
-
-      <h3>4 · Run simulated attacks</h3>
-      <pre><code>custodian demo attacks</code></pre>
-      <p>Tests the kernel against a suite of adversarial inputs: prompt injection, authority-claim spoofing, recursive self-approval attempts, and kill-switch bypass attempts. Each attack should be caught. If any aren't, the output shows exactly which control failed.</p>
-
-      <h3>5 · Start the enforcement server</h3>
-      <pre><code>custodian serve --port 8095</code></pre>
-      <p>Starts the HTTP enforcement node. Your AI agent (or any HTTP client) posts requests to this endpoint; the kernel evaluates them and returns <code>AUTONOMOUS</code>, <code>ESCALATE</code>, or <code>DENY</code>. The server logs every decision to the OCSF audit trail.</p>
-
-      <h3>Environment variables</h3>
-      <table class="outcome-table">
-        <thead><tr><th>Variable</th><th>Required</th><th>Purpose</th></tr></thead>
-        <tbody>
-          <tr><td><code>NVIDIA_API_KEY</code></td><td style="color:var(--amber)">For live inference</td><td>Calls Nemotron 3 Super via NVIDIA's hosted API. Not needed for <code>demo verify</code> or <code>demo cycle</code> (uses captured responses).</td></tr>
-          <tr><td><code>OPENROUTER_API_KEY</code></td><td style="color:var(--dim)">Optional fallback</td><td>Routes to Nemotron via OpenRouter if the NVIDIA key is absent. Same model, slightly higher latency.</td></tr>
-          <tr><td><code>STRIPE_SECRET_KEY</code></td><td style="color:var(--dim)">For payment flows</td><td>Test-mode key for real Stripe PaymentIntent creation. Use <code>sk_test_…</code> keys only for evaluation.</td></tr>
-          <tr><td><code>TWILIO_ACCOUNT_SID</code><br><code>TWILIO_AUTH_TOKEN</code><br><code>TWILIO_VERIFY_SID</code></td><td style="color:var(--dim)">For SMS approval</td><td>Sends real one-time codes to the operator's phone for over-cap escalation. Without these, escalations are logged but not delivered.</td></tr>
-          <tr><td><code>OPERATOR_PHONE</code></td><td style="color:var(--dim)">For SMS approval</td><td>E.164 phone number that receives escalation codes (e.g. <code>+14155552671</code>).</td></tr>
-        </tbody>
-      </table>
-
-      <div class="callout callout-green">
-        <div class="callout-label">Minimum viable run</div>
-        <p><code>pip install custodian-kernel && custodian demo verify</code> — no API keys, no config. The demo runs against sandboxed fixtures and proves the full pipeline end-to-end. Add <code>NVIDIA_API_KEY</code> when you want to route real customer messages through live Nemotron inference.</p>
-      </div>
-
-      <h3>Deploying to a second machine</h3>
-      <p>The enforcement kernel can run on any Linux server separate from the agent host. The agent has no network path to the kernel's internal state — it can only POST requests and receive verdicts.</p>
-      <pre><code># On the enforcement host (e.g. a DGX Spark, a VM, a bare-metal server)
-pip install custodian-kernel
-custodian serve --port 8095
-
-# Verify it's up
-curl http://localhost:8095/health
-# → {"ok": true, "node": "custodian-kernel", "role": "enforcement"}</code></pre>
-
-      <div class="callout callout-amber">
-        <div class="callout-label">Survive reboots with systemd</div>
-        <p>To keep the enforcement node running across reboots, install it as a systemd service:</p>
-      </div>
-      <pre><code>[Unit]
-Description=Custodian Enforcement Node
-After=network.target
-
-[Service]
-User=youruser
-WorkingDirectory=/home/youruser/custodian-kernel
-ExecStart=/home/youruser/custodian-venv/bin/python3 -m custodian serve --port 8095
-Restart=always
-RestartSec=5
-
-[Install]
-WantedBy=multi-user.target</code></pre>
-      <pre><code>sudo systemctl enable --now custodian-enforce
-sudo systemctl status custodian-enforce</code></pre>
-    </section>
 
     <!-- OVERVIEW -->
     <section class="doc-section" id="overview">
@@ -458,7 +345,7 @@ sudo systemctl status custodian-enforce</code></pre>
       <p>Open Policy Agent evaluates every action request against the current authority band in real time. Per-action caps ($250), rolling session windows ($1,000 / 2 hr), and escalation thresholds are enforced as Rego rules, not application code that can be patched or reasoned around.</p>
 
       <h3>OCSF Audit Log</h3>
-      <p>Every allow and deny emits an Open Cybersecurity Schema Framework event. The log is append-only, tamper-evident, and structured: verifiable by any SIEM. You can see the live feed on the <a href="/console">Live Console</a>.</p>
+      <p>Every allow and deny emits an Open Cybersecurity Schema Framework event. The log is append-only, tamper-evident, and structured: verifiable by any SIEM. You can see the live feed on the <a href="/hermes">Live Console</a>.</p>
 
       <div class="callout callout-blue">
         <div class="callout-label">Why kernel-level?</div>
@@ -552,7 +439,7 @@ class CapturedClient:                # testing / replay
         <p><code>per_action_cap</code> is the ceiling for a single transaction. <code>autonomous_remaining</code> is how much session budget is left. A $200 spend might be fine per-action but denied if the session budget is exhausted. Both checks are independent.</p>
       </div>
 
-      <p>The current band and remaining session budget are visible live on the <a href="/console">Live Console</a> status grid.</p>
+      <p>The current band and remaining session budget are visible live on the <a href="/hermes">Live Console</a> status grid.</p>
     </section>
 
     <!-- KILL SWITCH -->
@@ -780,10 +667,7 @@ class CapturedClient:                # testing / replay
   </main>
 </div>
 
-<script src="/tour-tracker.js"></script>
-<script src="/site-tour.js"></script>
 <script>
-if (window.TourTracker) TourTracker.track('page_visit', '/docs');
 // Sidebar active state on scroll
 const sections = document.querySelectorAll('.doc-section[id]');
 const sbLinks  = document.querySelectorAll('.sb-link');
@@ -809,21 +693,9 @@ document.querySelectorAll('.faq-q').forEach(btn => {
 });
 
 // Mobile sidebar: sidebar hidden on small screens via CSS
-
-(function(){
-    if(!window.CustodianTour) return;
-    const tour = window.CustodianTour;
-    tour.onPage('docs');
-    const copy = document.getElementById('docs-guide-copy');
-    const state = tour.getState();
-    if (state.pending_docs_followup) {
-        copy.textContent = 'You are at the last stop in the guided story. The key takeaway is simple: the model reasons, the verifier checks facts, and the kernel is the final authority every time.';
-        tour.completeDocs();
-    } else if (state.mode === 'deep') {
-        copy.textContent = 'This is the deep-dive layer of the tour: the live behavior you saw in console and operator is mapped here to the underlying kernel, verifier, and approval architecture.';
-    }
-})();
 </script>
+<script src="/site-tour.js"></script>
+<script src="/tour-tracker.js"></script>
 <script src="/nemo-guide.js"></script>
 </body>
 </html>

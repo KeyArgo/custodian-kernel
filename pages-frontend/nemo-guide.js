@@ -24,7 +24,7 @@
   // so we track the "audit return" as a virtual step via pending_console_followup.
   const TOUR_STEPS = [
     { path: '/',         label: 'Home',      idx: 0 },
-    { path: '/console',  label: 'Console',   idx: 1 },
+    { path: '/hermes',  label: 'Console',   idx: 1 },
     { path: '/operator', label: 'Operator',  idx: 2 },
     { path: '/triage',   label: 'Triage',    idx: 3 },
     { path: '/tools',    label: 'Tools',     idx: 4 },
@@ -35,12 +35,12 @@
     // Console is context-sensitive:
     //   first visit  → go to Operator
     //   post-operator return → go to Triage
-    if (path === '/console') {
+    if (path === '/hermes') {
       const postOp = siteState && siteState.pending_console_followup;
       return postOp ? { path: '/triage', label: 'Triage' } : { path: '/operator', label: 'Operator' };
     }
     // Operator always sends back to Console (audit return)
-    if (path === '/operator') return { path: '/console', label: 'Console (audit)' };
+    if (path === '/operator') return { path: '/hermes', label: 'Console (audit)' };
 
     const step = TOUR_STEPS.find(t => t.path === path);
     if (!step) return null;
@@ -60,7 +60,7 @@
         "What problem does Custodian solve that other tools don't?",
       ],
     },
-    '/console': {
+    '/hermes': {
       greeting_first: "I just opened the Console. What am I looking at and where do I start?",
       greeting_postop: "I just came back from the Operator Panel where I ran all the steps. What should I look at here now?",
       suggests_first: [
@@ -120,7 +120,7 @@
   }
 
   const siteState = getSiteTourState();
-  const isPostOp  = currentPath === '/console' && !!siteState.pending_console_followup;
+  const isPostOp  = currentPath === '/hermes' && !!siteState.pending_console_followup;
 
   const nextStep  = nextStepFor(currentPath, siteState);
 
@@ -161,7 +161,7 @@
   const EXISTING = {
     '/operator': { panelId: 'op-nemo-panel' },
     '/triage':   { panelId: 'tr-nemo-panel' },
-    '/console':  { panelId: 'nemotron-chat-panel' },
+    '/hermes':  { panelId: 'nemotron-chat-panel' },
   };
 
   if (EXISTING[currentPath]) {
@@ -308,7 +308,7 @@
     if (postOp) return cfg.greeting_postop;
     if (hist.length === 0) {
       // True first contact — use the intro question
-      return path === '/console' ? cfg.greeting_first : cfg.greeting;
+      return path === '/hermes' ? cfg.greeting_first : cfg.greeting;
     }
     // Returning user — bridge from the conversation, no re-introduction
     return `[TOUR CONTINUATION] The visitor just navigated to ${PAGE_NAME[path] || path}. In 1-2 sentences: ` +
@@ -318,8 +318,8 @@
   // Jump-key → real page path so [[jump:KEY|label]] renders as a real link.
   const JUMP_PAGE_MAP = {
     operator: '/operator',
-    pipeline: '/console', verdict: '/console', authority: '/console',
-    audit: '/console',   policy:  '/console', playground: '/console',
+    pipeline: '/hermes', verdict: '/hermes', authority: '/hermes',
+    audit: '/hermes',   policy:  '/hermes', playground: '/hermes',
   };
 
   function addMsg(text, role) {
@@ -332,7 +332,7 @@
         const m = part.match(/^\[\[jump:(\w+)\|([^\]]+)\]\]$/);
         if (m) {
           const a = document.createElement('a');
-          a.href = JUMP_PAGE_MAP[m[1]] || '/console';
+          a.href = JUMP_PAGE_MAP[m[1]] || '/hermes';
           a.textContent = m[2];
           a.style.cssText = 'color:#9fd968;text-decoration:underline;cursor:pointer';
           el.appendChild(a);
@@ -432,7 +432,7 @@
         addMsg(raw, 'bot');
         history.push({ role: 'assistant', content: raw });
         saveHistory(history);
-        const suggests = currentPath === '/console'
+        const suggests = currentPath === '/hermes'
           ? (isPostOp ? pageCfg.suggests_postop : pageCfg.suggests_first)
           : pageCfg.suggests;
         setTimeout(() => { renderSuggests(suggests); renderNext(); }, 350);
@@ -440,7 +440,7 @@
       .catch(() => {
         thinking.remove();
         addMsg(FALLBACK_GREET[currentPath] || "Ask me anything about what you're seeing here.", 'bot');
-        const suggests = currentPath === '/console'
+        const suggests = currentPath === '/hermes'
           ? (isPostOp ? pageCfg.suggests_postop : pageCfg.suggests_first)
           : pageCfg.suggests;
         setTimeout(() => { renderSuggests(suggests); renderNext(); }, 200);
