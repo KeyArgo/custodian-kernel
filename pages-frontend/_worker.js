@@ -15,8 +15,16 @@
 const PRIMARY   = 'https://rein-local.argobox.com';
 const SECONDARY = 'http://100.68.107.42:8094';
 const TIMEOUT_MS = 4000;
-// Triage/custom does live Nemotron inference — allow 25s before falling back
-const TIMEOUT_SLOW_MS = 25000;
+// Triage/custom and nemotron/ask do live inference. The backend's own
+// NemoClawRouter(timeout=25) can itself take up to 25s per provider, and
+// falls back from OpenRouter to NVIDIA NIM on failure — worst case that's
+// two ~25s legs back to back. Live-measured a direct (non-Worker) call at
+// 23.8s on a single leg alone. 25000 here was cutting it dangerously close
+// and was killing legitimate in-flight requests, not just runaway ones.
+// 55000 leaves real margin under gunicorn's own 65s worker timeout on the
+// backend (see custodian-dashboard.service) so the Worker never aborts a
+// request the backend was still going to finish.
+const TIMEOUT_SLOW_MS = 55000;
 
 const PROXY_PREFIX = '/api/v1/';
 

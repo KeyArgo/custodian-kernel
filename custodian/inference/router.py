@@ -117,11 +117,26 @@ class NemoClawRouter:
                 req = urllib.request.Request(endpoint, data=payload, headers=headers)
                 with urllib.request.urlopen(req, timeout=self.timeout) as resp:
                     result = json.loads(resp.read())
+                # A 200 response under concurrent load can still be a
+                # provider-side error body (rate limit, capacity, etc.)
+                # rather than a completion — no "choices" key. Treat that
+                # the same as a network failure: move on to the next
+                # endpoint rather than raising an uncaught KeyError, which
+                # was surfacing as an unhandled 500 (non-JSON body) that the
+                # Cloudflare Worker in front of this then misread as an
+                # infra outage instead of an application-level hiccup.
+                choices = result.get("choices")
+                if not choices:
+                    last_error = RuntimeError(
+                        f"{endpoint} returned no choices: {result.get('error', result)}"
+                    )
+                    continue
+                content = choices[0]["message"]["content"]
                 self.name = f"nemoclaw-router → {endpoint}"
                 self.live = True
-                content = result["choices"][0]["message"]["content"]
                 return self._strip_thinking(content)
-            except (urllib.error.URLError, OSError, TimeoutError) as e:
+            except (urllib.error.URLError, OSError, TimeoutError,
+                    KeyError, IndexError, json.JSONDecodeError) as e:
                 last_error = e
                 continue
 
