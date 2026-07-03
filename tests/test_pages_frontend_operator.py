@@ -95,6 +95,22 @@ def test_treasury_handles_real_authority_payload():
         assert field in html, f"JS reads authority.{field}"
 
 
+def test_operator_code_flow_does_not_fake_prefill():
+    """If the page says a code is auto-filled, the JS must really populate the input.
+
+    The operator flow now has to support both modes:
+    - current secure path: the code lives only on the phone, so the UI tells
+      the operator to type it manually
+    - legacy/live fallback: if the backend does return a code, the JS may
+      populate the input explicitly
+    """
+    html = read_operator()
+    assert "The code is pre-filled from the SMS" not in html
+    assert "Code is pre-filled from the SMS notification above" not in html
+    assert "enter code from your phone" in html.lower()
+    assert "document.getElementById(approveInputId).value = d.code" in html
+
+
 def test_live_audit_feed_esc_function_is_in_scope():
     """Regression: `esc` (the HTML escaper) must be defined at the same
     scope as refreshLive() and refreshOpFeed() — both of which use it.

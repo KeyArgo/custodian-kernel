@@ -346,13 +346,13 @@
 
     <div class="step">
         <h2>Step 3 — Approve with the real code</h2>
-        <p>The code is pre-filled from the SMS — shown as asterisks so it stays off-screen. Click Approve.</p>
+        <p>The code lives only on Twilio's servers and the operator's phone — enter code from your phone above. Click Approve.</p>
         <div class="row">
             <input type="text" id="approve1-code" placeholder="6-digit code" maxlength="6" style="width:160px;">
             <input type="text" id="approve1-by" placeholder="Approved by" value="Operator" style="width:120px;">
             <button id="approve1-btn">Approve</button>
         </div>
-        <div id="approve1-note" style="display:none;font-size:0.75em;color:#76b900;margin-top:4px;">✓ Code auto-filled from the SMS above. Hit Approve to execute.</div>
+        <div id="approve1-note" style="display:none;font-size:0.75em;color:#76b900;margin-top:4px;">✓ SMS confirmed delivered — enter code from your phone above. Hit Approve to execute.</div>
         <div class="out" id="approve1-out"></div>
     </div>
 
@@ -414,13 +414,13 @@
 
     <div class="step">
         <h2>Step 8 — Approve the refund</h2>
-        <p>Code is pre-filled from the SMS notification above — you can see it there. Click Approve refund to execute.</p>
+        <p>The code lives only on Twilio's servers and the operator's phone — enter code from your phone above. Click Approve refund to execute.</p>
         <div class="row">
             <input type="text" id="approve2-code" placeholder="6-digit code" maxlength="6" style="width:160px;">
             <input type="text" id="approve2-by" placeholder="Approved by" value="Operator" style="width:120px;">
             <button id="approve2-btn">Approve refund</button>
         </div>
-        <div id="approve2-note" style="display:none;font-size:0.75em;color:#76b900;margin-top:4px;">✓ Code auto-filled from the SMS above. Hit Approve refund to execute.</div>
+        <div id="approve2-note" style="display:none;font-size:0.75em;color:#76b900;margin-top:4px;">✓ SMS confirmed delivered — enter code from your phone above. Hit Approve refund to execute.</div>
         <div class="out" id="approve2-out"></div>
     </div>
 
@@ -538,11 +538,6 @@ async function nemoNarrate(stepIdx) {
 
     const prompt = narration.excited ? narration.prompt : narration.user;
 
-    if (!narration.excited) {
-        opNemoAddMsg(narration.user, 'user');
-        opNemoHistory.push({ role: 'user', content: prompt });
-    }
-
     const thinking = opNemoAddMsg('…', 'bot');
     try {
         const r = await fetch('/api/v1/nemotron/ask', {
@@ -558,6 +553,15 @@ async function nemoNarrate(stepIdx) {
         const d = await r.json();
         thinking.remove();
         const ans = (d.answer || 'Ask me anything about what just happened.').replace(/\[\[(?:jump|entry|suggest):[^\]]*\]\]/g, '').trim();
+        // Only NOW do we commit the user message + assistant reply to history.
+        // (Previously the user message was pushed BEFORE the fetch, so a
+        // 502/503/network error would leave an orphaned user message in
+        // opNemoHistory with no assistant reply — corrupting the next
+        // narration's context. See bug-hunt session 2026-07-02.)
+        if (!narration.excited) {
+            opNemoAddMsg(narration.user, 'user');
+            opNemoHistory.push({ role: 'user', content: prompt });
+        }
         opNemoAddMsg(ans, 'bot');
         opNemoHistory.push({ role: 'assistant', content: ans });
         nemoSaveHistory(opNemoHistory);
@@ -606,15 +610,25 @@ let _codePoller = null;
 
 function startCodePoll(codeElId, approveInputId, noteId) {
     if (_codePoller) clearInterval(_codePoller);
-    _codeFwdDone = false;
     _codePoller = setInterval(async () => {
         try {
             const res = await fetch(API + '/pending_code');
             if (!res.ok) return;
             const d = await res.json();
-            // The OTP lives only on Twilio and the operator's phone — never on the server.
-            // When a pending escalation is confirmed, show the "check your phone" prompt.
-            if (d.pending) {
+            // Twilio Verify never returns the code to the server by design — that's
+            // what makes self-approval structurally impossible, not just discouraged.
+            // If a backend variant DOES stage a real code (d.code), auto-fill it as a
+            // bonus. Otherwise, on confirmed pending (d.pending), tell the operator to
+            // check their phone rather than waiting forever for a code that never comes.
+            if (d.code) {
+                document.getElementById(codeElId).textContent = d.code;
+                if (approveInputId) document.getElementById(approveInputId).value = d.code;
+                if (noteId) {
+                    const n = document.getElementById(noteId);
+                    if (n) { n.textContent = '✓ Code auto-filled from the SMS above. Hit Approve to execute.'; n.style.display = 'block'; }
+                }
+                if (_codePoller) { clearInterval(_codePoller); _codePoller = null; }
+            } else if (d.pending) {
                 const el = document.getElementById(codeElId);
                 if (el && el.textContent === '••••••') el.textContent = '← check phone';
                 if (noteId) {

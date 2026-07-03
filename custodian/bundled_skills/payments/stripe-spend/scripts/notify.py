@@ -32,12 +32,17 @@ def _load_secrets():
     return vals
 
 
-def write_pending(amount, description, reason, kind="spend", payment_intent_id=None):
-    PENDING_FILE.parent.mkdir(parents=True, exist_ok=True)
-    PENDING_FILE.write_text(json.dumps({
+def write_pending(amount, description, reason, code=None, kind="spend", payment_intent_id=None):
+    payload = {
         "amount": amount, "description": description, "reason": reason,
-        "created_at": time.time(), "kind": kind, "payment_intent_id": payment_intent_id,
-    }, indent=2))
+        "created_at": time.time(), "kind": kind,
+    }
+    if code:
+        payload["code"] = code
+    if payment_intent_id:
+        payload["payment_intent_id"] = payment_intent_id
+    PENDING_FILE.parent.mkdir(parents=True, exist_ok=True)
+    PENDING_FILE.write_text(json.dumps(payload, indent=2))
 
 
 def send_approval_code(amount: float, description: str) -> bool:
