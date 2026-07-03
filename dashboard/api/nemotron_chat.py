@@ -697,6 +697,14 @@ def ask():
                 # internal reasoning. (See bug-hunt session 2026-07-02.)
                 max_tokens=4000,
             )
+            # NemoClawRouter only strips <think> tags -- it doesn't know about
+            # this app's meta-instruction preamble pattern (see _strip_thinking
+            # above). Apply the same v5 cleanup here so a degenerate response
+            # from the router's path gets the same treatment as the OpenRouter/
+            # NIM fallback paths below, instead of leaking raw self-talk.
+            answer = _strip_thinking(answer)
+            if not answer:
+                answer = None
         except RuntimeError:
             answer = None
     else:

@@ -11,7 +11,9 @@
  *   injects a tour-nav strip into their existing panel instead of spawning a
  *   second bubble.
  * - Shows "Next →" chip after greeting (context-aware for Console audit return).
- * - Resets per-page dismiss on navigation so Nemotron re-greets each new stop.
+ * - Once the visitor minimizes Nemotron (on any page), it stays minimized
+ *   across navigation until they reopen it themselves — a shared
+ *   `assistant_dismissed` flag (site-tour.js) is checked/set on every page.
  * - Never auto-opens on mobile (≤680 px).
  */
 (function () {
@@ -143,16 +145,6 @@
   const _navigated = _lastPath !== currentPath;
   if (_navigated) {
     sessionStorage.setItem(NG_PATH_KEY, currentPath);
-    try {
-      // Reset shared dismiss so operator.html / triage.html auto-open again.
-      const s = getSiteTourState();
-      s.assistant_dismissed = false;
-      sessionStorage.setItem('custodian_site_tour_v1', JSON.stringify(s));
-      // Reset per-page guide dismiss so Nemotron reopens on every navigation.
-      const gs = getGuideState();
-      if (gs.dismissed) delete gs.dismissed[currentPath];
-      saveGuideState(gs);
-    } catch (_) {}
   }
 
   // Track visit
@@ -420,6 +412,7 @@
     panel.style.display = 'flex';
     bubble.style.display = 'none';
     bubble.classList.remove('ng-pulse');
+    if (window.CustodianTour) window.CustodianTour.enableAssistant();
 
     if (!opened) {
       opened = true;
@@ -463,6 +456,10 @@
     s.dismissed = s.dismissed || {};
     s.dismissed[currentPath] = true;
     saveGuideState(s);
+    // Shared across every page (operator.html/triage.html/console.html all
+    // check this too) so minimizing on one page keeps it minimized everywhere
+    // until the visitor reopens it themselves.
+    if (window.CustodianTour) window.CustodianTour.dismissAssistant();
   }
 
   bubble.addEventListener('click', openPanel);
@@ -474,7 +471,8 @@
 
   /* ─── Auto-open logic ────────────────────────────────────────── */
   const freshState  = getGuideState();
-  const isDismissed = (freshState.dismissed || {})[currentPath];
+  const isDismissed = (freshState.dismissed || {})[currentPath]
+    || (window.CustodianTour && window.CustodianTour.getState().assistant_dismissed);
   const isMobile    = window.matchMedia('(max-width: 680px)').matches;
 
   if (!isMobile && !isDismissed && isNewArrival) {

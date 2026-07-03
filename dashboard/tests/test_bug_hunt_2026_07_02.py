@@ -91,7 +91,7 @@ def test_nemoclaw_router_call_passes_max_tokens():
     # stops at the next `try:` or `except:` after the call.
     m = re.search(
         r"answer\s*=\s*_nemo_client\.complete\((.*?),\s*try:|"
-        r"answer\s*=\s*_nemo_client\.complete\((.*?)\n\s+\)\s*\n\s+except",
+        r"answer\s*=\s*_nemo_client\.complete\((.*?)\n\s+\)\s*\n.*?except",
         src, re.DOTALL
     )
     assert m, "_nemo_client.complete() call not found"
