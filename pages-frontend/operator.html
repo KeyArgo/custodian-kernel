@@ -579,7 +579,12 @@ async function nemoNarrate(stepIdx) {
         // ('Ask me anything about what just happened.'), which made the
         // operator think the model was ignoring them. (Bug-hunt 2026-07-03.)
         let ans;
-        if (!r.ok) {
+        // A payload carrying `answer` is always renderable — the Worker sends
+        // an in-character answer even on its 503 last-resort path, and raw
+        // backend errors must never reach the visitor when an answer exists.
+        if (d.answer && d.answer.trim() !== '') {
+            ans = d.answer;
+        } else if (!r.ok) {
             ans = `⚠ Nemotron backend error (${r.status}): ${d.error || 'unknown'} — try again in a moment.`;
         } else if (d.error) {
             ans = `⚠ Nemotron error: ${d.error}`;
@@ -853,7 +858,11 @@ function opNemoOpen() {
             // empty / real answer so the operator sees a clear status, not
             // a placeholder-looking "I'm Nemotron…" string. (Bug-hunt 2026-07-03.)
             let ans;
-            if (d.error) {
+            // Prefer any renderable answer — the Worker's 503 last-resort
+            // path includes an in-character one alongside `error`.
+            if (d.answer && d.answer.trim() !== '') {
+                ans = d.answer;
+            } else if (d.error) {
                 ans = `⚠ Nemotron error: ${d.error}`;
             } else if (!d.answer || d.answer.trim() === '') {
                 ans = "I'm Nemotron — ask me about any of the demo steps. (Live inference just returned empty — your typed questions will still reach the model.)";

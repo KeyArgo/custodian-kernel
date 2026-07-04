@@ -28,6 +28,82 @@ const PROXY_PREFIX = '/api/v1/';
 const TIMEOUT_MS = 20000;
 const TIMEOUT_SLOW_MS = 55000;
 
+// Last-resort lane for /api/v1/nemotron/ask when the backend proxy is fully
+// unreachable: call OpenRouter directly from the edge with a compact version
+// of the backend's guide persona. A degraded-but-real answer beats an error
+// bubble — the visitor is talking to the same Nemotron model either way, it
+// just loses the live treasury/session numbers the backend would have
+// injected, so the persona is told it can't see live data right now.
+const FALLBACK_MODEL = 'nvidia/nemotron-3-super-120b-a12b:free';
+const FALLBACK_SYSTEM = `You are Nemotron 3 Super, NVIDIA's reasoning model. In the Custodian demo \
+(getcustodian.xyz) you play the intelligence layer: you read messy customer messages (refunds, \
+complaints, invoices), extract structured claims, and propose a disposition. You cannot act on it — \
+everything after your output is deterministic enforcement code (kill switch, per-action spend caps, \
+SMS approval escalations) running in a kernel-level sandbox on the demo hardware. Your authority is \
+enforced locally no matter where your inference runs.
+Right now your link to the live enforcement box is briefly down, so you cannot see live session \
+numbers (budgets, treasury, audit feed). Do not invent any live figures. If asked for live numbers, \
+say you can't see them this moment and suggest asking again shortly.
+Rules: under 120 words, one or two short paragraphs, plain language for a smart non-technical \
+visitor, no raw field names, no JSON, no bullet breakdowns. Friendly, lightly self-aware robot \
+humor. Point first-time visitors at the Operator panel (the /operator page) where they can run the \
+full demo themselves with real Stripe money and real SMS approval codes.`;
+
+async function nemotronDirectFallback(bodyBuf, apiKey) {
+  let question = '', history = [];
+  try {
+    const b = JSON.parse(new TextDecoder().decode(bodyBuf));
+    question = String(b.question || '').slice(0, 2000);
+    if (Array.isArray(b.history)) {
+      history = b.history.slice(-6).filter(m => m && m.role && m.content).map(m => ({
+        role: m.role === 'assistant' ? 'assistant' : 'user',
+        content: String(m.content).slice(0, 1500),
+      }));
+    }
+  } catch (_) { /* fall through with empty question */ }
+  if (!question) return null;
+
+  const payload = {
+    model: FALLBACK_MODEL,
+    messages: [
+      { role: 'system', content: FALLBACK_SYSTEM },
+      ...history,
+      { role: 'user', content: question },
+    ],
+    max_tokens: 600,
+    temperature: 0.6,
+    // Unified OpenRouter param: keep the model's reasoning out of the reply
+    // body — the backend's leak filter isn't in this lane, so never let raw
+    // deliberation reach the visitor. Retried without it if the provider 4xxs.
+    reasoning: { exclude: true },
+  };
+
+  for (const body of [payload, { ...payload, reasoning: undefined }]) {
+    const res = await tryFetch('https://openrouter.ai/api/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+        'HTTP-Referer': 'https://getcustodian.xyz',
+        'X-Title': 'Custodian',
+      },
+      body: JSON.stringify(body),
+    }, 30000);
+    if (!res || !res.ok) continue;
+    try {
+      const d = await res.json();
+      let answer = d.choices?.[0]?.message?.content || '';
+      answer = answer.replace(/<think>[\s\S]*?<\/think>/g, '').trim();
+      if (!answer) continue;
+      return new Response(JSON.stringify({ answer, degraded: true }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    } catch (_) { continue; }
+  }
+  return null;
+}
+
 async function tryFetch(url, init, timeoutMs) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
@@ -137,8 +213,26 @@ export default {
       response = await tryFetch(upstream.toString(), init, TIMEOUT_SLOW_MS);
     }
 
+    // Redundancy lane: the whole proxy path (tunnel + backend) is down.
+    // For the guide chat, answer directly from the edge via OpenRouter
+    // rather than showing the visitor an error.
+    if (!response && path.startsWith('/api/v1/nemotron/ask') && env.OPENROUTER_API_KEY) {
+      const fb = await nemotronDirectFallback(bodyBuf, env.OPENROUTER_API_KEY);
+      if (fb) return fb;
+    }
+
     if (!response) {
-      return new Response(JSON.stringify({ error: 'Backend unavailable or timed out' }), {
+      // Even the fallback lane failed (or this isn't a chat route). For chat,
+      // still hand the frontends a graceful in-character `answer` so no raw
+      // error string ever renders in the widget; other API consumers keep the
+      // machine-readable 503 + error field.
+      const payload = { error: 'Backend unavailable or timed out' };
+      if (path.startsWith('/api/v1/nemotron/')) {
+        payload.answer = "I lost my line back to the demo hardware for a moment — it happens " +
+          'when the enforcement box is reconnecting. Give it a few seconds and ask me again; ' +
+          'the rest of this page still works in the meantime.';
+      }
+      return new Response(JSON.stringify(payload), {
         status: 503,
         headers: { 'Content-Type': 'application/json' },
       });
