@@ -2,52 +2,60 @@
 
 > Inference routing layer for Custodian. Not a separate product — a drop-in
 > replacement for `NvidiaNemotronClient`.
+>
+> Note: "NemoClaw" is also the name of a real, separate NVIDIA sandboxing
+> product (github.com/NVIDIA/NemoClaw) installed independently on
+> argobox-lite for agent process isolation. `NemoClawRouter` below is
+> unrelated to that product — it's our own inference-routing class that
+> happens to share the name.
 
 ## What it is
 
 NemoClaw is the router in `custodian/inference/router.py`. It sends every
 LLM call to a chain of OpenAI-compatible `/v1/chat/completions` endpoints
-in order, falling back to the next hop on a 2-second timeout or
-connection error. The first endpoint to respond wins; `name` and `live`
-reflect which one served the call. It implements the same `LLMClient`
-protocol as `NvidiaNemotronClient` (`name: str`, `live: bool`,
+in order, falling back to the next hop on a timeout or connection error.
+The first endpoint to respond wins; `name` and `live` reflect which one
+served the call. It implements the same `LLMClient` protocol as
+`NvidiaNemotronClient` (`name: str`, `live: bool`,
 `complete(system, user) -> str`), so any caller accepting the protocol can
 swap one for the other with no other changes.
 
 ## Endpoint priority chain
 
-Default order in `NemoClawRouter.endpoints`:
+Default order in `NemoClawRouter.endpoints` (`DEFAULT_ENDPOINTS`):
 
-1. `http://dgx-spark-01:8000/v1/chat/completions` — own DGX Spark (NIM)
-2. `http://10.0.0.199:8000/v1/chat/completions` — argobox-lite local NIM
-3. `https://integrate.api.nvidia.com/v1/chat/completions` — NVIDIA hosted (billed)
+1. `https://openrouter.ai/api/v1/chat/completions` — primary. Faster
+   failover between its own upstream providers and more reliable uptime
+   than NIM direct.
+2. `https://integrate.api.nvidia.com/v1/chat/completions` — secondary,
+   used if OpenRouter is down. Requires `NVIDIA_API_KEY`.
 
-Own hardware first (free, no egress), local NIM as fallback, billed
-hosted endpoint last. Local endpoints need no API key; the hosted
-endpoint reads `NVIDIA_API_KEY=` from the configured key file.
+**DGX Spark does not serve inference.** It runs the enforcement kernel
+only (`:8095/decide`) — a separate, deterministic process from anything in
+this router. Inference always goes to a cloud endpoint, never local. Any
+earlier documentation describing local `dgx-spark-01`/`dgx-spark-02` NIM
+containers in this chain was aspirational and was never implemented —
+that hardware runs enforcement, not inference.
+
+Endpoints with no configured key are skipped automatically (see
+`complete()`), so the router degrades gracefully rather than raising if,
+say, only the OpenRouter key is set.
 
 ## Configuration
 
-`NEMOCLAW_ENDPOINTS` env var (comma-separated URLs) or the constructor
-argument `NemoClawRouter(endpoints=[...], model=..., timeout=2,
-nvidia_api_key_file=Path("..."))`. Defaults: DGX Spark → argobox-lite →
-NVIDIA hosted, model `nvidia/nemotron-3-super-120b-a12b`, 2-second per-hop
-timeout.
+`NemoClawRouter(endpoints=[...], model=..., timeout=2,
+nvidia_api_key_file=Path("..."), openrouter_key_file=Path("..."))`. Keys
+are read from `NVIDIA_API_KEY`/`OPENROUTER_API_KEY` env vars first, falling
+back to the given key files. Default per-hop timeout is 2 seconds; default
+model is `nvidia/llama-3.3-nemotron-super-49b-v1`, with a separate
+`OPENROUTER_FALLBACK_MODEL` (env-overridable, default
+`nvidia/nemotron-3-super-120b-a12b:free`) used specifically for the
+OpenRouter hop.
 
-## DGX Spark integration (arriving Monday)
-
-The two DGX Spark units arrive Monday. Each runs an NVIDIA NIM container
-exposing the same `/v1/chat/completions` shape as the hosted API. Point
-NemoClaw at a local NIM instead of the hosted service by replacing the
-third hop in the env var — no code change:
-
-```bash
-export NEMOCLAW_ENDPOINTS="http://dgx-spark-01:8000/v1/chat/completions,http://10.0.0.199:8000/v1/chat/completions,http://dgx-spark-02:8000/v1/chat/completions"
-```
-
-`NVIDIA_API_KEY` is no longer required when both local endpoints respond;
-the router only attaches a `Bearer` header when the URL contains
-`integrate.api.nvidia.com`.
+Worst-case latency the router can incur (both hops timing out slowly
+rather than failing fast) informs the Cloudflare Worker's `TIMEOUT_SLOW_MS`
+for `/api/v1/nemotron/*` and `/api/v1/triage/custom` — see
+`pages-frontend/_worker.js`.
 
 ## Custodian governance of inference spend
 
@@ -70,11 +78,13 @@ from pathlib import Path
 from custodian.inference.router import NemoClawRouter
 
 client = NemoClawRouter(
-    nvidia_api_key_file=Path("secrets/nvidia.env"),  # only used for the hosted hop
+    nvidia_api_key_file=Path("secrets/nvidia.env"),
+    openrouter_key_file=Path("secrets/openrouter.env"),
     timeout=2,
 )
 text = client.complete(system="...", user="...")
-print(client.name)  # e.g. "nemoclaw-router → http://dgx-spark-01:8000/..."
+print(client.name)  # e.g. "nemoclaw-router → https://openrouter.ai/api/v1/chat/completions"
 ```
 
-`NemoClawRouter` satisfies `LLMClient`; the pack pipeline (`parse_envelope`, verifier, kernel) works unchanged against it.
+`NemoClawRouter` satisfies `LLMClient`; the pack pipeline (`parse_envelope`,
+verifier, kernel) works unchanged against it.

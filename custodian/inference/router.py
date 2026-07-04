@@ -37,7 +37,8 @@ OPENROUTER_FALLBACK_MODEL = os.environ.get(
 @dataclass
 class NemoClawRouter:
     """Tries endpoints in order, falls back on timeout or connection error.
-    Endpoint priority: DGX Spark (local) → NVIDIA NIM (cloud) → OpenRouter (fallback).
+    Endpoint priority: OpenRouter (cloud) → NVIDIA NIM (cloud). DGX Spark runs
+    the enforcement kernel only (:8095/decide) — it never serves inference.
     name and live reflect the endpoint that actually responded."""
     endpoints: list[str] = field(default_factory=lambda: list(DEFAULT_ENDPOINTS))
     model: str = "nvidia/llama-3.3-nemotron-super-49b-v1"
