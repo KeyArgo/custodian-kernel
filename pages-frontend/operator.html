@@ -666,11 +666,13 @@ function startCodePoll(codeElId, approveInputId, noteId) {
                 }
                 if (_codePoller) { clearInterval(_codePoller); _codePoller = null; }
             } else if (d.pending) {
-                const el = document.getElementById(codeElId);
-                if (el && el.textContent === '••••••') el.textContent = '← check phone';
+                // Leave the notification's code masked (••••••) — it's a mockup of the
+                // real SMS bubble, not a status readout, and overwriting it with
+                // instruction text ("approval code is: ← check phone") read as broken.
+                // The instruction belongs in the note below, not inside the fake message.
                 if (noteId) {
                     const n = document.getElementById(noteId);
-                    if (n) { n.textContent = '✓ SMS confirmed delivered — enter code from your phone above.'; n.style.display = 'block'; }
+                    if (n) { n.textContent = '✓ SMS confirmed delivered — check your phone and enter the code below.'; n.style.display = 'block'; }
                 }
                 if (_codePoller) { clearInterval(_codePoller); _codePoller = null; }
             }
