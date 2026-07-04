@@ -394,7 +394,7 @@ def _write_reasoning(script: str, result: dict):
         'event': 'reasoning',
         'script': script.replace('.py', ''),
         'text': text[:600],
-        'iso': __import__('datetime').datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ'),
+        'iso': __import__('datetime').datetime.now(__import__('datetime').timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ'),
     }
     try:
         with open(_REASONING_LOG_PATH, 'a') as f:

@@ -159,23 +159,26 @@ def _execute_provision(case_id: str, data: dict, amount: float) -> dict:
             pass  # fall through to NIM
 
     # NIM path (all cloud cases can use NIM as the execution proof)
+    # The NVIDIA_API_KEY key was already loaded into keys dict above; we
+    # write it into a file so NemoClawRouter can read it without mutating
+    # os.environ, which is not thread-safe in a multi-worker Flask deploy.
     nvidia_key = keys.get("NVIDIA_API_KEY") or os.environ.get("NVIDIA_API_KEY")
     if nvidia_key:
         try:
             from custodian.inference.router import NemoClawRouter
-            r = NemoClawRouter(timeout=15)
-            # Temporarily set key in env for the call
-            old = os.environ.get("NVIDIA_API_KEY")
-            os.environ["NVIDIA_API_KEY"] = nvidia_key
-            response = r.complete(
-                "You are a terse compute orchestrator.",
-                f"Job {case_id} approved. Report: provider={provider}, cost=${amount:.2f}/hr, status=provisioned.",
-            )
-            if old is None:
-                del os.environ["NVIDIA_API_KEY"]
-            else:
-                os.environ["NVIDIA_API_KEY"] = old
-            return {"provider": "nvidia-nim", "endpoint": r.name, "response": response[:120], "billed": amount}
+            _NIM_KEY_PATH = Path(__file__).resolve().parents[2] / "skills" / "payments" / "stripe-spend" / "state" / "nvidia_nim_key.env"
+            _NIM_KEY_PATH.parent.mkdir(parents=True, exist_ok=True)
+            _NIM_KEY_PATH.write_text(f"NVIDIA_API_KEY={nvidia_key}\n")
+            try:
+                r = NemoClawRouter(timeout=15, nvidia_api_key_file=_NIM_KEY_PATH)
+                response = r.complete(
+                    "You are a terse compute orchestrator.",
+                    f"Job {case_id} approved. Report: provider={provider}, cost=${amount:.2f}/hr, status=provisioned.",
+                )
+                _NIM_KEY_PATH.unlink(missing_ok=True)
+                return {"provider": "nvidia-nim", "endpoint": r.name, "response": response[:120], "billed": amount}
+            finally:
+                _NIM_KEY_PATH.unlink(missing_ok=True)
         except Exception:
             pass
 
