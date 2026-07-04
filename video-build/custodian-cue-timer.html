@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Custodian v4 — Cue Timer</title>
+<style>
+  :root {
+    --bg: #0a0a0c;
+    --fg: #e8e8ee;
+    --dim: #6a6a7a;
+    --accent: #76b900;
+    --warn: #ffb000;
+    --hot: #ff5050;
+    --next: #2ee6a6;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--fg);
+    font-family: 'JetBrains Mono', 'Fira Code', 'Menlo', 'Consolas', monospace;
+    padding: 24px;
+    min-height: 100vh;
+  }
+  h1 {
+    color: var(--accent);
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+  }
+  .sub {
+    color: var(--dim);
+    font-size: 11px;
+    margin-bottom: 24px;
+    letter-spacing: 1px;
+  }
+  .controls {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+  }
+  button {
+    background: #1a1a22;
+    color: var(--fg);
+    border: 1px solid #2a2a35;
+    padding: 8px 14px;
+    font-family: inherit;
+    font-size: 11px;
+    letter-spacing: 1px;
+    cursor: pointer;
+    text-transform: uppercase;
+    transition: all 0.1s;
+  }
+  button:hover { border-color: var(--accent); color: var(--accent); }
+  button.active { background: var(--accent); color: #000; border-color: var(--accent); }
+  button.warn { color: var(--warn); border-color: var(--warn); }
+  button.danger { color: var(--hot); border-color: var(--hot); }
+
+  .clock {
+    font-size: 64px;
+    font-weight: 700;
+    color: var(--accent);
+    letter-spacing: -2px;
+    margin-bottom: 8px;
+    font-variant-numeric: tabular-nums;
+  }
+  .clock .ms { font-size: 28px; color: var(--dim); }
+  .clock.over { color: var(--hot); }
+
+  .next {
+    background: #0f0f14;
+    border: 1px solid #1a1a25;
+    border-left: 3px solid var(--next);
+    padding: 14px 18px;
+    margin-bottom: 16px;
+    transition: all 0.2s;
+  }
+  .next.urgent { border-left-color: var(--warn); background: #1a1408; }
+  .next.now { border-left-color: var(--hot); background: #1a0a0a; }
+  .next .label { color: var(--dim); font-size: 10px; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 4px; }
+  .next .when { color: var(--next); font-size: 22px; font-weight: 600; }
+  .next.urgent .when { color: var(--warn); }
+  .next.now .when { color: var(--hot); }
+  .next .what { color: var(--fg); font-size: 13px; margin-top: 6px; }
+  .next .where { color: var(--dim); font-size: 11px; margin-top: 4px; }
+
+  .cues {
+    margin-top: 16px;
+  }
+  .cue {
+    display: grid;
+    grid-template-columns: 90px 60px 1fr 1fr;
+    gap: 12px;
+    padding: 8px 12px;
+    border-bottom: 1px solid #1a1a22;
+    font-size: 12px;
+    align-items: center;
+  }
+  .cue.past { opacity: 0.4; }
+  .cue.upcoming { color: var(--next); }
+  .cue.current { background: #1a0a0a; color: var(--hot); border-left: 2px solid var(--hot); }
+  .cue .t { color: var(--dim); font-variant-numeric: tabular-nums; }
+  .cue .action { font-weight: 600; }
+  .cue .vis { color: var(--dim); }
+  .cue .speak { color: #c8c8d0; }
+
+  /* Compact mode for overlaying */
+  body.compact { padding: 8px; }
+  body.compact h1, body.compact .sub, body.compact .controls, body.compact .cues { display: none; }
+  body.compact .clock { font-size: 32px; margin-bottom: 4px; }
+  body.compact .next { padding: 6px 10px; margin-bottom: 0; }
+  body.compact .next .when { font-size: 14px; }
+  body.compact .next .what { font-size: 10px; margin-top: 2px; }
+  body.compact .next .where { display: none; }
+  body.compact .next .label { display: none; }
+</style>
+</head>
+<body>
+  <h1>// CUSTODIAN v4 — CUE TIMER</h1>
+  <div class="sub">AUDIO START 5.0s · TARGET 82.0s · VIDEO BUILD/DESKTOP RUN</div>
+
+  <div class="controls">
+    <button id="b-start" class="active">▶ Start (0:00)</button>
+    <button id="b-pause">⏸ Pause</button>
+    <button id="b-reset">↺ Reset</button>
+    <button id="b-skip5">+5s</button>
+    <button id="b-skip10">+10s</button>
+    <button id="b-mark" class="warn">● Mark Hit</button>
+    <button id="b-compact" class="danger">⊟ Compact</button>
+  </div>
+
+  <div class="clock" id="clock">00:00.0<span class="ms">0</span></div>
+
+  <div class="next" id="next">
+    <div class="label">UP NEXT</div>
+    <div class="when" id="next-when">--:--</div>
+    <div class="what" id="next-what">--</div>
+    <div class="where" id="next-where">--</div>
+  </div>
+
+  <div class="cues" id="cues"></div>
+
+<script>
+// Cue data — what you need to do, when, and what should be on screen
+// Times are in seconds from audio start (t=5.0s in the video)
+// 0:00 here = audio starts = video at 5.0s
+// Adjust AUDIO_OFFSET if your video cuts at a different point
+const AUDIO_OFFSET = 5.0;
+
+const CUES = [
+  // pre-roll
+  { t: 0,    action: "READY",    vis: "splash rolling",   speak: "(silence, just splash)",                                          where: "video 0:00–0:07" },
+  // sim card
+  { t: 6.4,  action: "DROP CARD 1", vis: "Card 1 in",     speak: "The AI tried to approve its own refund. The kernel said no.",     where: "video 0:07–0:11 → operator panel" },
+  { t: 11.4, action: "PANEL EARN", vis: "operator panel", speak: "This is a simulation. The policy allows unlimited inbound…",        where: "operator / earn row" },
+  // escalation
+  { t: 18.7, action: "PANEL SPEND UNDER",  vis: "operator panel", speak: "$85 undercap, the kernel clears it, no human in the loop.",     where: "spend $85 row" },
+  { t: 24.0, action: "PANEL SPEND OVER",   vis: "operator panel", speak: "$3,500 overcap, the policy escalates…",                          where: "spend $3,500 row" },
+  { t: 28.7, action: "SMS ARRIVES",  vis: "operator panel", speak: "escalates, real SMS right now",                                   where: "phone / SMS panel" },
+  { t: 33.0, action: "SMS CODE SHOWN",vis: "operator panel", speak: "The code is in the operator's phone, the agent cannot see it.",   where: "SMS code visible" },
+  // kill switch
+  { t: 37.0, action: "KILL ON",  vis: "operator panel", speak: "Kill switch on, every request denied…",                          where: "kill switch row" },
+  { t: 42.8, action: "KILL OFF", vis: "operator panel", speak: "Kill switch off, normal evaluation resumes.",                      where: "kill switch row" },
+  // refund
+  { t: 47.3, action: "REFUND REQ",vis: "operator panel", speak: "refunds always escalate, the operator decides…",                  where: "refund row" },
+  // live run transition
+  { t: 50.0, action: "DROP CARD 2",vis: "Card 2 in",     speak: "(end of simulation section)",                                       where: "video 0:42" },
+  { t: 55.2, action: "STRIPE $35", vis: "Stripe email",  speak: "Same kernel, $35, real Stripe payment verified.",                  where: "Stripe email panel" },
+  // router wait (your intent: 1:03-1:06)
+  { t: 58.7, action: "KONSOLE NEMOCLAW WAIT", vis: "Konsole loading", speak: "The kernel gates every outbound spend…",                       where: "Konsole: 'Calling NemoClawRouter…'" },
+  { t: 65.9, action: "KONSOLE RESULT",        vis: "Konsole result",  speak: "self-dealing risk, always escalate…",                          where: "Konsole: kernel returned" },
+  // step 8
+  { t: 71.5, action: "STEP 8 BEAT", vis: "Step 8 panel",  speak: "The kernel flags it before the AI can act…",                    where: "Step 8 / approve refund UI" },
+  { t: 75.0, action: "RECEIPT VERIFY TRUE",   vis: "receipt panel",  speak: "receipt.verify returns true, the report lands in the inbox.", where: "receipt visible" },
+  // close
+  { t: 80.9, action: "FINAL SLIDE",   vis: "closing slide", speak: "Every file, SHA-256 fingerprint, the kernel governs every step.",where: "slide 3 / GETCUSTODIAN.XYZ" },
+];
+
+// State
+let startT = null;     // performance.now() when started
+let pausedAt = 0;      // seconds elapsed when paused
+let running = false;
+let compact = false;
+let marks = [];        // times user marked "hit"
+
+// DOM
+const clock = document.getElementById('clock');
+const next = document.getElementById('next');
+const nextWhen = document.getElementById('next-when');
+const nextWhat = document.getElementById('next-what');
+const nextWhere = document.getElementById('next-where');
+const cuesEl = document.getElementById('cues');
+const btnStart = document.getElementById('b-start');
+const btnPause = document.getElementById('b-pause');
+
+function fmt(t) {
+  if (t < 0) t = 0;
+  const m = Math.floor(t / 60);
+  const s = Math.floor(t % 60);
+  const tenths = Math.floor((t * 10) % 10);
+  return `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}.${tenths}`;
+}
+
+function renderCues(now) {
+  // Find current cue
+  let current = null;
+  let next = null;
+  for (let i = 0; i < CUES.length; i++) {
+    if (CUES[i].t <= now) current = CUES[i];
+    else { next = CUES[i]; break; }
+  }
+  if (current && !next) next = CUES[CUES.length - 1];
+
+  // Update "up next" panel
+  if (next) {
+    nextWhen.textContent = `+${(next.t - now).toFixed(1)}s  →  at audio t=${next.t.toFixed(1)}s / video t=${(next.t + AUDIO_OFFSET).toFixed(1)}s`;
+    nextWhat.textContent = `[${next.action}]  ${next.speak}`;
+    nextWhere.textContent = `Visual: ${next.vis}   |   Where: ${next.where}`;
+    // Urgency classes
+    const dt = next.t - now;
+    next.className = 'next';
+    if (dt < 0.5) next.classList.add('now');
+    else if (dt < 2.0) next.classList.add('urgent');
+  }
+
+  // Update clock
+  clock.innerHTML = `${fmt(now)}<span class="ms">${Math.floor((now * 100) % 100)}</span>`;
+  if (now > 82) clock.classList.add('over');
+  else clock.classList.remove('over');
+
+  // Update cue list
+  let html = '';
+  for (const c of CUES) {
+    let cls = 'cue';
+    if (current && c.t === current.t) cls += ' current';
+    else if (c.t < now) cls += ' past';
+    else if (c.t > now) cls += ' upcoming';
+    html += `<div class="${cls}">
+      <div class="t">+${c.t.toFixed(1)}s</div>
+      <div class="action">${c.action}</div>
+      <div class="speak">${c.speak}</div>
+      <div class="vis">${c.vis}</div>
+    </div>`;
+  }
+  cuesEl.innerHTML = html;
+}
+
+function tick() {
+  if (!running) return;
+  const now = (performance.now() - startT) / 1000;
+  renderCues(now);
+  requestAnimationFrame(tick);
+}
+
+function start() {
+  if (running) return;
+  startT = performance.now() - pausedAt * 1000;
+  running = true;
+  btnStart.classList.add('active');
+  btnPause.classList.remove('active');
+  tick();
+}
+
+function pause() {
+  if (!running) return;
+  pausedAt = (performance.now() - startT) / 1000;
+  running = false;
+  btnStart.classList.remove('active');
+  btnPause.classList.add('active');
+}
+
+function reset() {
+  running = false;
+  pausedAt = 0;
+  startT = null;
+  marks = [];
+  btnStart.classList.remove('active');
+  btnPause.classList.remove('active');
+  renderCues(0);
+}
+
+function skip(sec) {
+  if (running) {
+    startT -= sec * 1000;
+  } else {
+    pausedAt += sec;
+    renderCues(pausedAt);
+  }
+}
+
+function mark() {
+  const now = running ? (performance.now() - startT) / 1000 : pausedAt;
+  marks.push(now);
+  console.log('marked', now);
+  alert(`Marked hit at ${fmt(now)} (audio t)\nVideo t = ${fmt(now + AUDIO_OFFSET)}`);
+}
+
+// Wire controls
+document.getElementById('b-start').onclick = start;
+document.getElementById('b-pause').onclick = pause;
+document.getElementById('b-reset').onclick = reset;
+document.getElementById('b-skip5').onclick = () => skip(5);
+document.getElementById('b-skip10').onclick = () => skip(10);
+document.getElementById('b-mark').onclick = mark;
+document.getElementById('b-compact').onclick = () => {
+  compact = !compact;
+  document.body.classList.toggle('compact', compact);
+  document.getElementById('b-compact').textContent = compact ? '⊞ Expand' : '⊟ Compact';
+};
+
+// Keyboard shortcuts
+document.addEventListener('keydown', (e) => {
+  if (e.target.tagName === 'INPUT') return;
+  if (e.code === 'Space') { e.preventDefault(); running ? pause() : start(); }
+  else if (e.key === 'r') reset();
+  else if (e.key === 'm') mark();
+  else if (e.key === 'c') document.getElementById('b-compact').click();
+});
+
+// Initial render
+renderCues(0);
+</script>
+</body>
+</html>
