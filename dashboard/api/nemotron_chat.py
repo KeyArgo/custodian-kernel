@@ -36,8 +36,16 @@ OPENROUTER_MODEL = os.environ.get('OPENROUTER_FALLBACK_MODEL', 'nvidia/nemotron-
 
 try:
     from custodian.inference.router import NemoClawRouter
+    # timeout=25 per provider * 2 providers (OpenRouter -> NIM fallback) = up to
+    # 50s worst-case backend latency, before any network/Flask overhead. That's
+    # close enough to Cloudflare's own platform-level subrequest duration limit
+    # (which is shorter than this Worker's own 55s AbortController timeout) that
+    # Cloudflare was killing the fetch before our own retry/timeout logic ever
+    # got a chance to run -- observed live as nemotron/ask failing on almost
+    # every request while every other (shorter) endpoint stayed 100% reliable.
+    # 12s leaves a safe ~24s worst-case total, comfortably under that ceiling.
     _nemo_client = NemoClawRouter(
-        timeout=25,
+        timeout=12,
         nvidia_api_key_file=NVIDIA_SECRET_FILE,
         openrouter_key_file=OPENROUTER_SECRET_FILE,
     )
@@ -213,7 +221,7 @@ def _call_openrouter(messages: list[dict]) -> str | None:
         'messages': messages,
         # Reasoning model needs room for CoT + a real answer. Previous 600
         # truncated the answer to a single sentence. (See bug-hunt 2026-07-02.)
-        'max_tokens': 4000,
+        'max_tokens': 1500,
         'temperature': 0.7,
         # NOTE: do NOT send `chat_template_kwargs.thinking: false` here —
         # that's a NIM-specific param and OpenRouter returns 422 for unknown
@@ -699,7 +707,17 @@ def ask():
                 # answers to be truncated to a few words. 4000 leaves room
                 # for ~3-4K tokens of actual answer after the model's
                 # internal reasoning. (See bug-hunt session 2026-07-02.)
-                max_tokens=4000,
+                # Cut from 4000: Cloudflare's edge-to-edge subrequest handling
+                # (Worker -> another Cloudflare-proxied hostname on the same
+                # account) was cancelling nemotron/ask connections after ~4-10s
+                # regardless of this Worker's own 55s AbortController timeout --
+                # confirmed via cloudflared logs ("Incoming request ended
+                # abruptly: context canceled") while the backend itself
+                # succeeded every time in its own access log. 1500 still leaves
+                # comfortable room for CoT + a full answer (600 was the
+                # original bug -- too small, truncated mid-sentence) while
+                # cutting worst-case generation time well below that ceiling.
+                max_tokens=1500,
             )
             # NemoClawRouter only strips <think> tags -- it doesn't know about
             # this app's meta-instruction preamble pattern (see _strip_thinking
@@ -732,7 +750,7 @@ def ask():
             payload = {
                 'model': NVIDIA_MODEL,
                 'messages': cloud_messages,
-                'max_tokens': 4000,
+                'max_tokens': 1500,
                 'temperature': 0.7,
                 'chat_template_kwargs': {'thinking': False},
             }

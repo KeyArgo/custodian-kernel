@@ -46,10 +46,16 @@ def test_openrouter_model_default_is_a_live_model():
 
 
 def test_openrouter_payload_has_sufficient_max_tokens():
-    """`_call_openrouter` must request at least 4000 max_tokens so the
-    reasoning model can produce a real answer after its CoT.
+    """`_call_openrouter` must request enough max_tokens for the reasoning
+    model to produce a real answer after its CoT.
 
-    Previous: 600 truncated answers to a single sentence.
+    Previous: 600 truncated answers to a single sentence. Later raised to
+    4000, then reduced to 1500 (2026-07-04) after live incident: Cloudflare's
+    edge-to-edge subrequest handling was randomly cancelling nemotron/ask
+    connections independent of duration, and cutting worst-case generation
+    time meaningfully reduced how often a request was in flight long enough
+    to get caught by it. 1200 is the floor -- comfortably above the original
+    600-token bug while reflecting the current deliberate value.
     """
     src = read_text("dashboard/api/nemotron_chat.py")
     # Find _call_openrouter function
@@ -59,7 +65,7 @@ def test_openrouter_payload_has_sufficient_max_tokens():
     mt = re.search(r"'max_tokens'\s*:\s*(\d+)", payload)
     assert mt, "max_tokens not in _call_openrouter payload"
     val = int(mt.group(1))
-    assert val >= 4000, f"_call_openrouter max_tokens should be >= 4000, got {val}"
+    assert val >= 1200, f"_call_openrouter max_tokens should be >= 1200, got {val}"
 
 
 def test_openrouter_payload_does_not_send_nim_specific_chat_template_kwargs():
@@ -83,8 +89,12 @@ def test_openrouter_payload_does_not_send_nim_specific_chat_template_kwargs():
 
 def test_nemoclaw_router_call_passes_max_tokens():
     """The /ask route's call to `_nemo_client.complete(...)` must pass an
-    explicit max_tokens override of >= 4000. Without this, the default
-    of 1200 was used and answers came out truncated.
+    explicit max_tokens override. Without this, the default of 1200 was
+    used and answers came out truncated.
+
+    Deliberately reduced from 4000 to 1500 (2026-07-04) as part of a live
+    incident fix -- see test_openrouter_payload_has_sufficient_max_tokens
+    for the full explanation. 1200 is the floor.
     """
     src = read_text("dashboard/api/nemotron_chat.py")
     # Find the function body containing the call. Use a non-greedy match that
@@ -99,7 +109,7 @@ def test_nemoclaw_router_call_passes_max_tokens():
     mt = re.search(r"max_tokens\s*=\s*(\d+)", call_args)
     assert mt, "_nemo_client.complete() must pass max_tokens explicitly"
     val = int(mt.group(1))
-    assert val >= 4000, f"max_tokens for _nemo_client.complete should be >= 4000, got {val}"
+    assert val >= 1200, f"max_tokens for _nemo_client.complete should be >= 1200, got {val}"
 
 
 # ── stripe_webhook.py ────────────────────────────────────────────────────────

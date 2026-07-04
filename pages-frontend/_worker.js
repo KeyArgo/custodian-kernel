@@ -55,6 +55,15 @@ export default {
     const url = new URL(request.url);
     const path = url.pathname;
 
+    // Serve install.sh with correct Content-Type so curl | bash works cleanly
+    // and it doesn't render as raw text in a browser.
+    if (path === '/install.sh') {
+      const res = await env.ASSETS.fetch(request);
+      const headers = new Headers(res.headers);
+      headers.set('Content-Type', 'text/plain; charset=utf-8');
+      return new Response(res.body, { status: res.status, headers });
+    }
+
     const shouldProxy =
       PROXY_EXACT.has(path) || path.startsWith(PROXY_PREFIX);
 
@@ -97,13 +106,20 @@ export default {
     // the same account intermittently hits Cloudflare's own edge-to-edge
     // request handling. Measured ~20-50% single-attempt failure rate here,
     // consistent across GET and POST, even with the Host header corrected
-    // above. Each failure is fast (sub-200ms observed), so several short
-    // retries is far cheaper than surfacing the failure to the user. This
-    // runs on slow paths too — the first attempt already used the full
-    // slow timeout, so a real slow inference call had its fair chance; a
-    // failure THIS fast is the edge bug, not a real timeout.
-    for (let attempt = 0; !response && attempt < 6; attempt++) {
-      response = await tryFetch(upstream.toString(), init, 2000);
+    // above, and NOT correlated with request duration -- confirmed live via
+    // cloudflared logs ("Incoming request ended abruptly: context canceled")
+    // firing anywhere from under a second to several seconds into an
+    // otherwise-healthy backend call. That means a fixed short retry timeout
+    // (fine for the fast-path edge bug, which fails near-instantly) is wrong
+    // for slow paths: a real Nemotron call takes 7-25s+ to complete, so a 2s
+    // retry can never succeed once the first attempt gets randomly killed --
+    // guaranteeing a 503 on every unlucky first attempt regardless of retries.
+    // Give slow paths a real retry budget; keep fast paths on the short,
+    // already-proven-effective retry loop.
+    const retryTimeoutMs = isSlow ? TIMEOUT_SLOW_MS : 2000;
+    const maxRetries = isSlow ? 2 : 6;
+    for (let attempt = 0; !response && attempt < maxRetries; attempt++) {
+      response = await tryFetch(upstream.toString(), init, retryTimeoutMs);
     }
 
     if (!response) {

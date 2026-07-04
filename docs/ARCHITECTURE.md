@@ -85,30 +85,37 @@ to `pages-frontend/operator.html` or `triage.html` take effect on next `deploy.s
 
 All JS in the frontend uses relative URLs (`/api/v1/...`). No hardcoded `rein-local.argobox.com` should appear in browser-facing code.
 
-### Kernel Enforcement — DGX Spark primary, argobox-lite fallback
+### Kernel Enforcement — DGX Spark node chain primary, argobox-lite fallback
 
 `custodian/custodian/policy/enforcer.py` wraps `decide()` with a remote-first pattern:
 
-1. **DGX Spark** (`http://192.168.50.20:8095/decide`) — airgapped enforcement node, primary.
-   Runs `spark-enforcement/enforce_server.py` on the Spark host.
+1. **DGX Spark node(s)** — airgapped enforcement node(s), tried in order. Configured via
+   `SPARK_ENFORCE_URLS` (comma-separated, e.g.
+   `http://192.168.50.101:8095/decide,http://192.168.50.102:8095/decide` for spark-a/spark-b).
+   `SPARK_ENFORCE_URL` (singular) is still honoured as a one-node fallback for compatibility.
+   Runs `spark-enforcement/enforce_server.py` on each Spark host.
 2. **argobox-lite local** (`custodian.policy.evaluator.decide()`) — silent automatic fallback
-   if Spark is unreachable (network blip, reboot, timeout of 1s).
+   if every configured Spark node is unreachable (network blip, reboot, timeout of 1s each).
+   Individual Spark nodes are known to go down — that's what the chain + local fallback exist
+   for. Confirmed live 2026-07-04: the primary Spark node was unreachable and production
+   correctly executed a real Stripe spend via local fallback with zero visible disruption.
 
 DGX Spark runs enforcement **only**. It does NOT run inference. All Nemotron inference is
 cloud-side — see Nemotron Inference below.
 
-Runtime toggle: `SPARK_ENFORCE_URL=''` env var or `/tmp/spark-enforcement-disabled` flag file
-disables Spark and forces local-only enforcement without a restart.
+Runtime toggle: `SPARK_ENFORCE_URLS=''` env var or `/tmp/spark-enforcement-disabled` flag file
+disables all Spark nodes and forces local-only enforcement without a restart.
 
-### Nemotron Inference — NVIDIA NIM primary, OpenRouter fallback
+### Nemotron Inference — OpenRouter primary, NVIDIA NIM fallback
 
 `custodian/inference/router.py` (`NemoClawRouter`) tries endpoints in order:
 
-1. **NVIDIA NIM** (`https://integrate.api.nvidia.com/v1/chat/completions`) — primary, billed.
-   Key: `NVIDIA_API_KEY` or `dashboard/secrets/nvidia.env`.
-2. **OpenRouter** (`https://openrouter.ai/api/v1/chat/completions`) — fallback.
+1. **OpenRouter** (`https://openrouter.ai/api/v1/chat/completions`) — primary. Faster failover
+   between its own upstream providers, more reliable uptime than NIM direct.
    Key: `OPENROUTER_API_KEY` or `dashboard/secrets/openrouter.env`.
-   Default fallback model: `nvidia/llama-3.3-nemotron-super-49b-v1` (override with `OPENROUTER_FALLBACK_MODEL`).
+   Default fallback model: `nvidia/nemotron-3-super-120b-a12b:free` (override with `OPENROUTER_FALLBACK_MODEL`).
+2. **NVIDIA NIM** (`https://integrate.api.nvidia.com/v1/chat/completions`) — secondary, billed.
+   Key: `NVIDIA_API_KEY` or `dashboard/secrets/nvidia.env`.
 
 Cloud endpoints with no key configured are skipped silently. If all endpoints fail, the
 dashboard returns HTTP 502.

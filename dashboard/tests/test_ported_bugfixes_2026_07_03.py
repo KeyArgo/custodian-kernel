@@ -60,12 +60,14 @@ def test_strip_thinking_strips_think_tags():
 
 
 def test_call_openrouter_max_tokens_is_sufficient():
-    """Previous 600 truncated reasoning-model answers to a single sentence."""
+    """Previous 600 truncated reasoning-model answers to a single sentence.
+    Reduced from 4000 to 1500 (2026-07-04, live incident fix) -- 1200 is
+    the floor, comfortably above the original bug value."""
     src = read_text("dashboard/api/nemotron_chat.py")
     m = re.search(r"def _call_openrouter\(.*?payload\s*=\s*\{(.*?)\n\s+\}", src, re.DOTALL)
     assert m, "_call_openrouter payload block not found"
     mt = re.search(r"'max_tokens'\s*:\s*(\d+)", m.group(1))
-    assert mt and int(mt.group(1)) >= 4000
+    assert mt and int(mt.group(1)) >= 1200
 
 
 def test_nemoclaw_router_call_passes_max_tokens_and_strips_result():
@@ -82,7 +84,7 @@ def test_nemoclaw_router_call_passes_max_tokens_and_strips_result():
     assert m, "_nemo_client.complete() call not found"
     call_args, post_call = m.group(1), m.group(2)
     mt = re.search(r"max_tokens\s*=\s*(\d+)", call_args)
-    assert mt and int(mt.group(1)) >= 4000
+    assert mt and int(mt.group(1)) >= 1200
     assert "answer = _strip_thinking(answer)" in post_call
     assert re.search(r"if not answer:\s*\n\s+answer\s*=\s*None", post_call)
 
