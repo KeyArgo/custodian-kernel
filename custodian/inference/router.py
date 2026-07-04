@@ -102,7 +102,7 @@ class NemoClawRouter:
                 continue
             if OPENROUTER_HOSTED in endpoint and "Authorization" not in headers:
                 continue
-            payload = json.dumps({
+            payload_body = {
                 "model": self._model_for(endpoint),
                 "messages": [
                     {"role": "system", "content": system},
@@ -110,10 +110,14 @@ class NemoClawRouter:
                 ],
                 "max_tokens": max_tokens,
                 "temperature": 0.2,
-                # Suppress chain-of-thought for all endpoints — NIM uses
-                # chat_template_kwargs, OpenRouter forwards the same param.
-                "chat_template_kwargs": {"thinking": False},
-            }).encode()
+            }
+            # chat_template_kwargs.thinking=False is NIM-specific; OpenRouter
+            # returns 422 for unknown fields (confirmed 2026-07-02). Only send
+            # it when the endpoint is actually NVIDIA NIM.
+            if NVIDIA_HOSTED in endpoint:
+                payload_body["chat_template_kwargs"] = {"thinking": False}
+
+            payload = json.dumps(payload_body).encode()
             try:
                 req = urllib.request.Request(endpoint, data=payload, headers=headers)
                 with urllib.request.urlopen(req, timeout=self.timeout) as resp:
