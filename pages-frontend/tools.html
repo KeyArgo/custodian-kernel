@@ -133,6 +133,16 @@ footer{border-top:1px solid var(--line);padding:32px 0;color:var(--dim);font-siz
 
 <div class="tools-hero">
   <div class="wrap">
+  <div id="tools-guide-card" style="background:rgba(139,123,255,0.04);border:1px solid rgba(139,123,255,0.2);border-radius:14px;padding:24px;margin-bottom:28px">
+  <div style="font-size:0.8em;font-weight:700;color:var(--violet);margin-bottom:12px;letter-spacing:0.04em;text-transform:uppercase">Judge's Guide</div>
+  <p style="color:var(--muted);font-size:0.92em;line-height:1.7;margin-bottom:12px">
+    The Custodian kernel-gated tool registry is a demo system where every tool call passes through a decision engine before execution. Each tool has an authority band (L0 read-only through L4 critical) that determines whether it can run autonomously or requires human approval.
+  </p>
+  <div style="display:flex;gap:8px;flex-wrap:wrap">
+    <button id="tools-guide-copy" style="all:unset;cursor:pointer;background:rgba(139,123,255,0.1);border:1px solid rgba(139,123,255,0.3);color:var(--violet);font-size:0.82em;padding:7px 16px;border-radius:8px;font-family:var(--mono);font-weight:600">Copy test instructions</button>
+  </div>
+</div>
+  
     <div class="eyebrow">◉ NVIDIA NemoClaw · Governed Tool Registry</div>
     <h1>100 tools.<br>One kernel. Zero exceptions.</h1>
     <p class="lede">Every tool call — whether it sends an SMS, submits an NVIDIA NIM inference job, reads a GitHub PR, or queries a database — passes through the <b>same Custodian kernel</b> before executing. Authority band enforced. OCSF-logged. Kill-switch honoured.</p>

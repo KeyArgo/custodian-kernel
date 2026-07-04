@@ -17,7 +17,8 @@ from flask import Blueprint, jsonify, request
 
 bp = Blueprint("stripe_webhook", __name__)
 
-LEDGER = Path("/tmp/hermes-earn-ledger.json")
+LEDGER = Path("/tmp/hermes-earn-ledger.json")  # volatile /tmp — acceptable for demo only (earn events are ephemeral by nature)
+# Production: use a persistent path like Path(os.environ.get("HERMES_EARN_LEDGER", "/var/lib/custodian/earn_ledger.jsonl"))
 
 
 def _append(entry: dict) -> None:
