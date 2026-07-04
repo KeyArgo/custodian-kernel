@@ -120,7 +120,7 @@ def _log_spend(case_id: str, provider: str, amount: float, description: str, exe
     _AUDIT_LOG.parent.mkdir(parents=True, exist_ok=True)
     event = {
         "event": "spend",
-        "ts": datetime.datetime.utcnow().isoformat() + "Z",
+        "ts": datetime.datetime.now(datetime.timezone.utc).isoformat(),
         "case_id": case_id,
         "provider": provider,
         "amount": amount,
