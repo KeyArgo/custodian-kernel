@@ -224,11 +224,17 @@ def _strip_thinking(text: str) -> str:
         # The model reasoning about its own system-prompt rules by name is
         # never something a visitor should see -- these strings only exist
         # in the prompt or in the model second-guessing that prompt.
+        # (v6.1: markers must be phrases that CANNOT appear in a legitimate
+        # reply about the demo itself. Earlier draft included 'no exceptions'
+        # -- the natural phrasing of the kill-switch answer, the demo's
+        # centerpiece -- plus 'the rule ' and 'system prompt', all of which
+        # false-positived on realistic correct answers and nuked them to
+        # empty. 'rule says' still covers "the rule says" deliberation.)
         RULE_SELF_REFERENCE = (
-            'hard rules', 'rule 4', 'rule says', 'as per rule', 'the rule ',
+            'hard rules', 'rule 4', 'rule says', 'as per rule',
             'jump syntax', 'operator panel is mandatory', 'valid jump key',
-            'meta_patterns', 'system prompt', 'clickable link',
-            'mandatory in first response', 'very first reply', 'no exceptions',
+            'meta_patterns', 'clickable link',
+            'mandatory in first response', 'very first reply',
         )
         if any(marker in low for marker in RULE_SELF_REFERENCE):
             return True
@@ -256,22 +262,28 @@ def _strip_thinking(text: str) -> str:
         if hedge_count >= 2:
             return True
 
-        # A short line that OPENS with a hedge/discourse marker is almost
-        # always a connector fragment between chunks of reasoning (e.g.
-        # "However, note the state says:"), not a standalone reply -- a
-        # real reply doesn't start mid-argument. Only applies to short
-        # lines; a longer sentence that happens to start with "However"
-        # can still be a legitimate, complete thought.
+        # A short line that OPENS with a hedge/discourse marker AND doesn't
+        # end as a complete sentence is a connector fragment between chunks
+        # of reasoning (e.g. "However, note the state says:"), not a
+        # standalone reply. (v6.1: requiring the incomplete ending is what
+        # separates the leak fragment above from a legitimate short line
+        # like "So the money stays put until a human says yes." -- normal
+        # prose starting with So/Now/But is common in real replies and must
+        # survive; a line that trails off into a colon or has no terminal
+        # punctuation is mid-deliberation.)
         if len(s.split()) <= 12 and re.match(
             r'^\s*(however|but|so|therefore|wait|let\'s|now|first|second)\b',
             low,
-        ):
+        ) and not re.search(r'[.!?]["\')\]]?\s*$', s):
             return True
 
-        # The system prompt caps the ENTIRE reply at ~150 words. A single
-        # paragraph well past that on its own can't be the intended reply --
-        # it's a strong sign of unstructured deliberation.
-        if len(s.split()) > 120:
+        # A single paragraph vastly past the prompt's ~150-word total-reply
+        # cap can't be the intended reply. (v6.1: threshold raised from 120
+        # to 200 -- the prompt permits up to 150 words and the model
+        # routinely lands in the 120-150 range legitimately; 120 was
+        # destroying compliant answers. Real deliberation dumps run far
+        # longer than 200.)
+        if len(s.split()) > 200:
             return True
 
         return False
