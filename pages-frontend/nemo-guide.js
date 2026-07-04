@@ -474,8 +474,13 @@
   const isDismissed = (freshState.dismissed || {})[currentPath]
     || (window.CustodianTour && window.CustodianTour.getState().assistant_dismissed);
   const isMobile    = window.matchMedia('(max-width: 680px)').matches;
+  // Home is the entry point — always auto-open there (reload, direct link, or
+  // landing back on '/' without leaving the tab all count), not just on a
+  // detected "new arrival". Other pages keep the narrower gate so re-visiting
+  // a page already seen this session doesn't reopen the panel every time.
+  const shouldAutoOpen = isNewArrival || currentPath === '/';
 
-  if (!isMobile && !isDismissed && isNewArrival) {
+  if (!isMobile && !isDismissed && shouldAutoOpen) {
     setTimeout(openPanel, 1400);
   } else if (!isMobile && !isDismissed) {
     bubble.classList.add('ng-pulse');
