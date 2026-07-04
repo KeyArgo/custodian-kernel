@@ -202,6 +202,11 @@ def _strip_thinking(text: str) -> str:
             r'^\s*Check word count\b', r'^\s*Count words\b',
             r'^\s*Count roughly\b', r'^\s*Word count\b',
             r'^\s*Add:', r'^\s*Note:', r'^\s*End:',
+            # v6.2 (live leak 2026-07-04): deliberation openers that dodge
+            # both the hedge-cluster check (only one hedge word) and the
+            # short-line check (the lines run long).
+            r'^\s*But note\b', r'^\s*The question is\b',
+            r'^\s*The instructions\b', r'^\s*According to the\b',
         )
         for pat in META_PATTERNS:
             if re.match(pat, p):
@@ -216,7 +221,7 @@ def _strip_thinking(text: str) -> str:
         # mention like "the actual answer for the visitor" is legitimate
         # phrasing and must not trip this.
         if re.search(
-            r'\bthe visitor\b\s+(is|was|just|asks?|wants?|said|says|means?|meant)\b',
+            r'\b(the|a|any|this) visitor\b\s+(is|was|just|asks?|wants?|said|says|means?|meant)\b',
             low,
         ):
             return True
@@ -235,6 +240,11 @@ def _strip_thinking(text: str) -> str:
             'jump syntax', 'operator panel is mandatory', 'valid jump key',
             'meta_patterns', 'clickable link',
             'mandatory in first response', 'very first reply',
+            # v6.2: literal phrases from other prompt rules the model quoted
+            # back verbatim in a live leak -- none can occur in a real reply.
+            'operator panel on demand', 'always include [[',
+            'tell them the step number', 'instructions say',
+            'instructions also say',
         )
         if any(marker in low for marker in RULE_SELF_REFERENCE):
             return True
