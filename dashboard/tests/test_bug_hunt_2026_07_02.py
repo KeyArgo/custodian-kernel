@@ -260,6 +260,32 @@ def test_op_nemo_open_does_not_show_input_placeholder_as_fallback():
     )
 
 
+def test_nemoclaw_router_does_not_send_chat_template_kwargs_to_openrouter():
+    """`chat_template_kwargs` is a NIM-specific param. OpenRouter returns
+    422 for unknown fields. NemoClawRouter must only send it for NIM, not
+    for OpenRouter — otherwise the primary endpoint fails every time and
+    the request falls through to the slower NIM path.
+
+    Fix (2026-07-03): route.py now conditionally adds chat_template_kwargs
+    only when NVIDIA_HOSTED is in the endpoint URL.
+    """
+    src = read_text("custodian/inference/router.py")
+    # Find the payload construction block inside complete()
+    # The fix creates payload_body and conditionally adds chat_template_kwargs
+    assert "NVIDIA_HOSTED in endpoint" in src, (
+        "router must check if endpoint is NIM before adding chat_template_kwargs"
+    )
+    # Verify the payload is only sent for NIM
+    # Find the section where chat_template_kwargs is conditionally added
+    m = re.search(
+        r"if NVIDIA_HOSTED in endpoint:\s*\n\s+payload_body\[\"chat_template_kwargs\"\]",
+        src, re.DOTALL
+    )
+    assert m, (
+        "chat_template_kwargs must be conditionally added inside 'if NVIDIA_HOSTED in endpoint'"
+    )
+
+
 def test_console_nemotron_send_handles_empty_answer():
     """console.html's nemotronSend() used to throw TypeError when
     data.answer was undefined (because it called .replace on undefined),
