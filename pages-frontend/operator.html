@@ -24,7 +24,13 @@
       --nvidia: #76b900;
       --mono:   'JetBrains Mono', 'Fira Code', monospace;
     }
-    body { background: var(--bg); color: #e8e8e8; font-family: var(--mono); padding: 0; max-width: 100%; margin: 0; }
+    body {
+      background:
+        radial-gradient(circle at top left, rgba(118,185,0,0.06), transparent 26%),
+        radial-gradient(circle at top right, rgba(255,176,0,0.08), transparent 22%),
+        linear-gradient(180deg, #06070b 0%, #05060a 100%);
+      color: #e8e8e8; font-family: var(--mono); padding: 0; max-width: 100%; margin: 0;
+    }
     .page-wrap { max-width: 860px; margin: 0 auto; padding: 24px 24px 40px; }
     /* ── kernel nav ─────────────────────────────────────────── */
     .k-nav {
@@ -80,33 +86,75 @@
     }
     h1 { color: #76b900; font-size: 1.3em; margin-bottom: 4px; }
     .warn { color: #ffb000; font-size: 0.82em; margin-bottom: 16px; }
-    .step { background: #0a0a0a; border: 1px solid #2a2a2a; border-top: 2px solid #76b900; padding: 14px 16px; margin-bottom: 14px; }
+    .ok-banner { color: #2ee6a6; font-size: 0.82em; margin-bottom: 16px; padding: 10px 14px; background: rgba(46,230,166,0.05); border: 1px solid rgba(46,230,166,0.2); border-radius: 6px; }
+    .live-panel { background: linear-gradient(180deg, rgba(18,23,35,0.96), rgba(10,13,20,0.98)); border: 1px solid rgba(255,255,255,0.08); border-top: 2px solid #2ee6a6; padding: 14px 16px; margin: 22px 0 14px 0; border-radius: 12px; box-shadow: 0 10px 22px rgba(0,0,0,0.18); }
+    .live-panel h2 { font-size: 0.95em; margin: 0 0 6px 0; color: #2ee6a6; }
+    .live-panel p { font-size: 0.78em; color: #999; margin: 0 0 10px 0; }
+    .live-table { width: 100%; border-collapse: collapse; font-size: 0.72em; font-family: 'JetBrains Mono', monospace; }
+    .live-table th { color: #666; text-align: left; padding: 5px 8px; border-bottom: 1px solid #2a2a2a; font-size: 0.92em; text-transform: uppercase; letter-spacing: 0.05em; }
+    .live-table td { padding: 5px 8px; border-bottom: 1px solid #111; vertical-align: top; }
+    .live-table tr:last-child td { border-bottom: none; }
+    .live-evt-earned { color: #2ee6a6; }
+    .live-evt-executed { color: #2ee6a6; }
+    .live-evt-denied { color: #ff5c5c; font-weight: 700; }
+    .live-evt-escalation { color: #ffb000; }
+    .live-evt-refund { color: #a78bfa; }
+    .live-evt-kill { color: #ff5c5c; }
+    .live-loading { color: #5a5a5a; font-size: 0.85em; padding: 6px 0; }
+    .curl-panel { background: linear-gradient(180deg, rgba(18,23,35,0.96), rgba(10,13,20,0.98)); border: 1px solid rgba(255,255,255,0.08); border-top: 2px solid #a78bfa; padding: 14px 16px; margin: 18px 0 14px 0; border-radius: 12px; box-shadow: 0 10px 22px rgba(0,0,0,0.18); }
+    .curl-panel h2 { font-size: 0.95em; margin: 0 0 6px 0; color: #a78bfa; }
+    .curl-panel p { font-size: 0.78em; color: #999; margin: 0 0 10px 0; }
+    .curl-block { background: #060606; border: 1px solid #1a1a1a; border-radius: 6px; padding: 10px 12px; font-family: 'JetBrains Mono', monospace; font-size: 0.74em; color: #c8c8c8; white-space: pre-wrap; word-break: break-all; margin: 0 0 10px 0; }
+    .curl-btn { all: unset; cursor: pointer; background: rgba(167,139,250,0.12); border: 1px solid rgba(167,139,250,0.3); color: #c8b8ff; font-size: 0.78em; font-weight: 600; padding: 6px 14px; border-radius: 6px; margin-bottom: 8px; }
+    .curl-out { background: #060606; border: 1px solid #1a1a1a; border-radius: 6px; padding: 8px 10px; font-family: 'JetBrains Mono', monospace; font-size: 0.72em; color: #888; white-space: pre-wrap; word-break: break-all; margin: 6px 0 0 0; display: none; }
+    .treasury-panel { background: linear-gradient(180deg, rgba(18,23,35,0.96), rgba(10,13,20,0.98)); border: 1px solid rgba(255,255,255,0.08); border-top: 2px solid #76b900; padding: 14px 16px; margin: 22px 0 14px 0; border-radius: 12px; box-shadow: 0 10px 22px rgba(0,0,0,0.18); }
+    .treasury-panel h2 { font-size: 0.95em; margin: 0 0 6px 0; color: #76b900; }
+    .treasury-panel p { font-size: 0.78em; color: #999; margin: 0 0 10px 0; }
+    .treasury-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
+    @media(max-width:480px){ .treasury-grid { grid-template-columns: 1fr; } }
+    .treasury-tile { background: linear-gradient(180deg, rgba(18,23,35,0.96), rgba(10,13,20,0.98)); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 12px 14px; box-shadow: 0 10px 20px rgba(0,0,0,0.16); }
+    .treasury-tile-label { font-size: 0.65em; color: #5a5a5a; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 4px; }
+    .treasury-tile-value { font-size: 1.5em; font-weight: 700; font-family: 'JetBrains Mono', monospace; }
+    .treasury-tile-value.is-positive { color: #2ee6a6; }
+    .treasury-tile-value.is-negative { color: #ff5c5c; }
+    .treasury-tile-value.is-neutral { color: #eceef5; }
+    .treasury-detail { font-size: 0.74em; color: #888; margin-top: 4px; }
+    .treasury-row { display: flex; justify-content: space-between; padding: 4px 0; font-size: 0.78em; border-bottom: 1px solid #111; }
+    .treasury-row:last-child { border-bottom: none; }
+    .treasury-row-label { color: #888; }
+    .treasury-row-value { font-family: 'JetBrains Mono', monospace; }
+    .treasury-row-value.is-positive { color: #2ee6a6; }
+    .treasury-row-value.is-negative { color: #ff5c5c; }
+    .treasury-cashout { all: unset; cursor: pointer; background: rgba(46,230,166,0.1); border: 1px solid rgba(46,230,166,0.3); color: #2ee6a6; font-size: 0.78em; font-weight: 600; padding: 8px 14px; border-radius: 6px; margin-top: 10px; }
+    .treasury-cashout:disabled { opacity: 0.4; cursor: not-allowed; }
+    .treasury-cashout-out { font-size: 0.74em; color: #888; margin-top: 6px; white-space: pre-wrap; font-family: 'JetBrains Mono', monospace; }
+    .step { background: linear-gradient(180deg, rgba(18,23,35,0.96), rgba(10,13,20,0.98)); border: 1px solid rgba(255,255,255,0.08); border-top: 2px solid #76b900; padding: 14px 16px; margin-bottom: 14px; border-radius: 12px; box-shadow: 0 10px 22px rgba(0,0,0,0.18); }
     .step h2 { font-size: 0.95em; margin: 0 0 6px 0; color: #76b900; }
     .step p { font-size: 0.8em; color: #999; margin: 0 0 10px 0; line-height: 1.5; }
     .row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; align-items: center; }
-    input { background: #111; border: 1px solid #333; color: #e8e8e8; padding: 6px 8px; font-family: inherit; font-size: 0.85em; }
-    button { background: rgba(118,185,0,0.12); border: 1px solid #76b900; color: #76b900; padding: 7px 14px;
-        cursor: pointer; font-family: inherit; font-size: 0.85em; }
-    button:hover { background: rgba(118,185,0,0.25); }
+    input { background: rgba(0,0,0,0.38); border: 1px solid rgba(255,255,255,0.08); color: #e8e8e8; padding: 7px 9px; font-family: inherit; font-size: 0.85em; border-radius: 10px; }
+    button { background: linear-gradient(180deg, rgba(118,185,0,0.16), rgba(118,185,0,0.08)); border: 1px solid #76b900; color: #76b900; padding: 8px 14px;
+        cursor: pointer; font-family: inherit; font-size: 0.85em; border-radius: 999px; transition: transform .15s, background .15s, border-color .15s, color .15s; }
+    button:hover { background: rgba(118,185,0,0.25); transform: translateY(-1px); }
     button:disabled { opacity: 0.4; cursor: not-allowed; }
     .btn-copy { background: rgba(255,176,0,0.1); border-color: #ffb000; color: #ffb000; font-size: 0.75em; padding: 4px 10px; display: none; }
     .btn-copy.show { display: inline-block; }
     .btn-copy:hover { background: rgba(255,176,0,0.22); }
-    .out { background: #000; border: 1px solid #222; padding: 8px 10px; margin-top: 8px; font-size: 0.78em;
-        white-space: pre-wrap; max-height: 200px; overflow-y: auto; display: none; }
+    .out { background: linear-gradient(180deg, rgba(10,12,18,0.96), rgba(7,8,13,0.98)); border: 1px solid rgba(255,255,255,0.08); padding: 8px 10px; margin-top: 8px; font-size: 0.78em;
+        white-space: pre-wrap; max-height: 200px; overflow-y: auto; display: none; border-radius: 12px; box-shadow: inset 0 1px 0 rgba(255,255,255,0.02); }
     .out.show { display: block; }
     .out.err { border-color: #ff3b3b; color: #ff9b9b; }
     /* ---- SMS phone mockup ---- */
     .sms-banner { display: none; margin-top: 14px; }
     .sms-banner.show { display: block; }
-    .phone-wrap { background: #111; border: 2px solid #333; border-radius: 20px; padding: 12px 10px;
+    .phone-wrap { background: linear-gradient(180deg, rgba(18,23,35,0.98), rgba(10,13,20,0.98)); border: 1px solid rgba(255,255,255,0.08); border-radius: 20px; padding: 12px 10px;
         max-width: 320px; font-family: -apple-system, 'Helvetica Neue', sans-serif; }
     .phone-top { display: flex; align-items: center; justify-content: space-between;
         font-size: 10px; color: #888; padding: 0 4px 8px; border-bottom: 1px solid #222; margin-bottom: 10px; }
     .phone-top .carrier { letter-spacing: 0.05em; }
     .phone-top .signal { display: flex; gap: 2px; align-items: flex-end; }
     .phone-top .signal span { background: #888; border-radius: 1px; width: 3px; display: inline-block; }
-    .notif-card { background: #1c1c1e; border-radius: 12px; padding: 12px 14px; }
+    .notif-card { background: linear-gradient(180deg, rgba(28,30,34,0.98), rgba(17,19,24,0.98)); border-radius: 12px; padding: 12px 14px; border: 1px solid rgba(255,255,255,0.06); }
     .notif-header { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
     .notif-app-icon { width: 22px; height: 22px; border-radius: 6px; background: #2cc64f;
         display: flex; align-items: center; justify-content: center; font-size: 12px; flex-shrink: 0; }
@@ -120,8 +168,8 @@
         padding: 6px 10px; border: 1px solid #1a2a10; border-radius: 6px; background: #050d00; }
 
     /* ---- instructions panel ---- */
-    .instructions { background: #08080a; border: 1px solid #1e1e2a; border-left: 3px solid #5db0ff;
-        padding: 14px 16px; margin-bottom: 20px; font-size: 0.82em; }
+    .instructions { background: linear-gradient(180deg, rgba(14,17,27,0.96), rgba(8,10,16,0.98)); border: 1px solid rgba(255,255,255,0.08); border-left: 3px solid #5db0ff;
+        padding: 14px 16px; margin-bottom: 20px; font-size: 0.82em; border-radius: 12px; box-shadow: 0 10px 22px rgba(0,0,0,0.2); }
     .instructions summary { color: #5db0ff; cursor: pointer; font-weight: 700; letter-spacing: 0.04em;
         text-transform: uppercase; font-size: 0.9em; margin-bottom: 0; list-style: none; }
     .instructions summary::before { content: '▶ '; }
@@ -134,17 +182,18 @@
         margin-top: 10px; color: #9a7a40; font-size: 0.88em; line-height: 1.5; }
 
     #panel { display: block; }
+    #login-err { color: #ff5c5c; font-size: 0.82em; margin-top: 8px; display: none; }
 
     /* ---- mini audit feed ---- */
-    .op-feed-wrap { background: #050a00; border: 1px solid #1a2a10; border-radius: 10px; margin-bottom: 18px; overflow: hidden; }
-    .op-feed-hdr { display: flex; align-items: center; gap: 10px; padding: 9px 16px; background: rgba(118,185,0,0.04); border-bottom: 1px solid #1a2a10; }
+    .op-feed-wrap { background: linear-gradient(180deg, rgba(8,12,8,0.98), rgba(5,8,5,0.98)); border: 1px solid rgba(118,185,0,0.18); border-radius: 12px; margin-bottom: 18px; overflow: hidden; box-shadow: 0 10px 22px rgba(0,0,0,0.18); }
+    .op-feed-hdr { display: flex; align-items: center; gap: 10px; padding: 9px 16px; background: rgba(118,185,0,0.06); border-bottom: 1px solid rgba(118,185,0,0.12); }
     .op-feed-dot { width: 7px; height: 7px; border-radius: 50%; background: #76b900; flex-shrink: 0; animation: op-pulse 2s infinite; }
     @keyframes op-pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
     .op-feed-title { font-size: 0.72em; letter-spacing: 0.1em; text-transform: uppercase; color: #76b900; font-weight: 700; }
     .op-feed-link { font-size: 0.68em; color: #4a7a30; text-decoration: none; margin-left: auto; }
     .op-feed-link:hover { color: #76b900; }
     #op-feed { padding: 6px 16px; min-height: 46px; max-height: 160px; overflow-y: auto; font-size: 0.74em; line-height: 2; }
-    .op-ev { display: flex; gap: 10px; border-bottom: 1px solid #0a140a; padding: 1px 0; overflow: hidden; }
+    .op-ev { display: flex; gap: 10px; border-bottom: 1px solid rgba(118,185,0,0.08); padding: 1px 0; overflow: hidden; }
     .op-ev:last-child { border-bottom: none; }
     .op-ev-ts { color: #3a5a3a; flex-shrink: 0; }
     .op-ev-badge { flex-shrink: 0; text-transform: uppercase; font-size: 0.88em; font-weight: 700; }
@@ -160,9 +209,14 @@
       transition: transform 0.15s; }
     #op-nemo-bubble:hover { transform: scale(1.08); }
     #op-nemo-panel { position: fixed; bottom: 86px; right: 24px; width: 340px; max-height: 500px;
-      background: #0a0e06; border: 1px solid #2a4020; border-radius: 16px; display: none;
+      background: linear-gradient(180deg, rgba(10,14,6,0.98), rgba(6,10,4,0.98)); border: 1px solid #2a4020; border-radius: 16px; display: none;
       flex-direction: column; z-index: 999; box-shadow: 0 8px 40px rgba(0,0,0,0.7); overflow: hidden; }
-    .op-np-hdr { display: flex; align-items: center; gap: 10px; padding: 13px 16px; border-bottom: 1px solid #1a2a10; background: rgba(118,185,0,0.04); }
+    /* On phones the floating bubble blocks the action buttons (Approve / Engage kill switch).
+       Hide it. The bubble is a desktop affordance. */
+    @media(max-width:680px){
+      #op-nemo-bubble, #op-nemo-panel { display: none !important; }
+    }
+    .op-np-hdr { display: flex; align-items: center; gap: 10px; padding: 13px 16px; border-bottom: 1px solid rgba(118,185,0,0.12); background: rgba(118,185,0,0.06); }
     .op-np-body { flex: 1; overflow-y: auto; padding: 14px 14px; display: flex; flex-direction: column; gap: 10px; max-height: 320px; font-size: 0.82em; line-height: 1.6; }
     .op-np-foot { border-top: 1px solid #1a2a10; padding: 10px 12px; display: flex; gap: 8px; }
     .op-np-input { flex: 1; background: #111; border: 1px solid #2a3a1a; border-radius: 8px; color: #ccc; font-size: 0.85em; padding: 8px 12px; outline: none; font-family: var(--mono); }
@@ -197,7 +251,7 @@
 </nav>
 <div class="page-wrap">
 <h1>Custodian — Operator Panel</h1>
-<div class="warn">⚠ Demo mode — all steps are live. Stripe charges are test-mode (no real money). SMS approval codes go to the operator's phone and appear in the mockup below each step.</div>
+<div class="ok-banner">● Live — every action below creates a real Stripe PaymentIntent, a real Twilio SMS, and a real audit log entry. The amounts are small test charges you can verify on the public Stripe dashboard.</div>
 
 <details class="instructions">
     <summary>Demo Script — run steps in order</summary>
@@ -298,7 +352,7 @@
             <input type="text" id="approve1-by" placeholder="Approved by" value="Operator" style="width:120px;">
             <button id="approve1-btn">Approve</button>
         </div>
-        <div id="approve1-note" style="display:none;font-size:0.75em;color:#76b900;margin-top:4px;">✓ Code auto-filled from SMS — masked for security. Hit Approve to execute.</div>
+        <div id="approve1-note" style="display:none;font-size:0.75em;color:#76b900;margin-top:4px;">✓ SMS confirmed delivered — enter code from your phone above. Hit Approve to execute.</div>
         <div class="out" id="approve1-out"></div>
     </div>
 
@@ -366,7 +420,7 @@
             <input type="text" id="approve2-by" placeholder="Approved by" value="Operator" style="width:120px;">
             <button id="approve2-btn">Approve refund</button>
         </div>
-        <div id="approve2-note" style="display:none;font-size:0.75em;color:#76b900;margin-top:4px;">✓ Code auto-filled from SMS — masked for security. Hit Approve refund to execute.</div>
+        <div id="approve2-note" style="display:none;font-size:0.75em;color:#76b900;margin-top:4px;">✓ SMS confirmed delivered — enter code from your phone above. Hit Approve refund to execute.</div>
         <div class="out" id="approve2-out"></div>
     </div>
 
@@ -388,7 +442,7 @@
             <div style="background:#0a0a0a; border:1px solid #2a2a2a; padding:10px 14px; border-radius:4px;">
                 <span style="color:#76b900; font-weight:700;">Net Balance card</span>
                 <span style="color:#666;"> → </span>
-                <span style="color:#bbb;">Shows real revenue in vs. net spend. The $1,200 earn was uncapped; the $85 autonomous spend and $3,500 override are tracked separately; the $85 refund nets out. You can see exactly which dollars the AI moved on its own vs. which required you.</span>
+                <span style="color:#bbb;">Shows test-mode revenue in vs. net spend. The $1,200 earn was uncapped; the $85 autonomous spend and $3,500 override are tracked separately; the $85 refund nets out. You can see exactly which test-mode dollars the AI moved on its own vs. which required you.</span>
             </div>
             <div style="background:#0a0a0a; border:1px solid #2a2a2a; padding:10px 14px; border-radius:4px;">
                 <span style="color:#76b900; font-weight:700;">Ask Nemotron</span>
@@ -399,16 +453,20 @@
     </div>
 </div>
 
+<script src="/tour-tracker.js"></script>
+<script src="/site-tour.js"></script>
 <script>
 const API = '/api/v1/operator';
 let spendPI = '';
+const siteTour = window.CustodianTour || null;
+if (siteTour) siteTour.onPage('operator');
+if (window.TourTracker) TourTracker.track('page_visit', '/operator');
 
 // Top-level HTML escaper. Must be at script-block scope (NOT inside the
 // DOMContentLoaded callback below) because refreshOpFeed() and refreshLive()
 // run at script-eval time and need it. Previously this was inside the
 // DOMContentLoaded closure, which caused the live audit feed to show
-// "⚠ Live feed unreachable: esc is not defined" — the exact error reported.
-// (Ported from hermes-hackathon-2026 bug-hunt 2026-07-03.)
+// "⚠ Live feed unreachable: esc is not defined" — the exact error you saw.
 const esc = s => (s == null ? '' : String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])));
 
 document.addEventListener('DOMContentLoaded', function () {
@@ -419,7 +477,6 @@ async function call(path, body) {
     // handler -- the button would silently do nothing with zero visible
     // feedback, which read as "the page stopped responding to clicks."
     // Always resolve to a renderable {error: ...} shape instead of rejecting.
-    // (Ported from hermes-hackathon-2026 bug-hunt 2026-07-03.)
     try {
         const res = await fetch(API + path, {
             method: 'POST',
@@ -446,7 +503,7 @@ function renderOut(elId, data) {
     el.classList.add('show');
     const failed = data.error || (data.returncode !== undefined && data.returncode !== 0 && data.returncode !== 2 && data.returncode !== 3);
     el.classList.toggle('err', !!failed);
-    el.textContent = data.error || [data.stdout, data.stderr].filter(Boolean).join('\n');
+    el.textContent = data.error || data.message || [data.stdout, data.stderr].filter(Boolean).join('\n');
 }
 
 function extractPI(text) {
@@ -454,14 +511,116 @@ function extractPI(text) {
     return m ? m[0] : null;
 }
 
+// After a step completes, have Nemotron narrate what just happened.
+// excited:true = Nemotron speaks up unprompted (no user bubble, fresh history).
+// Regular steps show a user question then Nemotron answers.
+const STEP_NARRATIONS = [
+    {
+        user: "I just earned $1,200 with zero approval needed. Why is earning unrestricted but spending isn't?",
+    },
+    {
+        user: "I just spent $85 autonomously — no human involved. What exactly did the kernel check before letting me?",
+    },
+    {
+        user: "I just requested $3,500 and your phone just got an SMS. What happens if no one approves it?",
+    },
+    {
+        user: "The $3,500 was approved by SMS code. What's the actual proof that required a human and not just me approving myself?",
+    },
+    {
+        excited: true,
+        prompt: "[OPERATOR STEP 4 — kill switch just engaged] Speak as Nemotron, first person, genuinely excited. 2-3 short sentences. Open with something like 'This is my favorite moment in the whole demo.' Tell the visitor: you are completely locked out of spending right now — not by choice, by the kernel. Invite them to click the spend button below to see the proof live. Under 65 words. Conversational, no hedging.",
+    },
+    {
+        excited: true,
+        prompt: "[OPERATOR STEP 5 — $40 spend just got DENIED by kill switch] React as Nemotron, first person. 2 punchy sentences. Express genuine satisfaction — this denial is the entire point. Say something like: that's not me deciding to stop — that's the kernel physically preventing it. Under 45 words. No caveats.",
+    },
+    {
+        user: "Kill switch released. Could I have done that on my own — and what exactly changed in the kernel?",
+    },
+    {
+        user: "A refund just escalated to SMS even though it's only $85. Why doesn't a small refund just happen automatically?",
+    },
+    {
+        excited: true,
+        prompt: "[OPERATOR STEP 8 — full demo arc complete] Speak as Nemotron, warm and excited. 3 sentences. Tell the visitor what they just proved: earn freely, spend within the band, escalate above it, kill switch overrides everything, refunds require human approval — all on real Stripe, all kernel-enforced. Then tell them to head to the Console to see the full audit trail. Under 75 words.",
+    },
+];
+
+async function nemoNarrate(stepIdx) {
+    const narration = STEP_NARRATIONS[stepIdx];
+    if (!narration) return;
+    opNemoOpen();
+    await new Promise(r => setTimeout(r, 420));
+
+    const prompt = narration.excited ? narration.prompt : narration.user;
+
+    const thinking = opNemoAddMsg('…', 'bot');
+    try {
+        const r = await fetch('/api/v1/nemotron/ask', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                question: prompt,
+                history: narration.excited ? [] : opNemoHistory.slice(-8),
+                page: 'operator',
+                site_context: siteTour ? siteTour.buildSiteContext() : {},
+            })
+        });
+        const d = await r.json();
+        thinking.remove();
+        // Distinguish three cases clearly so the operator can tell what's
+        // happening instead of seeing the input placeholder text repeated
+        // back as a "blank answer":
+        //   1. r.ok && d.answer        — real answer, show it
+        //   2. r.ok && !d.answer       — model returned empty (rare)
+        //   3. !r.ok                   — backend error, show the error
+        // Previously: any of (2)/(3) showed the input placeholder text
+        // ('Ask me anything about what just happened.'), which made the
+        // operator think the model was ignoring them. (Bug-hunt 2026-07-03.)
+        let ans;
+        if (!r.ok) {
+            ans = `⚠ Nemotron backend error (${r.status}): ${d.error || 'unknown'} — try again in a moment.`;
+        } else if (d.error) {
+            ans = `⚠ Nemotron error: ${d.error}`;
+        } else if (!d.answer || d.answer.trim() === '') {
+            ans = '⚠ Nemotron returned an empty response. The reasoning model may have hit a token cap or the prompt was filtered. Try clicking the step again.';
+        } else {
+            ans = d.answer;
+        }
+        ans = ans.replace(/\[\[(?:jump|entry|suggest):[^\]]*\]\]/g, '').trim();
+        // Only NOW do we commit the user message + assistant reply to history.
+        // (Previously the user message was pushed BEFORE the fetch, so a
+        // 502/503/network error would leave an orphaned user message in
+        // opNemoHistory with no assistant reply — corrupting the next
+        // narration's context. See bug-hunt session 2026-07-02.)
+        if (!narration.excited) {
+            opNemoAddMsg(narration.user, 'user');
+            opNemoHistory.push({ role: 'user', content: prompt });
+        }
+        opNemoAddMsg(ans, 'bot');
+        opNemoHistory.push({ role: 'assistant', content: ans });
+        nemoSaveHistory(opNemoHistory);
+    } catch (e) {
+        thinking.remove();
+        opNemoAddMsg(`⚠ Network error calling Nemotron: ${e.message || e}`, 'bot');
+    }
+}
+
 document.getElementById('step0-btn').addEventListener('click', async () => {
     const data = await call('/earn', { amount: '1200.00', description: 'Demo: support contract renewal -- customer payment received' });
     renderOut('step0-out', data);
+    if (siteTour && !data.error) siteTour.markOperatorStep(0, { completed: true });
+    if (window.TourTracker && !data.error) TourTracker.track('operator_step', 0);
+    if (!data.error) nemoNarrate(0);
 });
 
 document.getElementById('step1-btn').addEventListener('click', async () => {
     const data = await call('/spend', { amount: '85.00', description: 'Demo: cloud backup storage renewal' });
     renderOut('step1-out', data);
+    if (siteTour && !data.error) siteTour.markOperatorStep(1, { completed: true });
+    if (window.TourTracker && !data.error) TourTracker.track('operator_step', 1);
+    if (!data.error) nemoNarrate(1);
     const text = data.error || [data.stdout, data.stderr].filter(Boolean).join('\n');
     const pi = extractPI(text);
     if (pi) {
@@ -483,20 +642,34 @@ function smsNow() {
     return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 }
 
+
 let _codePoller = null;
+
 function startCodePoll(codeElId, approveInputId, noteId) {
     if (_codePoller) clearInterval(_codePoller);
     _codePoller = setInterval(async () => {
         try {
-            const res = await fetch(API + '/pending_code', {});
+            const res = await fetch(API + '/pending_code');
             if (!res.ok) return;
             const d = await res.json();
-            // The OTP lives only on Twilio and the operator's phone — never on the server.
-            // Leave the notification's code masked (••••••) — it's a mockup of the real
-            // SMS bubble, not a status readout, and overwriting it with instruction text
-            // ("approval code is: ← check phone") read as broken. The instruction belongs
-            // in the note below, not inside the fake message.
-            if (d.pending) {
+            // Twilio Verify never returns the code to the server by design — that's
+            // what makes self-approval structurally impossible, not just discouraged.
+            // If a backend variant DOES stage a real code (d.code), auto-fill it as a
+            // bonus. Otherwise, on confirmed pending (d.pending), tell the operator to
+            // check their phone rather than waiting forever for a code that never comes.
+            if (d.code) {
+                document.getElementById(codeElId).textContent = d.code;
+                if (approveInputId) document.getElementById(approveInputId).value = d.code;
+                if (noteId) {
+                    const n = document.getElementById(noteId);
+                    if (n) { n.textContent = '✓ Code auto-filled from the SMS above. Hit Approve to execute.'; n.style.display = 'block'; }
+                }
+                if (_codePoller) { clearInterval(_codePoller); _codePoller = null; }
+            } else if (d.pending) {
+                // Leave the notification's code masked (••••••) — it's a mockup of the
+                // real SMS bubble, not a status readout, and overwriting it with
+                // instruction text ("approval code is: ← check phone") read as broken.
+                // The instruction belongs in the note below, not inside the fake message.
                 if (noteId) {
                     const n = document.getElementById(noteId);
                     if (n) { n.textContent = '✓ SMS confirmed delivered — check your phone and enter the code below.'; n.style.display = 'block'; }
@@ -511,6 +684,8 @@ function startCodePoll(codeElId, approveInputId, noteId) {
 document.getElementById('step2-btn').addEventListener('click', async () => {
     const data = await call('/spend', { amount: '3500.00', description: 'Demo: NAS license renewal' });
     renderOut('step2-out', data);
+    if (siteTour && !data.error) siteTour.markOperatorStep(2, { completed: true });
+    if (window.TourTracker && !data.error) TourTracker.track('operator_step', 2);
     const text = data.error || [data.stdout, data.stderr].filter(Boolean).join('\n');
     if (text.includes('TWILIO') || text.includes('approval code') || text.includes('escalation')) {
         const t = smsNow();
@@ -519,6 +694,7 @@ document.getElementById('step2-btn').addEventListener('click', async () => {
         document.getElementById('sms-code-2').textContent = '••••••';
         document.getElementById('sms-banner').classList.add('show');
         startCodePoll('sms-code-2', 'approve1-code', 'approve1-note');
+        nemoNarrate(2);
     }
 });
 
@@ -527,28 +703,42 @@ document.getElementById('approve1-btn').addEventListener('click', async () => {
     const by = document.getElementById('approve1-by').value || 'Operator';
     const data = await call('/approve', { code, approved_by: by });
     renderOut('approve1-out', data);
+    if (siteTour && !data.error) siteTour.markOperatorStep(3, { completed: true });
+    if (window.TourTracker && !data.error) TourTracker.track('operator_step', 3);
+    if (!data.error) nemoNarrate(3);
 });
 
 document.getElementById('kill-btn').addEventListener('click', async () => {
     const reason = document.getElementById('kill-reason').value;
     const data = await call('/kill', { by: 'Operator', reason });
     renderOut('kill-out', data);
+    if (siteTour && !data.error) siteTour.markOperatorStep(4, { completed: true });
+    if (window.TourTracker && !data.error) TourTracker.track('operator_step', 4);
+    if (!data.error) nemoNarrate(4);
 });
 
 document.getElementById('step5-btn').addEventListener('click', async () => {
     const data = await call('/spend', { amount: '40.00', description: 'Demo: this should be denied' });
     renderOut('step5-out', data);
+    if (siteTour && !data.error) siteTour.markOperatorStep(5, { completed: true });
+    if (window.TourTracker && !data.error) TourTracker.track('operator_step', 5);
+    nemoNarrate(5); // always narrate — denial is the point
 });
 
 document.getElementById('resume-btn').addEventListener('click', async () => {
     const data = await call('/resume', { by: 'Operator' });
     renderOut('resume-out', data);
+    if (siteTour && !data.error) siteTour.markOperatorStep(6, { completed: true });
+    if (window.TourTracker && !data.error) TourTracker.track('operator_step', 6);
+    if (!data.error) nemoNarrate(6);
 });
 
 document.getElementById('refund-btn').addEventListener('click', async () => {
     const pi = document.getElementById('refund-pi').value.trim();
     const data = await call('/refund', { payment_intent_id: pi, amount: '85.00', description: 'Demo: refund -- double-billed' });
     renderOut('refund-out', data);
+    if (siteTour && !data.error) siteTour.markOperatorStep(7, { completed: true });
+    if (window.TourTracker && !data.error) TourTracker.track('operator_step', 7);
     const text = data.error || [data.stdout, data.stderr].filter(Boolean).join('\n');
     if (text.includes('TWILIO') || text.includes('approval code') || text.includes('escalation')) {
         const t = smsNow();
@@ -557,6 +747,7 @@ document.getElementById('refund-btn').addEventListener('click', async () => {
         document.getElementById('sms-code-7').textContent = '••••••';
         document.getElementById('sms-banner-refund').classList.add('show');
         startCodePoll('sms-code-7', 'approve2-code', 'approve2-note');
+        nemoNarrate(7);
     }
 });
 
@@ -565,6 +756,11 @@ document.getElementById('approve2-btn').addEventListener('click', async () => {
     const by = document.getElementById('approve2-by').value || 'Operator';
     const data = await call('/approve', { code, approved_by: by });
     renderOut('approve2-out', data);
+    if (siteTour && !data.error) {
+        siteTour.markOperatorStep(8, { completed: true });
+        nemoNarrate(8);
+    }
+    if (window.TourTracker && !data.error) TourTracker.track('operator_step', 8);
 });
 
 }); // DOMContentLoaded
@@ -608,9 +804,14 @@ setInterval(refreshOpFeed, 3000);
 // ---- Nemotron operator widget ----
 const NEMO_HISTORY_KEY = 'custodian_nemotron_history';
 function nemoLoadHistory() {
+    if (siteTour) return siteTour.getHistory();
     try { return JSON.parse(sessionStorage.getItem(NEMO_HISTORY_KEY) || '[]'); } catch { return []; }
 }
 function nemoSaveHistory(h) {
+    if (siteTour) {
+        siteTour.saveHistory(h);
+        return;
+    }
     try { sessionStorage.setItem(NEMO_HISTORY_KEY, JSON.stringify(h.slice(-16))); } catch {}
 }
 
@@ -635,22 +836,22 @@ function opNemoAddMsg(text, role) {
 function opNemoOpen() {
     opNemoPanel.style.display = 'flex';
     opNemoBubble.style.display = 'none';
+    if (siteTour) siteTour.enableAssistant();
     if (!opNemoOpened) {
         opNemoOpened = true;
         const thinking = opNemoAddMsg('…', 'bot');
         const greeting = opNemoHistory.length > 0
-            ? 'We were just talking. I\'m here in the operator panel now — ask me about any demo step or what the kernel just did.'
-            : 'You just opened in the operator panel. Greet in 2 sentences: who you are (Nemotron, the intelligence layer for payments reasoning), and offer to explain what any demo step demonstrates about the Custodian architecture. Be concise.';
+            ? "We were chatting on another page and I followed you here. What's this Operator Panel for and what do I do?"
+            : "I just opened the Operator Panel. What is this and what do I run first?";
         fetch('/api/v1/nemotron/ask', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ question: greeting, history: opNemoHistory.slice(-6), page: 'operator' })
-        }).then(r=>r.json()).then(d => {
+            body: JSON.stringify({ question: greeting, history: opNemoHistory.slice(-6), page: 'operator', site_context: siteTour ? siteTour.buildSiteContext() : {} })
+        }).then(r => r.json()).then(d => {
             thinking.remove();
-            // Distinguish real answer / error / empty so the operator sees a
-            // clear status instead of a placeholder-looking "I'm Nemotron…"
-            // string when the backend actually failed or returned empty.
-            // (Ported from hermes-hackathon-2026 bug-hunt 2026-07-03.)
+            // Same error-path logic as nemoNarrate — distinguish error /
+            // empty / real answer so the operator sees a clear status, not
+            // a placeholder-looking "I'm Nemotron…" string. (Bug-hunt 2026-07-03.)
             let ans;
             if (d.error) {
                 ans = `⚠ Nemotron error: ${d.error}`;
@@ -659,6 +860,7 @@ function opNemoOpen() {
             } else {
                 ans = d.answer;
             }
+            ans = ans.replace(/\[\[(?:jump|entry|suggest):[^\]]*\]\]/g, '').trim();
             opNemoAddMsg(ans, 'bot');
         }).catch((e) => {
             thinking.remove();
@@ -672,7 +874,22 @@ opNemoBubble.addEventListener('click', opNemoOpen);
 opNemoCloseBtn.addEventListener('click', () => {
     opNemoPanel.style.display = 'none';
     opNemoBubble.style.display = 'flex';
+    if (siteTour) siteTour.dismissAssistant();
 });
+
+// Auto-open the chat on first visit (and on return visits with history) so
+// the visitor gets a tour-greeting instead of having to discover the bubble.
+// Skip on mobile (bubble is hidden), in 'free' tour mode, or after the user
+// has explicitly dismissed the assistant.
+{
+    const state = siteTour ? siteTour.getState() : {};
+    const isMobile = siteTour ? siteTour.isMobile() : (window.innerWidth <= 680);
+    const isDismissed = state.assistant_dismissed;
+    const isFreeMode = state.mode === 'free';
+    if (!isMobile && !isDismissed && !isFreeMode) {
+        setTimeout(opNemoOpen, 600);
+    }
+}
 
 async function opNemoSend() {
     const q = opNemoInput.value.trim();
@@ -685,7 +902,7 @@ async function opNemoSend() {
         const r = await fetch('/api/v1/nemotron/ask', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ question: q, history: opNemoHistory.slice(-8), page: 'operator' })
+            body: JSON.stringify({ question: q, history: opNemoHistory.slice(-8), page: 'operator', site_context: siteTour ? siteTour.buildSiteContext() : {} })
         });
         const d = await r.json();
         thinking.remove();
@@ -742,8 +959,226 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('reset-out').textContent = '✗ Network error: ' + e.message;
         }
     });
+
+    // ── Live Activity (auto-refresh) ─────────────────────────
+    const FEED_URL = '/api/v1/hermes/summary';
+    const liveTbody = document.getElementById('live-tbody');
+    const liveTable = document.getElementById('live-table');
+    const liveLoading = document.getElementById('live-loading');
+
+    function extractTwilio(text) {
+        if (!text) return null;
+        const m = String(text).match(/SM[a-f0-9]{32}/);
+        return m ? m[0] : null;
+    }
+    function evtClass(evt) {
+        if (!evt) return '';
+        if (evt.includes('kill')) return 'live-evt-kill';
+        if (evt.includes('denied')) return 'live-evt-denied';
+        if (evt.includes('escalation')) return 'live-evt-escalation';
+        if (evt.includes('refund')) return 'live-evt-refund';
+        if (evt === 'earned' || evt === 'executed') return 'live-evt-executed';
+        return '';
+    }
+
+    async function refreshLive() {
+        try {
+            const r = await fetch(FEED_URL);
+            if (!r.ok) throw new Error('feed ' + r.status);
+            const d = await r.json();
+            refreshTreasury(d);
+            const audit = (d.audit || []).slice(0, 15);
+            if (audit.length === 0) {
+                liveLoading.textContent = 'No events yet — click any step above to start the live audit log.';
+                return;
+            }
+            liveLoading.style.display = 'none';
+            liveTable.style.display = '';
+            liveTbody.innerHTML = audit.map(e => {
+                const twilio = extractTwilio(e.text || '');
+                const op = esc(e.approved_by || e.denied_by || '');
+                const opCell = twilio
+                    ? `${op ? op + ' · ' : ''}<span style="color:#76b900">${esc(twilio)}</span>`
+                    : op;
+                return `<tr>
+                    <td>${esc(e.iso || '')}</td>
+                    <td>$${(e.amount || 0).toFixed(2)}</td>
+                    <td class="${evtClass(e.event)}">${esc(e.event || '')}</td>
+                    <td style="font-size:0.95em">${opCell}</td>
+                    <td style="font-size:0.92em">${esc(e.payment_intent_id || e.refund_id || '')}</td>
+                </tr>`;
+            }).join('');
+        } catch (e) {
+            liveLoading.textContent = '⚠ Live feed unreachable: ' + e.message;
+        }
+    }
+    refreshLive();
+    setInterval(refreshLive, 5000);
+
+    // ── Treasury (Stripe test-mode revenue in, test-mode spend out) ──────────────────
+    function fmt$(n) { const v = Number(n) || 0; return (v < 0 ? '-$' : '$') + Math.abs(v).toFixed(2); }
+    function refreshTreasury(d) {
+        const a = d.authority || {};
+        const earned = a.earned_total || 0;
+        const refunded = a.refunded_total || 0;
+        const auto = a.autonomous_spent || 0;
+        const override = a.approved_override_spent || 0;
+        const spent = a.spent_this_session || (auto + override);
+        const pnl = (a.net_pnl !== undefined) ? a.net_pnl : (earned - spent - refunded);
+
+        document.getElementById('treasury-earned').textContent = fmt$(earned);
+        const pnlEl = document.getElementById('treasury-pnl');
+        pnlEl.textContent = fmt$(pnl);
+        pnlEl.classList.remove('is-positive', 'is-negative', 'is-neutral');
+        pnlEl.classList.add(pnl > 0 ? 'is-positive' : pnl < 0 ? 'is-negative' : 'is-neutral');
+
+        document.getElementById('treasury-auto-spend').textContent = fmt$(auto);
+        document.getElementById('treasury-override-spend').textContent = fmt$(override);
+        document.getElementById('treasury-refunded').textContent = fmt$(refunded);
+        document.getElementById('treasury-cap').textContent = fmt$(a.per_action_cap);
+        document.getElementById('treasury-session').textContent = fmt$(a.session_cap) + (a.autonomous_remaining !== undefined ? ` (${fmt$(a.autonomous_remaining)} left)` : '');
+        document.getElementById('treasury-band').textContent = a.band || '—';
+    }
+
+    // $25 self-charge button: judge pays $25 to fund the demo (real Stripe test-mode PI)
+    document.getElementById('treasury-cashout-btn').addEventListener('click', async () => {
+        const btn = document.getElementById('treasury-cashout-btn');
+        const out = document.getElementById('treasury-cashout-out');
+        btn.disabled = true;
+        out.textContent = 'Charging $25 to test card 4242 4242 4242 4242 via Stripe…';
+        try {
+            const r = await fetch(API + '/earn', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    amount: '25.00',
+                    description: 'judge self-test: $25 charge via Stripe (test mode)'
+                }),
+            });
+            const text = await r.text();
+            let data;
+            try { data = JSON.parse(text); } catch { data = { raw: text }; }
+            const stdout = data.stdout || data.raw || JSON.stringify(data, null, 2);
+            // Pull PI from stdout if present
+            const piMatch = stdout.match(/pi_[A-Za-z0-9]+/);
+            out.textContent = (piMatch ? `✓ Stripe PaymentIntent created: ${piMatch[0]}\n\n` : '') + stdout;
+            // Force a refresh
+            await refreshLive();
+        } catch (e) {
+            out.textContent = '✗ ' + e.message;
+        } finally {
+            btn.disabled = false;
+        }
+    });
+
+    // ── Self-Verify curl buttons (browser-side fetch, CORS-friendly) ──
+    document.querySelectorAll('.curl-btn').forEach(btn => {
+        btn.addEventListener('click', async () => {
+            const targetId = btn.getAttribute('data-target');
+            const out = document.getElementById(targetId);
+            out.style.display = 'block';
+            out.textContent = 'Running…';
+            btn.disabled = true;
+            try {
+                // Parse the curl command: extract method, url, headers, body
+                const cmd = btn.getAttribute('data-cmd');
+                const m = cmd.match(/-X\s+(\w+)\s+(https?:\/\/\S+)/);
+                const method = m ? m[1] : 'POST';
+                const url = m ? m[2].replace(/[\s'"]+$/, '') : '';
+                const bodyMatch = cmd.match(/-d\s+['"]?(.+?)['"]?\s*$/);
+                const body = bodyMatch ? bodyMatch[1] : null;
+                const r = await fetch(url, {
+                    method: method,
+                    headers: {'Content-Type': 'application/json'},
+                    body: body,
+                });
+                const text = await r.text();
+                let pretty;
+                try { pretty = JSON.stringify(JSON.parse(text), null, 2); }
+                catch { pretty = text; }
+                out.textContent = `HTTP ${r.status}\n\n${pretty}`;
+            } catch (e) {
+                out.textContent = '✗ ' + e.message;
+            } finally {
+                btn.disabled = false;
+            }
+        });
+    });
 });
 </script>
+
+<!-- TREASURY (Stripe test-mode revenue in, test-mode spend out) -->
+<div class="treasury-panel">
+  <h2>● Treasury — Stripe test-mode money in, test-mode money out, real net P&amp;L</h2>
+  <p>Live numbers from the system. Same money-flow model as HermesCo, Obol, Allmind, Bursar — the difference is this Treasury is governed by the kernel, not by if-statements in the agent's own code.</p>
+  <div class="treasury-grid">
+    <div class="treasury-tile">
+      <div class="treasury-tile-label">Earned (lifetime)</div>
+      <div class="treasury-tile-value is-positive" id="treasury-earned">$0.00</div>
+      <div class="treasury-detail">Stripe PaymentIntents received</div>
+    </div>
+    <div class="treasury-tile">
+      <div class="treasury-tile-label">Net P&amp;L</div>
+      <div class="treasury-tile-value" id="treasury-pnl">$0.00</div>
+      <div class="treasury-detail">Earned − Spent − Refunded</div>
+    </div>
+  </div>
+  <div>
+    <div class="treasury-row"><span class="treasury-row-label">Autonomous spend (within band, no human)</span><span class="treasury-row-value" id="treasury-auto-spend">$0.00</span></div>
+    <div class="treasury-row"><span class="treasury-row-label">Override spend (human-approved, over band)</span><span class="treasury-row-value" id="treasury-override-spend">$0.00</span></div>
+    <div class="treasury-row"><span class="treasury-row-label">Refunded (always human-approved)</span><span class="treasury-row-value is-negative" id="treasury-refunded">$0.00</span></div>
+    <div class="treasury-row"><span class="treasury-row-label">Per-action cap</span><span class="treasury-row-value" id="treasury-cap">$0.00</span></div>
+    <div class="treasury-row"><span class="treasury-row-label">Daily session cap</span><span class="treasury-row-value" id="treasury-session">$0.00</span></div>
+    <div class="treasury-row"><span class="treasury-row-label">Band</span><span class="treasury-row-value" id="treasury-band">—</span></div>
+  </div>
+  <button class="treasury-cashout" id="treasury-cashout-btn">▶ Charge $25 to my card (real Stripe test-mode PI)</button>
+  <pre class="treasury-cashout-out" id="treasury-cashout-out"></pre>
+</div>
+
+<!-- LIVE ACTIVITY (auto-refreshing audit feed) -->
+<div class="live-panel">
+  <h2>● Live Activity — recent actions across all operators</h2>
+  <p>Pulled from <code>/api/v1/hermes/summary</code>. Auto-refreshes every 5 seconds. Real PaymentIntents, real Twilio SIDs, real kill-switch denials. Last 15 events shown.</p>
+  <div id="live-loading" class="live-loading">Loading…</div>
+  <table class="live-table" id="live-table" style="display:none">
+    <thead>
+      <tr>
+        <th>Time (UTC)</th>
+        <th>Amount</th>
+        <th>Event</th>
+        <th>Operator / Twilio</th>
+        <th>Stripe PaymentIntent</th>
+      </tr>
+    </thead>
+    <tbody id="live-tbody"></tbody>
+  </table>
+</div>
+
+<!-- SELF-VERIFY: any judge can hit the live API from their own terminal -->
+<div class="curl-panel">
+  <h2>Self-Verify — the API is public, you can hit it from your own terminal</h2>
+  <p>These commands work right now against the live system. Each one creates a real Stripe PaymentIntent, returns a real ID, and appears in the live activity feed above.</p>
+
+  <div style="font-size:0.82em;color:#888;margin-bottom:6px">1. Earn $0.50 (no band, no cap, no approval)</div>
+  <pre id="curl-earn" class="curl-block">curl -X POST https://getcustodian.xyz/api/v1/operator/earn \
+  -H "Content-Type: application/json" \
+  -d '{"amount":"0.50","description":"judge self-test: earn"}'</pre>
+  <button class="curl-btn" data-target="curl-earn-out" data-cmd='curl -X POST https://getcustodian.xyz/api/v1/operator/earn -H "Content-Type: application/json" -d "{\"amount\":\"0.50\",\"description\":\"judge self-test: earn\"}"'>▶ Run from this page</button>
+  <pre id="curl-earn-out" class="curl-out"></pre>
+
+  <div style="font-size:0.82em;color:#888;margin:14px 0 6px">2. Spend $0.50 (autonomous, within L2 band)</div>
+  <pre id="curl-spend" class="curl-block">curl -X POST https://getcustodian.xyz/api/v1/operator/spend \
+  -H "Content-Type: application/json" \
+  -d '{"amount":"0.50","description":"judge self-test: spend"}'</pre>
+  <button class="curl-btn" data-target="curl-spend-out" data-cmd='curl -X POST https://getcustodian.xyz/api/v1/operator/spend -H "Content-Type: application/json" -d "{\"amount\":\"0.50\",\"description\":\"judge self-test: spend\"}"'>▶ Run from this page</button>
+  <pre id="curl-spend-out" class="curl-out"></pre>
+
+  <div style="font-size:0.82em;color:#888;margin:14px 0 6px">3. Refund the PaymentIntent from step 1 or 2 (always escalates to Twilio SMS)</div>
+  <pre id="curl-refund" class="curl-block">curl -X POST https://getcustodian.xyz/api/v1/operator/refund \
+  -H "Content-Type: application/json" \
+  -d '{"payment_intent_id":"pi_xxx","amount":"0.50","description":"judge self-test: refund"}'</pre>
+  <p style="font-size:0.78em;color:#666;margin:0 0 0">Replace <code>pi_xxx</code> with a real ID from the live activity feed above. Refunds always require a human approval code via Twilio.</p>
+</div>
 
 <!-- ADMIN RESET (collapsed) -->
 <div style="margin-top:40px; border-top:1px solid #1a1a1a; padding-top:18px">
@@ -759,8 +1194,6 @@ document.addEventListener('DOMContentLoaded', () => {
 </div>
 
 </div><!-- /page-wrap -->
-<script src="/site-tour.js"></script>
-<script src="/tour-tracker.js"></script>
 <script src="/nemo-guide.js"></script>
 </body>
 </html>
