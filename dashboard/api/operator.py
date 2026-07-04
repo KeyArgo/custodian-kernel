@@ -145,7 +145,7 @@ def _read_flask_kill_switch() -> tuple:
     if not ks_path.exists():
         return False, '', ''
     try:
-        d = _json.loads(ks_path.read_text())
+        d = json.loads(ks_path.read_text())
         return bool(d.get('killed', False)), d.get('by', ''), d.get('reason', '')
     except Exception:
         return False, '', ''
@@ -155,7 +155,7 @@ def _write_flask_kill_switch(killed: bool, by: str, reason: str = '') -> None:
     """Write the Flask-layer kill switch state for the pre-check in /spend."""
     ks_path = Path.home() / '.custodian' / 'kill_switch.json'
     ks_path.parent.mkdir(parents=True, exist_ok=True)
-    ks_path.write_text(_json.dumps({'killed': killed, 'by': by, 'reason': reason}))
+    ks_path.write_text(json.dumps({'killed': killed, 'by': by, 'reason': reason}))
 
 
 @bp.route('/spend', methods=['POST'])
@@ -250,9 +250,9 @@ def resume():
     return jsonify(result)
 
 
-import json as _json
-import os as _os
-_STATE_BASE = Path(_os.getenv(
+import json
+import os
+_STATE_BASE = Path(os.getenv(
     'HERMES_SKILL_STATE_PATH',
     '/tmp/hermes-mount/sandbox/.hermes/skills/payments/stripe-spend/state',
 ))
@@ -264,7 +264,7 @@ def pending_code():
     if not _PENDING_CODE_PATH.exists():
         return jsonify({'pending': False, 'code': None, 'reason': 'no pending code'})
     try:
-        data = _json.loads(_PENDING_CODE_PATH.read_text())
+        data = json.loads(_PENDING_CODE_PATH.read_text())
     except (ValueError, OSError):
         return jsonify({'pending': False, 'code': None, 'reason': 'unreadable'})
     # The OTP code is staged in the pending_approval.json file by spend.py / refund.py
@@ -341,17 +341,17 @@ def forward_code():
                                           'Content-Type': 'application/x-www-form-urlencoded'})
     try:
         with urllib.request.urlopen(req, timeout=10) as resp:
-            result = _json.loads(resp.read())
+            result = json.loads(resp.read())
         return jsonify({'ok': True, 'sid': result.get('sid'), 'to': phone})
     except urllib.error.HTTPError as e:
         body = e.read().decode('utf-8', errors='replace')
         try:
-            detail = _json.loads(body)
+            detail = json.loads(body)
             msg = detail.get('message', body)
         except Exception:
             msg = body[:200]
         try:
-            twilio_code = _json.loads(body).get('code') if body.startswith('{') else None
+            twilio_code = json.loads(body).get('code') if body.startswith('{') else None
         except Exception:
             twilio_code = None
         return jsonify({'ok': False, 'error': msg, 'twilio_code': twilio_code, 'to': phone}), 502
@@ -381,7 +381,7 @@ def _write_reasoning(script: str, result: dict):
     }
     try:
         with open(_REASONING_LOG_PATH, 'a') as f:
-            f.write(_json.dumps(event) + '\n')
+            f.write(json.dumps(event) + '\n')
     except Exception:
         pass
 
@@ -412,9 +412,9 @@ def reset_demo():
 
         # Zero session spend in authority.json, preserve band and caps
         if _AUTHORITY_PATH.exists():
-            auth = _json.loads(_AUTHORITY_PATH.read_text())
+            auth = json.loads(_AUTHORITY_PATH.read_text())
             auth['spent_this_session'] = 0.0
-            _AUTHORITY_PATH.write_text(_json.dumps(auth, indent=2))
+            _AUTHORITY_PATH.write_text(json.dumps(auth, indent=2))
             steps.append(f'session spend zeroed (band={auth.get("band")}, cap=${auth.get("per_action_cap")})')
         else:
             steps.append('authority.json not found — skipped')
