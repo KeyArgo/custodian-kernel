@@ -491,20 +491,9 @@ function startCodePoll(codeElId, approveInputId, noteId) {
             const res = await fetch(API + '/pending_code', {});
             if (!res.ok) return;
             const d = await res.json();
-            // Twilio Verify never returns the code to the server by design — that's
-            // what makes self-approval structurally impossible, not just discouraged.
-            // If a backend variant DOES stage a real code (d.code), auto-fill it as a
-            // bonus. Otherwise, on confirmed pending (d.pending), tell the operator to
-            // check their phone rather than waiting forever for a code that never comes.
-            if (d.code) {
-                document.getElementById(codeElId).textContent = d.code;
-                if (approveInputId) document.getElementById(approveInputId).value = d.code;
-                if (noteId) {
-                    const n = document.getElementById(noteId);
-                    if (n) { n.textContent = '✓ Code auto-filled from the SMS above. Hit Approve to execute.'; n.style.display = 'block'; }
-                }
-                if (_codePoller) { clearInterval(_codePoller); _codePoller = null; }
-            } else if (d.pending) {
+            // The OTP lives only on Twilio and the operator's phone — never on the server.
+            // When a pending escalation is confirmed, show the "check your phone" prompt.
+            if (d.pending) {
                 const el = document.getElementById(codeElId);
                 if (el && el.textContent === '••••••') el.textContent = '← check phone';
                 if (noteId) {
@@ -699,27 +688,15 @@ async function opNemoSend() {
         });
         const d = await r.json();
         thinking.remove();
-        // Distinguish real answer / backend error / empty answer so a
-        // blank or errored response doesn't look like the model silently
-        // ignored the question. (Ported from hermes-hackathon-2026 bug-hunt 2026-07-03.)
-        let ans;
-        if (!r.ok) {
-            ans = `⚠ Nemotron backend error (${r.status}): ${d.error || 'unknown'} — try again in a moment.`;
-        } else if (d.error) {
-            ans = `⚠ Nemotron error: ${d.error}`;
-        } else if (!d.answer || d.answer.trim() === '') {
-            ans = '⚠ Nemotron returned an empty response. The reasoning model may have hit a token cap or the prompt was filtered. Try again.';
-        } else {
-            ans = d.answer;
-        }
-        ans = ans.replace(/\[\[(?:jump|entry|suggest):[^\]]*\]\]/g, '').trim();
+        // Strip hermes-specific [[...]] markers before displaying
+        const ans = (d.answer || d.error || 'No answer.').replace(/\[\[(?:jump|entry|suggest):[^\]]*\]\]/g, '').trim();
         opNemoAddMsg(ans, 'bot');
         opNemoHistory.push({ role: 'user', content: q });
         opNemoHistory.push({ role: 'assistant', content: ans });
         nemoSaveHistory(opNemoHistory);
     } catch(e) {
         thinking.remove();
-        opNemoAddMsg(`⚠ Network error calling Nemotron: ${e.message || e}`, 'bot');
+        opNemoAddMsg('Could not reach Nemotron right now.', 'bot');
     } finally {
         opNemoSendBtn.disabled = false;
         opNemoInput.focus();
