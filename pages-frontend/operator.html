@@ -1080,13 +1080,19 @@ document.addEventListener('DOMContentLoaded', () => {
             out.textContent = 'Running…';
             btn.disabled = true;
             try {
-                // Parse the curl command: extract method, url, headers, body
+                // Method/URL come from parsing the display-only curl string, which is
+                // safe (no quoting to get wrong). The JSON body does NOT -- the curl
+                // string's -d argument has backslash-escaped quotes for terminal
+                // display (\"amount\":\"0.50\"), and regex-extracting that text sends
+                // those literal backslashes to the server as an invalid JSON body,
+                // silently defaulting every amount to 0 and tripping the "amount must
+                // be between 0 and X" validation regardless of what was displayed.
+                // data-body carries the real, valid JSON directly instead.
                 const cmd = btn.getAttribute('data-cmd');
                 const m = cmd.match(/-X\s+(\w+)\s+(https?:\/\/\S+)/);
                 const method = m ? m[1] : 'POST';
                 const url = m ? m[2].replace(/[\s'"]+$/, '') : '';
-                const bodyMatch = cmd.match(/-d\s+['"]?(.+?)['"]?\s*$/);
-                const body = bodyMatch ? bodyMatch[1] : null;
+                const body = btn.getAttribute('data-body');
                 const r = await fetch(url, {
                     method: method,
                     headers: {'Content-Type': 'application/json'},
@@ -1163,14 +1169,14 @@ document.addEventListener('DOMContentLoaded', () => {
   <pre id="curl-earn" class="curl-block">curl -X POST https://getcustodian.xyz/api/v1/operator/earn \
   -H "Content-Type: application/json" \
   -d '{"amount":"0.50","description":"judge self-test: earn"}'</pre>
-  <button class="curl-btn" data-target="curl-earn-out" data-cmd='curl -X POST https://getcustodian.xyz/api/v1/operator/earn -H "Content-Type: application/json" -d "{\"amount\":\"0.50\",\"description\":\"judge self-test: earn\"}"'>▶ Run from this page</button>
+  <button class="curl-btn" data-target="curl-earn-out" data-cmd='curl -X POST https://getcustodian.xyz/api/v1/operator/earn -H "Content-Type: application/json" -d "{\"amount\":\"0.50\",\"description\":\"judge self-test: earn\"}"' data-body='{"amount":"0.50","description":"judge self-test: earn"}'>▶ Run from this page</button>
   <pre id="curl-earn-out" class="curl-out"></pre>
 
   <div style="font-size:0.82em;color:#888;margin:14px 0 6px">2. Spend $0.50 (autonomous, within L2 band)</div>
   <pre id="curl-spend" class="curl-block">curl -X POST https://getcustodian.xyz/api/v1/operator/spend \
   -H "Content-Type: application/json" \
   -d '{"amount":"0.50","description":"judge self-test: spend"}'</pre>
-  <button class="curl-btn" data-target="curl-spend-out" data-cmd='curl -X POST https://getcustodian.xyz/api/v1/operator/spend -H "Content-Type: application/json" -d "{\"amount\":\"0.50\",\"description\":\"judge self-test: spend\"}"'>▶ Run from this page</button>
+  <button class="curl-btn" data-target="curl-spend-out" data-cmd='curl -X POST https://getcustodian.xyz/api/v1/operator/spend -H "Content-Type: application/json" -d "{\"amount\":\"0.50\",\"description\":\"judge self-test: spend\"}"' data-body='{"amount":"0.50","description":"judge self-test: spend"}'>▶ Run from this page</button>
   <pre id="curl-spend-out" class="curl-out"></pre>
 
   <div style="font-size:0.82em;color:#888;margin:14px 0 6px">3. Refund the PaymentIntent from step 1 or 2 (always escalates to Twilio SMS)</div>
