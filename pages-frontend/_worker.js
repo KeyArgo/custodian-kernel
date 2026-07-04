@@ -116,10 +116,25 @@ export default {
     // guaranteeing a 503 on every unlucky first attempt regardless of retries.
     // Give slow paths a real retry budget; keep fast paths on the short,
     // already-proven-effective retry loop.
-    const retryTimeoutMs = isSlow ? TIMEOUT_SLOW_MS : 2000;
-    const maxRetries = isSlow ? 2 : 6;
-    for (let attempt = 0; !response && attempt < maxRetries; attempt++) {
-      response = await tryFetch(upstream.toString(), init, retryTimeoutMs);
+    //
+    // 2026-07-04: cutting maxRetries to 2 for slow paths (to make room for the
+    // full-timeout retry above) traded away survival odds against the OTHER,
+    // separately-confirmed failure mode this whole retry loop exists for: the
+    // classic near-instant edge-to-edge flake, which fails in under ~300ms
+    // regardless of path speed and is purely probabilistic per attempt (fewer
+    // attempts = measurably worse survival odds). Empirically confirmed live:
+    // 1 in 10 valid nemotron/ask requests failed with a 503 in ~270ms -- far
+    // too fast to be the mid-flight-cancellation case, consistent with the
+    // fast edge bug simply running out of retries. Restore the full 6x2000ms
+    // quick-retry budget for every path (this is what actually catches the
+    // fast bug), then give slow paths ONE additional full-timeout retry on
+    // top of that for the separate mid-flight-cancellation case -- covers
+    // both failure modes without a 6x55s worst-case blowup.
+    for (let attempt = 0; !response && attempt < 6; attempt++) {
+      response = await tryFetch(upstream.toString(), init, 2000);
+    }
+    if (!response && isSlow) {
+      response = await tryFetch(upstream.toString(), init, TIMEOUT_SLOW_MS);
     }
 
     if (!response) {
