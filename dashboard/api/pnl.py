@@ -1,31 +1,45 @@
 """P&L summary endpoint — earn vs spend, net, margin.
 
-Reads from the real skill audit log (skills/payments/stripe-spend/state/audit_log.jsonl)
-plus the demo earn ledger (/tmp/hermes-earn-ledger.json).
+Delegates to hermes.py for all audit-log reads so both use the same
+HERMES_SKILL_STATE_PATH — otherwise pnl.py resolves skill paths relative
+to its own location (dashboard/) and reads a dead directory.
 
 GET /api/v1/pnl/summary
 """
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 
 from flask import Blueprint, jsonify
 
+import api.hermes as hermes
+
 bp = Blueprint("pnl", __name__)
 
-# Real skill audit log (relative to this file's location in dashboard/api/)
-_HERE = Path(__file__).resolve().parent.parent  # dashboard/
-SKILL_LOG = _HERE.parent / "skills" / "payments" / "stripe-spend" / "state" / "audit_log.jsonl"
+# Demo earn ledger: mirrors the path stripe_webhook.py writes to.
+# stripe_webhook.py uses skills/earnings/ relative to the repo root.
+# In production the repo root is under the sandbox mount.
+_SKILL_STATE = Path(os.environ.get(
+    'HERMES_SKILL_STATE_PATH',
+    '/tmp/hermes-mount/sandbox/.hermes/skills/payments/stripe-spend/state',
+))
+DEMO_EARN_LEDGER = Path(
+    os.environ.get(
+        'HERMES_EARN_LEDGER',
+        str(_SKILL_STATE.parents[2] / "earnings" / "hermes-earn-ledger.json"),
+    )
+)
 
-# Demo earn ledger (written by stripe_webhook.py demo-earn endpoint)
-DEMO_EARN_LEDGER = Path("/tmp/hermes-earn-ledger.json")
 
-# Also check server-side path for when running from /tmp/hermes-dash-v4/
-SERVER_SKILL_LOG = Path("/tmp/hermes-dash-v4/skills/payments/stripe-spend/state/audit_log.jsonl")
+def _get_audit_log() -> list[dict]:
+    """Read audit log via hermes.py which resolves the correct SANDBOX path."""
+    return hermes.get_audit_log(limit=200)
 
 
 def _read_jsonl(p: Path) -> list[dict]:
+    """Read a JSONL file, skipping invalid lines."""
     if not p.exists():
         return []
     events = []
@@ -37,14 +51,6 @@ def _read_jsonl(p: Path) -> list[dict]:
             except json.JSONDecodeError:
                 pass
     return events
-
-
-def _get_audit_log() -> list[dict]:
-    for p in [SKILL_LOG, SERVER_SKILL_LOG]:
-        events = _read_jsonl(p)
-        if events:
-            return events
-    return []
 
 
 @bp.route("/summary", methods=["GET"])

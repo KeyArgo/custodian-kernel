@@ -1,10 +1,10 @@
 """Regression tests for the cross-page tour-guide system, ported from
 hermes-hackathon-2026 (2026-07-03).
 
-hermes-hackathon-2026's console-equivalent page is /console; custodian-dev's
-is /hermes (hermes.html). site-tour.js is page-agnostic and was copied
-verbatim; tour-tracker.js and nemo-guide.js hardcode the console route and
-had every '/console' occurrence remapped to '/hermes'.
+custodian-dev's console-equivalent page is /console (console.html).
+site-tour.js is page-agnostic and was copied verbatim; tour-tracker.js
+and nemo-guide.js hardcode the console route and had every '/console'
+occurrence remapped to '/console' (unchanged in custodian-dev).
 """
 from __future__ import annotations
 
@@ -42,7 +42,7 @@ def test_nemo_guide_js_has_no_leftover_console_route():
 
 
 def test_all_six_pages_include_tour_guide_scripts():
-    for page in ("index.html", "hermes.html", "operator.html", "triage.html",
+    for page in ("index.html", "console.html", "operator.html", "triage.html",
                  "tools.html", "docs.html"):
         src = read_text(f"pages-frontend/{page}")
         assert 'src="/site-tour.js"' in src, f"{page} missing site-tour.js include"
