@@ -165,7 +165,22 @@ def _strip_thinking(text: str) -> str:
 
     # Heuristic: is a paragraph model self-talk vs. real reply?
     def _is_meta(p: str) -> bool:
-        """True if the paragraph looks like model meta-instruction."""
+        """True if the paragraph looks like model meta-instruction.
+
+        v6 (2026-07-04, live incident): v5 only matched a fixed list of
+        KNOWN prefixes ("We need to", "Let me", etc.), which is what a
+        reasoning model's self-talk *usually* looks like when it's short.
+        Confirmed live that long, multi-sentence deliberation (weighing the
+        model's own system-prompt rules against each other, working through
+        arithmetic on internal state field values, narrating the visitor's
+        question in the third person) sails straight through untouched,
+        because none of those sentences happen to START with a listed
+        prefix. Real, visitor-facing replies from this system prompt always
+        address the visitor directly as "you" and never reference the
+        prompt's own rule structure or raw internal field names (both are
+        explicitly forbidden in SYSTEM_PROMPT) -- so those are much
+        stronger, harder-to-evade signals than prefix matching alone.
+        """
         s = p.strip()
         if len(s) < 20:
             # Short text is meta ONLY if it doesn't look like a complete
@@ -191,21 +206,99 @@ def _strip_thinking(text: str) -> str:
         for pat in META_PATTERNS:
             if re.match(pat, p):
                 return True
+
+        low = s.lower()
+
+        # The model narrating the visitor in third person ("the visitor
+        # just spent...", "the visitor is asking...") is deliberation, not
+        # a reply -- a real reply always addresses the visitor as "you".
+        # Requires a narration verb right after "the visitor" -- a plain
+        # mention like "the actual answer for the visitor" is legitimate
+        # phrasing and must not trip this.
+        if re.search(
+            r'\bthe visitor\b\s+(is|was|just|asks?|wants?|said|says|means?|meant)\b',
+            low,
+        ):
+            return True
+
+        # The model reasoning about its own system-prompt rules by name is
+        # never something a visitor should see -- these strings only exist
+        # in the prompt or in the model second-guessing that prompt.
+        RULE_SELF_REFERENCE = (
+            'hard rules', 'rule 4', 'rule says', 'as per rule', 'the rule ',
+            'jump syntax', 'operator panel is mandatory', 'valid jump key',
+            'meta_patterns', 'system prompt', 'clickable link',
+            'mandatory in first response', 'very first reply', 'no exceptions',
+        )
+        if any(marker in low for marker in RULE_SELF_REFERENCE):
+            return True
+
+        # Raw internal field names are explicitly forbidden by the system
+        # prompt (rule 2) -- their presence means the model is reasoning
+        # about the data, not describing it in plain English to a visitor.
+        RAW_FIELD_NAMES = (
+            'autonomous_spent', 'autonomous_remaining', 'spent_this_session',
+            'approved_override_spent', 'payment_intent_id', 'per_action_cap',
+            'session_cap', 'stripe_status', 'escalation_required',
+        )
+        if any(field in low for field in RAW_FIELD_NAMES):
+            return True
+
+        # Dense hedging/self-correction language ("however", "but note",
+        # "wait", "let's") clustered in one paragraph is a strong tell for
+        # reasoning-out-loud -- a short, plain-language reply doesn't
+        # backtrack on itself mid-sentence. Two or more in one paragraph
+        # is treated as meta; a single "however" can appear in a normal
+        # sentence and isn't enough on its own.
+        HEDGE_WORDS = (r'\bhowever\b', r'\bbut note\b', r'\bwait\b',
+                       r"\blet's\b", r'\btherefore\b', r'\bthis doesn\'t add up\b')
+        hedge_count = sum(1 for pat in HEDGE_WORDS if re.search(pat, low))
+        if hedge_count >= 2:
+            return True
+
+        # A short line that OPENS with a hedge/discourse marker is almost
+        # always a connector fragment between chunks of reasoning (e.g.
+        # "However, note the state says:"), not a standalone reply -- a
+        # real reply doesn't start mid-argument. Only applies to short
+        # lines; a longer sentence that happens to start with "However"
+        # can still be a legitimate, complete thought.
+        if len(s.split()) <= 12 and re.match(
+            r'^\s*(however|but|so|therefore|wait|let\'s|now|first|second)\b',
+            low,
+        ):
+            return True
+
+        # The system prompt caps the ENTIRE reply at ~150 words. A single
+        # paragraph well past that on its own can't be the intended reply --
+        # it's a strong sign of unstructured deliberation.
+        if len(s.split()) > 120:
+            return True
+
         return False
 
-    # Strategy 1: find paragraphs that look like real replies
+    # Strategy 1: find paragraphs (raw '\n'-split lines) that look like real
+    # replies. Deliberately per-line, not per-block: a reasoning preamble
+    # followed by a real answer on the next line (no blank line between
+    # them) must keep the real-answer line -- grouping by blank-line blocks
+    # was tried and rejected because it throws away legitimate content
+    # whenever it shares a block with even one bad line.
     paragraphs = text.split('\n')
     real_paragraphs = [p for p in paragraphs if not _is_meta(p)]
 
     if real_paragraphs:
         return '\n'.join(real_paragraphs).strip()
 
-    # Strategy 2: no real paragraphs — the model only produced meta-instruction.
+    # Strategy 2: no real blocks — the model only produced meta-instruction.
     # If the response contains a quoted draft (model talking to itself about
-    # what to write), extract the longest one as a fallback.
-    quoted = re.findall(r'"([^"]{50,})"', text)
-    if quoted:
-        return max(quoted, key=len).strip()
+    # what to write), extract the longest one as a fallback -- but only if
+    # it doesn't ITSELF look like meta (e.g. the model quoting its own
+    # system-prompt rule text back, or quoting a raw internal field name
+    # while reasoning about it). Skip any candidate that fails the same
+    # check Strategy 1 used, in length-descending order.
+    quoted = sorted(re.findall(r'"([^"]{50,})"', text), key=len, reverse=True)
+    for candidate in quoted:
+        if not _is_meta(candidate):
+            return candidate.strip()
 
     # Strategy 3: nothing usable — the model never produced a real reply.
     return ''
