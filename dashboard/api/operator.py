@@ -257,6 +257,16 @@ _STATE_BASE = Path(os.getenv(
     '/tmp/hermes-mount/sandbox/.hermes/skills/payments/stripe-spend/state',
 ))
 _PENDING_CODE_PATH = _STATE_BASE / 'pending_approval.json'
+# notify.py's send_approval_code() writes the real, server-generated 6-digit
+# code here (deliberately, so the operator panel can display it on screen --
+# see the module docstring in notify.py) -- a SEPARATE file from
+# pending_approval.json above, which only carries escalation metadata
+# (amount/description/reason) and never has a code field. Reading only
+# pending_approval.json here meant `code` was always None: the escalation
+# banner ("SMS confirmed delivered") showed correctly, but the code itself
+# never auto-filled into Step 3/Step 8, forcing every judge to squint at the
+# masked ****** in the phone mockup with no way to actually get the digits.
+_PENDING_APPROVAL_CODE_PATH = _STATE_BASE / 'pending_code.json'
 
 
 @bp.route('/pending_code', methods=['GET'])
@@ -267,13 +277,20 @@ def pending_code():
         data = json.loads(_PENDING_CODE_PATH.read_text())
     except (ValueError, OSError):
         return jsonify({'pending': False, 'code': None, 'reason': 'unreadable'})
-    # The OTP code is staged in the pending_approval.json file by spend.py / refund.py
-    # so the operator panel can display it. For production / non-demo use, the code
-    # would live only on Twilio and the operator's phone.
+
+    code = data.get('code') or data.get('otp_code') or data.get('approval_code')
+    if code is None and _PENDING_APPROVAL_CODE_PATH.exists():
+        try:
+            code_data = json.loads(_PENDING_APPROVAL_CODE_PATH.read_text())
+            if time.time() <= code_data.get('expires_at', 0):
+                code = code_data.get('code')
+        except (ValueError, OSError):
+            pass
+
     # Return the escalation metadata and the code so the UI can auto-fill it.
     return jsonify({
         'pending': True,
-        'code': data.get('code') or data.get('otp_code') or data.get('approval_code'),
+        'code': code,
         'amount': data.get('amount'),
         'description': data.get('description'),
         'kind': data.get('kind', 'spend'),
