@@ -410,14 +410,6 @@
         .policy-line.denied { color: var(--red); font-weight: 700; }
         .policy-line.other { color: #8a8a8a; }
 
-        .escalation-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.95); z-index: 999; align-items: center; justify-content: center; }
-        .escalation-overlay.show { display: flex; animation: flashIn 0.4s ease; }
-        @keyframes flashIn { 0% { background: rgba(255,59,59,0.85); } 100% { background: rgba(0,0,0,0.95); } }
-        .escalation-box { text-align: center; border: 2px solid var(--red); border-radius: 0; padding: 40px 60px; background: #0a0000; }
-        .escalation-title { color: var(--red); font-size: 1.6em; font-weight: 700; letter-spacing: 0.05em; margin-bottom: 18px; animation: pulse 1.2s infinite; }
-        .escalation-desc { color: #ff9d9d; font-size: 1.2em; margin-bottom: 8px; }
-        .escalation-amount { color: #fff; font-size: 2.2em; font-weight: 700; margin-bottom: 20px; }
-        .escalation-sub { color: #aaa; font-size: 0.9em; line-height: 1.5; }
 
         /* ---- guided tour: additive only, never touches real pipeline/audit state ---- */
         .tour-btn {
@@ -941,14 +933,6 @@
         </aside>
     </div>
 
-    <div class="escalation-overlay" id="escalation-overlay">
-        <div class="escalation-box">
-            <div class="escalation-title">⚠ ESCALATION — HUMAN APPROVAL REQUIRED</div>
-            <div class="escalation-desc" id="escalation-desc"></div>
-            <div class="escalation-amount" id="escalation-amount"></div>
-            <div class="escalation-sub">This exceeds the agent's autonomous authority band.<br>A one-time approval code has been dispatched to the human operator.</div>
-        </div>
-    </div>
 
     <div class="tour-bar" id="tour-bar">
         <span class="tour-step-label" id="tour-step-label">STEP 1/6</span>
@@ -1131,20 +1115,21 @@
                 document.getElementById('spec-cap').textContent = auth.per_action_cap != null ? fmtUSD(auth.per_action_cap) : '—';
                 document.getElementById('spec-session').textContent = `${fmtUSD(autonomous)} / ${fmtUSD(sessionCap)}`;
 
+                // Escalations are GLOBAL state shared across every visitor -- one
+                // person's stuck Step 2/Step 7 must never block anyone else from
+                // reading this page. A non-blocking banner is the right amount of
+                // visibility; a full-screen overlay (removed) made this page
+                // completely unusable for every other visitor for up to 10 minutes
+                // any time one demo run was mid-escalation.
                 const pending = data.pending_approvals || {};
                 const codes = Object.keys(pending);
                 const banner = document.getElementById('pending-banner');
-                const overlay = document.getElementById('escalation-overlay');
                 if (codes.length > 0) {
                     const rec = pending[codes[0]];
                     banner.textContent = `⚠ Escalation awaiting human approval — ${rec.description} (${fmtUSD(rec.amount)}). Code sent to operator.`;
                     banner.classList.add('show');
-                    document.getElementById('escalation-desc').textContent = rec.description;
-                    document.getElementById('escalation-amount').textContent = fmtUSD(rec.amount);
-                    overlay.classList.add('show');
                 } else {
                     banner.classList.remove('show');
-                    overlay.classList.remove('show');
                 }
 
                 const events = data.audit || [];
