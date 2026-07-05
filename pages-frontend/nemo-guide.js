@@ -408,18 +408,29 @@
     .catch(() => { thinking.remove(); addMsg("Ask me anything about what you're seeing here.", 'bot'); });
   }
 
-  function openPanel() {
+  function revealPanel() {
     panel.style.display = 'flex';
     bubble.style.display = 'none';
     bubble.classList.remove('ng-pulse');
     if (window.CustodianTour) window.CustodianTour.enableAssistant();
+  }
+
+  // auto=true means this is the unattended page-arrival open (setTimeout),
+  // not a click -- never show the panel sitting open with just "…" with
+  // nothing else on screen explaining why it appeared. Stay hidden, fetch
+  // the greeting silently, and only reveal once real content is ready to
+  // show. A manual bubble click (auto=false) still opens instantly with a
+  // "…" cue, same as before -- that's an expected, requested response to a
+  // click, not an unprompted blank panel. (Bug report 2026-07-05.)
+  function openPanel(auto) {
+    if (!auto || opened) revealPanel();
 
     if (!opened) {
       opened = true;
 
       const greetMsg = buildGreetMsg(currentPath, pageCfg, history, isPostOp);
+      const thinking = auto ? null : addMsg('…', 'bot');
 
-      const thinking = addMsg('…', 'bot');
       askNemotron({
         question: greetMsg,
         history: history.slice(-4),   // carry context from previous pages
@@ -427,7 +438,8 @@
         site_context: { ng_page: currentPath, ng_post_op: isPostOp, first_visit: isFirstVisit, has_history: history.length > 0 },
       })
       .then(d => {
-        thinking.remove();
+        if (thinking) thinking.remove();
+        if (auto) revealPanel();
         const raw = d.answer || FALLBACK_GREET[currentPath] || "Ask me anything about what you're seeing.";
         addMsg(raw, 'bot');
         history.push({ role: 'assistant', content: raw });
@@ -436,17 +448,21 @@
           ? (isPostOp ? pageCfg.suggests_postop : pageCfg.suggests_first)
           : pageCfg.suggests;
         setTimeout(() => { renderSuggests(suggests); renderNext(); }, 350);
+        document.getElementById('ng-inp').focus();
       })
       .catch(() => {
-        thinking.remove();
+        if (thinking) thinking.remove();
+        if (auto) revealPanel();
         addMsg(FALLBACK_GREET[currentPath] || "Ask me anything about what you're seeing here.", 'bot');
         const suggests = currentPath === '/hermes'
           ? (isPostOp ? pageCfg.suggests_postop : pageCfg.suggests_first)
           : pageCfg.suggests;
         setTimeout(() => { renderSuggests(suggests); renderNext(); }, 200);
+        document.getElementById('ng-inp').focus();
       });
+    } else {
+      document.getElementById('ng-inp').focus();
     }
-    document.getElementById('ng-inp').focus();
   }
 
   function closePanel() {
@@ -462,7 +478,7 @@
     if (window.CustodianTour) window.CustodianTour.dismissAssistant();
   }
 
-  bubble.addEventListener('click', openPanel);
+  bubble.addEventListener('click', () => openPanel(false));
   document.getElementById('ng-close').addEventListener('click', closePanel);
 
   const inp = document.getElementById('ng-inp');
@@ -481,7 +497,7 @@
   const shouldAutoOpen = isNewArrival || currentPath === '/';
 
   if (!isMobile && !isDismissed && shouldAutoOpen) {
-    setTimeout(openPanel, 1400);
+    setTimeout(() => openPanel(true), 1400);
   } else if (!isMobile && !isDismissed) {
     bubble.classList.add('ng-pulse');
   }

@@ -549,12 +549,23 @@ const STEP_NARRATIONS = [
 async function nemoNarrate(stepIdx) {
     const narration = STEP_NARRATIONS[stepIdx];
     if (!narration) return;
-    opNemoOpen();
-    await new Promise(r => setTimeout(r, 420));
+    // Only reveal the panel immediately if it's already open (a live "…"
+    // typing cue is normal there). If it's closed/minimized, stay closed
+    // and silent for the whole generation -- never pop open just to sit
+    // there blank -- then open already-populated once the real answer
+    // lands. (Bug report 2026-07-05: panel was force-opening on every step
+    // click even when minimized, showing nothing but "…" for several
+    // seconds.)
+    const wasOpen = opNemoPanel.style.display === 'flex';
+    let thinking = null;
+    if (wasOpen) {
+        opNemoOpen();
+        await new Promise(r => setTimeout(r, 420));
+        thinking = opNemoAddMsg('…', 'bot');
+    }
 
     const prompt = narration.excited ? narration.prompt : narration.user;
 
-    const thinking = opNemoAddMsg('…', 'bot');
     try {
         const r = await fetch('/api/v1/nemotron/ask', {
             method: 'POST',
@@ -567,7 +578,8 @@ async function nemoNarrate(stepIdx) {
             })
         });
         const d = await r.json();
-        thinking.remove();
+        if (thinking) thinking.remove();
+        if (!wasOpen) opNemoOpen();
         // Distinguish three cases clearly so the operator can tell what's
         // happening instead of seeing the input placeholder text repeated
         // back as a "blank answer":
@@ -606,7 +618,8 @@ async function nemoNarrate(stepIdx) {
         opNemoHistory.push({ role: 'assistant', content: ans });
         nemoSaveHistory(opNemoHistory);
     } catch (e) {
-        thinking.remove();
+        if (thinking) thinking.remove();
+        if (!wasOpen) opNemoOpen();
         opNemoAddMsg(`⚠ Network error calling Nemotron: ${e.message || e}`, 'bot');
     }
 }
