@@ -212,12 +212,34 @@ def _strip_thinking(text: str) -> str:
         re.IGNORECASE,
     )
 
+    # v8 (live leak 2026-07-05): the model dumping the raw audit-log JSON
+    # it was given as context ("ts": 169..., "event": "reasoning", "text":
+    # "[authority] L2 cap OK...") straight into its deliberation, then
+    # arguing with itself about numbers that don't match. A real reply
+    # paraphrases state in plain English and never contains literal
+    # "key": value JSON syntax — two or more occurrences is a clean,
+    # reliable tell that never happens in legitimate prose.
+    _JSON_KEY_RE = re.compile(r'"[a-zA-Z_]+"\s*:\s*')
+
+    def _json_dump_start(s: str):
+        matches = list(_JSON_KEY_RE.finditer(s))
+        return matches[0].start() if len(matches) >= 2 else None
+
     _cut_candidates = [i for i in (
         _selfcount_run_start(text),
         (lambda m: m.start() if m else None)(_TALLY_MARKER_RE.search(text)),
+        _json_dump_start(text),
     ) if i is not None]
     if _cut_candidates:
         text = text[:min(_cut_candidates)].rstrip().rstrip('"“')
+        # A genuine answer that happened to run right up against the leak
+        # always ends on a complete sentence (every real case observed
+        # does). A remainder that trails off into a colon/lead-in ("...is:",
+        # "From the live authority state:") is itself just the start of the
+        # deliberation, not a usable answer -- discard rather than show a
+        # dangling fragment.
+        if text and not re.search(r'[.!?]["\')\]]?$', text):
+            text = ''
 
     # Heuristic: is a paragraph model self-talk vs. real reply?
     def _is_meta(p: str) -> bool:
