@@ -98,7 +98,15 @@ class NemoClawRouter:
         text = re.sub(r'<thinking>.*?</thinking>', '', text, flags=re.DOTALL)
         return text.strip()
 
-    def complete(self, system: str, user: str, max_tokens: int = 1200) -> str:
+    # 2200 (was 1200, live bug 2026-07-05): this reasoning model spends real
+    # token budget on chain-of-thought before ever emitting output. Callers
+    # that need a full structured JSON envelope (multiple claims, policy
+    # citations) were routinely running out of budget mid-reasoning, either
+    # truncating the JSON mid-object ("Expecting property name...") or never
+    # reaching it at all ("no JSON object found") -- both were silently
+    # falling back to a generic placeholder that looked like every triage
+    # submission "just escalating" rather than a token-budget failure.
+    def complete(self, system: str, user: str, max_tokens: int = 2200) -> str:
         last_error: Exception = RuntimeError("no endpoints configured")
         for endpoint in self.endpoints:
             headers = self._headers_for(endpoint)

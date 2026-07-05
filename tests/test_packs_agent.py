@@ -46,6 +46,31 @@ class TestParseEnvelope:
         with pytest.raises(EnvelopeParseError, match="not valid JSON"):
             parse_envelope('{"case_id": "case-1", }')
 
+    def test_trailing_prose_with_braces_does_not_break_parse(self):
+        # Live bug 2026-07-05: despite "output ONLY a single JSON object, no
+        # prose", the model sometimes echoes the schema example or adds
+        # commentary after the real object -- and that trailing text often
+        # contains more braces (e.g. quoting the system prompt's own shape
+        # example). A greedy `\{.*\}` regex used to match from the first `{`
+        # all the way to the LAST `}` in the whole response, splicing the
+        # trailing junk onto the real object and raising JSONDecodeError --
+        # every custom /triage submission that triggered this silently fell
+        # back to a generic "escalate_ambiguous" placeholder, which read as
+        # the demo always escalating rather than a parse failure.
+        raw = (
+            json.dumps(make_envelope_payload())
+            + '\nLet me double check this matches the required shape: '
+            + '{"recommended_disposition": "...", "claims": [...]} looks right.'
+        )
+        assert parse_envelope(raw) == Envelope.from_dict(make_envelope_payload())
+
+    def test_markdown_fenced_json_with_trailing_commentary(self):
+        raw = (
+            "```json\n" + json.dumps(make_envelope_payload()) + "\n```\n"
+            "I'm confident in this analysis. {note: not real JSON, just thinking out loud}"
+        )
+        assert parse_envelope(raw) == Envelope.from_dict(make_envelope_payload())
+
     def test_fallback_meta_fills_missing_optional_fields(self):
         raw = json.dumps(
             {

@@ -27,8 +27,14 @@ try:
         # actually gets used. Without openrouter_key_file the router
         # silently skips OpenRouter (it has no key) and falls through to
         # NIM, which times out and triggers the no-AI fallback path.
+        # timeout=25 (was 10, live bug 2026-07-05): this reasoning model can
+        # legitimately take longer than 10s to think through a full claims
+        # envelope; nemotron_chat.py already settled on 25s for the same
+        # model on a lighter task. 10s was causing spurious "Backend
+        # unavailable or timed out" failures on requests that would have
+        # succeeded given a few more seconds.
         return NemoClawRouter(
-            timeout=10,
+            timeout=25,
             nvidia_api_key_file=_NVIDIA_SECRET,
             openrouter_key_file=_KEYS_ENV,
         )
@@ -362,6 +368,13 @@ def custom():
 
     extractor = _EXTRACTORS.get(name, refunds_extract_envelope)
     client = _make_client()
+    # No retry (tried and reverted 2026-07-05): this reasoning model spends
+    # real generation time (10-25s+) on every call regardless of whether the
+    # output ends up parsing -- a "retry only on parse error" attempt still
+    # measured 65s+ end-to-end on some inputs, blowing past the Worker's own
+    # 55s slow-path ceiling and turning a parse failure into a visitor-facing
+    # timeout, which is strictly worse. One clean attempt; the token-budget
+    # fix above (1200 -> 2200) already fixes most of what used to fail here.
     try:
         envelope = extractor(case_input, client)
         source = client.name
