@@ -57,7 +57,7 @@
       suggests: [
         "Why can't you just prompt the AI to stay in budget?",
         "What makes kernel enforcement different from a rate limit?",
-        "What problem does Custodian solve that other tools don't?",
+        "What happens if I try to make it overspend right now?",
       ],
     },
     '/hermes': {
