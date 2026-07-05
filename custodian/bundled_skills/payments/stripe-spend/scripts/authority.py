@@ -1,12 +1,31 @@
 #!/usr/bin/env python3
 """Status/log inspection for the stripe-spend skill. See SKILL.md for usage."""
 import json
+import os
+import random
 import sys
 from pathlib import Path
 
 SKILL_DIR = Path(__file__).resolve().parent.parent
 STATE_FILE = SKILL_DIR / "state" / "authority.json"
 LOG_FILE = SKILL_DIR / "state" / "audit_log.jsonl"
+
+
+def _atomic_write(path: Path, content: str) -> None:
+    """Atomic write: temp file + rename on same fs."""
+    dir_path = path.parent
+    dir_path.mkdir(parents=True, exist_ok=True)
+    tmp_path = Path(str(path) + f".tmp.{os.getpid()}.{random.randint(100000, 999999)}")
+    try:
+        tmp_path.write_text(content)
+        os.fsync(tmp_path.open("rb").fileno())
+        os.rename(str(tmp_path), str(path))
+    except Exception:
+        try:
+            tmp_path.unlink(missing_ok=True)
+        except OSError:
+            pass
+        raise
 
 DEFAULT_STATE = {
     "band": "L2",
@@ -46,7 +65,7 @@ def cmd_log():
 def cmd_reset():
     s = load_state()
     s["spent_this_session"] = 0.0
-    STATE_FILE.write_text(json.dumps(s, indent=2))
+    _atomic_write(STATE_FILE, json.dumps(s, indent=2))
     print("Session spend reset to $0.00. Audit log preserved.")
 
 

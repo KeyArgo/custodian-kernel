@@ -11,6 +11,7 @@ directory or call approve.py directly — the kernel's Landlock sandbox prevents
 """
 import json
 import os
+import random
 import secrets
 import sys
 import time
@@ -30,6 +31,24 @@ OPERATOR_PHONE = os.environ.get("HERMES_OPERATOR_PHONE", "+17196487887")
 CODE_TTL = 600
 
 
+def _atomic_write(path: Path, content: str) -> None:
+    """Atomic write: temp file + rename on same fs."""
+    dir_path = path.parent
+    dir_path.mkdir(parents=True, exist_ok=True)
+    tmp_name = str(path) + f".tmp.{os.getpid()}.{random.randint(100000, 999999)}"
+    tmp_path = Path(tmp_name)
+    try:
+        tmp_path.write_text(content)
+        os.fsync(tmp_path.open("rb").fileno())
+        os.rename(str(tmp_path), str(path))
+    except Exception:
+        try:
+            tmp_path.unlink(missing_ok=True)
+        except OSError:
+            pass
+        raise
+
+
 def _load_secrets():
     vals = {}
     for line in SECRET_FILE.read_text().splitlines():
@@ -40,8 +59,7 @@ def _load_secrets():
 
 
 def write_pending(amount, description, reason, kind="spend", payment_intent_id=None):
-    PENDING_FILE.parent.mkdir(parents=True, exist_ok=True)
-    PENDING_FILE.write_text(json.dumps({
+    _atomic_write(PENDING_FILE, json.dumps({
         "amount": amount, "description": description, "reason": reason,
         "created_at": time.time(), "kind": kind, "payment_intent_id": payment_intent_id,
     }, indent=2))
@@ -55,8 +73,7 @@ def send_approval_code(amount: float, description: str) -> bool:
 
     code = f"{secrets.randbelow(1000000):06d}"
 
-    PENDING_CODE_FILE.parent.mkdir(parents=True, exist_ok=True)
-    PENDING_CODE_FILE.write_text(json.dumps({
+    _atomic_write(PENDING_CODE_FILE, json.dumps({
         "code": code,
         "expires_at": time.time() + CODE_TTL,
     }))

@@ -87,21 +87,25 @@ All JS in the frontend uses relative URLs (`/api/v1/...`). No hardcoded `rein-lo
 
 ### Kernel Enforcement — DGX Spark node chain primary, argobox-lite fallback
 
-`custodian/custodian/policy/enforcer.py` wraps `decide()` with a remote-first pattern:
+`custodian/policy/enforcer.py` wraps `decide()` with a remote-first pattern:
 
 1. **DGX Spark node(s)** — airgapped enforcement node(s), tried in order. Configured via
    `SPARK_ENFORCE_URLS` (comma-separated, e.g.
-   `http://192.168.50.101:8095/decide,http://192.168.50.102:8095/decide` for spark-a/spark-b).
+   `http://192.168.50.56:8095/decide,http://192.168.50.94:8095/decide` for spark-a/spark-b).
    `SPARK_ENFORCE_URL` (singular) is still honoured as a one-node fallback for compatibility.
    Runs `spark-enforcement/enforce_server.py` on each Spark host.
+   Default: .56 (primary) → .94 (secondary) → local enforcement on argobox-lite.
 2. **argobox-lite local** (`custodian.policy.evaluator.decide()`) — silent automatic fallback
    if every configured Spark node is unreachable (network blip, reboot, timeout of 1s each).
    Individual Spark nodes are known to go down — that's what the chain + local fallback exist
    for. Confirmed live 2026-07-04: the primary Spark node was unreachable and production
    correctly executed a real Stripe spend via local fallback with zero visible disruption.
 
-DGX Spark runs enforcement **only**. It does NOT run inference. All Nemotron inference is
-cloud-side — see Nemotron Inference below.
+Demo visitors can switch enforcement mode themselves via the console UI (click the
+"Enforcement" badge in the top bar). Two modes:
+- **Remote-first** (default): tries Spark nodes, falls back to local if all unreachable.
+- **Local** (ArgoBox): skips Spark entirely, enforces locally. Both paths use the same
+  deterministic policy engine — no security risk, the only difference is network latency.
 
 Runtime toggle: `SPARK_ENFORCE_URLS=''` env var or `/tmp/spark-enforcement-disabled` flag file
 disables all Spark nodes and forces local-only enforcement without a restart.

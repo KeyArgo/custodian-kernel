@@ -73,7 +73,7 @@ class TestNemoClawRouter:
     def test_all_fail_raises_runtime_error(self, monkeypatch: pytest.MonkeyPatch):
         monkeypatch.setattr(urllib.request, "urlopen", lambda req, timeout: (_ for _ in ()).throw(_url_error()))
         router = NemoClawRouter(endpoints=["http://e1/v1", "http://e2/v1"])
-        with pytest.raises(RuntimeError, match="all 2 endpoints failed"):
+        with pytest.raises(RuntimeError, match="all 2 cloud endpoints failed"):
             router.complete("sys", "user")
 
     def test_live_flag_true_on_success(self, monkeypatch: pytest.MonkeyPatch):

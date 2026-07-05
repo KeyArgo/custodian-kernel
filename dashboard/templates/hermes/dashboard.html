@@ -601,6 +601,11 @@
             <div class="top-bar-badge"><span class="dot" id="badge-dot-nemoclaw"></span> NemoClaw <span class="sub">kernel sandbox</span></div>
             <div class="top-bar-badge"><span class="dot" id="badge-dot-hermes"></span> Nous Hermes Agent</div>
             <div class="top-bar-badge"><span class="dot" id="badge-dot-stripe"></span> Stripe <span class="sub">real PaymentIntents</span></div>
+            <div class="top-bar-badge" id="enforcement-mode-badge" title="Click to switch enforcement mode">
+                <span class="dot" id="badge-dot-enforcement"></span>
+                Enforcement
+                <span class="sub" id="enforcement-label">—</span>
+            </div>
         </div>
     </div>
 
@@ -1268,8 +1273,76 @@
             }
         }
 
-        poll();
-        setInterval(poll, 3000);
+        // ── Enforcement mode toggle ───────────────────────────────────────────
+        let _enforcementMode = null; // 'remote-first' | 'local' | null (unknown)
+        let _enforcementLoading = false;
+
+        function refreshEnforcementMode() {
+            fetch('/api/v1/enforcement-mode')
+                .then(r => r.json())
+                .then(data => {
+                    _enforcementMode = data.mode;
+                    updateEnforcementBadge(data);
+                })
+                .catch(() => {
+                    updateEnforcementBadge({ mode: 'local', effective: 'local', label: 'Local Only (fallback)', spark_health: { reachable: false } });
+                });
+        }
+
+        function updateEnforcementBadge(data) {
+            const labelEl = document.getElementById('enforcement-label');
+            const dotEl = document.getElementById('badge-dot-enforcement');
+            if (!labelEl || !dotEl) return;
+
+            const mode = data.effective || data.mode || 'local';
+            const reachable = data.spark_health && data.spark_health.reachable !== undefined ? data.spark_health.reachable : false;
+            const label = data.label || (mode === 'local' ? 'Local' : 'Remote');
+
+            labelEl.textContent = label;
+
+            if (mode === 'local' && !reachable) {
+                dotEl.className = 'dot down';
+                dotEl.title = 'Local only — Spark nodes unreachable';
+            } else if (mode === 'local') {
+                dotEl.className = 'dot live';
+                dotEl.title = 'Local enforcement (Spark disabled)';
+            } else if (reachable) {
+                dotEl.className = 'dot live';
+                dotEl.title = 'Remote-first (Spark → Local) — Spark reachable';
+            } else {
+                dotEl.className = 'dot down';
+                dotEl.title = 'Remote-first (Spark → Local) — Spark unreachable, falling through';
+            }
+        }
+
+        // Click-to-toggle: switches between remote-first and local
+        document.getElementById('enforcement-mode-badge')?.addEventListener('click', () => {
+            if (_enforcementLoading) return;
+            _enforcementLoading = true;
+            const next = _enforcementMode === 'local' ? 'remote-first' : 'local';
+            const badge = document.getElementById('enforcement-mode-badge');
+            if (badge) badge.style.opacity = '0.5';
+
+            fetch('/api/v1/enforcement-mode', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ mode: next }),
+            })
+                .then(r => r.json())
+                .then(data => {
+                    _enforcementMode = data.mode;
+                    updateEnforcementBadge(data);
+                    if (badge) badge.style.opacity = '1';
+                })
+                .catch(() => {
+                    if (badge) badge.style.opacity = '1';
+                })
+                .finally(() => { _enforcementLoading = false; });
+        });
+
+        // Initial load + periodic refresh
+        refreshEnforcementMode();
+        setInterval(refreshEnforcementMode, 10000);
 
         document.querySelectorAll('.tab-btn').forEach(btn => {
             btn.addEventListener('click', () => {

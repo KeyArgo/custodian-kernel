@@ -190,7 +190,7 @@
     #ng-bubble.ng-pulse { animation: ng-pulse 2.4s ease-in-out 0.3s 1; }
     #ng-panel {
       position: fixed; bottom: 86px; right: 24px;
-      width: 346px; max-height: 550px;
+      width: 346px; height: min(78vh, 760px); max-height: 78vh;
       background: #060c08; border: 1px solid #1e3020;
       border-radius: 16px; display: none; flex-direction: column;
       z-index: 1201; box-shadow: 0 8px 44px rgba(0,0,0,.82);
@@ -221,7 +221,7 @@
     .ng-body {
       flex: 1; overflow-y: auto; padding: 12px 14px;
       display: flex; flex-direction: column; gap: 9px;
-      min-height: 80px; max-height: 290px;
+      min-height: 80px;
       font-size: .84em; line-height: 1.6; color: #c8d8c0;
     }
     .ng-bot { align-self: flex-start; background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.07); border-radius: 12px 12px 12px 3px; padding: 8px 12px; max-width: 95%; word-break: break-word; }

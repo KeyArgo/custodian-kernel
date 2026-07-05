@@ -37,6 +37,7 @@ import api.pnl as pnl
 import api.triage as triage
 import api.triage_live as triage_live
 import api.tools as tools_api
+import api.enforcement_mode as enforcement_mode
 
 app = Flask(__name__, template_folder='templates')
 app.register_blueprint(hermes.bp, url_prefix='/api/v1/hermes')
@@ -50,6 +51,7 @@ app.register_blueprint(pnl.bp, url_prefix='/api/v1/pnl')
 app.register_blueprint(triage.bp, url_prefix='/api/v1/triage')
 app.register_blueprint(triage_live.bp, url_prefix='/api/v1/triage')
 app.register_blueprint(tools_api.tools_bp, url_prefix='/api/v1/tools')
+app.register_blueprint(enforcement_mode.bp, url_prefix='/api/v1')
 
 # CORS allowlist for the separately-hosted Cloudflare Pages frontend.
 # Scoped to /api/ routes only — never the root page route.

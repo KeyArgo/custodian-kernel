@@ -27,11 +27,16 @@ DEFAULT_ENDPOINTS = [
 ]
 NVIDIA_HOSTED = "integrate.api.nvidia.com"
 OPENROUTER_HOSTED = "openrouter.ai"
+OLLAMA_HOSTED = "ollama"
 
 # Model to use on OpenRouter when falling back — env-overridable.
 OPENROUTER_FALLBACK_MODEL = os.environ.get(
     "OPENROUTER_FALLBACK_MODEL", "nvidia/nemotron-3-super-120b-a12b:free"
 )
+
+# Local Ollama inference — set OLLAMA_HOST to enable fallback (default: localhost:11434).
+# Only used when all cloud endpoints are unreachable or have no keys configured.
+OLLAMA_HOST = os.environ.get("OLLAMA_HOST", "http://localhost:11434")
 
 
 @dataclass
@@ -145,7 +150,40 @@ class NemoClawRouter:
                 last_error = e
                 continue
 
+        # All cloud endpoints exhausted — try local Ollama if configured.
+        ollama_host = os.environ.get("OLLAMA_HOST")
+        if ollama_host:
+            try:
+                ollama_payload = {
+                    "model": os.environ.get("OLLAMA_MODEL", "qwen3:8b"),
+                    "messages": [
+                        {"role": "system", "content": system},
+                        {"role": "user", "content": user},
+                    ],
+                    "stream": False,
+                    "options": {
+                        "temperature": 0.2,
+                        "num_predict": max_tokens,
+                    },
+                }
+                ollama_headers = {"Content-Type": "application/json"}
+                req = urllib.request.Request(
+                    f"{ollama_host}/api/chat",
+                    data=json.dumps(ollama_payload).encode(),
+                    headers=ollama_headers,
+                )
+                with urllib.request.urlopen(req, timeout=30) as resp:
+                    ollama_result = json.loads(resp.read())
+                # Ollama returns {"message":{"content":"..."}}, not {"choices":...}
+                content = ollama_result.get("message", {}).get("content", "")
+                if content:
+                    self.name = f"nemoclaw-router → {ollama_host} (ollama)"
+                    self.live = True
+                    return self._strip_thinking(content)
+            except Exception:
+                pass  # Ollama not available — that's OK, this is best-effort
+
         raise RuntimeError(
-            f"NemoClawRouter: all {len(self.endpoints)} endpoints failed. "
-            f"Last error: {last_error}"
+            f"NemoClawRouter: all {len(self.endpoints)} cloud endpoints failed, "
+            f"Ollama also unavailable. Last error: {last_error}"
         )

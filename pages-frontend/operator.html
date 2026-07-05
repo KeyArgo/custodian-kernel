@@ -208,7 +208,7 @@
       justify-content: center; font-size: 1.35em; z-index: 1000; box-shadow: 0 4px 20px rgba(118,185,0,0.35);
       transition: transform 0.15s; }
     #op-nemo-bubble:hover { transform: scale(1.08); }
-    #op-nemo-panel { position: fixed; bottom: 86px; right: 24px; width: 340px; max-height: 500px;
+    #op-nemo-panel { position: fixed; bottom: 86px; right: 24px; width: 340px; height: min(78vh, 760px); max-height: 78vh;
       background: linear-gradient(180deg, rgba(10,14,6,0.98), rgba(6,10,4,0.98)); border: 1px solid #2a4020; border-radius: 16px; display: none;
       flex-direction: column; z-index: 999; box-shadow: 0 8px 40px rgba(0,0,0,0.7); overflow: hidden; }
     /* On phones the floating bubble blocks the action buttons (Approve / Engage kill switch).
@@ -217,7 +217,7 @@
       #op-nemo-bubble, #op-nemo-panel { display: none !important; }
     }
     .op-np-hdr { display: flex; align-items: center; gap: 10px; padding: 13px 16px; border-bottom: 1px solid rgba(118,185,0,0.12); background: rgba(118,185,0,0.06); }
-    .op-np-body { flex: 1; overflow-y: auto; padding: 14px 14px; display: flex; flex-direction: column; gap: 10px; max-height: 320px; font-size: 0.82em; line-height: 1.6; }
+    .op-np-body { flex: 1; overflow-y: auto; padding: 14px 14px; display: flex; flex-direction: column; gap: 10px; font-size: 0.82em; line-height: 1.6; }
     .op-np-foot { border-top: 1px solid #1a2a10; padding: 10px 12px; display: flex; gap: 8px; }
     .op-np-input { flex: 1; background: #111; border: 1px solid #2a3a1a; border-radius: 8px; color: #ccc; font-size: 0.85em; padding: 8px 12px; outline: none; font-family: var(--mono); }
     .op-np-send { background: rgba(118,185,0,0.15); border: 1px solid #76b900; color: #76b900; border-radius: 8px; padding: 8px 14px; cursor: pointer; font-family: inherit; }
@@ -686,7 +686,15 @@ function startCodePoll(codeElId, approveInputId, noteId) {
 }
 
 document.getElementById('step2-btn').addEventListener('click', async () => {
-    const data = await call('/spend', { amount: '3500.00', description: 'Demo: NAS license renewal' });
+    const btn = document.getElementById('step2-btn');
+    if (btn.disabled) return; // guard against a fast double-press racing two overlapping SMS/poll flows
+    btn.disabled = true;
+    let data;
+    try {
+        data = await call('/spend', { amount: '3500.00', description: 'Demo: NAS license renewal' });
+    } finally {
+        btn.disabled = false;
+    }
     renderOut('step2-out', data);
     if (siteTour && !data.error) siteTour.markOperatorStep(2, { completed: true });
     if (window.TourTracker && !data.error) TourTracker.track('operator_step', 2);
@@ -738,8 +746,16 @@ document.getElementById('resume-btn').addEventListener('click', async () => {
 });
 
 document.getElementById('refund-btn').addEventListener('click', async () => {
+    const btn = document.getElementById('refund-btn');
+    if (btn.disabled) return; // already in flight — a fast double-click/press must not fire a second overlapping /refund + SMS poll race
+    btn.disabled = true;
     const pi = document.getElementById('refund-pi').value.trim();
-    const data = await call('/refund', { payment_intent_id: pi, amount: '85.00', description: 'Demo: refund -- double-billed' });
+    let data;
+    try {
+        data = await call('/refund', { payment_intent_id: pi, amount: '85.00', description: 'Demo: refund -- double-billed' });
+    } finally {
+        btn.disabled = false;
+    }
     renderOut('refund-out', data);
     if (siteTour && !data.error) siteTour.markOperatorStep(7, { completed: true });
     if (window.TourTracker && !data.error) TourTracker.track('operator_step', 7);
@@ -843,10 +859,23 @@ function opNemoOpen() {
     if (siteTour) siteTour.enableAssistant();
     if (!opNemoOpened) {
         opNemoOpened = true;
+        // Deterministic orientation first — what's literally on screen must be
+        // accurate every time, and the live model (small, fast, occasionally
+        // hallucinates a different UI entirely under load) can't be trusted
+        // alone for that one fact. Its own reply follows right after for
+        // personality/narrative, per the existing per-page guidance.
+        if (opNemoHistory.length === 0) {
+            opNemoAddMsg(
+                "This is the live Operator Panel: nine numbered steps below, each firing a real " +
+                "action against the real kernel (real Stripe test money, real Twilio SMS), plus a " +
+                "live audit feed at the bottom streaming every event as it happens.",
+                'bot'
+            );
+        }
         const thinking = opNemoAddMsg('…', 'bot');
         const greeting = opNemoHistory.length > 0
             ? "We were chatting on another page and I followed you here. What's this Operator Panel for and what do I do?"
-            : "I just opened the Operator Panel. What is this and what do I run first?";
+            : "I just landed here and saw the orientation message about the steps and audit feed. Now get me hyped to run Step 0.";
         fetch('/api/v1/nemotron/ask', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
