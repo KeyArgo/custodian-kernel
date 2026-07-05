@@ -7,31 +7,44 @@
 <link rel="icon" type="image/svg+xml" href="/favicon-operator.svg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
 <style>
     :root {
       --bg:     #06070b;
       --bg2:    #0a0c13;
-      --panel:  #0e1018;
-      --line:   rgba(255,176,0,0.10);
+      /* Contrast fix + console alignment (2026-07-05): --panel was #0e1018,
+         1.06:1 against --bg -- nearly invisible, forcing every card to lean
+         on heavy gradients/glow-shadows to read as a surface at all. Console
+         page already runs a disciplined hairline-border look; matching that
+         here means the panel color itself has to actually separate from the
+         page. --dim was 3.32:1, below the 4.5:1 AA floor for body text. */
+      --panel:  #141726;
+      --line:   rgba(255,176,0,0.28);
       --text:   #eceef5;
       --muted:  #8d93a6;
-      --dim:    #5d6273;
+      --dim:    #8188a0;
       --amber:  #ffb000;
       --amber2: #ffd060;
       --green:  #2ee6a6;
       --red:    #ff5c5c;
       --nvidia: #76b900;
+      --violet: #a78bfa;
       --mono:   'JetBrains Mono', 'Fira Code', monospace;
+      --display: 'Space Grotesk', var(--mono);
+      --radius: 8px;
     }
     body {
-      background:
-        radial-gradient(circle at top left, rgba(118,185,0,0.06), transparent 26%),
-        radial-gradient(circle at top right, rgba(255,176,0,0.08), transparent 22%),
-        linear-gradient(180deg, #06070b 0%, #05060a 100%);
+      background: var(--bg);
       color: #e8e8e8; font-family: var(--mono); padding: 0; max-width: 100%; margin: 0;
     }
-    .page-wrap { max-width: 860px; margin: 0 auto; padding: 24px 24px 40px; }
+    .page-wrap { max-width: 1180px; margin: 0 auto; padding: 24px 24px 40px; }
+    /* ── two-column console layout: main content + sticky step rail ──── */
+    .op-grid { display: grid; grid-template-columns: 1fr 250px; gap: 36px; align-items: start; }
+    .op-main { min-width: 0; }
+    @media(max-width: 1020px) {
+      .op-grid { grid-template-columns: 1fr; }
+      .op-rail { display: none; }
+    }
     /* ── kernel nav ─────────────────────────────────────────── */
     .k-nav {
       position: sticky; top: 0; z-index: 100;
@@ -84,108 +97,145 @@
       .k-links a:not(.active) { display: none; }
       .k-brand span { display: inline; }
     }
-    h1 { color: #76b900; font-size: 1.3em; margin-bottom: 4px; }
+    h1 { font-family: var(--display); color: var(--text); font-size: 1.7em; font-weight: 700; letter-spacing: -0.01em; margin-bottom: 4px; }
+    h1 .h1-accent { color: var(--nvidia); }
     .warn { color: #ffb000; font-size: 0.82em; margin-bottom: 16px; }
-    .ok-banner { color: #2ee6a6; font-size: 0.82em; margin-bottom: 16px; padding: 10px 14px; background: rgba(46,230,166,0.05); border: 1px solid rgba(46,230,166,0.2); border-radius: 6px; }
-    .live-panel { background: linear-gradient(180deg, rgba(18,23,35,0.96), rgba(10,13,20,0.98)); border: 1px solid rgba(255,255,255,0.08); border-top: 2px solid #2ee6a6; padding: 14px 16px; margin: 22px 0 14px 0; border-radius: 12px; box-shadow: 0 10px 22px rgba(0,0,0,0.18); }
-    .live-panel h2 { font-size: 0.95em; margin: 0 0 6px 0; color: #2ee6a6; }
-    .live-panel p { font-size: 0.78em; color: #999; margin: 0 0 10px 0; }
-    .live-table { width: 100%; border-collapse: collapse; font-size: 0.72em; font-family: 'JetBrains Mono', monospace; }
-    .live-table th { color: #666; text-align: left; padding: 5px 8px; border-bottom: 1px solid #2a2a2a; font-size: 0.92em; text-transform: uppercase; letter-spacing: 0.05em; }
-    .live-table td { padding: 5px 8px; border-bottom: 1px solid #111; vertical-align: top; }
+    .ok-banner { color: var(--green); font-size: 0.82em; margin-bottom: 20px; padding: 10px 14px; background: rgba(46,230,166,0.08); border: 1px solid rgba(46,230,166,0.35); border-radius: var(--radius); }
+    /* ── shared console card: flat, hairline-bordered, left accent ──── */
+    .live-panel, .curl-panel, .treasury-panel, .step, .instructions {
+      background: var(--panel); border: 1px solid var(--line); border-left: 3px solid var(--nvidia);
+      padding: 16px 18px; margin-bottom: 14px; border-radius: var(--radius);
+    }
+    .live-panel { border-left-color: var(--green); margin-top: 22px; }
+    .curl-panel { border-left-color: var(--violet); }
+    .treasury-panel { margin-top: 22px; }
+    .live-panel h2, .curl-panel h2, .treasury-panel h2, .step h2 {
+      font-family: var(--display); font-size: 1em; font-weight: 600; letter-spacing: -0.005em; margin: 0 0 6px 0; color: var(--text);
+    }
+    .live-panel p, .curl-panel p, .treasury-panel p, .step p { font-size: 0.8em; color: var(--dim); margin: 0 0 10px 0; line-height: 1.55; }
+    .live-table { width: 100%; border-collapse: collapse; font-size: 0.72em; font-family: var(--mono); }
+    .live-table th { color: var(--dim); text-align: left; padding: 5px 8px; border-bottom: 1px solid var(--line); font-size: 0.92em; text-transform: uppercase; letter-spacing: 0.05em; }
+    .live-table td { padding: 5px 8px; border-bottom: 1px solid rgba(255,255,255,0.05); vertical-align: top; }
     .live-table tr:last-child td { border-bottom: none; }
-    .live-evt-earned { color: #2ee6a6; }
-    .live-evt-executed { color: #2ee6a6; }
-    .live-evt-denied { color: #ff5c5c; font-weight: 700; }
-    .live-evt-escalation { color: #ffb000; }
-    .live-evt-refund { color: #a78bfa; }
-    .live-evt-kill { color: #ff5c5c; }
-    .live-loading { color: #5a5a5a; font-size: 0.85em; padding: 6px 0; }
-    .curl-panel { background: linear-gradient(180deg, rgba(18,23,35,0.96), rgba(10,13,20,0.98)); border: 1px solid rgba(255,255,255,0.08); border-top: 2px solid #a78bfa; padding: 14px 16px; margin: 18px 0 14px 0; border-radius: 12px; box-shadow: 0 10px 22px rgba(0,0,0,0.18); }
-    .curl-panel h2 { font-size: 0.95em; margin: 0 0 6px 0; color: #a78bfa; }
-    .curl-panel p { font-size: 0.78em; color: #999; margin: 0 0 10px 0; }
-    .curl-block { background: #060606; border: 1px solid #1a1a1a; border-radius: 6px; padding: 10px 12px; font-family: 'JetBrains Mono', monospace; font-size: 0.74em; color: #c8c8c8; white-space: pre-wrap; word-break: break-all; margin: 0 0 10px 0; }
-    .curl-btn { all: unset; cursor: pointer; background: rgba(167,139,250,0.12); border: 1px solid rgba(167,139,250,0.3); color: #c8b8ff; font-size: 0.78em; font-weight: 600; padding: 6px 14px; border-radius: 6px; margin-bottom: 8px; }
-    .curl-out { background: #060606; border: 1px solid #1a1a1a; border-radius: 6px; padding: 8px 10px; font-family: 'JetBrains Mono', monospace; font-size: 0.72em; color: #888; white-space: pre-wrap; word-break: break-all; margin: 6px 0 0 0; display: none; }
-    .treasury-panel { background: linear-gradient(180deg, rgba(18,23,35,0.96), rgba(10,13,20,0.98)); border: 1px solid rgba(255,255,255,0.08); border-top: 2px solid #76b900; padding: 14px 16px; margin: 22px 0 14px 0; border-radius: 12px; box-shadow: 0 10px 22px rgba(0,0,0,0.18); }
-    .treasury-panel h2 { font-size: 0.95em; margin: 0 0 6px 0; color: #76b900; }
-    .treasury-panel p { font-size: 0.78em; color: #999; margin: 0 0 10px 0; }
+    .live-evt-earned { color: var(--green); }
+    .live-evt-executed { color: var(--green); }
+    .live-evt-denied { color: var(--red); font-weight: 700; }
+    .live-evt-escalation { color: var(--amber); }
+    .live-evt-refund { color: var(--violet); }
+    .live-evt-kill { color: var(--red); }
+    .live-loading { color: var(--dim); font-size: 0.85em; padding: 6px 0; }
+    .curl-block { background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 10px 12px; font-family: var(--mono); font-size: 0.74em; color: #c8c8c8; white-space: pre-wrap; word-break: break-all; margin: 0 0 10px 0; }
+    .curl-btn { all: unset; cursor: pointer; background: rgba(167,139,250,0.12); border: 1px solid rgba(167,139,250,0.4); color: #c8b8ff; font-size: 0.78em; font-weight: 600; padding: 6px 14px; border-radius: 6px; margin-bottom: 8px; }
+    .curl-out { background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; font-family: var(--mono); font-size: 0.72em; color: var(--dim); white-space: pre-wrap; word-break: break-all; margin: 6px 0 0 0; display: none; }
     .treasury-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
     @media(max-width:480px){ .treasury-grid { grid-template-columns: 1fr; } }
-    .treasury-tile { background: linear-gradient(180deg, rgba(18,23,35,0.96), rgba(10,13,20,0.98)); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 12px 14px; box-shadow: 0 10px 20px rgba(0,0,0,0.16); }
-    .treasury-tile-label { font-size: 0.65em; color: #5a5a5a; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 4px; }
-    .treasury-tile-value { font-size: 1.5em; font-weight: 700; font-family: 'JetBrains Mono', monospace; }
-    .treasury-tile-value.is-positive { color: #2ee6a6; }
-    .treasury-tile-value.is-negative { color: #ff5c5c; }
-    .treasury-tile-value.is-neutral { color: #eceef5; }
-    .treasury-detail { font-size: 0.74em; color: #888; margin-top: 4px; }
-    .treasury-row { display: flex; justify-content: space-between; padding: 4px 0; font-size: 0.78em; border-bottom: 1px solid #111; }
+    .treasury-tile { background: var(--bg2); border: 1px solid var(--line); border-radius: 6px; padding: 12px 14px; }
+    .treasury-tile-label { font-size: 0.65em; color: var(--dim); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 4px; }
+    .treasury-tile-value { font-size: 1.5em; font-weight: 700; font-family: var(--mono); }
+    .treasury-tile-value.is-positive { color: var(--green); }
+    .treasury-tile-value.is-negative { color: var(--red); }
+    .treasury-tile-value.is-neutral { color: var(--text); }
+    .treasury-detail { font-size: 0.74em; color: var(--dim); margin-top: 4px; }
+    .treasury-row { display: flex; justify-content: space-between; padding: 5px 0; font-size: 0.78em; border-bottom: 1px solid rgba(255,255,255,0.05); }
     .treasury-row:last-child { border-bottom: none; }
-    .treasury-row-label { color: #888; }
-    .treasury-row-value { font-family: 'JetBrains Mono', monospace; }
-    .treasury-row-value.is-positive { color: #2ee6a6; }
-    .treasury-row-value.is-negative { color: #ff5c5c; }
-    .treasury-cashout { all: unset; cursor: pointer; background: rgba(46,230,166,0.1); border: 1px solid rgba(46,230,166,0.3); color: #2ee6a6; font-size: 0.78em; font-weight: 600; padding: 8px 14px; border-radius: 6px; margin-top: 10px; }
+    .treasury-row-label { color: var(--muted); }
+    .treasury-row-value { font-family: var(--mono); }
+    .treasury-row-value.is-positive { color: var(--green); }
+    .treasury-row-value.is-negative { color: var(--red); }
+    .treasury-cashout { all: unset; cursor: pointer; background: rgba(46,230,166,0.1); border: 1px solid rgba(46,230,166,0.4); color: var(--green); font-size: 0.78em; font-weight: 600; padding: 8px 14px; border-radius: 6px; margin-top: 10px; }
     .treasury-cashout:disabled { opacity: 0.4; cursor: not-allowed; }
-    .treasury-cashout-out { font-size: 0.74em; color: #888; margin-top: 6px; white-space: pre-wrap; font-family: 'JetBrains Mono', monospace; }
-    .step { background: linear-gradient(180deg, rgba(18,23,35,0.96), rgba(10,13,20,0.98)); border: 1px solid rgba(255,255,255,0.08); border-top: 2px solid #76b900; padding: 14px 16px; margin-bottom: 14px; border-radius: 12px; box-shadow: 0 10px 22px rgba(0,0,0,0.18); }
-    .step h2 { font-size: 0.95em; margin: 0 0 6px 0; color: #76b900; }
-    .step p { font-size: 0.8em; color: #999; margin: 0 0 10px 0; line-height: 1.5; }
+    .treasury-cashout-out { font-size: 0.74em; color: var(--dim); margin-top: 6px; white-space: pre-wrap; font-family: var(--mono); }
     .row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; align-items: center; }
-    input { background: rgba(0,0,0,0.38); border: 1px solid rgba(255,255,255,0.08); color: #e8e8e8; padding: 7px 9px; font-family: inherit; font-size: 0.85em; border-radius: 10px; }
-    button { background: linear-gradient(180deg, rgba(118,185,0,0.16), rgba(118,185,0,0.08)); border: 1px solid #76b900; color: #76b900; padding: 8px 14px;
-        cursor: pointer; font-family: inherit; font-size: 0.85em; border-radius: 999px; transition: transform .15s, background .15s, border-color .15s, color .15s; }
-    button:hover { background: rgba(118,185,0,0.25); transform: translateY(-1px); }
+    input { background: var(--bg); border: 1px solid var(--line); color: var(--text); padding: 8px 10px; font-family: inherit; font-size: 0.85em; border-radius: 6px; }
+    input:focus { outline: none; border-color: var(--nvidia); }
+    button { background: rgba(118,185,0,0.10); border: 1px solid rgba(118,185,0,0.55); color: var(--nvidia); padding: 8px 16px;
+        cursor: pointer; font-family: inherit; font-weight: 600; font-size: 0.85em; border-radius: 6px; transition: background .15s, border-color .15s, color .15s; }
+    button:hover { background: rgba(118,185,0,0.22); }
+    button:focus-visible { outline: 2px solid var(--nvidia); outline-offset: 2px; }
     button:disabled { opacity: 0.4; cursor: not-allowed; }
-    .btn-copy { background: rgba(255,176,0,0.1); border-color: #ffb000; color: #ffb000; font-size: 0.75em; padding: 4px 10px; display: none; }
+    .btn-copy { background: rgba(255,176,0,0.1); border-color: rgba(255,176,0,0.55); color: var(--amber); font-size: 0.75em; padding: 4px 10px; display: none; }
     .btn-copy.show { display: inline-block; }
     .btn-copy:hover { background: rgba(255,176,0,0.22); }
-    .out { background: linear-gradient(180deg, rgba(10,12,18,0.96), rgba(7,8,13,0.98)); border: 1px solid rgba(255,255,255,0.08); padding: 8px 10px; margin-top: 8px; font-size: 0.78em;
-        white-space: pre-wrap; max-height: 200px; overflow-y: auto; display: none; border-radius: 12px; box-shadow: inset 0 1px 0 rgba(255,255,255,0.02); }
+    .out { background: var(--bg); border: 1px solid var(--line); padding: 9px 11px; margin-top: 8px; font-size: 0.78em;
+        white-space: pre-wrap; max-height: 200px; overflow-y: auto; display: none; border-radius: 6px; }
     .out.show { display: block; }
-    .out.err { border-color: #ff3b3b; color: #ff9b9b; }
+    .out.err { border-color: var(--red); color: #ff9b9b; }
     /* ---- SMS phone mockup ---- */
     .sms-banner { display: none; margin-top: 14px; }
     .sms-banner.show { display: block; }
-    .phone-wrap { background: linear-gradient(180deg, rgba(18,23,35,0.98), rgba(10,13,20,0.98)); border: 1px solid rgba(255,255,255,0.08); border-radius: 20px; padding: 12px 10px;
+    .phone-wrap { background: var(--bg2); border: 1px solid var(--line); border-radius: 20px; padding: 12px 10px;
         max-width: 320px; font-family: -apple-system, 'Helvetica Neue', sans-serif; }
     .phone-top { display: flex; align-items: center; justify-content: space-between;
-        font-size: 10px; color: #888; padding: 0 4px 8px; border-bottom: 1px solid #222; margin-bottom: 10px; }
+        font-size: 10px; color: var(--dim); padding: 0 4px 8px; border-bottom: 1px solid rgba(255,255,255,0.08); margin-bottom: 10px; }
     .phone-top .carrier { letter-spacing: 0.05em; }
     .phone-top .signal { display: flex; gap: 2px; align-items: flex-end; }
-    .phone-top .signal span { background: #888; border-radius: 1px; width: 3px; display: inline-block; }
-    .notif-card { background: linear-gradient(180deg, rgba(28,30,34,0.98), rgba(17,19,24,0.98)); border-radius: 12px; padding: 12px 14px; border: 1px solid rgba(255,255,255,0.06); }
+    .phone-top .signal span { background: var(--muted); border-radius: 1px; width: 3px; display: inline-block; }
+    .notif-card { background: #191c26; border-radius: 12px; padding: 12px 14px; border: 1px solid rgba(255,255,255,0.08); }
     .notif-header { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
     .notif-app-icon { width: 22px; height: 22px; border-radius: 6px; background: #2cc64f;
         display: flex; align-items: center; justify-content: center; font-size: 12px; flex-shrink: 0; }
-    .notif-app-name { font-size: 11px; color: #999; font-weight: 600; text-transform: uppercase;
+    .notif-app-name { font-size: 11px; color: var(--muted); font-weight: 600; text-transform: uppercase;
         letter-spacing: 0.06em; }
-    .notif-time { margin-left: auto; font-size: 11px; color: #666; }
-    .notif-sender { font-size: 13px; color: #e8e8e8; font-weight: 600; margin-bottom: 4px; }
+    .notif-time { margin-left: auto; font-size: 11px; color: var(--dim); }
+    .notif-sender { font-size: 13px; color: var(--text); font-weight: 600; margin-bottom: 4px; }
     .notif-body { font-size: 13px; color: #c8c8c8; line-height: 1.4; }
     .notif-code { color: #2cc64f; font-weight: 700; letter-spacing: 0.12em; font-size: 15px; }
-    .sms-note { margin-top: 10px; font-size: 0.78em; color: #76b900; font-family: var(--mono);
-        padding: 6px 10px; border: 1px solid #1a2a10; border-radius: 6px; background: #050d00; }
+    .sms-note { margin-top: 10px; font-size: 0.78em; color: var(--nvidia); font-family: var(--mono);
+        padding: 6px 10px; border: 1px solid rgba(118,185,0,0.3); border-radius: 6px; background: rgba(118,185,0,0.06); }
 
     /* ---- instructions panel ---- */
-    .instructions { background: linear-gradient(180deg, rgba(14,17,27,0.96), rgba(8,10,16,0.98)); border: 1px solid rgba(255,255,255,0.08); border-left: 3px solid #5db0ff;
-        padding: 14px 16px; margin-bottom: 20px; font-size: 0.82em; border-radius: 12px; box-shadow: 0 10px 22px rgba(0,0,0,0.2); }
-    .instructions summary { color: #5db0ff; cursor: pointer; font-weight: 700; letter-spacing: 0.04em;
+    .instructions { border-left-color: #5db0ff; font-size: 0.82em; }
+    .instructions summary { color: #7fc4ff; cursor: pointer; font-weight: 700; letter-spacing: 0.04em;
         text-transform: uppercase; font-size: 0.9em; margin-bottom: 0; list-style: none; }
     .instructions summary::before { content: '▶ '; }
     details[open] summary::before { content: '▼ '; }
-    .instructions ol { margin: 12px 0 0 16px; color: #999; line-height: 1.9; }
-    .instructions ol li b { color: #e8e8e8; }
-    .instructions ol li .note { color: #ffb000; font-size: 0.9em; }
-    .instructions ol li .sms-note { color: #76b900; }
-    .tip { background: #0a0800; border: 1px solid #2a1a00; border-radius: 6px; padding: 8px 12px;
-        margin-top: 10px; color: #9a7a40; font-size: 0.88em; line-height: 1.5; }
+    .instructions ol { margin: 12px 0 0 16px; color: var(--muted); line-height: 1.9; }
+    .instructions ol li b { color: var(--text); }
+    .instructions ol li .note { color: var(--amber); font-size: 0.9em; }
+    .instructions ol li .sms-note { color: var(--nvidia); }
+    .tip { background: rgba(255,176,0,0.06); border: 1px solid rgba(255,176,0,0.3); border-radius: 6px; padding: 8px 12px;
+        margin-top: 10px; color: #e8d9a8; font-size: 0.88em; line-height: 1.5; }
 
     #panel { display: block; }
-    #login-err { color: #ff5c5c; font-size: 0.82em; margin-top: 8px; display: none; }
+    #login-err { color: var(--red); font-size: 0.82em; margin-top: 8px; display: none; }
+
+    /* ── step rail: sticky progress tracker, the page's signature element ──
+       Operator is the one page on the site where order is load-bearing --
+       9 steps run in a fixed sequence and the whole point is watching the
+       kernel's behavior change at each one. A persistent rail turns that
+       into something the visitor can always see at a glance, and doubles
+       as in-page navigation on a long scrolling page. */
+    .op-rail { position: sticky; top: 68px; }
+    .op-rail-hdr { font-family: var(--display); font-size: 0.72em; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--dim); margin-bottom: 14px; }
+    .rail-track { position: relative; padding-left: 26px; }
+    .rail-track::before { content: ''; position: absolute; left: 9px; top: 6px; bottom: 6px; width: 1px; background: rgba(255,255,255,0.12); }
+    .rail-node { position: relative; padding: 7px 0 7px 4px; cursor: pointer; }
+    .rail-node:hover .rail-label { color: var(--text); }
+    .rail-dot { position: absolute; left: -26px; top: 10px; width: 19px; height: 19px; border-radius: 50%;
+      background: var(--bg); border: 1.5px solid rgba(255,255,255,0.18);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.6em; font-weight: 700; color: var(--dim); font-family: var(--mono);
+      transition: border-color .2s, background .2s, color .2s; }
+    .rail-label { font-size: 0.78em; color: var(--dim); line-height: 1.3; transition: color .2s; }
+    .rail-node.active .rail-dot { border-color: var(--amber); background: rgba(255,176,0,0.14); color: var(--amber); box-shadow: 0 0 10px rgba(255,176,0,0.35); }
+    .rail-node.active .rail-label { color: var(--amber2); font-weight: 600; }
+    .rail-node.done .rail-dot { border-color: var(--nvidia); background: rgba(118,185,0,0.14); color: var(--nvidia); }
+    .rail-node.done .rail-dot::after { content: '✓'; }
+    .rail-node.done .rail-label { color: var(--muted); }
+    /* The moment a step actually completes, its node visibly lights up --
+       not just a quiet color change to muted green afterward. */
+    @keyframes rail-flash {
+      0%   { box-shadow: 0 0 0 rgba(118,185,0,0); }
+      30%  { box-shadow: 0 0 18px rgba(118,185,0,0.9); }
+      100% { box-shadow: 0 0 0 rgba(118,185,0,0); }
+    }
+    .rail-node.just-done .rail-dot { animation: rail-flash 900ms ease-out; }
+    @media (prefers-reduced-motion: reduce) { .rail-node.just-done .rail-dot { animation: none; } }
+    .rail-node.danger.active .rail-dot { border-color: var(--red); background: rgba(255,92,92,0.14); color: var(--red); box-shadow: 0 0 10px rgba(255,92,92,0.35); }
+    .rail-node.danger.active .rail-label { color: #ffb3b3; }
 
     /* ---- mini audit feed ---- */
-    .op-feed-wrap { background: linear-gradient(180deg, rgba(8,12,8,0.98), rgba(5,8,5,0.98)); border: 1px solid rgba(118,185,0,0.18); border-radius: 12px; margin-bottom: 18px; overflow: hidden; box-shadow: 0 10px 22px rgba(0,0,0,0.18); }
+    .op-feed-wrap { background: var(--bg2); border: 1px solid rgba(118,185,0,0.25); border-radius: var(--radius); margin-bottom: 18px; overflow: hidden; box-shadow: 0 10px 22px rgba(0,0,0,0.18); }
     .op-feed-hdr { display: flex; align-items: center; gap: 10px; padding: 9px 16px; background: rgba(118,185,0,0.06); border-bottom: 1px solid rgba(118,185,0,0.12); }
     .op-feed-dot { width: 7px; height: 7px; border-radius: 50%; background: #76b900; flex-shrink: 0; animation: op-pulse 2s infinite; }
     @keyframes op-pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
@@ -249,8 +299,11 @@
   </div>
 </nav>
 <div class="page-wrap">
-<h1>Custodian — Operator Panel</h1>
+<h1>Custodian <span class="h1-accent">— Operator Panel</span></h1>
 <div class="ok-banner">● Live — every action below creates a real Stripe PaymentIntent, a real Twilio SMS, and a real audit log entry. The amounts are small test charges you can verify on the public Stripe dashboard.</div>
+
+<div class="op-grid">
+<div class="op-main">
 
 <details class="instructions">
     <summary>Demo Script — run steps in order</summary>
@@ -423,30 +476,30 @@
         <div class="out" id="approve2-out"></div>
     </div>
 
-    <div style="margin-top:28px; border:1px solid #1a2a10; border-left:3px solid #76b900;
-                background:#050d00; padding:18px 20px; font-size:0.85em; line-height:1.7;">
-        <div style="color:#76b900; font-weight:700; font-size:1em; margin-bottom:10px; letter-spacing:0.04em; text-transform:uppercase;">
+    <div style="margin-top:28px; border:1px solid var(--line); border-left:3px solid var(--nvidia);
+                background:var(--panel); border-radius:var(--radius); padding:18px 20px; font-size:0.85em; line-height:1.7;">
+        <div style="font-family:var(--display); color:var(--nvidia); font-weight:700; font-size:1.05em; margin-bottom:10px; letter-spacing:0.01em;">
             Arc complete — see what happened
         </div>
-        <p style="color:#999; margin:0 0 14px;">Every action you just took is recorded in real time. Open the
-            <a href="/console" target="_blank" style="color:#76b900; font-weight:600;">Live Console</a>
+        <p style="color:var(--muted); margin:0 0 14px;">Every action you just took is recorded in real time. Open the
+            <a href="/console" target="_blank" style="color:var(--nvidia); font-weight:600;">Live Console</a>
             and look at three things:
         </p>
         <div style="display:grid; gap:10px;">
-            <div style="background:#0a0a0a; border:1px solid #2a2a2a; padding:10px 14px; border-radius:4px;">
-                <span style="color:#76b900; font-weight:700;">Audit Feed</span>
-                <span style="color:#666;"> → </span>
-                <span style="color:#bbb;">Every earn, spend, denial, kill-switch toggle, and refund — timestamped and in order. The $40 denial during the kill-switch test will show <code style="color:#ff9b9b;">DENIED</code> while every approved action shows the real Stripe PaymentIntent ID.</span>
+            <div style="background:var(--bg2); border:1px solid var(--line); padding:10px 14px; border-radius:6px;">
+                <span style="color:var(--nvidia); font-weight:700;">Audit Feed</span>
+                <span style="color:var(--dim);"> → </span>
+                <span style="color:var(--muted);">Every earn, spend, denial, kill-switch toggle, and refund — timestamped and in order. The $40 denial during the kill-switch test will show <code style="color:#ff9b9b;">DENIED</code> while every approved action shows the real Stripe PaymentIntent ID.</span>
             </div>
-            <div style="background:#0a0a0a; border:1px solid #2a2a2a; padding:10px 14px; border-radius:4px;">
-                <span style="color:#76b900; font-weight:700;">Net Balance card</span>
-                <span style="color:#666;"> → </span>
-                <span style="color:#bbb;">Shows test-mode revenue in vs. net spend. The $1,200 earn was uncapped; the $85 autonomous spend and $3,500 override are tracked separately; the $85 refund nets out. You can see exactly which test-mode dollars the AI moved on its own vs. which required you.</span>
+            <div style="background:var(--bg2); border:1px solid var(--line); padding:10px 14px; border-radius:6px;">
+                <span style="color:var(--nvidia); font-weight:700;">Net Balance card</span>
+                <span style="color:var(--dim);"> → </span>
+                <span style="color:var(--muted);">Shows test-mode revenue in vs. net spend. The $1,200 earn was uncapped; the $85 autonomous spend and $3,500 override are tracked separately; the $85 refund nets out. You can see exactly which test-mode dollars the AI moved on its own vs. which required you.</span>
             </div>
-            <div style="background:#0a0a0a; border:1px solid #2a2a2a; padding:10px 14px; border-radius:4px;">
-                <span style="color:#76b900; font-weight:700;">Ask Nemotron</span>
-                <span style="color:#666;"> → </span>
-                <span style="color:#bbb;">Click the chat bubble on the Live Console and ask <em>"what just happened?"</em> — you'll get an answer from the actual model that ran all those requests, explaining what it could and couldn't do and why.</span>
+            <div style="background:var(--bg2); border:1px solid var(--line); padding:10px 14px; border-radius:6px;">
+                <span style="color:var(--nvidia); font-weight:700;">Ask Nemotron</span>
+                <span style="color:var(--dim);"> → </span>
+                <span style="color:var(--muted);">Click the chat bubble on the Live Console and ask <em>"what just happened?"</em> — you'll get an answer from the actual model that ran all those requests, explaining what it could and couldn't do and why.</span>
             </div>
         </div>
     </div>
@@ -460,6 +513,27 @@ let spendPI = '';
 const siteTour = window.CustodianTour || null;
 if (siteTour) siteTour.onPage('operator');
 if (window.TourTracker) TourTracker.track('page_visit', '/operator');
+
+// ── step rail: mark node N done, node N+1 active. Called from the same
+// spots that already call siteTour.markOperatorStep(N, ...), so it stays
+// in lockstep with the existing progress tracking rather than duplicating
+// its own notion of "what step are we on."
+const railNodes = Array.from(document.querySelectorAll('.rail-node'));
+function opRailMark(n) {
+    if (railNodes[n]) {
+        railNodes[n].classList.remove('active');
+        railNodes[n].classList.add('done', 'just-done');
+        railNodes[n].addEventListener('animationend', () => railNodes[n].classList.remove('just-done'), { once: true });
+    }
+    if (railNodes[n + 1]) railNodes[n + 1].classList.add('active');
+}
+railNodes.forEach(node => {
+    node.addEventListener('click', () => {
+        const btn = document.getElementById(node.dataset.target);
+        if (btn) btn.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    });
+});
+if (railNodes[0]) railNodes[0].classList.add('active');
 
 // Top-level HTML escaper. Must be at script-block scope (NOT inside the
 // DOMContentLoaded callback below) because refreshOpFeed() and refreshLive()
@@ -628,6 +702,7 @@ document.getElementById('step0-btn').addEventListener('click', async () => {
     const data = await call('/earn', { amount: '1200.00', description: 'Demo: support contract renewal -- customer payment received' });
     renderOut('step0-out', data);
     if (siteTour && !data.error) siteTour.markOperatorStep(0, { completed: true });
+    if (!data.error) opRailMark(0);
     if (window.TourTracker && !data.error) TourTracker.track('operator_step', 0);
     if (!data.error) nemoNarrate(0);
 });
@@ -636,6 +711,7 @@ document.getElementById('step1-btn').addEventListener('click', async () => {
     const data = await call('/spend', { amount: '85.00', description: 'Demo: cloud backup storage renewal' });
     renderOut('step1-out', data);
     if (siteTour && !data.error) siteTour.markOperatorStep(1, { completed: true });
+    if (!data.error) opRailMark(1);
     if (window.TourTracker && !data.error) TourTracker.track('operator_step', 1);
     if (!data.error) nemoNarrate(1);
     const text = data.error || [data.stdout, data.stderr].filter(Boolean).join('\n');
@@ -710,6 +786,7 @@ document.getElementById('step2-btn').addEventListener('click', async () => {
     }
     renderOut('step2-out', data);
     if (siteTour && !data.error) siteTour.markOperatorStep(2, { completed: true });
+    if (!data.error) opRailMark(2);
     if (window.TourTracker && !data.error) TourTracker.track('operator_step', 2);
     const text = data.error || [data.stdout, data.stderr].filter(Boolean).join('\n');
     if (text.includes('TWILIO') || text.includes('approval code') || text.includes('escalation')) {
@@ -729,6 +806,7 @@ document.getElementById('approve1-btn').addEventListener('click', async () => {
     const data = await call('/approve', { code, approved_by: by });
     renderOut('approve1-out', data);
     if (siteTour && !data.error) siteTour.markOperatorStep(3, { completed: true });
+    if (!data.error) opRailMark(3);
     if (window.TourTracker && !data.error) TourTracker.track('operator_step', 3);
     if (!data.error) nemoNarrate(3);
 });
@@ -738,6 +816,7 @@ document.getElementById('kill-btn').addEventListener('click', async () => {
     const data = await call('/kill', { by: 'Operator', reason });
     renderOut('kill-out', data);
     if (siteTour && !data.error) siteTour.markOperatorStep(4, { completed: true });
+    if (!data.error) opRailMark(4);
     if (window.TourTracker && !data.error) TourTracker.track('operator_step', 4);
     if (!data.error) nemoNarrate(4);
 });
@@ -746,6 +825,7 @@ document.getElementById('step5-btn').addEventListener('click', async () => {
     const data = await call('/spend', { amount: '40.00', description: 'Demo: this should be denied' });
     renderOut('step5-out', data);
     if (siteTour && !data.error) siteTour.markOperatorStep(5, { completed: true });
+    if (!data.error) opRailMark(5);
     if (window.TourTracker && !data.error) TourTracker.track('operator_step', 5);
     nemoNarrate(5); // always narrate — denial is the point
 });
@@ -754,6 +834,7 @@ document.getElementById('resume-btn').addEventListener('click', async () => {
     const data = await call('/resume', { by: 'Operator' });
     renderOut('resume-out', data);
     if (siteTour && !data.error) siteTour.markOperatorStep(6, { completed: true });
+    if (!data.error) opRailMark(6);
     if (window.TourTracker && !data.error) TourTracker.track('operator_step', 6);
     if (!data.error) nemoNarrate(6);
 });
@@ -771,6 +852,7 @@ document.getElementById('refund-btn').addEventListener('click', async () => {
     }
     renderOut('refund-out', data);
     if (siteTour && !data.error) siteTour.markOperatorStep(7, { completed: true });
+    if (!data.error) opRailMark(7);
     if (window.TourTracker && !data.error) TourTracker.track('operator_step', 7);
     const text = data.error || [data.stdout, data.stderr].filter(Boolean).join('\n');
     if (text.includes('TWILIO') || text.includes('approval code') || text.includes('escalation')) {
@@ -793,6 +875,7 @@ document.getElementById('approve2-btn').addEventListener('click', async () => {
         siteTour.markOperatorStep(8, { completed: true });
         nemoNarrate(8);
     }
+    if (!data.error) opRailMark(8);
     if (window.TourTracker && !data.error) TourTracker.track('operator_step', 8);
 });
 
@@ -1248,6 +1331,33 @@ document.addEventListener('DOMContentLoaded', () => {
     <pre id="reset-out" style="margin:12px 0 0;font-family:'JetBrains Mono',monospace;font-size:0.78em;color:#666;white-space:pre-wrap"></pre>
   </div>
 </div>
+
+</div><!-- /op-main -->
+
+<aside class="op-rail">
+  <div class="op-rail-hdr">Demo Arc · 9 steps</div>
+  <div class="rail-track" id="rail-track">
+    <div class="rail-node" data-target="step0-btn"><span class="rail-dot">0</span><span class="rail-label">Earn $1,200</span></div>
+    <div class="rail-node" data-target="step1-btn"><span class="rail-dot">1</span><span class="rail-label">Autonomous spend</span></div>
+    <div class="rail-node" data-target="step2-btn"><span class="rail-dot">2</span><span class="rail-label">Over-cap escalation</span></div>
+    <div class="rail-node" data-target="approve1-btn"><span class="rail-dot">3</span><span class="rail-label">Approve via SMS</span></div>
+    <div class="rail-node danger" data-target="kill-btn"><span class="rail-dot">4</span><span class="rail-label">Engage kill switch</span></div>
+    <div class="rail-node danger" data-target="step5-btn"><span class="rail-dot">5</span><span class="rail-label">Prove it blocks all</span></div>
+    <div class="rail-node" data-target="resume-btn"><span class="rail-dot">6</span><span class="rail-label">Release kill switch</span></div>
+    <div class="rail-node" data-target="refund-btn"><span class="rail-dot">7</span><span class="rail-label">Refund $85</span></div>
+    <div class="rail-node" data-target="approve2-btn"><span class="rail-dot">8</span><span class="rail-label">Approve refund</span></div>
+  </div>
+</aside>
+
+</div><!-- /op-grid -->
+
+<footer style="margin-top:32px;padding:20px 0 8px;display:flex;flex-wrap:wrap;gap:18px;font-size:0.8em;color:var(--dim);border-top:1px solid var(--line)">
+  <span><strong style="color:var(--text)">Tech stack</strong></span>
+  <span>🛡 <span style="color:var(--nvidia);font-weight:600">NemoClaw</span> — kernel sandbox</span>
+  <span>◉ <span style="color:var(--nvidia);font-weight:600">NVIDIA Nemotron 3 Super</span> — agent reasoning</span>
+  <span>◆ <span style="color:var(--text);font-weight:600">Nous Research Hermes</span> — agent framework</span>
+  <span>💳 <span style="color:var(--text);font-weight:600">Stripe</span> — payment rails</span>
+</footer>
 
 </div><!-- /page-wrap -->
 <script src="/nemo-guide.js"></script>
