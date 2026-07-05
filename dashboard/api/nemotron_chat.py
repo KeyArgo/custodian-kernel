@@ -163,6 +163,62 @@ def _strip_thinking(text: str) -> str:
     text = re.sub(r'<thinking>.*?</thinking>', '', text, flags=re.DOTALL)
     text = text.strip()
 
+    # v7 (live leak 2026-07-04): a whole new failure shape -- a genuine,
+    # clean answer immediately followed, ON THE SAME LINE (no newline), by
+    # the model self-verifying its own word count. Strategy 1 below filters
+    # per LINE, so it can't split "good prefix" from "bad suffix" within one
+    # unbroken line -- the whole line passes because it legitimately opens
+    # well. Two independent signatures catch this before line-splitting even
+    # happens:
+    #   (a) a run of 5+ tokens glued directly to a running index, e.g.
+    #       "Hey(1) there,(2) I'm3 Nemotron4" -- this exact digit-glued-to-
+    #       word shape never occurs in real prose.
+    #   (b) an explicit tally marker like "Sentence 1: 10 words (That, $40,"
+    #       or "Total so far: 5 + 13 = 18" -- the model narrating its own
+    #       word count out loud.
+    # Whichever marker appears first wins; text is truncated there and the
+    # (now-clean) remainder continues through the existing per-line pipeline
+    # below untouched.
+    _NUMBERED_TOKEN_RE = re.compile(r"^\(?[^\s]*?\)?\d{1,3}\)?[.,;:]?$")
+
+    def _looks_numbered(tok: str) -> bool:
+        if not _NUMBERED_TOKEN_RE.match(tok):
+            return False
+        if re.search(r'[A-Za-z]', tok):
+            return True
+        return bool(re.match(r'^\(\d{1,3}\)[.,;:]?$', tok))
+
+    def _selfcount_run_start(s: str):
+        run_start = None
+        run_len = 0
+        gap = 0
+        for m in re.finditer(r'\S+', s):
+            if _looks_numbered(m.group(0)):
+                if run_start is None:
+                    run_start = m.start()
+                run_len += 1
+                gap = 0
+            else:
+                gap += 1
+                if gap > 1:
+                    if run_len >= 5:
+                        return run_start
+                    run_start, run_len, gap = None, 0, 0
+        return run_start if run_len >= 5 else None
+
+    _TALLY_MARKER_RE = re.compile(
+        r'\bSentence\s*\d+\s*:|\bTotal so far\b|\bTotal:\s*\d|'
+        r'->\s*\d+\s*$|->\s*\d+\b.{0,20}$|\b\d+\s*words\b.{0,30}(Let|However|Actually)',
+        re.IGNORECASE,
+    )
+
+    _cut_candidates = [i for i in (
+        _selfcount_run_start(text),
+        (lambda m: m.start() if m else None)(_TALLY_MARKER_RE.search(text)),
+    ) if i is not None]
+    if _cut_candidates:
+        text = text[:min(_cut_candidates)].rstrip().rstrip('"“')
+
     # Heuristic: is a paragraph model self-talk vs. real reply?
     def _is_meta(p: str) -> bool:
         """True if the paragraph looks like model meta-instruction.
