@@ -10,14 +10,24 @@
 <title>Custodian — Refund Triage Walkthrough</title>
 <style>
   :root{
-    --bg:     #06070b; --bg2:    #0a0c13; --panel:  #0e1018;
-    --line:   rgba(255,176,0,0.10);
-    --text:   #eceef5; --muted:  #8d93a6; --dim:    #5d6273;
+    /* Contrast fix (2026-07-05): --panel/--panel2 were #0e1018 -- 1.06:1
+       against --bg, i.e. visually indistinguishable from the page. Every
+       card/box on this page relies on these tokens to read as a distinct
+       area; bumped to a real, still-tasteful lift so borders aren't the
+       only thing separating one area from another. --dim was 3.32:1 on
+       --bg, below the 4.5:1 AA minimum for body text -- bumped to meet it
+       while staying visually dimmer than --muted. --line's amber tint was
+       barely visible at 10% opacity (well under the 3:1 WCAG 1.4.11
+       non-text-contrast floor against the new panel color); raised to 50%
+       to clear it. */
+    --bg:     #06070b; --bg2:    #0a0c13; --panel:  #181b2e;
+    --line:   rgba(255,176,0,0.50);
+    --text:   #eceef5; --muted:  #8d93a6; --dim:    #848aa3;
     --amber:  #ffb000; --amber2: #ffd060;
     --green:  #2ee6a6; --red:    #ff5c5c; --nvidia: #76b900;
     --mono:   'JetBrains Mono', 'Fira Code', monospace;
     /* triage-specific aliases */
-    --panel2: #0e1018; --line2: #1a2030;
+    --panel2: #181b2e; --line2: #2a3050;
     --ink: #eceef5; --accent:#5db0ff; --good:#2ee6a6;
     --bad:#ff5c5c; --warn:#ffb000; --chip:#0e1018;
   }
@@ -283,17 +293,17 @@
     <p style="color:var(--dim);margin:4px 0 14px">Two phases, separated by design. The AI reasons. The kernel verifies. They can disagree — and when they do, the kernel wins.</p>
 
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:0 0 14px">
-      <div style="background:#0a0e06;border:1px solid #1a2a10;border-left:3px solid #5db0ff;border-radius:8px;padding:12px 14px;font-size:0.86em;line-height:1.65">
-        <div style="color:#5db0ff;font-weight:700;font-size:0.78em;letter-spacing:0.08em;text-transform:uppercase;margin-bottom:6px">Phase 1 · AI reads the request</div>
+      <div style="background:rgba(93,176,255,0.10);border:1px solid rgba(93,176,255,0.55);border-left:3px solid #5db0ff;border-radius:8px;padding:12px 14px;font-size:0.86em;line-height:1.65;color:#dfe8f5">
+        <div style="color:#7fc4ff;font-weight:700;font-size:0.78em;letter-spacing:0.08em;text-transform:uppercase;margin-bottom:6px">Phase 1 · AI reads the request</div>
         Nemotron 3 Super reads the customer's message and forms a recommendation — APPROVE or DENY — based on what they claimed. The AI can be tricked. That's fine. It isn't the last line of defense.
       </div>
-      <div style="background:#0a0e06;border:1px solid #1a2a10;border-left:3px solid #39d98a;border-radius:8px;padding:12px 14px;font-size:0.86em;line-height:1.65">
-        <div style="color:#39d98a;font-weight:700;font-size:0.78em;letter-spacing:0.08em;text-transform:uppercase;margin-bottom:6px">Phase 2 · Kernel checks the facts</div>
-        Zero AI. The enforcement engine extracts every factual claim from the message and resolves each one against the real order database. A lie gets <span style="color:#ff5d6c;font-weight:700">✗ CONTRADICTED</span>. The AI's verdict is then overridden if the facts don't hold.
+      <div style="background:rgba(57,217,138,0.10);border:1px solid rgba(57,217,138,0.55);border-left:3px solid #39d98a;border-radius:8px;padding:12px 14px;font-size:0.86em;line-height:1.65;color:#dcf5e9">
+        <div style="color:#5ee6a8;font-weight:700;font-size:0.78em;letter-spacing:0.08em;text-transform:uppercase;margin-bottom:6px">Phase 2 · Kernel checks the facts</div>
+        Zero AI. The enforcement engine extracts every factual claim from the message and resolves each one against the real order database. A lie gets <span style="color:#ff8088;font-weight:700">✗ CONTRADICTED</span>. The AI's verdict is then overridden if the facts don't hold.
       </div>
     </div>
-    <div style="background:#0b0a04;border:1px solid #2a2200;border-left:3px solid #ffc857;border-radius:8px;padding:10px 14px;font-size:0.84em;color:#a09060;margin-bottom:4px">
-      <b style="color:#ffc857">The key moment to watch:</b> when the AI says APPROVE and the kernel says DENY. That gap — the AI being fooled and the kernel not caring — is what Custodian is. No other AI payment system can demonstrate this, because they stop at "did the agent ask nicely?"
+    <div style="background:rgba(255,200,87,0.10);border:1px solid rgba(255,200,87,0.55);border-left:3px solid #ffc857;border-radius:8px;padding:10px 14px;font-size:0.84em;color:#e8d9a8;margin-bottom:4px">
+      <b style="color:#ffd67a">The key moment to watch:</b> when the AI says APPROVE and the kernel says DENY. That gap — the AI being fooled and the kernel not caring — is what Custodian is. No other AI payment system can demonstrate this, because they stop at "did the agent ask nicely?"
     </div>
   </header>
   <!-- pack selector -->
