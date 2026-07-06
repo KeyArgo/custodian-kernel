@@ -21,14 +21,23 @@ from custodian.types import (
     PendingApproval,
     SpendRequest,
     Verdict,
+    _SECRET_SENTINELS,
+    _is_secret_key,
+    sanitize_dict,
 )
 from custodian.govern import govern, GovernedResult, EscalationRequired, KernelDenied
 from custodian.session import CustodianSession
 from custodian.receipt import GovernedReceipt
 from custodian.bus import on as on_event, emit as emit_event
 from custodian.middleware import CustodianMiddleware
+from custodian.client import (
+    ValueFreeClient,
+    ValueFreePlan,
+    ValueFreeResult,
+    KernelDenied as ValueFreeKernelDenied,
+)
 
-__version__ = "0.2.0"
+__version__ = "0.2.1"
 
 __all__ = [
     "__version__",
@@ -50,4 +59,12 @@ __all__ = [
     "CustodianMiddleware",
     "on_event",
     "emit_event",
+    # 0.2.1 — value-free protocol + tamper-snapshot
+    "_SECRET_SENTINELS",
+    "_is_secret_key",
+    "sanitize_dict",
+    "ValueFreeClient",
+    "ValueFreePlan",
+    "ValueFreeResult",
+    "ValueFreeKernelDenied",
 ]

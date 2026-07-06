@@ -1,0 +1,42 @@
+# Self-test manifest for the purchasing pack.
+# Pinned alongside the corpus manifest so the kernel can verify the pack
+# has not been modified between policy audit and execution.
+# Pattern from cyberware's executor.py self-tests.
+---
+pack: purchasing
+version: "0.2.1"
+cases:
+  - id: "corpus-clean-autopay"
+    description: "Clean small invoice from approved vendor auto-pays when kernel permits"
+    corpus_file: "01-clean-autopay.json"
+    expected_kernel_verdict: "autonomous"
+    expected_adapt_disposition: "auto_pay"
+    expected_final_action: "executed_autonomously"
+
+  - id: "corpus-over-threshold"
+    description: "Invoice over $100 routes to L3 human approval"
+    corpus_file: "02-over-threshold.json"
+    expected_kernel_verdict: "escalation_required"
+    expected_adapt_disposition: "pending_approval"
+    expected_final_action: "pending_human_approval"
+
+  - id: "corpus-inflated-invoice"
+    description: "Inflated invoice is caught by adapter — PO mismatch"
+    corpus_file: "03-inflated-invoice.json"
+    expected_kernel_verdict: "escalation_required"
+    expected_adapt_disposition: "deny_inflation"
+    expected_final_action: "needs_human_review"
+
+  - id: "corpus-unapproved-vendor"
+    description: "Unapproved vendor denies regardless of amount"
+    corpus_file: "04-unapproved-vendor.json"
+    expected_kernel_verdict: "escalation_required"
+    expected_adapt_disposition: "deny_vendor_not_approved"
+    expected_final_action: "needs_human_review"
+
+  - id: "corpus-duplicate-invoice"
+    description: "Duplicate invoice is caught by adapter"
+    corpus_file: "05-duplicate-invoice.json"
+    expected_kernel_verdict: "escalation_required"
+    expected_adapt_disposition: "deny_duplicate"
+    expected_final_action: "needs_human_review"

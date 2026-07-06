@@ -75,6 +75,53 @@ class Verdict(str, Enum):
     DENIED = "denied"               # explicitly denied by a human
 
 
+# Secret-key sentinel patterns adapted from cyberware's value-free protocol:
+# any dict key matching one of these is treated as a secret and stripped
+# unless suffixed with _FILE, _DIR, or _PATH (which conventionally point to
+# a filesystem path containing the secret rather than the secret itself).
+_SECRET_SENTINELS = (
+    "password", "passwd", "token", "secret", "credential",
+    "mnemonic", "api_key", "apikey", "api-key", "ssh_key",
+    "sshkey", "ssh-key", "private_key", "privatekey",
+    "private-key", "access_key", "accesskey", "access-key",
+    "auth_token", "bearer", "client_secret", "signing_key",
+)
+
+
+def _is_secret_key(key: str) -> bool:
+    """Return True if *key* looks like a secret-holder.
+
+    Matches against the sentinel list (case-insensitive); keys ending in
+    ``_FILE``, ``_DIR``, or ``_PATH`` are exempt (they conventionally hold
+    a path *to* the secret, not the secret itself).
+    """
+    clean = key.strip().lower()
+    if any(clean.endswith(suffix) for suffix in ("_file", "_dir", "_path")):
+        return False
+    return any(clean == s or clean.startswith(s + "_") or clean.endswith("_" + s) for s in _SECRET_SENTINELS)
+
+
+def sanitize_dict(d: Optional[dict]) -> dict:
+    """Return a shallow copy of *d* with secret-bearing keys stripped.
+
+    Top-level and one level of nesting are scanned.  This implements the
+    value-free protocol's **secret-key filtering** (cyberware pattern):
+    only var *names* cross the governance wire — values are never logged
+    or audited.
+    """
+    if not d:
+        return {}
+    out: dict = {}
+    for k, v in d.items():
+        if _is_secret_key(str(k)):
+            out[k] = "[REDACTED]"
+        elif isinstance(v, dict):
+            out[k] = sanitize_dict(v)
+        else:
+            out[k] = v
+    return out
+
+
 @dataclass
 class Decision:
     """The policy engine's verdict on a SpendRequest, given an AuthorityState."""
