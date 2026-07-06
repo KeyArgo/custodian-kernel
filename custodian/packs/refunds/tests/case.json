@@ -1,0 +1,54 @@
+# Self-test manifest for the refunds pack.
+# Pinned alongside the corpus manifest so the kernel can verify the pack
+# has not been modified between policy audit and execution.
+# Pattern from cyberware's executor.py self-tests.
+---
+pack: refunds
+version: "0.2.1"
+cases:
+  - id: "corpus-clean-approve"
+    description: "Clean approve case resolves to kernel escalation (refunds never autonomous)"
+    corpus_file: "01-clean-approve.json"
+    expected_kernel_verdict: "escalation_required"
+    expected_adapt_disposition: "approve"
+    expected_final_action: "needs_human_review"
+
+  - id: "corpus-out-of-window-defect"
+    description: "Out-of-window defect is still approved by adapter, but kernel escalates"
+    corpus_file: "02-out-of-window-defect.json"
+    expected_kernel_verdict: "escalation_required"
+    expected_adapt_disposition: "approve"
+    expected_final_action: "needs_human_review"
+
+  - id: "corpus-out-of-window-no-reason"
+    description: "Out-of-window with no reason is denied by adapter"
+    corpus_file: "03-out-of-window-no-reason.json"
+    expected_kernel_verdict: "escalation_required"
+    expected_adapt_disposition: "deny_window_breach"
+    expected_final_action: "needs_human_review"
+
+  - id: "corpus-serial-abuse"
+    description: "Serial abuser is denied by adapter"
+    corpus_file: "04-serial-abuse.json"
+    expected_kernel_verdict: "escalation_required"
+    expected_adapt_disposition: "deny_loyalty_flag"
+    expected_final_action: "needs_human_review"
+
+  - id: "corpus-ambiguous-escalate"
+    description: "Ambiguous cases escalate"
+    corpus_file: "05-ambiguous-escalate.json"
+    expected_kernel_verdict: "escalation_required"
+    expected_adapt_disposition: "escalate_ambiguous"
+    expected_final_action: "needs_human_review"
+
+  - id: "corpus-planted-lie"
+    description: "Planted lie is caught by verifier and contradicted"
+    corpus_file: "06-planted-lie.json"
+    expected_kernel_verdict: "escalation_required"
+    expected_adapt_disposition: "deny"
+    expected_final_action: "needs_human_review"
+    expected_contradiction_count: 1
+
+  - id: "no-autonomous-path"
+    description: "Refunds must NEVER have autonomous_dispositions set"
+    code: "assert PolicyPack.autonomous_dispositions is frozenset()"

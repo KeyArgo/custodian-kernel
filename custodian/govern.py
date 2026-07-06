@@ -1,12 +1,66 @@
 from __future__ import annotations
 import functools
+import hashlib
+import inspect
+import os
 import time
 import uuid
 from dataclasses import dataclass, field
-from typing import Any, Callable, Optional
+from typing import Any, Callable, Optional, Tuple
 
 from custodian.types import Band, SpendRequest, Verdict
 from custodian.bus import _bus
+
+
+def _source_sha(func: Callable) -> Optional[str]:
+    """Return SHA-256 hex of the decorated function's source file.
+    Returns None if source is unavailable (built-in, REPL, dynamically
+    generated) — tamper check stays disabled rather than silently allowing
+    the gap."""
+    try:
+        source_file = inspect.getsourcefile(func)
+        if source_file is None or not os.path.isfile(source_file):
+            return None
+        return hashlib.sha256(open(source_file, "rb").read()).hexdigest()
+    except (TypeError, OSError):
+        return None
+
+
+def _tamper_check(
+    func: Callable, state_dir: Optional[str]
+) -> Tuple[Optional[str], Optional[str]]:
+    """Tamper-snapshot: on first run, take SHA-256 of the source file.
+    On subsequent runs, verify it matches. Returns (snapshot_sha, verdict).
+
+    Pattern from cyberware's executor.py .bk: the source is hashed on first
+    run and stored in <state_dir>/<func_name>.bk.sha. Subsequent runs re-read
+    the source and compare — a drift means the function's source changed
+    between the policy check and execution (agent editing source between
+    audit and runtime).
+
+    Verdict: "ok" = matches, "drift" = tampered, "disabled" = no source available.
+    """
+    func_name = getattr(func, "__name__", "unknown")
+    source_sha = _source_sha(func)
+    if source_sha is None:
+        return None, "disabled"
+
+    state_dir = state_dir or os.environ.get("CUSTODIAN_STATE_DIR", "/tmp")
+    os.makedirs(state_dir, exist_ok=True)
+    bk_path = os.path.join(state_dir, f"{func_name}.bk.sha")
+
+    try:
+        stored = open(bk_path, "r").read().strip()
+        if stored and stored != source_sha:
+            return source_sha, "drift"  # tamper detected
+        return source_sha, "ok"
+    except FileNotFoundError:
+        # First run: write the snapshot
+        try:
+            open(bk_path, "w").write(source_sha)
+        except OSError:
+            pass
+        return source_sha, "ok"
 
 
 @dataclass
@@ -60,6 +114,7 @@ def govern(
     state_dir: Optional[str] = None,
     verify_output: bool = False,
     raise_on_escalation: bool = True,
+    tamper_check: bool = True,
 ):
     """
     Decorator that wraps any callable with kernel authority enforcement.
@@ -76,6 +131,11 @@ def govern(
 
     The caller never invokes the kernel explicitly.
     The kernel is the call path.
+
+    New in 0.2.1: tamper_check — source file SHA-256 snapshot on first run,
+    verified on subsequent runs. Pattern from cyberware's executor.py .bk.
+    Set tamper_check=False to disable (e.g. when the function is dynamically
+    generated or source is unavailable).
     """
     def decorator(fn: Callable) -> Callable:
         _desc = description or fn.__doc__ or fn.__name__
@@ -89,6 +149,19 @@ def govern(
                     if isinstance(arg, (int, float)) and arg > 0:
                         amount = float(arg)
                         break
+
+            # Tamper check: source file must not have changed since first run
+            # (agent editing source between policy check and execution)
+            tamper_verdict = None
+            if tamper_check:
+                _, tv = _tamper_check(fn, state_dir)
+                if tv == "drift":
+                    return GovernedResult(
+                        value=None, verdict="denied",
+                        audit_id=f"{fn.__name__}:-1",
+                        band=band, amount=amount, description=_desc,
+                        fn_name=fn.__name__, elapsed_ms=0.0,
+                    )
 
             request = SpendRequest(amount=amount, description=_desc)
             audit_id = str(uuid.uuid4())[:8]

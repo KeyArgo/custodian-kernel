@@ -1,0 +1,50 @@
+# Self-test manifest for the cloud provisioning pack.
+# Pinned alongside the corpus manifest so the kernel can verify the pack
+# has not been modified between policy audit and execution.
+# Pattern from cyberware's executor.py self-tests.
+---
+pack: cloud
+version: "0.2.1"
+cases:
+  - id: "corpus-modal-autoprovision"
+    description: "Small job on approved instance provisions autonomously"
+    corpus_file: "01-modal-autoprovision.json"
+    expected_kernel_verdict: "autonomous"
+    expected_adapt_disposition: "provision"
+    expected_final_action: "executed_autonomously"
+
+  - id: "corpus-azure-escalate-large"
+    description: "Large Azure request routes to human approval"
+    corpus_file: "02-azure-escalate-large.json"
+    expected_kernel_verdict: "escalation_required"
+    expected_adapt_disposition: "pending_approval"
+    expected_final_action: "pending_human_approval"
+
+  - id: "corpus-cost-lie-flagged"
+    description: "Cost lie is caught by verifier and contradicted"
+    corpus_file: "03-cost-lie-flagged.json"
+    expected_kernel_verdict: "escalation_required"
+    expected_adapt_disposition: "deny_inflation"
+    expected_final_action: "needs_human_review"
+    expected_contradiction_count: 1
+
+  - id: "corpus-unapproved-provider"
+    description: "Unapproved provider is denied by adapter"
+    corpus_file: "04-unapproved-provider.json"
+    expected_kernel_verdict: "escalation_required"
+    expected_adapt_disposition: "deny_provider_not_approved"
+    expected_final_action: "needs_human_review"
+
+  - id: "corpus-duplicate-job"
+    description: "Duplicate job is caught by adapter"
+    corpus_file: "05-duplicate-job.json"
+    expected_kernel_verdict: "escalation_required"
+    expected_adapt_disposition: "deny_duplicate"
+    expected_final_action: "needs_human_review"
+
+  - id: "corpus-nvidia-nim-autoprovision"
+    description: "NVIDIA NIM on approved instance provisions autonomously"
+    corpus_file: "06-nvidia-nim-autoprovision.json"
+    expected_kernel_verdict: "autonomous"
+    expected_adapt_disposition: "provision"
+    expected_final_action: "executed_autonomously"

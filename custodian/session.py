@@ -42,7 +42,8 @@ class CustodianSession:
                  daily_envelope: float = 50.00,
                  policy_path: Optional[str] = None,
                  state_dir: Optional[str] = None,
-                 parent: Optional["CustodianSession"] = None):
+                 parent: Optional["CustodianSession"] = None,
+                 step: Optional[str] = None):
         self.band = band
         self.cap = cap
         self.daily_envelope = daily_envelope
@@ -52,6 +53,8 @@ class CustodianSession:
         self.session_id = str(uuid.uuid4())[:8]
         self._results: List[SessionResult] = []
         self._spent = 0.0
+        self._step = step          # human-readable step label (e.g. "step-02")
+        self._parents_audit: List[str] = []  # audit_ids inherited from parent
 
     def __enter__(self):
         return self
@@ -77,8 +80,33 @@ class CustodianSession:
                 return r
 
         from custodian.govern import _evaluate
+        from custodian.types import Verdict
+
         req = SpendRequest(amount=amount, description=description)
         decision = _evaluate(req, self.band, self.cap, self.policy_path, self.state_dir)
+
+        # Upstream step ordering check: if this session has a step label,
+        # every parent audit_id must have succeeded (autonomous) in the
+        # parent session.  Pattern from cyberware's upstream_step_gate.
+        if self._step is not None and self.parent is not None:
+            for parent_audit in self._parents_audit:
+                parent_ok = any(
+                    r.audit_id == parent_audit and r.verdict == "autonomous"
+                    for r in self.parent._results
+                )
+                if not parent_ok:
+                    r = SessionResult(
+                        request=req,
+                        verdict="denied",
+                        reason=(
+                            f"upstream step {parent_audit} "
+                            f"(step before {self._step}) "
+                            f"did not produce an autonomous result"
+                        ),
+                        audit_id=f"{self.session_id}-{len(self._results)}",
+                    )
+                    self._results.append(r)
+                    return r
 
         if decision.verdict == Verdict.AUTONOMOUS:
             self._spent += amount
