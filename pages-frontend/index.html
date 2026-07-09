@@ -705,14 +705,10 @@
       <p class="sec-sub">Watch a real agent recommend approving a fraudulent refund — and watch the deterministic kernel override it, with real Stripe IDs and an append-only audit trail.</p>
     </div>
     <div class="video-frame reveal" id="video-frame">
-      <div class="video-ratio">
-        <!-- When the demo video is up, set VIDEO_ID in the script below and it renders automatically. -->
-        <div class="video-ph" id="video-ph">
-          <div class="play">▶</div>
-          <div class="vt">Demo video drops before submission</div>
-          <div class="vs">In the meantime, the live console is the real thing — every number on this page is pulled from it right now.</div>
-          <a class="btn btn-ghost" href="/hermes">Launch the live console instead →</a>
-        </div>
+      <div class="video-ratio" style="aspect-ratio:auto; display:flex; justify-content:center; padding:24px 0">
+        <blockquote class="twitter-tweet" data-theme="dark" data-media-max-width="720">
+          <a href="https://x.com/MHArgonaut/status/2072211650619527372"></a>
+        </blockquote>
       </div>
     </div>
   </div>
@@ -758,6 +754,14 @@
     const r=document.querySelector('#video-frame .video-ratio');
     r.innerHTML='<iframe src="https://www.youtube.com/embed/'+VIDEO_ID+'?rel=0" title="Custodian demo" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>';
   }
+
+  // ---- X (Twitter) demo video embed ----
+  (function(){
+    const s=document.createElement('script');
+    s.src='https://platform.twitter.com/widgets.js';
+    s.async=true;
+    document.body.appendChild(s);
+  })();
 
   // ---- live data (same backend the console uses; absolute URLs, CORS-enabled) ----
   const API='/api/v1';
