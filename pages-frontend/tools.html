@@ -118,7 +118,7 @@ footer{border-top:1px solid var(--line);padding:32px 0;color:var(--dim);font-siz
   </a>
   <div class="k-links">
     <a href="/">Home</a>
-    <a href="/hermes">Console</a>
+    <a href="/console">Console</a>
     <a href="/operator">Operator</a>
     <a href="/triage">Triage</a>
     <a href="/tools" class="active">Tools</a>
@@ -263,7 +263,7 @@ async function loadTools() {
     document.getElementById('stub-count').textContent = '60';
     document.getElementById('tools-grid').innerHTML = `<div class="empty">
       Tool registry API not reachable from static preview.<br>
-      <a href="/hermes" style="color:var(--amber)">Open live console</a> to see the registry live, or run <code>custodian tools list</code> locally.
+      <a href="/console" style="color:var(--amber)">Open live console</a> to see the registry live, or run <code>custodian tools list</code> locally.
     </div>`;
   }
 }

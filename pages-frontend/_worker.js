@@ -1,7 +1,8 @@
 /**
  * CF Pages _worker.js
  *
- * /hermes          → hermes.html static asset (public live-console page)
+ * /console         → console.html static asset (public live-console page)
+ * /hermes          → redirects to /console (legacy link, kept for compatibility)
  * /operator        → operator.html static asset (judge demo panel)
  * /triage          → triage.html static asset (lie-catch demo; JS calls API directly)
  * /api/v1/*        → Flask API endpoints (proxied to Flask backend)
@@ -140,11 +141,18 @@ export default {
       return new Response(res.body, { status: res.status, headers });
     }
 
+    // /hermes was the console route before the 817d7b0 rename to /console.
+    // hermes.html no longer exists, so this used to silently fall through to
+    // the SPA-fallback index.html instead of 404ing or reaching the console.
+    // Redirect explicitly so old/shared links keep working.
+    if (path === '/hermes') {
+      return Response.redirect(new URL('/console' + url.search, url), 301);
+    }
+
     const shouldProxy =
       PROXY_EXACT.has(path) || path.startsWith(PROXY_PREFIX);
 
     if (!shouldProxy) {
-      // /hermes falls here — CF Pages ASSETS serves hermes.html at /hermes automatically
       return env.ASSETS.fetch(request);
     }
 

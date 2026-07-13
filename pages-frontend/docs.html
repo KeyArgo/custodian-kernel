@@ -193,7 +193,7 @@ h1,h2,h3,h4{font-weight:700;letter-spacing:-0.01em;color:var(--text)}
   </a>
   <div class="k-links">
     <a href="/">Home</a>
-    <a href="/hermes">Console</a>
+    <a href="/console">Console</a>
     <a href="/operator">Operator</a>
     <a href="/triage">Triage</a>
     <a href="/tools">Tools</a>
@@ -354,7 +354,7 @@ h1,h2,h3,h4{font-weight:700;letter-spacing:-0.01em;color:var(--text)}
       <p>Open Policy Agent evaluates every action request against the current authority band in real time. Per-action caps ($250), rolling session windows ($1,000 / 2 hr), and escalation thresholds are enforced as Rego rules, not application code that can be patched or reasoned around.</p>
 
       <h3>OCSF Audit Log</h3>
-      <p>Every allow and deny emits an Open Cybersecurity Schema Framework event. The log is append-only, tamper-evident, and structured: verifiable by any SIEM. You can see the live feed on the <a href="/hermes">Live Console</a>.</p>
+      <p>Every allow and deny emits an Open Cybersecurity Schema Framework event. The log is append-only, tamper-evident, and structured: verifiable by any SIEM. You can see the live feed on the <a href="/console">Live Console</a>.</p>
 
       <div class="callout callout-blue">
         <div class="callout-label">Why kernel-level?</div>
@@ -448,7 +448,7 @@ class CapturedClient:                # testing / replay
         <p><code>per_action_cap</code> is the ceiling for a single transaction. <code>autonomous_remaining</code> is how much session budget is left. A $200 spend might be fine per-action but denied if the session budget is exhausted. Both checks are independent.</p>
       </div>
 
-      <p>The current band and remaining session budget are visible live on the <a href="/hermes">Live Console</a> status grid.</p>
+      <p>The current band and remaining session budget are visible live on the <a href="/console">Live Console</a> status grid.</p>
     </section>
 
     <!-- KILL SWITCH -->
