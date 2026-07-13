@@ -91,10 +91,10 @@ All JS in the frontend uses relative URLs (`/api/v1/...`). No hardcoded `rein-lo
 
 1. **DGX Spark node(s)** — airgapped enforcement node(s), tried in order. Configured via
    `SPARK_ENFORCE_URLS` (comma-separated, e.g.
-   `http://192.168.50.56:8095/decide,http://192.168.50.94:8095/decide` for spark-a/spark-b).
+   `http://10.0.0.50:8095/decide,http://10.0.0.51:8095/decide` for spark-a/spark-b).
    `SPARK_ENFORCE_URL` (singular) is still honoured as a one-node fallback for compatibility.
    Runs `spark-enforcement/enforce_server.py` on each Spark host.
-   Default: .56 (primary) → .94 (secondary) → local enforcement on argobox-lite.
+   Default: spark-a 10.0.0.50 (primary) → spark-b 10.0.0.51 (secondary) → local enforcement on argobox-lite.
 2. **argobox-lite local** (`custodian.policy.evaluator.decide()`) — silent automatic fallback
    if every configured Spark node is unreachable (network blip, reboot, timeout of 1s each).
    Individual Spark nodes are known to go down — that's what the chain + local fallback exist

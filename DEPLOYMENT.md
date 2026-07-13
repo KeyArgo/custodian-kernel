@@ -2,20 +2,34 @@
 
 ## Enforcement Nodes
 
-Two nodes run the custodian kernel. The enforcer tries Spark first (2s timeout),
-falls back to argobox-lite silently if Spark is unreachable.
+Three nodes run the custodian kernel. The enforcer tries the Spark chain
+(spark-a, then spark-b) first (2s timeout each), falls back to argobox-lite
+silently if every Spark node is unreachable.
 
-### DGX Spark — primary trust anchor
-- **Host:** `bogart@192.168.50.56` (kronos network — dad's connection)
+### DGX Spark A — primary trust anchor
+- **Host:** `bogart@10.0.0.50`
 - **Service:** `enforce_server.py` on port 8095
 - **Venv:** `/home/bogart/custodian-venv`
 - **Code:** `/home/bogart/custodian-kernel/`
 - **Log:** `/home/bogart/custodian-enforce.log`
-- **Health:** `curl http://192.168.50.56:8095/health`
+- **Health:** `curl http://10.0.0.50:8095/health`
 
 Start after reboot:
 ```bash
-ssh bogart@192.168.50.56 "cd /home/bogart/custodian-kernel && nohup /home/bogart/custodian-venv/bin/python3 enforce_server.py > /home/bogart/custodian-enforce.log 2>&1 &"
+ssh bogart@10.0.0.50 "cd /home/bogart/custodian-kernel && nohup /home/bogart/custodian-venv/bin/python3 enforce_server.py > /home/bogart/custodian-enforce.log 2>&1 &"
+```
+
+### DGX Spark B — secondary trust anchor
+- **Host:** `bogart@10.0.0.51`
+- **Service:** `enforce_server.py` on port 8095
+- **Venv:** `/home/bogart/custodian-venv`
+- **Code:** `/home/bogart/custodian-kernel/`
+- **Log:** `/home/bogart/custodian-enforce.log`
+- **Health:** `curl http://10.0.0.51:8095/health`
+
+Start after reboot:
+```bash
+ssh bogart@10.0.0.51 "cd /home/bogart/custodian-kernel && nohup /home/bogart/custodian-venv/bin/python3 enforce_server.py > /home/bogart/custodian-enforce.log 2>&1 &"
 ```
 
 ### argobox-lite — API server + local fallback

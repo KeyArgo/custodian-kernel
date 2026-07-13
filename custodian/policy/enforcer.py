@@ -37,7 +37,7 @@ from custodian.types import AuthorityState, Band, Decision, SpendRequest, Verdic
 # SPARK_ENFORCE_URLS is not set. Point this at real hosts as they come online —
 # unreachable entries are skipped via the same timeout/fallback path as any
 # other outage, so it's safe to list a not-yet-provisioned node in advance.
-# Default: .56 (primary) → .94 (secondary) → local enforcement on argobox-lite.
+# Default: spark-a (primary) → spark-b (secondary) → local enforcement on argobox-lite.
 _urls_env = os.environ.get('SPARK_ENFORCE_URLS')
 if _urls_env is not None:
     SPARK_ENFORCE_URLS = [u.strip() for u in _urls_env.split(',') if u.strip()]
@@ -47,8 +47,8 @@ else:
         SPARK_ENFORCE_URLS = [u.strip() for u in _url_env.split(',') if u.strip()]
     else:
         SPARK_ENFORCE_URLS = [
-            'http://192.168.50.56:8095/decide',
-            'http://192.168.50.94:8095/decide',
+            'http://10.0.0.50:8095/decide',
+            'http://10.0.0.51:8095/decide',
         ]
 
 # Kept for anything importing the old singular name directly (e.g. tests, admin panel).

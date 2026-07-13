@@ -10,7 +10,8 @@
 set -euo pipefail
 
 REPO="$(cd "$(dirname "$0")" && pwd)"
-SPARK_HOST="argo@192.168.50.56"
+SPARK_A_HOST="argo@10.0.0.50"
+SPARK_B_HOST="argo@10.0.0.51"
 SPARK_DIR="/home/argo/custodian-kernel"
 SPARK_VENV="/home/argo/custodian-venv"
 LITE_HOST="argonaut@10.0.0.199"
@@ -25,24 +26,30 @@ echo "━━━━━━━━━━━━━━━━━━━━━━━━�
 echo "  Custodian kernel deploy — $(date '+%Y-%m-%d %H:%M:%S')"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
-# ── DGX Spark (primary enforcement node) ──────────────────────────────────────
-if [[ "${SKIP_SPARK:-}" != "1" ]]; then
+# ── DGX Spark node(s) — spark-a primary, spark-b secondary ───────────────────
+deploy_spark_node() {
+  local label="$1" host="$2"
   echo ""
-  echo "→ DGX Spark (primary enforcement node)"
-  if ssh -o ConnectTimeout=4 -o BatchMode=yes "$SPARK_HOST" true 2>/dev/null; then
+  echo "→ DGX Spark $label ($host)"
+  if ssh -o ConnectTimeout=4 -o BatchMode=yes "$host" true 2>/dev/null; then
     rsync -a --delete --exclude='__pycache__' --exclude='*.pyc' --exclude='.git' \
       --exclude='build' --exclude='*.egg-info' \
-      "$REPO/custodian/" "$SPARK_HOST:$SPARK_DIR/custodian/"
-    rsync -a "$REPO/spark-enforcement/enforce_server.py" "$SPARK_HOST:$SPARK_DIR/"
-    ssh -t "$SPARK_HOST" "
+      "$REPO/custodian/" "$host:$SPARK_DIR/custodian/"
+    rsync -a "$REPO/spark-enforcement/enforce_server.py" "$host:$SPARK_DIR/"
+    ssh -t "$host" "
       sudo systemctl restart custodian-enforce
       sleep 2
       curl -sf http://localhost:8095/health && echo '' || echo 'HEALTH CHECK FAILED'
     "
-    ok "Spark enforcement node updated and running"
+    ok "Spark $label ($host) updated and running"
   else
-    warn "Spark unreachable — skipping (argobox-lite will enforce locally)"
+    warn "Spark $label ($host) unreachable — skipping"
   fi
+}
+
+if [[ "${SKIP_SPARK:-}" != "1" ]]; then
+  deploy_spark_node "spark-a" "$SPARK_A_HOST"
+  deploy_spark_node "spark-b" "$SPARK_B_HOST"
 fi
 
 # ── argobox-lite (API server + local fallback enforcement) ─────────────────────
@@ -75,8 +82,11 @@ fi
 echo ""
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 ok "Deploy complete"
-SPARK_STATUS=$(ssh -o ConnectTimeout=3 -o BatchMode=yes "$SPARK_HOST" \
-  'curl -sf http://localhost:8095/health 2>/dev/null' 2>/dev/null \
-  || echo '{"ok":false,"node":"dgx-spark","role":"unreachable — fallback active"}')
-echo "  Spark: $SPARK_STATUS"
+for pair in "spark-a:$SPARK_A_HOST" "spark-b:$SPARK_B_HOST"; do
+  label="${pair%%:*}"; host="${pair#*:}"
+  status=$(ssh -o ConnectTimeout=3 -o BatchMode=yes "$host" \
+    'curl -sf http://localhost:8095/health 2>/dev/null' 2>/dev/null \
+    || echo "{\"ok\":false,\"node\":\"$label\",\"role\":\"unreachable — fallback active\"}")
+  echo "  $label: $status"
+done
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
