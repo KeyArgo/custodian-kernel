@@ -53,7 +53,7 @@ def _policy_facts(policy_path: str | Path) -> list[str]:
 
 
 def compile_soul_section(policy_path: Optional[str | Path] = None,
-                         capsule=None, caduceus_enabled: bool = False) -> str:
+                         capsule=None, warden_enabled: bool = False) -> str:
     """Render the authority section of SOUL.md from live state."""
     lines = [
         "## Your authority (generated — matches the enforced policy exactly)",
@@ -74,9 +74,9 @@ def compile_soul_section(policy_path: Optional[str | Path] = None,
         if capsule.max_session_cost_usd:
             lines.append(f"- Session budget: ${capsule.max_session_cost_usd:.2f} "
                          f"(${capsule.spent_usd:.2f} already spent).")
-    if caduceus_enabled:
+    if warden_enabled:
         lines += [
-            "- Credentials are managed by Caduceus. You will see `caduceus://` "
+            "- Credentials are managed by Warden. You will see `warden://` "
             "references — use them exactly as given in tool arguments. You "
             "cannot read, print, or export the underlying values, and tool "
             "output containing credentials is redacted before you see it. "

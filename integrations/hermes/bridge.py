@@ -7,7 +7,7 @@ Every skill invocation flows::
           spend anomalies, PII
         → kernel decide: band / cap / envelope / kill switch
           (inside CustodianTool.invoke, unchanged)
-        → Caduceus egress: credentials materialize ONLY in the skill
+        → Warden egress: credentials materialize ONLY in the skill
           subprocess env — the agent process never holds them
         → skill executes
         → guard adapters (post): secret redaction, PII redaction
@@ -34,7 +34,7 @@ from integrations.hermes.capsule import SessionCapsule
 
 
 class HermesBridge:
-    """Wire a ToolRegistry, an AdapterPipeline, and (optionally) a Caduceus
+    """Wire a ToolRegistry, an AdapterPipeline, and (optionally) a Warden
     Broker + SessionCapsule into one governed invoke() surface."""
 
     def __init__(self, registry=None, pipeline: Optional[AdapterPipeline] = None,
@@ -60,15 +60,15 @@ class HermesBridge:
                     guard.inventory.setdefault(skill, [])
             self.pipeline.adapters.insert(0, guard)
 
-    # -- caduceus egress ----------------------------------------------------------
+    # -- warden egress ----------------------------------------------------------
 
     def _egress_env(self, skill: str, args: dict, band: str) -> Optional[dict]:
-        """Build the skill subprocess env from Caduceus, if a broker is wired.
+        """Build the skill subprocess env from Warden, if a broker is wired.
 
         Two resolution paths, both grant-gated under requester
         ``skill:<name>``:
 
-        * every ``caduceus://`` ref appearing in args — resolved to the
+        * every ``warden://`` ref appearing in args — resolved to the
           entry's configured env var, and the arg is dropped from what the
           script sees (scripts read env, not plaintext argv);
         * auto-wiring: env vars the tool requires (per the registry's
@@ -76,7 +76,7 @@ class HermesBridge:
         """
         if self.broker is None:
             return None
-        from caduceus.refs import find_refs
+        from warden.refs import find_refs
         from custodian.tools.registry import _ENV_REQUIREMENTS
 
         requester = f"skill:{skill}"
@@ -94,7 +94,7 @@ class HermesBridge:
 
         for env_var in _ENV_REQUIREMENTS.get(skill, []):
             if env_var not in refs and env_var in by_env_var:
-                from caduceus.refs import SecretRef
+                from warden.refs import SecretRef
                 refs[env_var] = SecretRef(by_env_var[env_var])
 
         if not refs:
@@ -135,14 +135,14 @@ class HermesBridge:
             self.capsule.record(skill, ok=bool(handled.get("ok")), note="handled by adapter")
             return self._result(handled)
 
-        # Caduceus egress (may strip caduceus:// refs out of args).
+        # Warden egress (may strip warden:// refs out of args).
         try:
             env = self._egress_env(skill, ctx.args, band)
         except Exception as e:
             # Grant denials and unknown refs are policy outcomes, not crashes.
             self.capsule.record(skill, ok=False, note=str(e))
             return self._result({
-                "ok": False, "denied_by": ["caduceus"], "reason": str(e),
+                "ok": False, "denied_by": ["warden"], "reason": str(e),
                 "tool": skill,
             }, force_anchor=True)
 
