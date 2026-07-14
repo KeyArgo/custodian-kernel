@@ -9,7 +9,7 @@ Hermes proposes  invoke(skill, args)
     scope, loops, spend anomalies, PII
   → capability adapters may answer directly (introspection meta-skills)
   → kernel decide: band / cap / envelope / kill switch
-  → Warden egress: credentials materialize ONLY in the skill subprocess
+  → Caduceus egress: credentials materialize ONLY in the skill subprocess
   → skill executes
   → guard adapters (post): secret redaction, PII redaction
   → SessionCapsule records what happened
@@ -53,8 +53,8 @@ guards:            # all default true — set false to drop one
 
 ```python
 from integrations.hermes.session_policy import build_bridge
-from warden.vault import Vault
-from warden.broker import Broker
+from caduceus.vault import Vault
+from caduceus.broker import Broker
 
 broker = Broker(Vault.open(passphrase=...))
 bridge = build_bridge("hermes-session.yaml", broker=broker)
@@ -73,7 +73,7 @@ can reach, how fast and how much it can spend.
 The bridge runs against the same `ToolRegistry` that powers the 100+
 governed skills on the website — no adapter shims per skill. Any skill
 with a `custodian-band` in its `SKILL.md` is automatically fenced,
-budgeted, credentialed (via Warden), and audited.
+budgeted, credentialed (via Caduceus), and audited.
 
 Three **meta-skills** are served by the governance layer itself (the
 `hermes-introspection` capability adapter), so Hermes can inspect its own
@@ -81,7 +81,7 @@ governed state:
 
 - `custodian-status` — band, budget spent/remaining, action/denial counts.
 - `custodian-anchor` — the full re-anchoring block on demand.
-- `warden-vault-list` — which `warden://` refs exist (metadata only).
+- `caduceus-vault-list` — which `caduceus://` refs exist (metadata only).
 
 ## Local models that lose context
 
@@ -104,6 +104,6 @@ policy, so what the model is told always equals what the kernel enforces
 ## NemoClaw egress
 
 `integrations/hermes/nemoclaw_egress.governed_sandbox_exec(...)` runs a
-script inside a NemoClaw sandbox with Warden-resolved secrets piped in
+script inside a NemoClaw sandbox with Caduceus-resolved secrets piped in
 over stdin — never on the command line, never written to sandbox disk,
 grant-gated under `sandbox:<name>` and audited.

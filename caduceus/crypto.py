@@ -24,7 +24,7 @@ import json
 import os
 from dataclasses import dataclass
 
-from warden.errors import CryptoUnavailableError, VaultCorruptError, VaultLockedError
+from caduceus.errors import CryptoUnavailableError, VaultCorruptError, VaultLockedError
 
 try:  # pragma: no cover - import guard exercised only without the extra
     from cryptography.hazmat.primitives.ciphers.aead import AESGCM
@@ -33,12 +33,12 @@ except ImportError:  # pragma: no cover
     AESGCM = None
     _HAVE_CRYPTO = False
 
-MAGIC = b"WARDEN1\n"
+MAGIC = b"CADUCEUS1\n"
 KEY_LEN = 32
 NONCE_LEN = 12
 SALT_LEN = 16
 
-# scrypt parameters — interactive-grade (~100ms) so `warden` CLI stays
+# scrypt parameters — interactive-grade (~100ms) so `caduceus` CLI stays
 # snappy while brute force on a stolen vault file stays expensive.
 SCRYPT_N = 2 ** 15
 SCRYPT_R = 8
@@ -49,7 +49,7 @@ def require_crypto() -> None:
     if not _HAVE_CRYPTO:
         raise CryptoUnavailableError(
             "the 'cryptography' package is required for vault encryption — "
-            "install with: pip install custodian-kernel[warden]"
+            "install with: pip install custodian-kernel[caduceus]"
         )
 
 
@@ -92,7 +92,7 @@ def derive_key(passphrase: str, params: KdfParams) -> bytes:
 def subkey(master_key: bytes, purpose: bytes) -> bytes:
     """Derive a purpose-bound subkey (e.g. the audit HMAC key) so the
     vault key itself is never used in more than one construction."""
-    return hmac.new(master_key, b"warden-subkey:" + purpose, hashlib.sha256).digest()
+    return hmac.new(master_key, b"caduceus-subkey:" + purpose, hashlib.sha256).digest()
 
 
 def encrypt_blob(key: bytes, plaintext: bytes, header: dict) -> bytes:
@@ -125,7 +125,7 @@ def decrypt_blob(key: bytes, blob: bytes) -> bytes:
 def split_blob(blob: bytes) -> tuple[dict, bytes, bytes]:
     """Parse the on-disk format into (header, nonce, ciphertext)."""
     if not blob.startswith(MAGIC):
-        raise VaultCorruptError("not a Warden vault (bad magic)")
+        raise VaultCorruptError("not a Caduceus vault (bad magic)")
     rest = blob[len(MAGIC):]
     sep = rest.find(b"\n")
     if sep < 0 or len(rest) < sep + 1 + NONCE_LEN + 16:

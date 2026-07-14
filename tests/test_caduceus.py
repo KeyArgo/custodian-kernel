@@ -1,18 +1,18 @@
-"""Warden credential broker tests: crypto, grants, egress, audit."""
+"""Caduceus credential broker tests: crypto, grants, egress, audit."""
 import json
 import subprocess
 import sys
 
 import pytest
 
-from warden.vault import Vault
-from warden.broker import Broker, LeakSentinel
-from warden.grants import GrantPolicy, Grant, band_index
-from warden.audit import AuditLog, AuditChainBrokenError
-from warden.refs import SecretRef, find_refs
-from warden.errors import (
+from caduceus.vault import Vault
+from caduceus.broker import Broker, LeakSentinel
+from caduceus.grants import GrantPolicy, Grant, band_index
+from caduceus.audit import AuditLog, AuditChainBrokenError
+from caduceus.refs import SecretRef, find_refs
+from caduceus.errors import (
     GrantDeniedError, UnknownRefError, VaultLockedError, VaultMissingError,
-    WardenError,
+    CaduceusError,
 )
 
 PP = "test-passphrase-123"
@@ -20,7 +20,7 @@ PP = "test-passphrase-123"
 
 @pytest.fixture
 def vault(tmp_path):
-    return Vault.create(path=tmp_path / "v.warden", passphrase=PP)
+    return Vault.create(path=tmp_path / "v.caduceus", passphrase=PP)
 
 
 @pytest.fixture
@@ -32,9 +32,9 @@ def broker(vault):
 
 def test_ref_is_value_free():
     r = SecretRef("stripe_sk")
-    assert r.uri == "warden://stripe_sk"
+    assert r.uri == "caduceus://stripe_sk"
     assert "stripe_sk" in repr(r)
-    assert r == SecretRef.parse("warden://stripe_sk")
+    assert r == SecretRef.parse("caduceus://stripe_sk")
 
 
 def test_ref_rejects_bad_names():
@@ -45,7 +45,7 @@ def test_ref_rejects_bad_names():
 
 
 def test_find_refs():
-    refs = find_refs("use warden://a and warden://b/c here")
+    refs = find_refs("use caduceus://a and caduceus://b/c here")
     assert [r.name for r in refs] == ["a", "b/c"]
 
 
@@ -81,7 +81,7 @@ def test_tampered_vault_fails(vault):
 
 def test_open_missing(tmp_path):
     with pytest.raises(VaultMissingError):
-        Vault.open(path=tmp_path / "nope.warden", passphrase=PP)
+        Vault.open(path=tmp_path / "nope.caduceus", passphrase=PP)
 
 
 def test_rotate_master(vault):
@@ -117,13 +117,13 @@ def test_rotation_count(vault):
 def test_deny_by_default(broker):
     broker.vault.add("k", "v")
     with pytest.raises(GrantDeniedError):
-        broker.build_env({"K": "warden://k"}, "skill:x", "L1")
+        broker.build_env({"K": "caduceus://k"}, "skill:x", "L1")
 
 
 def test_grant_allows(broker):
     broker.vault.add("k", "v")
     broker.grant("k", "skill:x", max_band="L2")
-    env = broker.build_env({"K": "warden://k"}, "skill:x", "L1", base_env={})
+    env = broker.build_env({"K": "caduceus://k"}, "skill:x", "L1", base_env={})
     assert env["K"] == "v"
 
 
@@ -131,22 +131,22 @@ def test_band_ceiling(broker):
     broker.vault.add("k", "v")
     broker.grant("k", "skill:x", max_band="L1")
     with pytest.raises(GrantDeniedError):
-        broker.build_env({"K": "warden://k"}, "skill:x", "L2")
+        broker.build_env({"K": "caduceus://k"}, "skill:x", "L2")
 
 
 def test_wildcard_ref_grant(broker):
     broker.vault.add("stripe/sk", "v1")
     broker.vault.add("stripe/pk", "v2")
     broker.grant("stripe/*", "skill:x", max_band="L2")
-    env = broker.build_env({"A": "warden://stripe/sk", "B": "warden://stripe/pk"},
+    env = broker.build_env({"A": "caduceus://stripe/sk", "B": "caduceus://stripe/pk"},
                            "skill:x", "L1", base_env={})
     assert env["A"] == "v1" and env["B"] == "v2"
 
 
 def test_grant_requester_must_be_exact():
-    with pytest.raises(WardenError):
+    with pytest.raises(CaduceusError):
         Grant(ref_pattern="k", requester="skill:*")
-    with pytest.raises(WardenError):
+    with pytest.raises(CaduceusError):
         Grant(ref_pattern="k", requester="noscheme")
 
 
@@ -154,7 +154,7 @@ def test_grant_expiry(broker):
     broker.vault.add("k", "v")
     broker.grant("k", "skill:x", max_band="L2", ttl_seconds=-1)  # already expired
     with pytest.raises(GrantDeniedError):
-        broker.build_env({"K": "warden://k"}, "skill:x", "L1")
+        broker.build_env({"K": "caduceus://k"}, "skill:x", "L1")
 
 
 def test_revoke(broker):
@@ -162,19 +162,19 @@ def test_revoke(broker):
     broker.grant("k", "skill:x")
     assert broker.revoke("k", "skill:x") == 1
     with pytest.raises(GrantDeniedError):
-        broker.build_env({"K": "warden://k"}, "skill:x", "L1")
+        broker.build_env({"K": "caduceus://k"}, "skill:x", "L1")
 
 
 def test_owner_implicit_grant(broker):
     broker.vault.add("k", "v")
-    env = broker.build_env({"K": "warden://k"}, "user:cli", "L4", base_env={})
+    env = broker.build_env({"K": "caduceus://k"}, "user:cli", "L4", base_env={})
     assert env["K"] == "v"
 
 
 def test_unknown_ref(broker):
     broker.grant("*", "skill:x", max_band="L2")
     with pytest.raises(UnknownRefError):
-        broker.build_env({"K": "warden://nope"}, "skill:x", "L1")
+        broker.build_env({"K": "caduceus://nope"}, "skill:x", "L1")
 
 
 # -- egress ------------------------------------------------------------------
@@ -184,7 +184,7 @@ def test_spawn_injects_env(broker):
     broker.grant("k", "user:cli")
     proc = broker.spawn(
         [sys.executable, "-c", "import os;print(os.environ['MY_KEY'])"],
-        {"MY_KEY": "warden://k"}, "user:cli",
+        {"MY_KEY": "caduceus://k"}, "user:cli",
     )
     assert proc.stdout.strip() == "secret-42"
 
@@ -202,7 +202,7 @@ def test_profile_egress(broker):
 def test_leak_sentinel_registers_on_resolve(broker):
     broker.vault.add("k", "sk_live_abc123def456")
     broker.grant("k", "skill:x", max_band="L2")
-    broker.build_env({"K": "warden://k"}, "skill:x", "L1", base_env={})
+    broker.build_env({"K": "caduceus://k"}, "skill:x", "L1", base_env={})
     assert broker.leak_sentinel.seen("sk_live_abc123def456")
     assert not broker.leak_sentinel.seen("unrelated")
 
@@ -218,14 +218,14 @@ def test_leak_sentinel_stores_only_hashes():
 def test_audit_chain_records(broker):
     broker.vault.add("k", "v")
     broker.grant("k", "skill:x", max_band="L2")
-    broker.build_env({"K": "warden://k"}, "skill:x", "L1", base_env={})
+    broker.build_env({"K": "caduceus://k"}, "skill:x", "L1", base_env={})
     assert broker.audit.verify() >= 2  # grant + resolve
 
 
 def test_audit_deny_recorded(broker):
     broker.vault.add("k", "v")
     with pytest.raises(GrantDeniedError):
-        broker.build_env({"K": "warden://k"}, "skill:x", "L1")
+        broker.build_env({"K": "caduceus://k"}, "skill:x", "L1")
     events = [r["event"] for r in broker.audit.records()]
     assert "deny" in events
 
@@ -233,7 +233,7 @@ def test_audit_deny_recorded(broker):
 def test_audit_tamper_detected(broker, tmp_path):
     broker.vault.add("k", "v")
     broker.grant("k", "skill:x", max_band="L2")
-    broker.build_env({"K": "warden://k"}, "skill:x", "L1", base_env={})
+    broker.build_env({"K": "caduceus://k"}, "skill:x", "L1", base_env={})
     recs = broker.audit.path.read_text().splitlines()
     d = json.loads(recs[0]); d["requester"] = "skill:evil"
     recs[0] = json.dumps(d, sort_keys=True, separators=(",", ":"))
@@ -246,7 +246,7 @@ def test_audit_truncation_detected(broker):
     broker.vault.add("k", "v")
     broker.grant("k", "skill:x", max_band="L2")
     for _ in range(3):
-        broker.build_env({"K": "warden://k"}, "skill:x", "L1", base_env={})
+        broker.build_env({"K": "caduceus://k"}, "skill:x", "L1", base_env={})
     recs = broker.audit.path.read_text().splitlines()
     broker.audit.path.write_text("\n".join(recs[:-1]) + "\n")  # drop last
     # remaining chain still verifies (truncation of tail is detectable only
@@ -259,7 +259,7 @@ def test_audit_truncation_detected(broker):
 
 def test_receipt_cosign_roundtrip(vault):
     from custodian.receipt import GovernedReceipt
-    from warden.receipts import sign_receipt, verify_signed
+    from caduceus.receipts import sign_receipt, verify_signed
     r = GovernedReceipt.build("charge", "L2", 5.0, "t", "autonomous", "ok", 3.0, {"a": 1})
     sig = sign_receipt(r, vault)
     assert verify_signed(r, sig, vault)
@@ -268,7 +268,7 @@ def test_receipt_cosign_roundtrip(vault):
 
 def test_receipt_cosign_detects_tamper(vault):
     from custodian.receipt import GovernedReceipt
-    from warden.receipts import sign_receipt, verify_signed
+    from caduceus.receipts import sign_receipt, verify_signed
     r = GovernedReceipt.build("charge", "L2", 5.0, "t", "autonomous", "ok", 3.0, {"a": 1})
     sig = sign_receipt(r, vault)
     r.amount = 9999.0
@@ -277,9 +277,9 @@ def test_receipt_cosign_detects_tamper(vault):
 
 def test_receipt_cosign_key_isolated(tmp_path):
     from custodian.receipt import GovernedReceipt
-    from warden.receipts import sign_receipt, verify_signed
-    v1 = Vault.create(path=tmp_path / "a.warden", passphrase="p1")
-    v2 = Vault.create(path=tmp_path / "b.warden", passphrase="p2")
+    from caduceus.receipts import sign_receipt, verify_signed
+    v1 = Vault.create(path=tmp_path / "a.caduceus", passphrase="p1")
+    v2 = Vault.create(path=tmp_path / "b.caduceus", passphrase="p2")
     r = GovernedReceipt.build("c", "L2", 1.0, "t", "autonomous", "ok", 1.0, {})
     sig = sign_receipt(r, v1)
     assert not verify_signed(r, sig, v2)  # different vault, different key

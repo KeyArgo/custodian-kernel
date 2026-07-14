@@ -11,7 +11,7 @@ and forging a valid chain requires the vault key. The log itself is
 value-free: it records *that* ``skill:stripe-spend`` resolved
 ``stripe_sk`` at band L2, never any secret material.
 
-``warden audit verify`` walks the chain and reports the first break.
+``caduceus audit verify`` walks the chain and reports the first break.
 """
 from __future__ import annotations
 
@@ -24,7 +24,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
 
-from warden.errors import AuditChainBrokenError
+from caduceus.errors import AuditChainBrokenError
 
 GENESIS = "0" * 64
 

@@ -1,25 +1,25 @@
-"""``warden`` — the human's password/env manager for agent credentials.
+"""``caduceus`` — the human's password/env manager for agent credentials.
 
 Design rules for this CLI:
 
 * **Values in, never out.** ``add``/``edit`` read values via getpass or
   stdin; no subcommand prints a secret value. Not ``list``, not
   ``show``, not errors, not ``--verbose``. The only way a value leaves
-  the vault is ``warden exec`` egress into a child process env.
-* Passphrase comes from ``WARDEN_PASSPHRASE``/``WARDEN_KEYFILE`` (for
+  the vault is ``caduceus exec`` egress into a child process env.
+* Passphrase comes from ``CADUCEUS_PASSPHRASE``/``CADUCEUS_KEYFILE`` (for
   scripting) or an interactive prompt.
 * Every state change is audited.
 
 Examples::
 
-    warden init
-    warden add stripe_sk --profile prod --env-var STRIPE_SECRET_KEY
-    warden list
-    warden show stripe_sk                      # metadata only
-    warden grant 'stripe*' --to skill:stripe-spend --max-band L2
-    warden exec --with stripe_sk -- python bill.py
-    warden exec --profile prod -- python agent.py
-    warden audit verify
+    caduceus init
+    caduceus add stripe_sk --profile prod --env-var STRIPE_SECRET_KEY
+    caduceus list
+    caduceus show stripe_sk                      # metadata only
+    caduceus grant 'stripe*' --to skill:stripe-spend --max-band L2
+    caduceus exec --with stripe_sk -- python bill.py
+    caduceus exec --profile prod -- python agent.py
+    caduceus audit verify
 """
 from __future__ import annotations
 
@@ -31,10 +31,10 @@ import sys
 import time
 from pathlib import Path
 
-from warden.broker import Broker
-from warden.errors import WardenError
-from warden.refs import SecretRef
-from warden.vault import Vault
+from caduceus.broker import Broker
+from caduceus.errors import CaduceusError
+from caduceus.refs import SecretRef
+from caduceus.vault import Vault
 
 CLI_REQUESTER = "user:cli"
 
@@ -52,7 +52,7 @@ def _read_value(prompt: str, from_stdin: bool) -> str:
         return sys.stdin.readline().rstrip("\n")
     value = getpass.getpass(prompt)
     if not value:
-        raise WardenError("empty value")
+        raise CaduceusError("empty value")
     return value
 
 
@@ -67,7 +67,7 @@ def cmd_init(args) -> int:
             print(f"generated keyfile {key_path} (mode 0600) — back it up securely")
         Vault.create(path=args.vault, keyfile=key_path)
     else:
-        env_pp = os.environ.get("WARDEN_PASSPHRASE")
+        env_pp = os.environ.get("CADUCEUS_PASSPHRASE")
         if env_pp:
             # Non-interactive setup (CI/services): trust the env passphrase.
             Vault.create(path=args.vault, passphrase=env_pp)
@@ -75,7 +75,7 @@ def cmd_init(args) -> int:
             p1 = getpass.getpass("new vault passphrase: ")
             p2 = getpass.getpass("repeat: ")
             if p1 != p2:
-                raise WardenError("passphrases do not match")
+                raise CaduceusError("passphrases do not match")
             Vault.create(path=args.vault, passphrase=p1)
     print(f"vault created at {args.vault or Vault.default_path()}")
     return 0
@@ -100,7 +100,7 @@ def cmd_edit(args) -> int:
     vault.update_meta(args.name, profile=args.profile, env_var=args.env_var,
                       note=args.note)
     Broker(vault).audit.append("edit", args.name, CLI_REQUESTER, "-", "")
-    print(f"updated warden://{args.name}")
+    print(f"updated caduceus://{args.name}")
     return 0
 
 
@@ -108,7 +108,7 @@ def cmd_rm(args) -> int:
     vault = _open_vault(args)
     vault.delete(args.name)
     Broker(vault).audit.append("delete", args.name, CLI_REQUESTER, "-", "")
-    print(f"deleted warden://{args.name}")
+    print(f"deleted caduceus://{args.name}")
     return 0
 
 
@@ -124,7 +124,7 @@ def cmd_list(args) -> int:
     width = max(len(r["name"]) for r in rows)
     for r in rows:
         age = time.strftime("%Y-%m-%d", time.localtime(r["updated_at"]))
-        print(f"warden://{r['name']:<{width}}  {r['profile']:<10} "
+        print(f"caduceus://{r['name']:<{width}}  {r['profile']:<10} "
               f"{r['kind']:<8} → ${r['env_var']}  ({r['length']} chars, {age})")
     return 0
 
@@ -142,7 +142,7 @@ def cmd_import_env(args) -> int:
     Broker(vault).audit.append("add", f"import:{args.file}", CLI_REQUESTER, "-",
                                f"count={len(names)}")
     for n in names:
-        print(f"imported warden://{n}")
+        print(f"imported caduceus://{n}")
     print(f"\n{len(names)} entries imported. The plaintext file {args.file} "
           f"still exists — shred it when ready:  shred -u {args.file}")
     return 0
@@ -208,7 +208,7 @@ def cmd_rotate_master(args) -> int:
     p1 = getpass.getpass("NEW vault passphrase: ")
     p2 = getpass.getpass("repeat: ")
     if p1 != p2:
-        raise WardenError("passphrases do not match")
+        raise CaduceusError("passphrases do not match")
     vault.rotate_master(new_passphrase=p1)
     Broker(vault).audit.append("rotate", "-", CLI_REQUESTER, "-", "master key rotated")
     print("vault re-encrypted under new master key")
@@ -217,11 +217,11 @@ def cmd_rotate_master(args) -> int:
 
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(
-        prog="warden",
+        prog="caduceus",
         description="Credential broker for AI agents — the agent never sees the value.",
     )
     p.add_argument("--vault", type=Path, default=None,
-                   help="vault path (default: ~/.warden/vault.warden, or $WARDEN_HOME)")
+                   help="vault path (default: ~/.caduceus/vault.caduceus, or $CADUCEUS_HOME)")
     sub = p.add_subparsers(dest="command", required=True)
 
     sp = sub.add_parser("init", help="create a new vault")
@@ -310,8 +310,8 @@ def main(argv=None) -> int:
         args.cmd = args.cmd[1:]
     try:
         return args.fn(args)
-    except WardenError as e:
-        print(f"warden: {e}", file=sys.stderr)
+    except CaduceusError as e:
+        print(f"caduceus: {e}", file=sys.stderr)
         return 1
 
 

@@ -1,8 +1,8 @@
-# Security Hardening — Warden, Adapters, Hermes Bridge
+# Security Hardening — Caduceus, Adapters, Hermes Bridge
 
-This document records the security scan performed while adding the Warden
+This document records the security scan performed while adding the Caduceus
 credential broker, the guard-adapter framework, and the Hermes bridge
-(branch `feat/warden-adapters-hermes`), the findings, and the design
+(branch `feat/caduceus-adapters-hermes`), the findings, and the design
 decisions that make this stack harder to attack than an in-process
 guardrail.
 
@@ -25,7 +25,7 @@ further attacker positions:
 
 ## Scan results on the existing codebase
 
-Patterns audited across `custodian/`, `warden/`, `integrations/`,
+Patterns audited across `custodian/`, `caduceus/`, `integrations/`,
 `dashboard/`, `skills/`:
 
 | Check | Result |
@@ -61,8 +61,8 @@ README's phrase "cannot be forged" overstates this.
 
 We did **not** rewrite the kernel receipt (out of scope, and it would
 churn the receipt test suite). Instead, receipt *authenticity* is
-offered as an opt-in, modular co-signer keyed by the Warden vault — see
-`warden.receipts.sign_receipt` / `verify_signed`. A verifier who holds
+offered as an opt-in, modular co-signer keyed by the Caduceus vault — see
+`caduceus.receipts.sign_receipt` / `verify_signed`. A verifier who holds
 (or is handed) the public verification path can then distinguish a
 genuine kernel receipt from a forged one. Sites that need
 non-repudiation enable it; the kernel stays lean for those that don't.
@@ -76,7 +76,7 @@ throw, and — worse — a naive reader to start a fresh chain from genesis,
 breaking tamper-evidence silently. Fixed two ways: the tail window now
 grows until it provably contains the last full line, and `detail` is
 capped at 512 chars so records stay bounded and value-free. Covered by
-`test_warden.py::test_audit_*`.
+`test_caduceus.py::test_audit_*`.
 
 ## Design decisions that raise the security bar
 
@@ -85,7 +85,7 @@ capped at 512 chars so records stay bounded and value-free. Covered by
 Cyberware's model is "value-free: data and secrets never transit the
 governance layer; they stay in the execution substrate." That keeps
 secrets off the *control plane*, but the secrets still live wherever the
-agent runs. Warden goes further: the secret is **encrypted at rest**
+agent runs. Caduceus goes further: the secret is **encrypted at rest**
 (AES-256-GCM, scrypt), and materializes **only inside the skill
 subprocess's environment**, built by the broker at egress. The agent
 process that proposes the action never has the value in its address
@@ -129,7 +129,7 @@ enforcement never depends on the reminder landing.
 
 ## Residual risk
 
-- Warden's zeroization is best-effort (CPython may copy bytes); the
+- Caduceus's zeroization is best-effort (CPython may copy bytes); the
   vault key and resolved values live briefly in RAM during egress.
 - The audit chain proves records weren't altered or reordered, but tail
   truncation is only detectable against an external anchor (e.g.

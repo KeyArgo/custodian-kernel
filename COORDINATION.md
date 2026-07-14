@@ -25,7 +25,7 @@
 | a5-silo-tests | silo-unit-tests | tests/unit/silo/** | feat/a5-silo-tests | active | 2026-07-05T19:22Z |
 | video-shot-script | video-shot-script | docs/video/shot-script.md | feat/video-shot-script | active | 2026-07-05T19:22Z |
 | positioning | positioning | docs/positioning/** | feat/positioning | active | 2026-07-05T19:22Z |
-| warden | credential-broker (standalone) + adapter-framework + hermes-bridge | warden/**, custodian/adapters/**, integrations/hermes/**, skills/custodian-meta/**, tests/test_warden*.py, tests/test_adapters*.py, tests/test_hermes_bridge*.py, docs/WARDEN.md, docs/ADAPTERS.md, docs/HERMES-BRIDGE.md, docs/SECURITY-HARDENING.md | feat/warden-adapters-hermes | active | 2026-07-14T00:00Z |
+| caduceus | credential-broker (standalone) + adapter-framework + hermes-bridge | caduceus/**, custodian/adapters/**, integrations/hermes/**, skills/custodian-meta/**, tests/test_caduceus*.py, tests/test_adapters*.py, tests/test_hermes_bridge*.py, docs/CADUCEUS.md, docs/ADAPTERS.md, docs/HERMES-BRIDGE.md, docs/SECURITY-HARDENING.md | feat/warden-adapters-hermes (merged to main) | active | 2026-07-14T13:00Z |
 
 ---
 

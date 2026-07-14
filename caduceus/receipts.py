@@ -4,18 +4,18 @@ integrity hash.
 The kernel's :class:`custodian.receipt.GovernedReceipt` fingerprint is an
 *unkeyed* SHA-256: it proves a receipt wasn't accidentally corrupted, but
 not that it was issued by this system (anyone can recompute it). This
-module adds an HMAC signature keyed by a Warden vault subkey, so a holder
+module adds an HMAC signature keyed by a Caduceus vault subkey, so a holder
 of the key can distinguish a genuine receipt from a forged one —
 non-repudiation for sites that need it, off by default for those that
 don't.
 
-This lives in ``warden`` (not the kernel) on purpose: the kernel stays
+This lives in ``caduceus`` (not the kernel) on purpose: the kernel stays
 lean; authenticity is a modular add-on you opt into.
 
 Usage::
 
-    from warden.vault import Vault
-    from warden.receipts import sign_receipt, verify_signed
+    from caduceus.vault import Vault
+    from caduceus.receipts import sign_receipt, verify_signed
 
     vault = Vault.open(passphrase=...)
     sig = sign_receipt(receipt, vault)          # hex HMAC
@@ -26,7 +26,7 @@ from __future__ import annotations
 import hashlib
 import hmac
 
-from warden import crypto
+from caduceus import crypto
 
 
 def _receipt_key(vault) -> bytes:

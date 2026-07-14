@@ -126,13 +126,13 @@ def test_secret_leak_in_output_redacted():
     assert r.allowed and "REDACTED" in c.output
 
 
-def test_secret_leak_warden_tripwire():
-    from warden.broker import LeakSentinel
+def test_secret_leak_caduceus_tripwire():
+    from caduceus.broker import LeakSentinel
     s = LeakSentinel(); s.register("zzt0psecretvalue999")
     guard = SecretLeakGuard(leak_sentinel=s)
     c = ctx("x", output="the value is zzt0psecretvalue999 oops")
     AdapterPipeline([guard]).run_post(c)
-    assert "REDACTED:warden-vault-value" in c.output
+    assert "REDACTED:caduceus-vault-value" in c.output
 
 
 # -- pii ---------------------------------------------------------------------

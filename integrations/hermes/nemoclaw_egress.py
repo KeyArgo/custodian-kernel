@@ -1,6 +1,6 @@
-"""Warden → NemoClaw egress: secrets into a sandbox exec, leaving no trace.
+"""Caduceus → NemoClaw egress: secrets into a sandbox exec, leaving no trace.
 
-Runs a script inside a NemoClaw sandbox with Warden-resolved secrets in
+Runs a script inside a NemoClaw sandbox with Caduceus-resolved secrets in
 its environment, subject to three hard rules:
 
 1. **Never on the command line.** argv is visible to `ps` and shell
@@ -42,7 +42,7 @@ def _env_block(env: Mapping[str, str]) -> str:
 def governed_sandbox_exec(
     executor: NemoClawExecutor,
     broker,
-    refs: Mapping[str, object],   # {ENV_VAR: SecretRef | "warden://name"}
+    refs: Mapping[str, object],   # {ENV_VAR: SecretRef | "caduceus://name"}
     script_path: str,
     *args: str,
     band: str = "L1",
@@ -50,7 +50,7 @@ def governed_sandbox_exec(
 ) -> ExecResult:
     """Run `python3 script_path *args` in the sandbox with secrets injected.
 
-    `broker` is a warden.Broker; every ref resolves under requester
+    `broker` is a caduceus.Broker; every ref resolves under requester
     ``sandbox:<sandbox_name>`` (grant-gated + audited). Raises
     GrantDeniedError before anything touches the sandbox if any ref is
     not granted.

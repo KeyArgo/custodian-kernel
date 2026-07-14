@@ -29,7 +29,7 @@ declared `fail_closed`, else a WARN — the pipeline never dies mid-run.
 |---|---|---|
 | `spend-sentinel` | money | duplicate spends, spend loops, cap-probing |
 | `prompt-injection-guard` | security | instruction-override / exfil / role-hijack payloads in tool args (incl. base64-smuggled) |
-| `secret-leak-guard` | security | credentials in args (deny) or output (redact); Warden-value tripwire |
+| `secret-leak-guard` | security | credentials in args (deny) or output (redact); Caduceus-value tripwire |
 | `kernel-self-protection` | security | writes to policy, vault, kill switch, adapters, or the skills tree |
 | `pii-redactor` | privacy | emails, phones, SSNs, Luhn-checked cards, IPs |
 | `context-anchor` | guardrail | tool fences + session budget, enforced regardless of what the model remembers |
