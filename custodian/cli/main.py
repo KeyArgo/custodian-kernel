@@ -9,7 +9,8 @@ from custodian.cli import (
 )
 from custodian.cli import cmd_tools, cmd_demo_verify, cmd_earn_and_buy
 from custodian.cli import cmd_status_enhanced, cmd_poison_tests, cmd_beancount, cmd_confirm
-from custodian.cli import cmd_demo_receipt
+from custodian.cli import cmd_demo_receipt, cmd_generate_report
+from custodian.cli import cmd_adapters
 from custodian.config import CustodianConfig
 
 
@@ -72,7 +73,7 @@ EXPORT
 VERIFY EVERYTHING
   python3 verify_kit.py                        4-phase self-verifying proof:
                                                re-introduces the self-approval bug,
-                                               runs 1,245 tests, pulls live Stripe
+                                               runs 1,350 tests, pulls live Stripe
                                                data, tests the kill switch end-to-end.
 
 DEMO COMMANDS (no credentials, no side effects)
@@ -279,6 +280,9 @@ def main(argv: list[str] | None = None) -> int:
     ts = tools_sub.add_parser("summary", help="Print tool count and band breakdown as JSON")
     ts.set_defaults(func=cmd_tools.cmd_tools_summary)
 
+    # ── adapters ──────────────────────────────────────────────────────────────
+    cmd_adapters.register(sub)
+
     # ── demo ──────────────────────────────────────────────────────────────────
     demo_parser = sub.add_parser(
         "demo",
@@ -306,12 +310,14 @@ def main(argv: list[str] | None = None) -> int:
 
     ds = demo_sub.add_parser(
         "cycle",
-        help="Full earn→gate→GPU spend→verify economic loop",
+        help="Full earn→kernel gates AI→AI generates report→receipt loop",
         description=(
-            "Shows the complete economic cycle: agent earns $0.50 (test-mode), "
-            "the kernel gates the Modal GPU spend, the GPU job runs (real if "
-            "MODAL_TOKEN_ID is set, simulated otherwise), and the claim verifier "
-            "proves both sides of the ledger match. No real money moves."
+            "Shows the complete economic cycle: customer pays $35 (real Stripe PI "
+            "if STRIPE_SECRET_KEY is set), the kernel gates the AI inference spend, "
+            "Nemotron generates a governance report from customer inputs, and the "
+            "claim verifier proves both sides. Set OPENROUTER_API_KEY or "
+            "NVIDIA_API_KEY to enable live inference; without them shows the kernel "
+            "gate only."
         ),
     )
     ds.set_defaults(func=cmd_earn_and_buy.run)
@@ -337,6 +343,23 @@ def main(argv: list[str] | None = None) -> int:
         ),
     )
     ds.set_defaults(func=cmd_demo_receipt.run)
+
+    # ── generate-report ───────────────────────────────────────────────────────
+    p = sub.add_parser(
+        "generate-report",
+        help="AI generates a governance package from customer inputs",
+        description=(
+            "Kernel gates the inference spend, then Nemotron reads the customer's "
+            "tool list and produces policy.yaml, threat-model.md, audit-report.md, "
+            "and a SHA-256 delivery-receipt.json. Requires OPENROUTER_API_KEY or "
+            "NVIDIA_API_KEY."
+        ),
+    )
+    p.add_argument("--input", default=None, help="JSON file with customer inputs")
+    p.add_argument("--out", default="./delivery", help="Output directory (default: ./delivery)")
+    p.add_argument("--pi-id", default="pi_demo_standalone", help="Stripe PaymentIntent ID")
+    p.add_argument("--amount", type=float, default=35.00, help="Earn amount (default: 35.00)")
+    p.set_defaults(func=cmd_generate_report.run)
 
     args = parser.parse_args(argv)
     try:

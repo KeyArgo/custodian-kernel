@@ -114,12 +114,18 @@ _ENV_REQUIREMENTS: dict[str, list[str]] = {
 }
 
 
-def _is_configured(name: str, skill_meta_flag: bool) -> bool:
-    """Return True if the tool's required env vars are all present."""
+def _is_configured(name: str, skill_meta_flag: bool,
+                   env: Optional[dict] = None) -> bool:
+    """Return True if the tool's required env vars are all present.
+
+    `env` overrides os.environ when given — a Warden-injected environment
+    counts as configured even though the agent's own env has no keys.
+    """
     reqs = _ENV_REQUIREMENTS.get(name)
     if reqs is None:
         return skill_meta_flag  # no known requirement → trust SKILL.md
-    return all(os.environ.get(v) for v in reqs)
+    source = env if env is not None else os.environ
+    return all(source.get(v) for v in reqs)
 
 
 @dataclass
@@ -198,17 +204,22 @@ class CustodianTool:
         except Exception:
             return None  # kernel unavailable → allow through
 
-    def invoke(self, **kwargs) -> dict:
+    def invoke(self, _env: Optional[dict] = None, **kwargs) -> dict:
         """Run the skill's execute.py script with kwargs as --key value args.
 
         For L2/L3/L4 tools the kernel's decide() is called first. If it
         returns anything other than AUTONOMOUS the tool does not execute.
 
+        `_env`, when given, is the complete environment for the script
+        subprocess (Warden egress injection: the credential exists in the
+        skill's process, never the agent's). Defaults to inheriting the
+        parent environment, matching the old behavior.
+
         Returns dict with at minimum {"ok": bool}.
         """
         from custodian import bus as _event_bus
 
-        if not _is_configured(self.name, self.configured):
+        if not _is_configured(self.name, self.configured, env=_env):
             return {
                 "ok": False,
                 "stub": True,
@@ -266,6 +277,7 @@ class CustodianTool:
             result = subprocess.run(
                 cmd, capture_output=True, text=True, timeout=30,
                 cwd=str(self.skill_dir) if self.skill_dir else None,
+                env=_env,
             )
             try:
                 parsed = json.loads(result.stdout.strip())
@@ -363,11 +375,12 @@ class ToolRegistry:
             "by_band": by_band,
         }
 
-    def run(self, name: str, **kwargs) -> dict:
+    def run(self, name: str, _env: Optional[dict] = None, **kwargs) -> dict:
         """Convenience: look up a tool by name and invoke it.
 
         Returns a structured error dict (never raises) when the tool is
         unknown so callers can branch on `ok` without try/except plumbing.
+        `_env` is forwarded to CustodianTool.invoke (Warden egress).
         """
         tool = self.get(name)
         if tool is None:
@@ -376,7 +389,7 @@ class ToolRegistry:
                 "error": f"tool not found: {name}",
                 "tool": name,
             }
-        return tool.invoke(**kwargs)
+        return tool.invoke(_env=_env, **kwargs)
 
 
 def default_registry() -> ToolRegistry:

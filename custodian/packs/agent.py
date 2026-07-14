@@ -24,15 +24,12 @@ a fresh model call.
 from __future__ import annotations
 
 import json
-import re
 import urllib.request
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional, Protocol
 
 from custodian.packs.base import Envelope
-
-_JSON_BLOCK = re.compile(r"\{.*\}", re.DOTALL)
 
 
 class LLMClient(Protocol):
@@ -104,11 +101,22 @@ def parse_envelope(raw: str, *, fallback_meta: Optional[dict] = None) -> Envelop
     Envelope. `fallback_meta` supplies case_id/customer_id/order_id/amount/
     requested_action if the model omitted them (it should not, but we own those
     facts -- they are request metadata, not model judgment)."""
-    match = _JSON_BLOCK.search(raw)
-    if not match:
+    start = raw.find("{")
+    if start == -1:
         raise EnvelopeParseError(f"no JSON object found in model output: {raw[:200]!r}")
     try:
-        data = json.loads(match.group(0))
+        # Parse only the first complete JSON object and ignore anything the
+        # model appends after it (live bug 2026-07-05: despite the "output
+        # ONLY a single JSON object, no prose" instruction, the model
+        # sometimes echoes the schema example or adds trailing commentary
+        # containing more braces. The previous greedy regex `\{.*\}` matched
+        # from the first `{` to the LAST `}` anywhere in the whole response,
+        # splicing that trailing garbage onto the real object and producing
+        # invalid JSON -- every custom /triage submission that triggered this
+        # silently fell back to a generic "escalate_ambiguous" placeholder,
+        # which looked like the demo always escalating rather than a parse
+        # failure. raw_decode stops at the end of the first valid object.)
+        data, _ = json.JSONDecoder().raw_decode(raw, start)
     except json.JSONDecodeError as e:
         raise EnvelopeParseError(f"model output was not valid JSON: {e}") from e
     if fallback_meta:

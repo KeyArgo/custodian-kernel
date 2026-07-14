@@ -1,0 +1,9 @@
+pyyaml
+requests
+
+[dev]
+pytest
+pytest-cov
+
+[warden]
+cryptography>=42.0

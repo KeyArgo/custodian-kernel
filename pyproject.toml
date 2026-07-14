@@ -1,6 +1,6 @@
 [project]
 name = "custodian-kernel"
-version = "0.2.0"
+version = "0.3.0"
 description = "Kernel-enforced authority and spend platform for AI agents"
 requires-python = ">=3.11"
 readme = "README.md"
@@ -32,17 +32,21 @@ dev = [
     "pytest",
     "pytest-cov",
 ]
+warden = [
+    "cryptography>=42.0",
+]
 
 [project.scripts]
 custodian = "custodian.cli.main:main"
 custodian-verify = "custodian.verify_kit:main"
+warden = "warden.cli:main"
 
 [build-system]
 requires = ["setuptools>=64"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]
-include = ["custodian*"]
+include = ["custodian*", "warden*"]
 
 [tool.setuptools.package-data]
 "custodian" = ["bundled_skills/**/*", "bundled_skills/**", "packs/**/corpus/*.json", "packs/**/*.yaml", "packs/**/*.json"]

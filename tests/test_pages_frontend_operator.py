@@ -93,3 +93,55 @@ def test_treasury_handles_real_authority_payload():
                   "approved_override_spent", "net_pnl", "per_action_cap",
                   "session_cap", "autonomous_remaining", "band"):
         assert field in html, f"JS reads authority.{field}"
+
+
+def test_operator_code_flow_does_not_fake_prefill():
+    """If the page says a code is auto-filled, the JS must really populate the input.
+
+    The operator flow now has to support both modes:
+    - current secure path: the code lives only on the phone, so the UI tells
+      the operator to type it manually
+    - legacy/live fallback: if the backend does return a code, the JS may
+      populate the input explicitly
+    """
+    html = read_operator()
+    assert "The code is pre-filled from the SMS" not in html
+    assert "Code is pre-filled from the SMS notification above" not in html
+    assert "enter code from your phone" in html.lower()
+    assert "document.getElementById(approveInputId).value = d.code" in html
+
+
+def test_live_audit_feed_esc_function_is_in_scope():
+    """Regression: `esc` (the HTML escaper) must be defined at the same
+    scope as refreshLive() and refreshOpFeed() — both of which use it.
+
+    The bug: previously `const esc = ...` was inside the DOMContentLoaded
+    callback closure, but refreshLive() and refreshOpFeed() are defined
+    at the script-block top level and were called at script-eval time
+    (before DOMContentLoaded). The result: ReferenceError "esc is not
+    defined", caught by the try/catch, the live audit feed showed
+    "⚠ Live feed unreachable: esc is not defined".
+
+    Fix: `esc` is now a top-level constant in the same <script> block,
+    defined BEFORE the DOMContentLoaded callback. The inner copy inside
+    the closure has been removed so there is exactly one definition.
+    """
+    html = read_operator()
+    # Must be exactly one definition
+    n_defined = html.count("const esc = s =>")
+    assert n_defined == 1, f"expected exactly 1 esc definition, found {n_defined}"
+
+    # Find the position of the `const esc` and the DOMContentLoaded callback
+    pos_esc = html.index("const esc = s =>")
+    pos_dom = html.index("document.addEventListener('DOMContentLoaded'")
+    assert pos_esc < pos_dom, (
+        "const esc must be defined BEFORE the DOMContentLoaded callback so that "
+        "top-level calls to refreshOpFeed() and refreshLive() can find it. "
+        f"Got esc at {pos_esc}, DOMContentLoaded at {pos_dom}."
+    )
+
+    # refreshLive and refreshOpFeed must use esc (i.e. the dependency still exists)
+    assert "function refreshLive" in html or "async function refreshLive" in html
+    assert "function refreshOpFeed" in html or "async function refreshOpFeed" in html
+    # esc must be referenced multiple times in the script
+    assert html.count("esc(") >= 5, "expected multiple uses of esc() in the script"

@@ -40,3 +40,31 @@ class StorageError(CustodianError):
 
 class ConfigError(CustodianError):
     """Custodian's own configuration is invalid or incomplete."""
+
+
+class NemoClawError(CustodianError):
+    """Base class for NemoClaw sandbox adapter errors.
+
+    Exists so a caller can distinguish "the sandbox infrastructure itself
+    is broken" from "the governed script ran and failed on its own terms" —
+    prior to this, both looked like the same opaque subprocess stderr blob.
+    """
+
+
+class SandboxGatewayDownError(NemoClawError):
+    """The NemoClaw sandbox gateway is unreachable (transport/connection
+    failure reaching the sandbox), not a failure of the script being run.
+    Recoverable via `nemohermes <sandbox> status` or `recover`."""
+
+
+class SandboxTimeoutError(NemoClawError):
+    """The sandboxed command did not complete within the given timeout."""
+
+
+class SandboxScriptError(NemoClawError):
+    """The sandbox itself was reachable and the script ran, but exited
+    non-zero for its own reasons (a real traceback, a real validation
+    failure). Only raised when the caller opts in via `run(..., check=True)`
+    — by default `run()` returns this as a non-ok ExecResult instead, since
+    an ordinary script failure is meaningful data the caller usually wants
+    to inspect (e.g. render to a demo UI), not an exception to catch."""
