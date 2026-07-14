@@ -1,9 +1,9 @@
 pyyaml
 requests
 
+[caduceus]
+cryptography>=42.0
+
 [dev]
 pytest
 pytest-cov
-
-[warden]
-cryptography>=42.0

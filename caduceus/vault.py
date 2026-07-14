@@ -6,7 +6,7 @@ file learns only its size. Writes are atomic (tmp file + rename in the
 same directory) and permission-hardened (0700 dir, 0600 file).
 
 The vault is the *human's* API surface. Agents never touch this class;
-they go through :class:`warden.broker.Broker`, which enforces grants
+they go through :class:`caduceus.broker.Broker`, which enforces grants
 and audits every access.
 """
 from __future__ import annotations
@@ -20,20 +20,20 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Iterator, Optional
 
-from warden import crypto
-from warden.errors import (
+from caduceus import crypto
+from caduceus.errors import (
     UnknownRefError,
     VaultCorruptError,
     VaultLockedError,
     VaultMissingError,
-    WardenError,
+    CaduceusError,
 )
-from warden.refs import SecretRef, valid_name
+from caduceus.refs import SecretRef, valid_name
 
-DEFAULT_VAULT_DIR = Path(os.environ.get("WARDEN_HOME", "~/.warden")).expanduser()
-VAULT_FILENAME = "vault.warden"
-PASSPHRASE_ENV = "WARDEN_PASSPHRASE"
-KEYFILE_ENV = "WARDEN_KEYFILE"
+DEFAULT_VAULT_DIR = Path(os.environ.get("CADUCEUS_HOME", "~/.caduceus")).expanduser()
+VAULT_FILENAME = "vault.caduceus"
+PASSPHRASE_ENV = "CADUCEUS_PASSPHRASE"
+KEYFILE_ENV = "CADUCEUS_KEYFILE"
 
 
 @dataclass
@@ -103,7 +103,7 @@ class Vault:
                keyfile: Optional[Path] = None) -> "Vault":
         path = Path(path) if path else cls.default_path()
         if path.exists():
-            raise WardenError(f"a vault already exists at {path}")
+            raise CaduceusError(f"a vault already exists at {path}")
         crypto.require_crypto()
         params = crypto.KdfParams.fresh()
         key = _load_key_material(passphrase, keyfile, params)
@@ -116,7 +116,7 @@ class Vault:
              keyfile: Optional[Path] = None) -> "Vault":
         path = Path(path) if path else cls.default_path()
         if not path.exists():
-            raise VaultMissingError(f"no vault at {path} — run `warden init` first")
+            raise VaultMissingError(f"no vault at {path} — run `caduceus init` first")
         blob = path.read_bytes()
         header, _, _ = crypto.split_blob(blob)
         params = crypto.KdfParams.from_header(header)
@@ -133,7 +133,7 @@ class Vault:
     @classmethod
     def open_from_env(cls, path: Optional[Path] = None,
                       interactive: bool = False) -> "Vault":
-        """Unlock using WARDEN_KEYFILE / WARDEN_PASSPHRASE, optionally
+        """Unlock using CADUCEUS_KEYFILE / CADUCEUS_PASSPHRASE, optionally
         falling back to an interactive prompt (CLI use only)."""
         keyfile = os.environ.get(KEYFILE_ENV)
         passphrase = os.environ.get(PASSPHRASE_ENV)
@@ -185,9 +185,9 @@ class Vault:
     def add(self, name: str, value: str, kind: str = "secret", profile: str = "default",
             env_var: Optional[str] = None, note: str = "", overwrite: bool = False) -> SecretRef:
         if not valid_name(name):
-            raise WardenError(f"invalid secret name {name!r}")
+            raise CaduceusError(f"invalid secret name {name!r}")
         if name in self._entries and not overwrite:
-            raise WardenError(f"entry {name!r} already exists (use overwrite/edit)")
+            raise CaduceusError(f"entry {name!r} already exists (use overwrite/edit)")
         prior = self._entries.get(name)
         entry = Entry(name=name, value=value, kind=kind, profile=profile,
                       env_var=env_var or _default_env_var(name), note=note)

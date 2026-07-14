@@ -1,4 +1,4 @@
 [console_scripts]
+caduceus = caduceus.cli:main
 custodian = custodian.cli.main:main
 custodian-verify = custodian.verify_kit:main
-warden = warden.cli:main

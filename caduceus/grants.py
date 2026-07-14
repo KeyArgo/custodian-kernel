@@ -5,7 +5,7 @@ A requester is a namespaced identity string:
 * ``skill:stripe-spend``   — a Hermes/Custodian skill by name
 * ``adapter:spend-sentinel`` — a Custodian adapter
 * ``sandbox:hermes-hackathon`` — a NemoClaw sandbox
-* ``user:cli``             — the human at the Warden CLI
+* ``user:cli``             — the human at the Caduceus CLI
 
 Deny-by-default: with no matching grant, resolution fails. Wildcards are
 allowed only in the *ref* position (``stripe/*``), never for requesters —
@@ -21,7 +21,7 @@ import time
 from dataclasses import dataclass, field, asdict
 from typing import Optional
 
-from warden.errors import GrantDeniedError, WardenError
+from caduceus.errors import GrantDeniedError, CaduceusError
 
 # Custodian authority bands, lowest to highest.
 BAND_ORDER = ["L0", "L1", "L2", "L3", "L4"]
@@ -31,7 +31,7 @@ def band_index(band: str) -> int:
     try:
         return BAND_ORDER.index(band)
     except ValueError:
-        raise WardenError(f"unknown band {band!r} (expected one of {BAND_ORDER})")
+        raise CaduceusError(f"unknown band {band!r} (expected one of {BAND_ORDER})")
 
 
 @dataclass
@@ -47,7 +47,7 @@ class Grant:
 
     def __post_init__(self) -> None:
         if ":" not in self.requester or "*" in self.requester:
-            raise WardenError(
+            raise CaduceusError(
                 f"requester must be an exact 'namespace:name' id, got {self.requester!r}"
             )
         band_index(self.max_band)  # validate

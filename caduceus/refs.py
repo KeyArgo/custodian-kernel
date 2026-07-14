@@ -1,6 +1,6 @@
 """SecretRef — the zero-value pointer an agent is allowed to hold.
 
-A ref is just ``warden://<name>``. It is safe everywhere: logs, model
+A ref is just ``caduceus://<name>``. It is safe everywhere: logs, model
 context, tool arguments, tracebacks. Nothing about the underlying value
 is recoverable from it. ``repr()`` and ``str()`` are both value-free by
 construction — there is no code path that can put a secret in one.
@@ -10,7 +10,7 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 
-SCHEME = "warden://"
+SCHEME = "caduceus://"
 # Names look like env-var-ish slugs: stripe_sk, openrouter/api_key, ...
 _NAME_RE = re.compile(r"^[a-zA-Z0-9][a-zA-Z0-9_.\-/]{0,127}$")
 
@@ -21,7 +21,7 @@ def valid_name(name: str) -> bool:
 
 @dataclass(frozen=True)
 class SecretRef:
-    """A pointer to a secret stored in a Warden vault."""
+    """A pointer to a secret stored in a Caduceus vault."""
 
     name: str
 
@@ -43,14 +43,14 @@ class SecretRef:
 
     @classmethod
     def parse(cls, text: str) -> "SecretRef":
-        """Parse ``warden://name`` (or a bare name) into a SecretRef."""
+        """Parse ``caduceus://name`` (or a bare name) into a SecretRef."""
         if text.startswith(SCHEME):
             text = text[len(SCHEME):]
         return cls(text)
 
 
 def find_refs(text: str) -> list[SecretRef]:
-    """Extract every warden:// ref appearing in a blob of text — used by
+    """Extract every caduceus:// ref appearing in a blob of text — used by
     the Hermes bridge to discover which secrets a tool call wants."""
     out = []
     for m in re.finditer(re.escape(SCHEME) + r"([a-zA-Z0-9][a-zA-Z0-9_.\-/]{0,127})", text):

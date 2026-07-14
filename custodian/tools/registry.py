@@ -118,7 +118,7 @@ def _is_configured(name: str, skill_meta_flag: bool,
                    env: Optional[dict] = None) -> bool:
     """Return True if the tool's required env vars are all present.
 
-    `env` overrides os.environ when given — a Warden-injected environment
+    `env` overrides os.environ when given — a Caduceus-injected environment
     counts as configured even though the agent's own env has no keys.
     """
     reqs = _ENV_REQUIREMENTS.get(name)
@@ -211,7 +211,7 @@ class CustodianTool:
         returns anything other than AUTONOMOUS the tool does not execute.
 
         `_env`, when given, is the complete environment for the script
-        subprocess (Warden egress injection: the credential exists in the
+        subprocess (Caduceus egress injection: the credential exists in the
         skill's process, never the agent's). Defaults to inheriting the
         parent environment, matching the old behavior.
 
@@ -380,7 +380,7 @@ class ToolRegistry:
 
         Returns a structured error dict (never raises) when the tool is
         unknown so callers can branch on `ok` without try/except plumbing.
-        `_env` is forwarded to CustodianTool.invoke (Warden egress).
+        `_env` is forwarded to CustodianTool.invoke (Caduceus egress).
         """
         tool = self.get(name)
         if tool is None:
