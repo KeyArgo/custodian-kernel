@@ -10,6 +10,7 @@ from custodian.cli import (
 from custodian.cli import cmd_tools, cmd_demo_verify, cmd_earn_and_buy
 from custodian.cli import cmd_status_enhanced, cmd_poison_tests, cmd_beancount, cmd_confirm
 from custodian.cli import cmd_demo_receipt, cmd_generate_report
+from custodian.cli import cmd_adapters
 from custodian.config import CustodianConfig
 
 
@@ -278,6 +279,9 @@ def main(argv: list[str] | None = None) -> int:
 
     ts = tools_sub.add_parser("summary", help="Print tool count and band breakdown as JSON")
     ts.set_defaults(func=cmd_tools.cmd_tools_summary)
+
+    # ── adapters ──────────────────────────────────────────────────────────────
+    cmd_adapters.register(sub)
 
     # ── demo ──────────────────────────────────────────────────────────────────
     demo_parser = sub.add_parser(

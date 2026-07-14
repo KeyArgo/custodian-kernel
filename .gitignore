@@ -26,3 +26,4 @@ video-build/newaudio
 video-build/" is .wav"
 # delivery/ contains runtime Stripe PaymentIntent IDs — not source
 delivery/
+.venv-dev/
