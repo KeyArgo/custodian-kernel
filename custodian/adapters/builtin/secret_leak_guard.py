@@ -40,11 +40,13 @@ _PATTERNS: list[tuple[re.Pattern, str]] = [
 
 _TOKEN_SPLIT = re.compile(r"[\s\"'`,;=(){}\[\]<>/\\]+")
 
-# A ref is a zero-value pointer, so it is exempt from the high-entropy check —
-# a long secret name is not a leaked secret. The pre-rename scheme stays in the
-# tuple because refs minted before the rename are still in circulation; without
-# it they read as leaked credentials and get denied on sight.
-_REF_SCHEME_PREFIXES = ("paladin://", "warden://")
+# A ref is a zero-value pointer, so its name is exempt from the high-entropy
+# check — a long secret name is not a leaked secret. Matched against the RAW
+# text, never against tokens: _TOKEN_SPLIT deliberately splits on "/" (see
+# _findings), so no token ever retains a "paladin://" prefix and a
+# startswith() test here is unreachable dead code. The pre-rename scheme is
+# accepted because refs minted before the rename are still in circulation.
+_REF_RE = re.compile(r"(?:paladin|warden)://([a-zA-Z0-9][a-zA-Z0-9_.\-/]{0,127})")
 
 
 def _entropy(s: str) -> float:
@@ -77,11 +79,19 @@ def _scan(text: str, sentinel) -> list[tuple[str, str]]:
     for pattern, label in _PATTERNS:
         for m in pattern.finditer(text):
             findings.append((m.group(0), label))
+    # Ref names, collected from the raw text before tokenizing (see _REF_RE).
+    # A name may itself contain '/' (openrouter/api_key), so split it the same
+    # way the text is split or its segments won't match.
+    exempt = set()
+    for m in _REF_RE.finditer(text):
+        exempt.update(_TOKEN_SPLIT.split(m.group(1)))
     for token in _TOKEN_SPLIT.split(text):
+        # Order matters: a token the sentinel has seen is a real vault VALUE
+        # and stays a finding even if it also appears as a ref name.
         if sentinel is not None and sentinel.seen(token):
             findings.append((token, "paladin-vault-value"))
         elif (len(token) >= 32 and _entropy(token) >= 4.5
-              and not token.startswith(_REF_SCHEME_PREFIXES)):
+              and token not in exempt):
             findings.append((token, "high-entropy-token"))
     return findings
 

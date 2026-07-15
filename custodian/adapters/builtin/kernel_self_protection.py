@@ -41,10 +41,15 @@ _SHELL_WRITE = re.compile(r"(>|>>|\btee\b|\bmv\b|\bcp\b|\brm\b|\bsed\s+-i|\bchmo
 
 def _default_protected() -> list[str]:
     home = os.path.expanduser("~")
+    # `or` not a get() default: an env var set to "" normpaths to "." and
+    # matches nothing, so an empty PALADIN_HOME would contribute a hole to the
+    # protected list rather than a path.
+    paladin_home = os.environ.get("PALADIN_HOME") or os.path.join(home, ".paladin")
+    warden_home = os.environ.get("WARDEN_HOME") or os.path.join(home, ".warden")
     return [
         os.path.join(home, ".custodian"),
         os.path.join(home, ".paladin"),
-        os.environ.get("PALADIN_HOME", os.path.join(home, ".paladin")),
+        paladin_home,
         # The pre-rename home is protected unconditionally, not only when
         # PALADIN_HOME is unset. This list must cover wherever the vault
         # *actually* is, which is not always where this version would put it:
@@ -54,7 +59,7 @@ def _default_protected() -> list[str]:
         # unprotected next to it -- a fail-open in the one adapter whose job
         # is stopping the agent from editing what governs it.
         os.path.join(home, ".warden"),
-        os.environ.get("WARDEN_HOME", os.path.join(home, ".warden")),
+        warden_home,
         "skills", "bundled_skills",
         "SOUL.md", "policy.yaml", "COORDINATION.md",
     ]

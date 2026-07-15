@@ -68,7 +68,13 @@ def default_vault_dir() -> Path:
     exist and a pre-rename ``~/.warden`` does, in which case the existing
     vault is used rather than shadowed by an empty new one."""
     explicit = _env(HOME_ENV, LEGACY_HOME_ENV)
-    if explicit is not None:
+    # Truthy, not `is not None`: Path("").expanduser() is Path("."), so an
+    # empty PALADIN_HOME would silently put the vault in the current working
+    # directory -- usually whatever repo the agent happens to be in. An empty
+    # home is not a location; fall through to the default. (_env still returns
+    # "" so the empty value shadows the legacy variable rather than promoting
+    # it -- it just doesn't name a directory.)
+    if explicit:
         return Path(explicit).expanduser()
     current = Path("~/.paladin").expanduser()
     if not current.exists() and Path("~/.warden").expanduser().exists():
@@ -250,7 +256,7 @@ class Vault:
         if not path.exists():
             raise VaultMissingError(f"no vault at {path} — run `paladin init` first")
         blob = path.read_bytes()
-        header, _, _ = crypto.split_blob(blob)
+        _, header, _, _ = crypto.split_blob(blob)
         params = crypto.KdfParams.from_header(header)
         key = _load_key_material(passphrase, keyfile, params)
         plaintext = crypto.decrypt_blob(key, blob)

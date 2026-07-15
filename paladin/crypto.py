@@ -41,6 +41,19 @@ except ImportError:  # pragma: no cover
     _HAVE_CRYPTO = False
 
 MAGIC = b"PALADIN1\n"
+
+# The pre-rename format magic. This is NOT an identifier -- it is a file-format
+# version string baked into the first bytes of every vault ever written, and it
+# is bound as AEAD associated data in encrypt_blob/decrypt_blob below. Rewriting
+# it (as a blind rename did once) does not merely fail the magic sniff: it
+# changes the AAD, so the AEAD tag no longer authenticates and every existing
+# vault becomes permanently undecryptable. The plaintext is fine; only the
+# literal is wrong, and the operator is told their healthy file is corrupt.
+#
+# Read both, write MAGIC. A legacy vault therefore opens, and upgrades to the
+# current format the next time it is saved.
+LEGACY_MAGIC = b"WARDEN1\n"
+MAGICS = (MAGIC, LEGACY_MAGIC)
 KEY_LEN = 32
 NONCE_LEN = 12
 SALT_LEN = 16
@@ -104,7 +117,12 @@ def derive_key(passphrase: str, params: KdfParams) -> bytes:
 def subkey(master_key: bytes, purpose: bytes) -> bytes:
     """Derive a purpose-bound subkey (e.g. the audit HMAC key) so the
     vault key itself is never used in more than one construction."""
-    return hmac.new(master_key, b"paladin-subkey:" + purpose, hashlib.sha256).digest()
+    # This prefix is a cryptographic domain separator, not a name. It is an
+    # input to every audit-chain HMAC and receipt signature ever produced, and
+    # nothing renders it to a user. Renaming it buys exactly nothing and makes
+    # `paladin audit verify` report tampering on untampered chains and
+    # verify_signed() reject every genuine pre-rename receipt. It stays as-is.
+    return hmac.new(master_key, b"warden-subkey:" + purpose, hashlib.sha256).digest()
 
 
 def encrypt_blob(key: bytes, plaintext: bytes, header: dict) -> bytes:
@@ -124,21 +142,29 @@ def decrypt_blob(key: bytes, blob: bytes) -> bytes:
     """Reverse of encrypt_blob. Raises VaultLockedError on a wrong key
     or any tampering (GCM authentication failure)."""
     require_crypto()
-    header, nonce, ct = split_blob(blob)
+    magic, header, nonce, ct = split_blob(blob)
     header_bytes = json.dumps(header, sort_keys=True).encode("utf-8")
     try:
-        return AESGCM(key).decrypt(nonce, ct, MAGIC + header_bytes)
+        # AAD is the magic THIS FILE was written with, never the module
+        # constant -- a legacy vault authenticates under LEGACY_MAGIC.
+        return AESGCM(key).decrypt(nonce, ct, magic + header_bytes)
     except Exception as e:  # InvalidTag — deliberately not distinguished further
         raise VaultLockedError(
             "vault failed to unlock: wrong passphrase/keyfile, or the file was tampered with"
         ) from e
 
 
-def split_blob(blob: bytes) -> tuple[dict, bytes, bytes]:
-    """Parse the on-disk format into (header, nonce, ciphertext)."""
-    if not blob.startswith(MAGIC):
+def split_blob(blob: bytes) -> tuple[bytes, dict, bytes, bytes]:
+    """Parse the on-disk format into (magic, header, nonce, ciphertext).
+
+    The magic is returned because it is AEAD associated data: the caller must
+    authenticate against the one the file actually carries."""
+    for magic in MAGICS:
+        if blob.startswith(magic):
+            break
+    else:
         raise VaultCorruptError("not a Paladin vault (bad magic)")
-    rest = blob[len(MAGIC):]
+    rest = blob[len(magic):]
     sep = rest.find(b"\n")
     if sep < 0 or len(rest) < sep + 1 + NONCE_LEN + 16:
         raise VaultCorruptError("vault file is truncated")
@@ -147,7 +173,7 @@ def split_blob(blob: bytes) -> tuple[dict, bytes, bytes]:
     except (UnicodeDecodeError, json.JSONDecodeError) as e:
         raise VaultCorruptError("vault header is not valid JSON") from e
     body = rest[sep + 1:]
-    return header, body[:NONCE_LEN], body[NONCE_LEN:]
+    return magic, header, body[:NONCE_LEN], body[NONCE_LEN:]
 
 
 def wipe(buf: bytearray) -> None:
