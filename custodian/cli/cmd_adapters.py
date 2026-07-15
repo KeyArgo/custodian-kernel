@@ -49,6 +49,23 @@ def cmd_adapters_list(args) -> int:
 
 def cmd_adapters_enable(args) -> int:
     reg = _registry(args)
+    if getattr(args, "all", False):
+        already = {e["name"] for e in reg.enabled()}
+        names = sorted(reg.builtin_classes())
+        newly_enabled = [name for name in names if name not in already]
+        for name in newly_enabled:
+            reg.enable(name)
+        if newly_enabled:
+            print(f"enabled {len(newly_enabled)} built-in adapter(s): {', '.join(newly_enabled)}")
+        skipped = sorted(already & set(names))
+        if skipped:
+            print(f"already enabled, left as-is: {', '.join(skipped)}")
+        if not newly_enabled and not skipped:
+            print("no built-in adapters found")
+        return 0
+    if not args.name:
+        print("error: give an adapter name, or pass --all", file=sys.stderr)
+        return 1
     config = json.loads(args.config) if args.config else None
     try:
         reg.enable(args.name, config=config)
@@ -120,8 +137,9 @@ def register(sub) -> None:
     sp.set_defaults(func=cmd_adapters_list)
 
     sp = asub.add_parser("enable", help="Enable an adapter")
-    sp.add_argument("name")
+    sp.add_argument("name", nargs="?", help="Adapter name (omit with --all)")
     sp.add_argument("--config", help="JSON config object for the adapter")
+    sp.add_argument("--all", action="store_true", help="Enable every built-in adapter")
     sp.set_defaults(func=cmd_adapters_enable)
 
     sp = asub.add_parser("disable", help="Disable an adapter")

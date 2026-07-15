@@ -261,3 +261,21 @@ class TestAudit:
         out = capsys.readouterr().out
         assert out.count("denied:") == 1
         assert "$2.00" in out  # the most recent of the two, since audit shows the tail
+
+
+class TestExitCodePropagation:
+    """Regression test: main() used to discard args.func(args)'s return value
+    and always return 0, so a subcommand reporting a handled error (return 1,
+    not an exception) silently looked like success to any script checking $?.
+    """
+
+    def test_subcommand_error_return_code_propagates(self, tmp_path):
+        # `adapters enable` with neither a name nor --all is a handled error
+        # (returns 1), not a raised exception — exactly the case that was
+        # previously swallowed into an incorrect 0.
+        rc = main(["adapters", "enable"])
+        assert rc == 1
+
+    def test_subcommand_success_still_returns_zero(self, state_dir):
+        rc = main(["status", "--state-dir", str(state_dir)])
+        assert rc == 0

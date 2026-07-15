@@ -303,3 +303,29 @@ def test_registry_install_and_tamper_pin(tmp_path):
     installed.write_text("# EVIL\n" + installed.read_text())
     with pytest.raises(AdapterLoadError):
         reg.load_pipeline()
+
+
+def test_scope_path_glob():
+    f = ScopeFence({"path_prefixes": ["/tmp/task"], "path_globs": ["*.log", "*.csv"]})
+    pipe = AdapterPipeline([f])
+    assert pipe.run_pre(ctx("file-read", {"path": "/tmp/task/out.log"})).allowed
+    r = pipe.run_pre(ctx("file-read", {"path": "/tmp/task/secrets.db"}))
+    assert not r.allowed and "pattern" in r.denials[0].reason
+
+
+def test_scope_glob_without_prefix_refused():
+    # Regression: path_globs alone used to provide zero real containment
+    # (any path anywhere matching the glob was allowed) despite the
+    # class's own docstring promising containment comes from prefixes.
+    # Now refused at construction instead of silently under-enforcing.
+    with pytest.raises(ValueError, match="path_globs requires path_prefixes"):
+        ScopeFence({"path_globs": ["*.md"]})
+
+
+def test_scope_bare_filename_not_bypassed():
+    # Regression: a value with no '/' at all (e.g. a bare relative
+    # filename) used to skip the containment check entirely.
+    f = ScopeFence({"path_prefixes": ["/tmp/task"]})
+    pipe = AdapterPipeline([f])
+    r = pipe.run_pre(ctx("file-read", {"path": "secrets.db"}))
+    assert not r.allowed

@@ -215,11 +215,41 @@ def cmd_rotate_master(args) -> int:
     return 0
 
 
+def _pkg_version() -> str:
+    try:
+        from importlib.metadata import version
+        return version("custodian-kernel")
+    except Exception:
+        return "unknown"
+
+
+class _LazyVersionAction(argparse.Action):
+    """Like argparse's built-in 'version' action, but only computes the
+    version string when --version is actually passed — a plain
+    version=f"...{_pkg_version()}" is evaluated at add_argument() time,
+    i.e. on every single `warden` invocation, not just `--version`.
+
+    Deliberately self-contained rather than imported from custodian.cli:
+    warden is a standalone package with zero dependency on custodian (see
+    warden/__init__.py's module docstring) and this must not become its
+    first one. custodian's own CLI and talaria (which already depends on
+    both) share an identical helper at custodian.cli._version instead."""
+
+    def __init__(self, option_strings, dest=argparse.SUPPRESS,
+                 help="show program's version number and exit"):
+        super().__init__(option_strings=option_strings, dest=dest, nargs=0, help=help)
+
+    def __call__(self, parser, namespace, values, option_string=None):
+        print(f"{parser.prog} {_pkg_version()} (custodian-kernel)")
+        parser.exit()
+
+
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(
         prog="warden",
         description="Credential broker for AI agents — the agent never sees the value.",
     )
+    p.add_argument("--version", action=_LazyVersionAction)
     p.add_argument("--vault", type=Path, default=None,
                    help="vault path (default: ~/.warden/vault.warden, or $WARDEN_HOME)")
     sub = p.add_subparsers(dest="command", required=True)

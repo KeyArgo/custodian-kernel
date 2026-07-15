@@ -283,3 +283,57 @@ def test_receipt_cosign_key_isolated(tmp_path):
     r = GovernedReceipt.build("c", "L2", 1.0, "t", "autonomous", "ok", 1.0, {})
     sig = sign_receipt(r, v1)
     assert not verify_signed(r, sig, v2)  # different vault, different key
+
+
+def test_open_from_env_missing_keyfile_fails_clean(monkeypatch, vault):
+    """Regression: WARDEN_KEYFILE pointing at a nonexistent file used to
+    raise a raw FileNotFoundError instead of a clean, actionable error.
+    Uses an existing vault so this exercises the keyfile check specifically
+    rather than the (higher-priority) missing-vault check."""
+    dead_path = vault.path.parent / "nonexistent.key"
+    monkeypatch.setenv("WARDEN_KEYFILE", str(dead_path))
+    monkeypatch.setenv("WARDEN_PASSPHRASE", "irrelevant-should-not-be-tried")
+    with pytest.raises(VaultLockedError, match="keyfile.*could not be read"):
+        Vault.open_from_env(path=vault.path)
+
+
+def test_open_from_env_missing_keyfile_does_not_silently_use_passphrase(monkeypatch, tmp_path, vault):
+    """A dead keyfile must not silently fall through to unlocking a
+    DIFFERENT vault via the passphrase — that would be worse than failing."""
+    dead_path = tmp_path / "nonexistent.key"
+    monkeypatch.setenv("WARDEN_KEYFILE", str(dead_path))
+    monkeypatch.setenv("WARDEN_PASSPHRASE", PP)
+    with pytest.raises(VaultLockedError):
+        Vault.open_from_env(path=vault.path)
+
+
+def test_open_from_env_valid_keyfile_still_works(monkeypatch, tmp_path):
+    keyfile = tmp_path / "real.key"
+    keyfile.write_bytes(b"x" * 32)
+    v = Vault.create(path=tmp_path / "v.warden", keyfile=keyfile)
+    v.add("k", "value")
+    monkeypatch.setenv("WARDEN_KEYFILE", str(keyfile))
+    monkeypatch.delenv("WARDEN_PASSPHRASE", raising=False)
+    reopened = Vault.open_from_env(path=v.path)
+    assert reopened._resolve_value("k") == "value"
+
+
+def test_open_from_env_keyfile_is_a_directory_fails_clean(monkeypatch, vault, tmp_path):
+    """Regression: only FileNotFoundError was caught originally: a keyfile
+    path that exists but is a directory (IsADirectoryError) or unreadable
+    (PermissionError) must fail just as cleanly, not with a raw traceback."""
+    dir_as_keyfile = tmp_path / "not_a_file"
+    dir_as_keyfile.mkdir()
+    monkeypatch.setenv("WARDEN_KEYFILE", str(dir_as_keyfile))
+    with pytest.raises(VaultLockedError, match="could not be read"):
+        Vault.open_from_env(path=vault.path)
+
+
+def test_open_from_env_missing_vault_reported_before_missing_keyfile(monkeypatch, tmp_path):
+    """When both the vault and the keyfile are missing, the vault-missing
+    error is more fundamental for a first-time user ('run warden init
+    first') and should surface first, not a keyfile complaint."""
+    dead_keyfile = tmp_path / "nonexistent.key"
+    monkeypatch.setenv("WARDEN_KEYFILE", str(dead_keyfile))
+    with pytest.raises(VaultMissingError):
+        Vault.open_from_env(path=tmp_path / "no-such-vault.warden")

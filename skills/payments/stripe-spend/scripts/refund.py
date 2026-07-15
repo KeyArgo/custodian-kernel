@@ -93,11 +93,23 @@ def main():
 
     import notify
     reason_str = f'refund of ${args.amount:.2f} against {args.payment_intent_id} -- all refunds require human approval, no exceptions'
-    notify.write_pending(args.amount, args.description, reason_str,
-                          kind='refund', payment_intent_id=args.payment_intent_id)
-    notify.send_approval_code(args.amount, args.description)
-
     state = _core.load_state()
+    try:
+        notify.write_pending(args.amount, args.description, reason_str,
+                              kind='refund', payment_intent_id=args.payment_intent_id)
+    except notify.PendingEscalationExistsError as e:
+        # See spend.py's identical handling: refuse rather than clobber a
+        # still-live escalation someone else is waiting to approve.
+        _core.append_log({
+            'event': 'refund_denied', 'amount': args.amount, 'description': args.description,
+            'payment_intent_id': args.payment_intent_id, 'band': state['band'],
+            'reason': f'another escalation is already pending: {e}',
+        })
+        print(f'[authority] DENIED -- {e}')
+        print('[authority] Only one escalation can be pending at a time. Wait for the '
+              'current one to be approved or to expire, then retry.')
+        sys.exit(2)
+    notify.send_approval_code(args.amount, args.description)
     _core.append_log({
         'event': 'refund_escalation_required', 'amount': args.amount, 'description': args.description,
         'payment_intent_id': args.payment_intent_id, 'band': state['band'], 'reason': reason_str,

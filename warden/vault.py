@@ -68,7 +68,24 @@ class Entry:
 def _load_key_material(passphrase: Optional[str], keyfile: Optional[Path],
                        params: crypto.KdfParams) -> bytes:
     if keyfile is not None:
-        raw = Path(keyfile).read_bytes()
+        try:
+            raw = Path(keyfile).read_bytes()
+        except OSError as e:
+            # Covers a missing file, a directory given instead of a file,
+            # unreadable permissions, a broken symlink, etc. — every one of
+            # these must fail as a clean VaultLockedError, not a raw
+            # traceback. This is the single, shared choke point: every
+            # caller that opens a vault by keyfile (open_from_env's
+            # WARDEN_KEYFILE path, the CLI's --keyfile flag, direct
+            # Vault.open(keyfile=...) calls) routes through here, so fixing
+            # it here — once — covers all of them instead of requiring each
+            # call site to duplicate the check.
+            raise VaultLockedError(
+                f"keyfile {str(keyfile)!r} could not be read "
+                f"({type(e).__name__}: {e}). If this came from WARDEN_KEYFILE, "
+                f"fix the path, regenerate the keyfile, or unset WARDEN_KEYFILE "
+                f"to fall back to WARDEN_PASSPHRASE instead."
+            ) from e
         if len(raw) != crypto.KEY_LEN:
             raise VaultLockedError("keyfile must be exactly 32 raw bytes")
         return raw
@@ -134,7 +151,19 @@ class Vault:
     def open_from_env(cls, path: Optional[Path] = None,
                       interactive: bool = False) -> "Vault":
         """Unlock using WARDEN_KEYFILE / WARDEN_PASSPHRASE, optionally
-        falling back to an interactive prompt (CLI use only)."""
+        falling back to an interactive prompt (CLI use only).
+
+        A WARDEN_KEYFILE that doesn't exist (or can't be read) is a
+        configuration error, not a signal to quietly try the passphrase
+        instead — silently falling back could unlock a *different* vault
+        than the caller thinks they're using, which is worse for a
+        credential tool than failing loudly. That check lives in the
+        single shared choke point every keyfile-opening path already
+        goes through, _load_key_material() (see its docstring) — not
+        duplicated here — so a missing *vault* (VaultMissingError, "run
+        `warden init` first") is still reported first if both are wrong,
+        which is the more fundamental problem for a first-time user.
+        """
         keyfile = os.environ.get(KEYFILE_ENV)
         passphrase = os.environ.get(PASSPHRASE_ENV)
         if keyfile:

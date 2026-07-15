@@ -31,15 +31,38 @@ OPERATOR_PHONE = os.environ.get("HERMES_OPERATOR_PHONE", "+17196487887")
 CODE_TTL = 600
 
 
+class PendingEscalationExistsError(Exception):
+    """Raised by write_pending() when an unexpired escalation is already
+    on file. PENDING_FILE and PENDING_CODE_FILE are a single shared path
+    per sandbox, not scoped per visitor/session — on a public demo with
+    concurrent traffic, a second write_pending() call would otherwise
+    silently overwrite the first escalation's record and code. Whoever
+    is holding the first SMS code would then have it stop matching
+    anything, or a stray unlink from the second flow could delete the
+    file entirely — surfacing to them as approve.py's plain "No pending
+    escalation found", with no indication a second request came in.
+    Refusing to clobber turns that into an honest, immediate error at
+    the point the second request is made instead."""
+
+
 def _atomic_write(path: Path, content: str) -> None:
-    """Atomic write: temp file + rename on same fs."""
+    """Atomic write: temp file + rename on same fs.
+
+    fsync's fd must come from the SAME file object the whole way through
+    (via a `with` block) — a previous version called
+    `os.fsync(tmp_path.open("rb").fileno())`, whose anonymous file object
+    has no reference held once .fileno() returns, so CPython's refcounting
+    GC could close it immediately and hand fsync an already-closed fd
+    (reproducible: OSError: [Errno 9] Bad file descriptor)."""
     dir_path = path.parent
     dir_path.mkdir(parents=True, exist_ok=True)
     tmp_name = str(path) + f".tmp.{os.getpid()}.{random.randint(100000, 999999)}"
     tmp_path = Path(tmp_name)
     try:
-        tmp_path.write_text(content)
-        os.fsync(tmp_path.open("rb").fileno())
+        with open(tmp_path, "w") as f:
+            f.write(content)
+            f.flush()
+            os.fsync(f.fileno())
         os.rename(str(tmp_path), str(path))
     except Exception:
         try:
@@ -58,7 +81,22 @@ def _load_secrets():
     return vals
 
 
+def _existing_pending_is_live() -> bool:
+    if not PENDING_FILE.exists():
+        return False
+    try:
+        record = json.loads(PENDING_FILE.read_text())
+    except (json.JSONDecodeError, OSError):
+        return False  # unreadable/corrupt — treat as not blocking, not as live
+    return time.time() - record.get("created_at", 0) <= CODE_TTL
+
+
 def write_pending(amount, description, reason, kind="spend", payment_intent_id=None):
+    if _existing_pending_is_live():
+        raise PendingEscalationExistsError(
+            "an escalation is already pending and unexpired — resolve it with "
+            "approve.py (or wait for it to expire) before requesting another"
+        )
     _atomic_write(PENDING_FILE, json.dumps({
         "amount": amount, "description": description, "reason": reason,
         "created_at": time.time(), "kind": kind, "payment_intent_id": payment_intent_id,

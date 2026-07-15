@@ -11,6 +11,7 @@ from custodian.cli import cmd_tools, cmd_demo_verify, cmd_earn_and_buy
 from custodian.cli import cmd_status_enhanced, cmd_poison_tests, cmd_beancount, cmd_confirm
 from custodian.cli import cmd_demo_receipt, cmd_generate_report
 from custodian.cli import cmd_adapters
+from custodian.cli._version import LazyVersionAction
 from custodian.config import CustodianConfig
 
 
@@ -103,6 +104,7 @@ def main(argv: list[str] | None = None) -> int:
         epilog=_EPILOG,
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
+    parser.add_argument("--version", action=LazyVersionAction)
     sub = parser.add_subparsers(dest="command", required=True)
 
     # ── init ──────────────────────────────────────────────────────────────────
@@ -363,8 +365,8 @@ def main(argv: list[str] | None = None) -> int:
 
     args = parser.parse_args(argv)
     try:
-        args.func(args)
-        return 0
+        code = args.func(args)
+        return code if isinstance(code, int) else 0
     except SystemExit as e:
         return e.code if isinstance(e.code, int) else 1
     except Exception as e:

@@ -70,9 +70,9 @@ class BusinessHoursGuard(Adapter):
 Ship it as a pip package exposing the `custodian.adapters` entry-point
 group, or `custodian adapters install ./business_hours.py` locally.
 
-## In the Hermes bridge
+## In Talaria
 
 The bridge builds a pipeline from a single session-policy YAML (see
-`docs/HERMES-BRIDGE.md`) and runs it around every skill call, so all of
+`docs/TALARIA.md`) and runs it around every skill call, so all of
 the above applies to Hermes automatically with granular per-session
 control over tools, files, hosts, spend, and privacy.
