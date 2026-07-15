@@ -1,18 +1,18 @@
-"""Warden credential broker tests: crypto, grants, egress, audit."""
+"""Paladin credential broker tests: crypto, grants, egress, audit."""
 import json
 import subprocess
 import sys
 
 import pytest
 
-from warden.vault import Vault
-from warden.broker import Broker, LeakSentinel
-from warden.grants import GrantPolicy, Grant, band_index
-from warden.audit import AuditLog, AuditChainBrokenError
-from warden.refs import SecretRef, find_refs
-from warden.errors import (
+from paladin.vault import Vault
+from paladin.broker import Broker, LeakSentinel
+from paladin.grants import GrantPolicy, Grant, band_index
+from paladin.audit import AuditLog, AuditChainBrokenError
+from paladin.refs import SecretRef, find_refs
+from paladin.errors import (
     GrantDeniedError, UnknownRefError, VaultLockedError, VaultMissingError,
-    WardenError,
+    PaladinError,
 )
 
 PP = "test-passphrase-123"
@@ -20,7 +20,7 @@ PP = "test-passphrase-123"
 
 @pytest.fixture
 def vault(tmp_path):
-    return Vault.create(path=tmp_path / "v.warden", passphrase=PP)
+    return Vault.create(path=tmp_path / "v.paladin", passphrase=PP)
 
 
 @pytest.fixture
@@ -32,9 +32,9 @@ def broker(vault):
 
 def test_ref_is_value_free():
     r = SecretRef("stripe_sk")
-    assert r.uri == "warden://stripe_sk"
+    assert r.uri == "paladin://stripe_sk"
     assert "stripe_sk" in repr(r)
-    assert r == SecretRef.parse("warden://stripe_sk")
+    assert r == SecretRef.parse("paladin://stripe_sk")
 
 
 def test_ref_rejects_bad_names():
@@ -45,7 +45,7 @@ def test_ref_rejects_bad_names():
 
 
 def test_find_refs():
-    refs = find_refs("use warden://a and warden://b/c here")
+    refs = find_refs("use paladin://a and paladin://b/c here")
     assert [r.name for r in refs] == ["a", "b/c"]
 
 
@@ -58,7 +58,7 @@ def test_scrypt_n_strengthened_and_derive_key_still_works():
     # headroom — 128*N*r lands exactly on the old maxmem boundary at
     # N=2**17, which some implementations reject as "memory limit
     # exceeded" if maxmem isn't strictly greater.
-    from warden import crypto
+    from paladin import crypto
     assert crypto.SCRYPT_N >= 2 ** 17
     params = crypto.KdfParams.fresh()
     key = crypto.derive_key("a-real-passphrase", params)
@@ -95,7 +95,7 @@ def test_tampered_vault_fails(vault):
 
 def test_open_missing(tmp_path):
     with pytest.raises(VaultMissingError):
-        Vault.open(path=tmp_path / "nope.warden", passphrase=PP)
+        Vault.open(path=tmp_path / "nope.paladin", passphrase=PP)
 
 
 def test_rotate_master(vault):
@@ -153,7 +153,7 @@ def test_concurrent_saves_do_not_corrupt_vault(tmp_path):
     # don't include the first save's addition (the known, documented
     # lost-update limitation) — the file itself must stay valid and
     # openable, not truncated or interleaved.
-    path = tmp_path / "race.warden"
+    path = tmp_path / "race.paladin"
     v1 = Vault.create(path=path, passphrase=PP)
     v2 = Vault.open(path=path, passphrase=PP)
     v1.add("a", "1")
@@ -183,13 +183,13 @@ def test_rotation_count(vault):
 def test_deny_by_default(broker):
     broker.vault.add("k", "v")
     with pytest.raises(GrantDeniedError):
-        broker.build_env({"K": "warden://k"}, "skill:x", "L1")
+        broker.build_env({"K": "paladin://k"}, "skill:x", "L1")
 
 
 def test_grant_allows(broker):
     broker.vault.add("k", "v")
     broker.grant("k", "skill:x", max_band="L2")
-    env = broker.build_env({"K": "warden://k"}, "skill:x", "L1", base_env={})
+    env = broker.build_env({"K": "paladin://k"}, "skill:x", "L1", base_env={})
     assert env["K"] == "v"
 
 
@@ -197,22 +197,22 @@ def test_band_ceiling(broker):
     broker.vault.add("k", "v")
     broker.grant("k", "skill:x", max_band="L1")
     with pytest.raises(GrantDeniedError):
-        broker.build_env({"K": "warden://k"}, "skill:x", "L2")
+        broker.build_env({"K": "paladin://k"}, "skill:x", "L2")
 
 
 def test_wildcard_ref_grant(broker):
     broker.vault.add("stripe/sk", "v1")
     broker.vault.add("stripe/pk", "v2")
     broker.grant("stripe/*", "skill:x", max_band="L2")
-    env = broker.build_env({"A": "warden://stripe/sk", "B": "warden://stripe/pk"},
+    env = broker.build_env({"A": "paladin://stripe/sk", "B": "paladin://stripe/pk"},
                            "skill:x", "L1", base_env={})
     assert env["A"] == "v1" and env["B"] == "v2"
 
 
 def test_grant_requester_must_be_exact():
-    with pytest.raises(WardenError):
+    with pytest.raises(PaladinError):
         Grant(ref_pattern="k", requester="skill:*")
-    with pytest.raises(WardenError):
+    with pytest.raises(PaladinError):
         Grant(ref_pattern="k", requester="noscheme")
 
 
@@ -220,7 +220,7 @@ def test_grant_expiry(broker):
     broker.vault.add("k", "v")
     broker.grant("k", "skill:x", max_band="L2", ttl_seconds=-1)  # already expired
     with pytest.raises(GrantDeniedError):
-        broker.build_env({"K": "warden://k"}, "skill:x", "L1")
+        broker.build_env({"K": "paladin://k"}, "skill:x", "L1")
 
 
 def test_revoke(broker):
@@ -228,19 +228,19 @@ def test_revoke(broker):
     broker.grant("k", "skill:x")
     assert broker.revoke("k", "skill:x") == 1
     with pytest.raises(GrantDeniedError):
-        broker.build_env({"K": "warden://k"}, "skill:x", "L1")
+        broker.build_env({"K": "paladin://k"}, "skill:x", "L1")
 
 
 def test_owner_implicit_grant(broker):
     broker.vault.add("k", "v")
-    env = broker.build_env({"K": "warden://k"}, "user:cli", "L4", base_env={})
+    env = broker.build_env({"K": "paladin://k"}, "user:cli", "L4", base_env={})
     assert env["K"] == "v"
 
 
 def test_unknown_ref(broker):
     broker.grant("*", "skill:x", max_band="L2")
     with pytest.raises(UnknownRefError):
-        broker.build_env({"K": "warden://nope"}, "skill:x", "L1")
+        broker.build_env({"K": "paladin://nope"}, "skill:x", "L1")
 
 
 # -- egress ------------------------------------------------------------------
@@ -250,7 +250,7 @@ def test_spawn_injects_env(broker):
     broker.grant("k", "user:cli")
     proc = broker.spawn(
         [sys.executable, "-c", "import os;print(os.environ['MY_KEY'])"],
-        {"MY_KEY": "warden://k"}, "user:cli",
+        {"MY_KEY": "paladin://k"}, "user:cli",
     )
     assert proc.stdout.strip() == "secret-42"
 
@@ -268,7 +268,7 @@ def test_profile_egress(broker):
 def test_leak_sentinel_registers_on_resolve(broker):
     broker.vault.add("k", "sk_live_abc123def456")
     broker.grant("k", "skill:x", max_band="L2")
-    broker.build_env({"K": "warden://k"}, "skill:x", "L1", base_env={})
+    broker.build_env({"K": "paladin://k"}, "skill:x", "L1", base_env={})
     assert broker.leak_sentinel.seen("sk_live_abc123def456")
     assert not broker.leak_sentinel.seen("unrelated")
 
@@ -284,14 +284,14 @@ def test_leak_sentinel_stores_only_hashes():
 def test_audit_chain_records(broker):
     broker.vault.add("k", "v")
     broker.grant("k", "skill:x", max_band="L2")
-    broker.build_env({"K": "warden://k"}, "skill:x", "L1", base_env={})
+    broker.build_env({"K": "paladin://k"}, "skill:x", "L1", base_env={})
     assert broker.audit.verify() >= 2  # grant + resolve
 
 
 def test_audit_deny_recorded(broker):
     broker.vault.add("k", "v")
     with pytest.raises(GrantDeniedError):
-        broker.build_env({"K": "warden://k"}, "skill:x", "L1")
+        broker.build_env({"K": "paladin://k"}, "skill:x", "L1")
     events = [r["event"] for r in broker.audit.records()]
     assert "deny" in events
 
@@ -299,7 +299,7 @@ def test_audit_deny_recorded(broker):
 def test_audit_tamper_detected(broker, tmp_path):
     broker.vault.add("k", "v")
     broker.grant("k", "skill:x", max_band="L2")
-    broker.build_env({"K": "warden://k"}, "skill:x", "L1", base_env={})
+    broker.build_env({"K": "paladin://k"}, "skill:x", "L1", base_env={})
     recs = broker.audit.path.read_text().splitlines()
     d = json.loads(recs[0]); d["requester"] = "skill:evil"
     recs[0] = json.dumps(d, sort_keys=True, separators=(",", ":"))
@@ -312,7 +312,7 @@ def test_audit_truncation_detected(broker):
     broker.vault.add("k", "v")
     broker.grant("k", "skill:x", max_band="L2")
     for _ in range(3):
-        broker.build_env({"K": "warden://k"}, "skill:x", "L1", base_env={})
+        broker.build_env({"K": "paladin://k"}, "skill:x", "L1", base_env={})
     recs = broker.audit.path.read_text().splitlines()
     broker.audit.path.write_text("\n".join(recs[:-1]) + "\n")  # drop last
     # remaining chain still verifies (truncation of tail is detectable only
@@ -325,7 +325,7 @@ def test_audit_truncation_detected(broker):
 
 def test_receipt_cosign_roundtrip(vault):
     from custodian.receipt import GovernedReceipt
-    from warden.receipts import sign_receipt, verify_signed
+    from paladin.receipts import sign_receipt, verify_signed
     r = GovernedReceipt.build("charge", "L2", 5.0, "t", "autonomous", "ok", 3.0, {"a": 1})
     sig = sign_receipt(r, vault)
     assert verify_signed(r, sig, vault)
@@ -334,7 +334,7 @@ def test_receipt_cosign_roundtrip(vault):
 
 def test_receipt_cosign_detects_tamper(vault):
     from custodian.receipt import GovernedReceipt
-    from warden.receipts import sign_receipt, verify_signed
+    from paladin.receipts import sign_receipt, verify_signed
     r = GovernedReceipt.build("charge", "L2", 5.0, "t", "autonomous", "ok", 3.0, {"a": 1})
     sig = sign_receipt(r, vault)
     r.amount = 9999.0
@@ -343,22 +343,22 @@ def test_receipt_cosign_detects_tamper(vault):
 
 def test_receipt_cosign_key_isolated(tmp_path):
     from custodian.receipt import GovernedReceipt
-    from warden.receipts import sign_receipt, verify_signed
-    v1 = Vault.create(path=tmp_path / "a.warden", passphrase="p1")
-    v2 = Vault.create(path=tmp_path / "b.warden", passphrase="p2")
+    from paladin.receipts import sign_receipt, verify_signed
+    v1 = Vault.create(path=tmp_path / "a.paladin", passphrase="p1")
+    v2 = Vault.create(path=tmp_path / "b.paladin", passphrase="p2")
     r = GovernedReceipt.build("c", "L2", 1.0, "t", "autonomous", "ok", 1.0, {})
     sig = sign_receipt(r, v1)
     assert not verify_signed(r, sig, v2)  # different vault, different key
 
 
 def test_open_from_env_missing_keyfile_fails_clean(monkeypatch, vault):
-    """Regression: WARDEN_KEYFILE pointing at a nonexistent file used to
+    """Regression: PALADIN_KEYFILE pointing at a nonexistent file used to
     raise a raw FileNotFoundError instead of a clean, actionable error.
     Uses an existing vault so this exercises the keyfile check specifically
     rather than the (higher-priority) missing-vault check."""
     dead_path = vault.path.parent / "nonexistent.key"
-    monkeypatch.setenv("WARDEN_KEYFILE", str(dead_path))
-    monkeypatch.setenv("WARDEN_PASSPHRASE", "irrelevant-should-not-be-tried")
+    monkeypatch.setenv("PALADIN_KEYFILE", str(dead_path))
+    monkeypatch.setenv("PALADIN_PASSPHRASE", "irrelevant-should-not-be-tried")
     with pytest.raises(VaultLockedError, match="keyfile.*could not be read"):
         Vault.open_from_env(path=vault.path)
 
@@ -367,8 +367,8 @@ def test_open_from_env_missing_keyfile_does_not_silently_use_passphrase(monkeypa
     """A dead keyfile must not silently fall through to unlocking a
     DIFFERENT vault via the passphrase — that would be worse than failing."""
     dead_path = tmp_path / "nonexistent.key"
-    monkeypatch.setenv("WARDEN_KEYFILE", str(dead_path))
-    monkeypatch.setenv("WARDEN_PASSPHRASE", PP)
+    monkeypatch.setenv("PALADIN_KEYFILE", str(dead_path))
+    monkeypatch.setenv("PALADIN_PASSPHRASE", PP)
     with pytest.raises(VaultLockedError):
         Vault.open_from_env(path=vault.path)
 
@@ -376,10 +376,10 @@ def test_open_from_env_missing_keyfile_does_not_silently_use_passphrase(monkeypa
 def test_open_from_env_valid_keyfile_still_works(monkeypatch, tmp_path):
     keyfile = tmp_path / "real.key"
     keyfile.write_bytes(b"x" * 32)
-    v = Vault.create(path=tmp_path / "v.warden", keyfile=keyfile)
+    v = Vault.create(path=tmp_path / "v.paladin", keyfile=keyfile)
     v.add("k", "value")
-    monkeypatch.setenv("WARDEN_KEYFILE", str(keyfile))
-    monkeypatch.delenv("WARDEN_PASSPHRASE", raising=False)
+    monkeypatch.setenv("PALADIN_KEYFILE", str(keyfile))
+    monkeypatch.delenv("PALADIN_PASSPHRASE", raising=False)
     reopened = Vault.open_from_env(path=v.path)
     assert reopened._resolve_value("k") == "value"
 
@@ -390,19 +390,19 @@ def test_open_from_env_keyfile_is_a_directory_fails_clean(monkeypatch, vault, tm
     (PermissionError) must fail just as cleanly, not with a raw traceback."""
     dir_as_keyfile = tmp_path / "not_a_file"
     dir_as_keyfile.mkdir()
-    monkeypatch.setenv("WARDEN_KEYFILE", str(dir_as_keyfile))
+    monkeypatch.setenv("PALADIN_KEYFILE", str(dir_as_keyfile))
     with pytest.raises(VaultLockedError, match="could not be read"):
         Vault.open_from_env(path=vault.path)
 
 
 def test_open_from_env_missing_vault_reported_before_missing_keyfile(monkeypatch, tmp_path):
     """When both the vault and the keyfile are missing, the vault-missing
-    error is more fundamental for a first-time user ('run warden init
+    error is more fundamental for a first-time user ('run paladin init
     first') and should surface first, not a keyfile complaint."""
     dead_keyfile = tmp_path / "nonexistent.key"
-    monkeypatch.setenv("WARDEN_KEYFILE", str(dead_keyfile))
+    monkeypatch.setenv("PALADIN_KEYFILE", str(dead_keyfile))
     with pytest.raises(VaultMissingError):
-        Vault.open_from_env(path=tmp_path / "no-such-vault.warden")
+        Vault.open_from_env(path=tmp_path / "no-such-vault.paladin")
 
 
 def test_entry_allowed_hosts_default_empty(vault):
@@ -422,7 +422,7 @@ def test_old_vault_without_allowed_hosts_loads(vault):
     import json
     vault.add("k", "v")
     # hand-craft a decrypted doc missing allowed_hosts, re-encrypt it
-    from warden import crypto
+    from paladin import crypto
     doc = {"entries": {"legacy": {
         "name": "legacy", "value": "secret", "kind": "secret", "profile": "default",
         "env_var": "LEGACY", "note": "", "created_at": 1.0, "updated_at": 1.0,

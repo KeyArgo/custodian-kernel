@@ -101,7 +101,7 @@ def test_load_policy_missing_returns_empty(tmp_path):
 def test_hermes_install_end_to_end(tmp_path, monkeypatch):
     monkeypatch.setenv("HERMES_HOME", str(tmp_path / "hermes"))
     monkeypatch.setenv("TALARIA_HOME", str(tmp_path / "talaria"))
-    monkeypatch.setenv("WARDEN_HOME", str(tmp_path / "warden"))
+    monkeypatch.setenv("PALADIN_HOME", str(tmp_path / "paladin"))
     rc = talaria_main(["hermes", "install"])
     assert rc == 0
     assert (tmp_path / "hermes" / "plugins" / "talaria-guard" / "plugin.yaml").exists()
@@ -112,7 +112,7 @@ def test_hermes_install_end_to_end(tmp_path, monkeypatch):
 def test_hermes_install_idempotent_preserves_policy(tmp_path, monkeypatch):
     monkeypatch.setenv("HERMES_HOME", str(tmp_path / "hermes"))
     monkeypatch.setenv("TALARIA_HOME", str(tmp_path / "talaria"))
-    monkeypatch.setenv("WARDEN_HOME", str(tmp_path / "warden"))
+    monkeypatch.setenv("PALADIN_HOME", str(tmp_path / "paladin"))
     talaria_main(["hermes", "install"])
     pol = tmp_path / "talaria" / "policy.yaml"
     pol.write_text("tools:\n  forbid: [my-custom-rule]\n")  # user edits
@@ -123,7 +123,7 @@ def test_hermes_install_idempotent_preserves_policy(tmp_path, monkeypatch):
 def test_hermes_status_reports_installed(tmp_path, monkeypatch, capsys):
     monkeypatch.setenv("HERMES_HOME", str(tmp_path / "hermes"))
     monkeypatch.setenv("TALARIA_HOME", str(tmp_path / "talaria"))
-    monkeypatch.setenv("WARDEN_HOME", str(tmp_path / "warden"))
+    monkeypatch.setenv("PALADIN_HOME", str(tmp_path / "paladin"))
     talaria_main(["hermes", "install"])
     capsys.readouterr()
     talaria_main(["hermes", "status"])

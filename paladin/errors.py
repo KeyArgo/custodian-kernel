@@ -1,4 +1,4 @@
-"""Warden exception hierarchy.
+"""Paladin exception hierarchy.
 
 Every error message in this module is written to be safe to show to an
 agent: no error ever includes a secret value, a vault key, or the
@@ -7,38 +7,38 @@ plaintext of any entry.
 from __future__ import annotations
 
 
-class WardenError(Exception):
-    """Base class for all Warden errors."""
+class PaladinError(Exception):
+    """Base class for all Paladin errors."""
 
 
-class VaultMissingError(WardenError):
-    """No vault exists at the given path — run ``warden init`` first."""
+class VaultMissingError(PaladinError):
+    """No vault exists at the given path — run ``paladin init`` first."""
 
 
-class VaultLockedError(WardenError):
+class VaultLockedError(PaladinError):
     """The vault could not be unlocked (wrong passphrase/keyfile, or the
     ciphertext failed authentication)."""
 
 
-class VaultCorruptError(WardenError):
-    """The vault file exists but is not a valid Warden vault (truncated,
+class VaultCorruptError(PaladinError):
+    """The vault file exists but is not a valid Paladin vault (truncated,
     tampered with, or not a vault at all)."""
 
 
-class UnknownRefError(WardenError):
+class UnknownRefError(PaladinError):
     """The requested secret ref does not exist in the vault."""
 
 
-class GrantDeniedError(WardenError):
+class GrantDeniedError(PaladinError):
     """The requester holds no grant covering this ref (or the grant's
     band ceiling is below the requested band)."""
 
 
-class AuditChainBrokenError(WardenError):
+class AuditChainBrokenError(PaladinError):
     """The audit log's hash chain does not verify — records were
     altered, reordered, or truncated after being written."""
 
 
-class CryptoUnavailableError(WardenError):
+class CryptoUnavailableError(PaladinError):
     """The ``cryptography`` package is not installed. Install with
-    ``pip install custodian-kernel[warden]``."""
+    ``pip install custodian-kernel[paladin]``."""

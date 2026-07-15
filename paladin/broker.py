@@ -25,11 +25,11 @@ import subprocess
 from pathlib import Path
 from typing import Mapping, Optional, Sequence
 
-from warden.audit import AuditLog
-from warden.errors import GrantDeniedError, UnknownRefError
-from warden.grants import GrantPolicy
-from warden.refs import SecretRef
-from warden.vault import Vault
+from paladin.audit import AuditLog
+from paladin.errors import GrantDeniedError, UnknownRefError
+from paladin.grants import GrantPolicy
+from paladin.refs import SecretRef
+from paladin.vault import Vault
 
 AUDIT_FILENAME = "audit.jsonl"
 
@@ -39,7 +39,7 @@ class LeakSentinel:
 
     Stores only SHA-256 digests — holding the sentinel never yields a
     secret. ``seen()`` answers: does this exact token match any value
-    (or any whitespace-split token of a value) that Warden released?
+    (or any whitespace-split token of a value) that Paladin released?
     """
 
     def __init__(self) -> None:

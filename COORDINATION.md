@@ -25,7 +25,7 @@
 | a5-silo-tests | silo-unit-tests | tests/unit/silo/** | feat/a5-silo-tests | active | 2026-07-05T19:22Z |
 | video-shot-script | video-shot-script | docs/video/shot-script.md | feat/video-shot-script | active | 2026-07-05T19:22Z |
 | positioning | positioning | docs/positioning/** | feat/positioning | active | 2026-07-05T19:22Z |
-| warden | credential-broker (standalone) + adapter-framework + talaria-suite | warden/**, custodian/adapters/**, talaria/**, skills/custodian-meta/**, tests/test_warden*.py, tests/test_adapters*.py, tests/test_talaria*.py, docs/WARDEN.md, docs/ADAPTERS.md, docs/TALARIA.md, docs/SECURITY-HARDENING.md | feat/warden-adapters-hermes (merged to main) | active | 2026-07-14T14:30Z |
+| paladin | credential-broker (standalone) + adapter-framework + talaria-suite | paladin/**, custodian/adapters/**, talaria/**, skills/custodian-meta/**, tests/test_paladin*.py, tests/test_adapters*.py, tests/test_talaria*.py, docs/PALADIN.md, docs/ADAPTERS.md, docs/TALARIA.md, docs/SECURITY-HARDENING.md | feat/paladin-adapters-hermes (merged to main) | active | 2026-07-14T14:30Z |
 
 ---
 
@@ -75,10 +75,10 @@ New pre-gate breadth dispatch (4 workers, all pushed):
 - feat/video-shot-script @b705365 · docs/video/shot-script.md (narration for real features, 8-12 shots)
 - feat/positioning @d56e55f · docs/positioning/sovereignty.md + docs/positioning/cyberware-comparison.md
 
-## Warden + adapters + hermes-bridge dispatch (2026-07-14)
-`feat/warden-adapters-hermes` — three-part capability build, all tests green (1527 passed, +80 new):
-- **Warden** (`warden/**`): standalone AES-256-GCM credential broker — encrypted vault, scrypt KDF, password-manager CLI (`warden` entry point), env profiles, `warden://` SecretRefs, deny-by-default grants, hash-chained HMAC audit, egress-only injection (agent never sees values). Optional receipt co-signing.
+## Paladin + adapters + hermes-bridge dispatch (2026-07-14)
+`feat/paladin-adapters-hermes` — three-part capability build, all tests green (1527 passed, +80 new):
+- **Paladin** (`paladin/**`): standalone AES-256-GCM credential broker — encrypted vault, scrypt KDF, password-manager CLI (`paladin` entry point), env profiles, `paladin://` SecretRefs, deny-by-default grants, hash-chained HMAC audit, egress-only injection (agent never sees values). Optional receipt co-signing.
 - **Adapters** (`custodian/adapters/**`): guard-adapter framework (pre/post/handle hooks) + 9 built-ins (spend-sentinel, prompt-injection-guard, secret-leak-guard, kernel-self-protection, pii-redactor, context-anchor, repetition-breaker, tool-confabulation-guard, scope-fence); registry with hash-pinned local installs; `custodian adapters` CLI.
-- **Hermes bridge** (`integrations/hermes/**`): one governed invoke() surface (adapters → kernel → Warden egress → post-scan), SessionCapsule for context-loss re-anchoring, session-policy YAML for granular tool/file/host/spend control, soul compiler, introspection meta-skills, NemoClaw governed egress.
-- Docs: WARDEN.md, ADAPTERS.md, HERMES-BRIDGE.md, SECURITY-HARDENING.md, positioning/cyberware-head-to-head.md.
-- _2026-07-14 update: the Hermes bridge was promoted to a top-level suite named **Talaria** (`integrations/hermes/**` → `talaria/**`, HERMES-BRIDGE.md → TALARIA.md, test_hermes_bridge → test_talaria) and gained a unified `talaria` CLI (vault/adapters/session/init). Broker remains `warden` pending its final name._
+- **Hermes bridge** (`integrations/hermes/**`): one governed invoke() surface (adapters → kernel → Paladin egress → post-scan), SessionCapsule for context-loss re-anchoring, session-policy YAML for granular tool/file/host/spend control, soul compiler, introspection meta-skills, NemoClaw governed egress.
+- Docs: PALADIN.md, ADAPTERS.md, HERMES-BRIDGE.md, SECURITY-HARDENING.md, positioning/cyberware-head-to-head.md.
+- _2026-07-14 update: the Hermes bridge was promoted to a top-level suite named **Talaria** (`integrations/hermes/**` → `talaria/**`, HERMES-BRIDGE.md → TALARIA.md, test_hermes_bridge → test_talaria) and gained a unified `talaria` CLI (vault/adapters/session/init). Broker remains `paladin` pending its final name._

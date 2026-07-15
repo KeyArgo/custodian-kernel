@@ -53,11 +53,11 @@ _PIPELINE = None
 def _open_vault_best_effort():
     """Open the credential vault for EgressDomainGuard's host-restriction
     metadata. Best-effort and silent on failure — a missing/misconfigured
-    vault (no WARDEN_KEYFILE, wrong passphrase, no vault created yet) must
+    vault (no PALADIN_KEYFILE, wrong passphrase, no vault created yet) must
     never crash the plugin or block tool calls; it just means host
     restrictions on secrets won't be enforced until the vault is reachable."""
     try:
-        from warden.vault import Vault
+        from paladin.vault import Vault
         return Vault.open_from_env(interactive=False)
     except Exception:
         return None

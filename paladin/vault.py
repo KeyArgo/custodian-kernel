@@ -6,12 +6,11 @@ file learns only its size. Writes are atomic (tmp file + rename in the
 same directory) and permission-hardened (0700 dir, 0600 file).
 
 The vault is the *human's* API surface. Agents never touch this class;
-they go through :class:`warden.broker.Broker`, which enforces grants
+they go through :class:`paladin.broker.Broker`, which enforces grants
 and audits every access.
 """
 from __future__ import annotations
 
-import fcntl
 import getpass
 import json
 import os
@@ -21,20 +20,63 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Iterator, Optional
 
-from warden import crypto
-from warden.errors import (
+from paladin import crypto
+from paladin.errors import (
     UnknownRefError,
     VaultCorruptError,
     VaultLockedError,
     VaultMissingError,
-    WardenError,
+    PaladinError,
 )
-from warden.refs import SecretRef, valid_name
+from paladin.refs import SecretRef, valid_name
 
-DEFAULT_VAULT_DIR = Path(os.environ.get("WARDEN_HOME", "~/.warden")).expanduser()
-VAULT_FILENAME = "vault.warden"
-PASSPHRASE_ENV = "WARDEN_PASSPHRASE"
-KEYFILE_ENV = "WARDEN_KEYFILE"
+HOME_ENV = "PALADIN_HOME"
+VAULT_FILENAME = "vault.paladin"
+PASSPHRASE_ENV = "PALADIN_PASSPHRASE"
+KEYFILE_ENV = "PALADIN_KEYFILE"
+
+# Pre-rename spellings, honored on read and never written. These are the only
+# place the old name survives, and it has to: the rename cannot reach a vault
+# already sitting at ~/.warden/vault.warden, nor a shell that still exports
+# WARDEN_PASSPHRASE. Dropping them would not fail loudly -- the operator would
+# get a fresh empty vault and a working prompt, with their real credentials
+# still on disk but invisible. That is the worst available failure mode for a
+# credential tool, so the old names stay until a migration command exists.
+LEGACY_HOME_ENV = "WARDEN_HOME"
+LEGACY_VAULT_FILENAME = "vault.warden"
+LEGACY_PASSPHRASE_ENV = "WARDEN_PASSPHRASE"
+LEGACY_KEYFILE_ENV = "WARDEN_KEYFILE"
+
+
+def _env(name: str, legacy_name: str) -> Optional[str]:
+    """Read ``name``, falling back to its pre-rename spelling.
+
+    An empty value is still a *set* value: ``PALADIN_KEYFILE= paladin ...``
+    means "explicitly none", so it must shadow the legacy variable rather
+    than silently promote it."""
+    value = os.environ.get(name)
+    if value is not None:
+        return value
+    return os.environ.get(legacy_name)
+
+
+def default_vault_dir() -> Path:
+    """The vault home, resolved at call time.
+
+    ``PALADIN_HOME`` wins; ``WARDEN_HOME`` is honored but deprecated. With
+    neither set the default is ``~/.paladin`` -- except when that does not
+    exist and a pre-rename ``~/.warden`` does, in which case the existing
+    vault is used rather than shadowed by an empty new one."""
+    explicit = _env(HOME_ENV, LEGACY_HOME_ENV)
+    if explicit is not None:
+        return Path(explicit).expanduser()
+    current = Path("~/.paladin").expanduser()
+    if not current.exists() and Path("~/.warden").expanduser().exists():
+        return Path("~/.warden").expanduser()
+    return current
+
+
+DEFAULT_VAULT_DIR = default_vault_dir()
 
 
 @dataclass
@@ -83,15 +125,15 @@ def _load_key_material(passphrase: Optional[str], keyfile: Optional[Path],
             # these must fail as a clean VaultLockedError, not a raw
             # traceback. This is the single, shared choke point: every
             # caller that opens a vault by keyfile (open_from_env's
-            # WARDEN_KEYFILE path, the CLI's --keyfile flag, direct
+            # PALADIN_KEYFILE path, the CLI's --keyfile flag, direct
             # Vault.open(keyfile=...) calls) routes through here, so fixing
             # it here — once — covers all of them instead of requiring each
             # call site to duplicate the check.
             raise VaultLockedError(
                 f"keyfile {str(keyfile)!r} could not be read "
-                f"({type(e).__name__}: {e}). If this came from WARDEN_KEYFILE, "
-                f"fix the path, regenerate the keyfile, or unset WARDEN_KEYFILE "
-                f"to fall back to WARDEN_PASSPHRASE instead."
+                f"({type(e).__name__}: {e}). If this came from PALADIN_KEYFILE, "
+                f"fix the path, regenerate the keyfile, or unset PALADIN_KEYFILE "
+                f"to fall back to PALADIN_PASSPHRASE instead."
             ) from e
         if len(raw) != crypto.KEY_LEN:
             raise VaultLockedError("keyfile must be exactly 32 raw bytes")
@@ -101,7 +143,35 @@ def _load_key_material(passphrase: Optional[str], keyfile: Optional[Path],
     return crypto.derive_key(passphrase, params)
 
 
+try:  # POSIX
+    import fcntl
+
+    def _lock_exclusive(fd: int) -> None:
+        fcntl.flock(fd, fcntl.LOCK_EX)
+
+    def _lock_release(fd: int) -> None:
+        fcntl.flock(fd, fcntl.LOCK_UN)
+
+except ImportError:  # Windows: no fcntl, lock a byte range instead
+    import msvcrt
+
+    def _lock_exclusive(fd: int) -> None:
+        # Unlike flock's indefinite wait, LK_LOCK retries for ~10s and then
+        # raises OSError. A save() racing a slower one fails loudly rather
+        # than blocking; callers see the error instead of a silent clobber.
+        os.lseek(fd, 0, os.SEEK_SET)
+        msvcrt.locking(fd, msvcrt.LK_LOCK, 1)
+
+    def _lock_release(fd: int) -> None:
+        os.lseek(fd, 0, os.SEEK_SET)
+        msvcrt.locking(fd, msvcrt.LK_UNLCK, 1)
+
+
 def _harden_permissions(path: Path) -> None:
+    # NOTE: on Windows os.chmod only toggles the read-only bit — it does NOT
+    # restrict other users. The 0600/0700 guarantee in this module's docstring
+    # holds on POSIX only. On Windows the AEAD encryption is the sole
+    # protection for vault contents at rest.
     os.chmod(path, stat.S_IRUSR | stat.S_IWUSR)  # 0600
 
 
@@ -152,17 +222,20 @@ class Vault:
 
     @classmethod
     def default_path(cls) -> Path:
-        # Resolve WARDEN_HOME at call time, not import time, so a value set
+        # Resolve PALADIN_HOME at call time, not import time, so a value set
         # after import (tests, or a process that changes it) is honored.
-        base = Path(os.environ.get("WARDEN_HOME", "~/.warden")).expanduser()
-        return base / VAULT_FILENAME
+        base = default_vault_dir()
+        current = base / VAULT_FILENAME
+        if not current.exists() and (base / LEGACY_VAULT_FILENAME).exists():
+            return base / LEGACY_VAULT_FILENAME
+        return current
 
     @classmethod
     def create(cls, path: Optional[Path] = None, passphrase: Optional[str] = None,
                keyfile: Optional[Path] = None) -> "Vault":
         path = Path(path) if path else cls.default_path()
         if path.exists():
-            raise WardenError(f"a vault already exists at {path}")
+            raise PaladinError(f"a vault already exists at {path}")
         crypto.require_crypto()
         params = crypto.KdfParams.fresh()
         key = _load_key_material(passphrase, keyfile, params)
@@ -175,7 +248,7 @@ class Vault:
              keyfile: Optional[Path] = None) -> "Vault":
         path = Path(path) if path else cls.default_path()
         if not path.exists():
-            raise VaultMissingError(f"no vault at {path} — run `warden init` first")
+            raise VaultMissingError(f"no vault at {path} — run `paladin init` first")
         blob = path.read_bytes()
         header, _, _ = crypto.split_blob(blob)
         params = crypto.KdfParams.from_header(header)
@@ -192,10 +265,10 @@ class Vault:
     @classmethod
     def open_from_env(cls, path: Optional[Path] = None,
                       interactive: bool = False) -> "Vault":
-        """Unlock using WARDEN_KEYFILE / WARDEN_PASSPHRASE, optionally
+        """Unlock using PALADIN_KEYFILE / PALADIN_PASSPHRASE, optionally
         falling back to an interactive prompt (CLI use only).
 
-        A WARDEN_KEYFILE that doesn't exist (or can't be read) is a
+        A PALADIN_KEYFILE that doesn't exist (or can't be read) is a
         configuration error, not a signal to quietly try the passphrase
         instead — silently falling back could unlock a *different* vault
         than the caller thinks they're using, which is worse for a
@@ -203,11 +276,11 @@ class Vault:
         single shared choke point every keyfile-opening path already
         goes through, _load_key_material() (see its docstring) — not
         duplicated here — so a missing *vault* (VaultMissingError, "run
-        `warden init` first") is still reported first if both are wrong,
+        `paladin init` first") is still reported first if both are wrong,
         which is the more fundamental problem for a first-time user.
         """
-        keyfile = os.environ.get(KEYFILE_ENV)
-        passphrase = os.environ.get(PASSPHRASE_ENV)
+        keyfile = _env(KEYFILE_ENV, LEGACY_KEYFILE_ENV)
+        passphrase = _env(PASSPHRASE_ENV, LEGACY_PASSPHRASE_ENV)
         if keyfile:
             return cls.open(path, keyfile=Path(keyfile))
         if passphrase is None and interactive:
@@ -219,7 +292,7 @@ class Vault:
 
         Holds an exclusive flock on a sibling ``.lock`` file for the
         duration of the write so two concurrent ``save()`` calls (e.g.
-        two ``warden`` CLI invocations racing) serialize instead of one
+        two ``paladin`` CLI invocations racing) serialize instead of one
         silently clobbering the other's write — found missing in review.
         This narrows but doesn't eliminate the lost-update window: it
         protects the write itself, not the whole open→modify→save
@@ -230,7 +303,7 @@ class Vault:
         lock_path = self.path.with_suffix(".lock")
         lock_fd = os.open(lock_path, os.O_CREAT | os.O_RDWR, 0o600)
         try:
-            fcntl.flock(lock_fd, fcntl.LOCK_EX)
+            _lock_exclusive(lock_fd)
             doc = {
                 "entries": {name: vars(e) for name, e in self._entries.items()},
                 "grants": self._grants,
@@ -252,7 +325,7 @@ class Vault:
                 if tmp.exists():
                     tmp.unlink(missing_ok=True)
         finally:
-            fcntl.flock(lock_fd, fcntl.LOCK_UN)
+            _lock_release(lock_fd)
             os.close(lock_fd)
 
     def rotate_master(self, new_passphrase: Optional[str] = None,
@@ -275,9 +348,9 @@ class Vault:
             env_var: Optional[str] = None, note: str = "", overwrite: bool = False,
             allowed_hosts: Optional[list] = None) -> SecretRef:
         if not valid_name(name):
-            raise WardenError(f"invalid secret name {name!r}")
+            raise PaladinError(f"invalid secret name {name!r}")
         if name in self._entries and not overwrite:
-            raise WardenError(f"entry {name!r} already exists (use overwrite/edit)")
+            raise PaladinError(f"entry {name!r} already exists (use overwrite/edit)")
         prior = self._entries.get(name)
         entry = Entry(name=name, value=value, kind=kind, profile=profile,
                       env_var=env_var or _default_env_var(name), note=note,

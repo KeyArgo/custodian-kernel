@@ -28,7 +28,10 @@ def looks_like_path(value: str) -> bool:
     can't be paths at all (empty, or obviously a URL)."""
     if not value:
         return False
-    if value.startswith(("http://", "https://", "warden://")):
+    # "warden://" is the pre-rename ref scheme; refs minted before the rename
+    # are still in circulation and are no more a filesystem path than the
+    # current ones.
+    if value.startswith(("http://", "https://", "paladin://", "warden://")):
         return False
     return True
 

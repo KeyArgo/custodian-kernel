@@ -1,10 +1,10 @@
-"""Shared --version support for all three CLIs (custodian, warden, talaria).
+"""Shared --version support for all three CLIs (custodian, paladin, talaria).
 
 A plain `version=f"...{_pkg_version()}"` string is evaluated the moment
 `add_argument()` runs — i.e. on every single invocation of the CLI, not
 just `--version` — because argparse's built-in version action only
 defers *printing*, not computing, the string. LazyVersionAction defers
-the metadata lookup itself, so `custodian status`, `warden list`, etc.
+the metadata lookup itself, so `custodian status`, `paladin list`, etc.
 never pay for it.
 """
 from __future__ import annotations

@@ -30,16 +30,18 @@ Documentation = "https://getcustodian.xyz/docs"
 [project.optional-dependencies]
 dev = [
     "pytest",
+    "pytest-asyncio",
     "pytest-cov",
+    "flask",
 ]
-warden = [
+paladin = [
     "cryptography>=42.0",
 ]
 
 [project.scripts]
 custodian = "custodian.cli.main:main"
 custodian-verify = "custodian.verify_kit:main"
-warden = "warden.cli:main"
+paladin = "paladin.cli:main"
 talaria = "talaria.cli:main"
 
 [build-system]
@@ -47,7 +49,7 @@ requires = ["setuptools>=64"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]
-include = ["custodian*", "warden*", "talaria*"]
+include = ["custodian*", "paladin*", "talaria*"]
 
 [tool.setuptools.package-data]
 "custodian" = ["bundled_skills/**/*", "bundled_skills/**", "packs/**/corpus/*.json", "packs/**/*.yaml", "packs/**/*.json"]

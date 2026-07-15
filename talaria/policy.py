@@ -64,7 +64,9 @@ def talaria_home() -> Path:
 # personal machine most wants an agent kept out of.
 DEFAULT_FORBIDDEN_PATHS = [
     "~/.ssh", "~/.aws", "~/.gnupg", "~/.config/gcloud",
-    "~/.warden", "~/.talaria", "~/.custodian",
+    # ~/.warden is the pre-rename vault home. It stays forbidden while any
+    # vault can still live there -- see paladin.vault.default_vault_dir.
+    "~/.paladin", "~/.warden", "~/.talaria", "~/.custodian",
 ]
 DEFAULT_FORBIDDEN_GLOBS = ["*.env", "*.pem", "id_rsa", "id_ed25519", "*.key"]
 
@@ -120,7 +122,7 @@ def build_pipeline(policy: dict, denial_observer=None, vault=None) -> AdapterPip
     ``denial_observer`` (from talaria.denial_log.DenialLog.observer) is
     wired in when policy['log_denials'] is true.
 
-    ``vault`` (a warden.vault.Vault), when given, populates
+    ``vault`` (a paladin.vault.Vault), when given, populates
     EgressDomainGuard's ref_hosts map from every entry's allowed_hosts
     metadata — this is the ONLY place that wiring happens. Without a
     vault passed in, host-restricted secrets have no domain enforcement

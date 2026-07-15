@@ -4,7 +4,7 @@ Named for Hermes' winged sandals. Talaria is the one call surface
 between Hermes Agent and everything Custodian offers — every
 Hermes/NemoClaw-specific assumption lives here, not in the kernel. The
 kernel (`custodian/`), the guard-adapter framework (`custodian/adapters/`),
-and the credential broker (`warden/`) are all brand-neutral and know
+and the credential broker (`paladin/`) are all brand-neutral and know
 nothing about Hermes; Talaria is what wires them together specifically
 for it. A future Claude or Codex integration would be its own equivalent
 package, resting on the same neutral core.
@@ -12,7 +12,7 @@ package, resting on the same neutral core.
 ## Quickstart — protect your local Hermes Agent in one command
 
 ```bash
-pip install custodian-kernel[warden]
+pip install custodian-kernel[paladin]
 
 talaria hermes install          # installs the guard plugin + starter policy + vault
 hermes plugins enable talaria-guard
@@ -62,15 +62,15 @@ its way around a guard the way it can ignore a system-prompt instruction.
 ## Credentials — the broker
 
 ```bash
-talaria vault add stripe_sk --env-var STRIPE_SECRET_KEY   # same broker as `warden`
+talaria vault add stripe_sk --env-var STRIPE_SECRET_KEY   # same broker as `paladin`
 talaria vault list
 talaria vault exec --with stripe_sk -- ./charge.py        # value injected into the child only
 ```
 
-`talaria vault ...` and the standalone `warden ...` command are the exact
+`talaria vault ...` and the standalone `paladin ...` command are the exact
 same broker underneath — nothing is duplicated, `talaria vault` just
 saves a Hermes user from needing to know a second tool name. The agent
-only ever holds a `warden://stripe_sk` reference; the real value is
+only ever holds a `paladin://stripe_sk` reference; the real value is
 injected into the tool subprocess's environment at the last moment and
 never enters the agent's own process.
 
@@ -102,7 +102,7 @@ Hermes proposes  invoke(skill, args)
     scope, loops, spend anomalies, PII
   → capability adapters may answer directly (introspection meta-skills)
   → kernel decide: band / cap / envelope / kill switch
-  → Warden egress: credentials materialize ONLY in the skill subprocess
+  → Paladin egress: credentials materialize ONLY in the skill subprocess
   → skill executes
   → guard adapters (post): secret redaction, PII redaction
   → SessionCapsule records what happened
@@ -144,8 +144,8 @@ guards:               # togglable; set false to drop one.
 
 ```python
 from talaria.session_policy import build_bridge
-from warden.vault import Vault
-from warden.broker import Broker
+from paladin.vault import Vault
+from paladin.broker import Broker
 
 broker = Broker(Vault.open(passphrase=...))
 bridge = build_bridge("hermes-session.yaml", broker=broker)
@@ -164,7 +164,7 @@ can reach, how fast and how much it can spend.
 The bridge runs against the same `ToolRegistry` that powers the 100+
 governed skills on the website — no adapter shims per skill. Any skill
 with a `custodian-band` in its `SKILL.md` is automatically fenced,
-budgeted, credentialed (via Warden), and audited.
+budgeted, credentialed (via Paladin), and audited.
 
 Three **meta-skills** are served by the governance layer itself (the
 `hermes-introspection` capability adapter), so Hermes can inspect its own
@@ -172,7 +172,7 @@ governed state:
 
 - `custodian-status` — band, budget spent/remaining, action/denial counts.
 - `custodian-anchor` — the full re-anchoring block on demand.
-- `warden-vault-list` — which `warden://` refs exist (metadata only).
+- `paladin-vault-list` — which `paladin://` refs exist (metadata only).
 
 ## Local models that lose context
 
@@ -195,7 +195,7 @@ policy, so what the model is told always equals what the kernel enforces
 ## NemoClaw egress
 
 `talaria/nemoclaw_egress.governed_sandbox_exec(...)` runs a
-script inside a NemoClaw sandbox with Warden-resolved secrets piped in
+script inside a NemoClaw sandbox with Paladin-resolved secrets piped in
 over stdin — never on the command line, never written to sandbox disk,
 grant-gated under `sandbox:<name>` and audited.
 
@@ -207,9 +207,9 @@ matches its feature set and goes further:
 
 | | BlindKey | Talaria + Custodian |
 |---|---|---|
-| Agent never sees plaintext secrets | ✅ `bk://` | ✅ `warden://` |
+| Agent never sees plaintext secrets | ✅ `bk://` | ✅ `paladin://` |
 | AES-256-GCM encrypted vault | ✅ | ✅ |
-| Hash-chained tamper-evident audit | ✅ | ✅ (`warden audit`, `talaria log verify`) |
+| Hash-chained tamper-evident audit | ✅ | ✅ (`paladin audit`, `talaria log verify`) |
 | Content scanner (secrets + PII) | ✅ | ✅ (secret-leak-guard, pii-redactor) |
 | Filesystem gating (allow + deny, **read & write**) | ✅ | ✅ (path-fence) |
 | Domain allowlist (secret only to approved hosts) | ✅ | ✅ (egress-domain-guard) |

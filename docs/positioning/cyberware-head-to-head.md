@@ -26,7 +26,7 @@ real advantages worth matching over time.
 | Capability | Cyberware | Custodian |
 |---|---|---|
 | Agent proposes, layer decides, nothing runs otherwise | ✅ | ✅ (`@govern`, middleware, bridge) |
-| Tamper-evident ledger / provenance | ✅ | ✅ (hash-chained Warden audit; kernel receipts) |
+| Tamper-evident ledger / provenance | ✅ | ✅ (hash-chained Paladin audit; kernel receipts) |
 | Deterministic pre-execution scanning | ✅ (oversight regex) | ✅ (guard-adapter pipeline) |
 | Skill model with self-tests | ✅ (perks) | ✅ (SKILL.md + registry, 100+ governed) |
 | Sandbox execution | ✅ (bubblewrap/gVisor) | ✅ (NemoClaw executor + governed egress) |
@@ -38,7 +38,7 @@ real advantages worth matching over time.
 
 Cyberware is *value-free*: secrets never cross the control plane, but
 they still live in the execution substrate — i.e. wherever the agent
-runs. **Custodian + Warden encrypts secrets at rest** (AES-256-GCM,
+runs. **Custodian + Paladin encrypts secrets at rest** (AES-256-GCM,
 scrypt) and materializes them **only inside the skill subprocess's
 environment**, built at egress under a deny-by-default, band-ceilinged,
 expirable grant. The proposing agent never has the value in its address
@@ -85,7 +85,7 @@ and never holds funds. Fewer trust assumptions, no platform lock-in.
   roadmap item to match.
 - **TSA-anchored receipts.** Our audit chain proves ordering and
   authenticity locally; an external time-stamp anchor would strengthen
-  non-repudiation. `warden.receipts` co-signing is the first step.
+  non-repudiation. `paladin.receipts` co-signing is the first step.
 - **Signed distribution.** Cyberware ships cosign-verified images; we
   should sign releases the same way.
 

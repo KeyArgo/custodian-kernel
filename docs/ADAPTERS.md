@@ -29,7 +29,7 @@ declared `fail_closed`, else a WARN — the pipeline never dies mid-run.
 |---|---|---|
 | `spend-sentinel` | money | duplicate spends, spend loops, cap-probing |
 | `prompt-injection-guard` | security | instruction-override / exfil / role-hijack payloads in tool args (incl. base64-smuggled) |
-| `secret-leak-guard` | security | credentials in args (deny) or output (redact); Warden-value tripwire |
+| `secret-leak-guard` | security | credentials in args (deny) or output (redact); Paladin-value tripwire |
 | `kernel-self-protection` | security | writes to policy, vault, kill switch, adapters, or the skills tree |
 | `pii-redactor` | privacy | emails, phones, SSNs, Luhn-checked cards, IPs |
 | `context-anchor` | guardrail | tool fences + session budget, enforced regardless of what the model remembers |
@@ -37,7 +37,7 @@ declared `fail_closed`, else a WARN — the pipeline never dies mid-run.
 | `tool-confabulation-guard` | guardrail | calls to tools/args that don't exist (with `did you mean…`) |
 | `scope-fence` | guardrail | file/host/arg reach outside the current task scope |
 | `path-fence` | security | denylist read/write fence (`~/.ssh`, `*.env`, ...), reads AND writes, including shell-command paths |
-| `egress-domain-guard` | security | a host-restricted `warden://` secret sent to a non-approved destination |
+| `egress-domain-guard` | security | a host-restricted `paladin://` secret sent to a non-approved destination |
 
 ## CLI
 

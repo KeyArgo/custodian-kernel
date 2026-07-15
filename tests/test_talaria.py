@@ -58,29 +58,29 @@ def test_output_transform_marks_result(echo_registry):
     assert "pii-redactor" in r.get("transformed_by", [])
 
 
-def test_warden_egress(echo_registry, tmp_path):
-    from warden.vault import Vault
-    from warden.broker import Broker
-    v = Vault.create(path=tmp_path / "v.warden", passphrase="pp")
+def test_paladin_egress(echo_registry, tmp_path):
+    from paladin.vault import Vault
+    from paladin.broker import Broker
+    v = Vault.create(path=tmp_path / "v.paladin", passphrase="pp")
     v.add("test_key", "sekret-1234", env_var="TEST_KEY")
     b = Broker(v)
     b.grant("test_key", "skill:echo-tool", max_band="L2")
     bridge = HermesBridge(registry=echo_registry, pipeline=AdapterPipeline(), broker=b)
-    r = bridge.invoke("echo-tool", {"msg": "go", "key": "warden://test_key"})
+    r = bridge.invoke("echo-tool", {"msg": "go", "key": "paladin://test_key"})
     assert r["ok"] and r["klen"] == len("sekret-1234")
     # the ref never remained in the args passed onward
     assert "key" not in r
 
 
-def test_warden_egress_denied_without_grant(echo_registry, tmp_path):
-    from warden.vault import Vault
-    from warden.broker import Broker
-    v = Vault.create(path=tmp_path / "v.warden", passphrase="pp")
+def test_paladin_egress_denied_without_grant(echo_registry, tmp_path):
+    from paladin.vault import Vault
+    from paladin.broker import Broker
+    v = Vault.create(path=tmp_path / "v.paladin", passphrase="pp")
     v.add("test_key", "sekret", env_var="TEST_KEY")
     bridge = HermesBridge(registry=echo_registry, pipeline=AdapterPipeline(),
                           broker=Broker(v))
-    r = bridge.invoke("echo-tool", {"msg": "go", "key": "warden://test_key"})
-    assert not r["ok"] and "warden" in r["denied_by"]
+    r = bridge.invoke("echo-tool", {"msg": "go", "key": "paladin://test_key"})
+    assert not r["ok"] and "paladin" in r["denied_by"]
 
 
 # -- capsule -----------------------------------------------------------------
@@ -121,9 +121,9 @@ def test_introspection_status(echo_registry):
 
 
 def test_introspection_vault_list_metadata_only(echo_registry, tmp_path):
-    from warden.vault import Vault
-    from warden.broker import Broker
-    v = Vault.create(path=tmp_path / "v.warden", passphrase="pp")
+    from paladin.vault import Vault
+    from paladin.broker import Broker
+    v = Vault.create(path=tmp_path / "v.paladin", passphrase="pp")
     v.add("stripe_sk", "sk_live_secretzzz", env_var="STRIPE_SECRET_KEY")
     b = Broker(v)
     cap = SessionCapsule()
@@ -131,10 +131,10 @@ def test_introspection_vault_list_metadata_only(echo_registry, tmp_path):
         registry=echo_registry, capsule=cap,
         pipeline=AdapterPipeline([IntrospectionAdapter(capsule=cap, broker=b)]),
         broker=b)
-    r = bridge.invoke("warden-vault-list")
+    r = bridge.invoke("paladin-vault-list")
     assert r["ok"]
     blob = json.dumps(r)
-    assert "warden://stripe_sk" in blob
+    assert "paladin://stripe_sk" in blob
     assert "sk_live_secretzzz" not in blob  # value never present
 
 
@@ -143,10 +143,10 @@ def test_introspection_vault_list_metadata_only(echo_registry, tmp_path):
 def test_cli_version_flags():
     import pytest as _pytest
     from talaria.cli import main as talaria_main
-    from warden.cli import main as warden_main
+    from paladin.cli import main as paladin_main
     from custodian.cli.main import main as custodian_main
     # argparse's version action exits at parse time in every CLI.
-    for entry in (talaria_main, warden_main, custodian_main):
+    for entry in (talaria_main, paladin_main, custodian_main):
         with _pytest.raises(SystemExit) as exc:
             entry(["--version"])
         assert exc.value.code == 0
