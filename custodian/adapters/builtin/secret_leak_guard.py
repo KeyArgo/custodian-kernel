@@ -7,8 +7,8 @@ Two detection layers:
    check on long opaque tokens. Applied to *both* directions: arguments
    (agent trying to send a credential somewhere) and outputs (a
    credential coming back into model context).
-2. **Warden tripwire** — if a :class:`warden.broker.LeakSentinel` is
-   provided, every token is hashed and checked against the values Warden
+2. **Paladin tripwire** — if a :class:`paladin.broker.LeakSentinel` is
+   provided, every token is hashed and checked against the values Paladin
    actually released. This catches the worst case precisely: a secret
    the agent was never shown, surfacing in its context anyway (echoed by
    a subprocess, printed in an error, reflected by an API).
@@ -73,8 +73,8 @@ def _scan(text: str, sentinel) -> list[tuple[str, str]]:
             findings.append((m.group(0), label))
     for token in _TOKEN_SPLIT.split(text):
         if sentinel is not None and sentinel.seen(token):
-            findings.append((token, "warden-vault-value"))
-        elif len(token) >= 32 and _entropy(token) >= 4.5 and not token.startswith("warden://"):
+            findings.append((token, "paladin-vault-value"))
+        elif len(token) >= 32 and _entropy(token) >= 4.5 and not token.startswith("paladin://"):
             findings.append((token, "high-entropy-token"))
     return findings
 
@@ -97,7 +97,7 @@ class SecretLeakGuard(Adapter):
             return Verdict.deny(
                 self.name,
                 f"credential material in tool arguments ({', '.join(labels)}) — "
-                f"use a warden:// ref instead of a raw value",
+                f"use a paladin:// ref instead of a raw value",
             )
         return Verdict.allow(self.name)
 

@@ -64,7 +64,7 @@ def talaria_home() -> Path:
 # personal machine most wants an agent kept out of.
 DEFAULT_FORBIDDEN_PATHS = [
     "~/.ssh", "~/.aws", "~/.gnupg", "~/.config/gcloud",
-    "~/.warden", "~/.talaria", "~/.custodian",
+    "~/.paladin", "~/.talaria", "~/.custodian",
 ]
 DEFAULT_FORBIDDEN_GLOBS = ["*.env", "*.pem", "id_rsa", "id_ed25519", "*.key"]
 
@@ -114,13 +114,26 @@ def load_policy(path: Optional[Path] = None) -> dict:
     return doc if isinstance(doc, dict) else {}
 
 
+def save_policy(policy: dict, path: Optional[Path] = None) -> None:
+    """Write a policy dict back to policy.yaml (e.g. from the dashboard).
+
+    This replaces the whole file, so hand-written comments in an edited
+    policy.yaml are lost on the first save through this path — a normal
+    tradeoff for a GUI-editable config file, but worth being explicit
+    about rather than surprising someone the next time they open it in
+    an editor."""
+    path = Path(path) if path else default_policy_path()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(yaml.safe_dump(policy, sort_keys=False, default_flow_style=False))
+
+
 def build_pipeline(policy: dict, denial_observer=None, vault=None) -> AdapterPipeline:
     """Compile a policy dict into a ready AdapterPipeline.
 
     ``denial_observer`` (from talaria.denial_log.DenialLog.observer) is
     wired in when policy['log_denials'] is true.
 
-    ``vault`` (a warden.vault.Vault), when given, populates
+    ``vault`` (a paladin.vault.Vault), when given, populates
     EgressDomainGuard's ref_hosts map from every entry's allowed_hosts
     metadata — this is the ONLY place that wiring happens. Without a
     vault passed in, host-restricted secrets have no domain enforcement

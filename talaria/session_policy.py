@@ -1,7 +1,7 @@
 """Session policy — one YAML file that declares everything Hermes may do.
 
 The operator writes ``hermes-session.yaml``; ``build_bridge()`` compiles
-it into the full governed stack (capsule + guard adapters + Warden +
+it into the full governed stack (capsule + guard adapters + Paladin +
 bridge). Granular control over tools, files, hosts, spend, skill
 authoring, and privacy — in one reviewable artifact::
 

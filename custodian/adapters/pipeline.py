@@ -23,7 +23,7 @@ from custodian.adapters.base import ActionContext, Adapter, Decision, Verdict
 # (ActionContext, Verdict) -> None. It exists so an integration layer can
 # persist denials/warnings (e.g. to a tamper-evident log) WITHOUT the pure
 # kernel pipeline taking a dependency on that layer. The pipeline stays
-# brand-neutral; talaria wires a warden-audit-backed observer into it.
+# brand-neutral; talaria wires a paladin-audit-backed observer into it.
 VerdictObserver = Callable[[ActionContext, Verdict], None]
 
 

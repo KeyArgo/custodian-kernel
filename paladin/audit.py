@@ -11,7 +11,7 @@ and forging a valid chain requires the vault key. The log itself is
 value-free: it records *that* ``skill:stripe-spend`` resolved
 ``stripe_sk`` at band L2, never any secret material.
 
-``warden audit verify`` walks the chain and reports the first break.
+``paladin audit verify`` walks the chain and reports the first break.
 """
 from __future__ import annotations
 
@@ -19,12 +19,13 @@ import hashlib
 import hmac
 import json
 import os
+import threading
 import time
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
 
-from warden.errors import AuditChainBrokenError
+from paladin.errors import AuditChainBrokenError
 
 GENESIS = "0" * 64
 
@@ -57,6 +58,12 @@ class AuditLog:
     def __init__(self, path: Path, key: bytes) -> None:
         self.path = Path(path)
         self._key = key
+        # Serialize append() within a process. The egress gateway drives
+        # this from a thread per connection, so concurrent calls would
+        # otherwise read the same tail MAC and fork the hash chain (found in
+        # review — reproduced with 8 threads). This guards in-process
+        # concurrency only; cross-process racing is a separate concern.
+        self._lock = threading.Lock()
 
     def _mac(self, prev: str, body: dict) -> str:
         return hmac.new(self._key, prev.encode() + _canonical(body), hashlib.sha256).hexdigest()
@@ -84,18 +91,19 @@ class AuditLog:
     def append(self, event: str, ref: str, requester: str, band: str = "L0",
                detail: str = "") -> AuditRecord:
         detail = detail[:512]  # keep records bounded and value-free
-        prev = self._tail_mac()
-        body = {"ts": time.time(), "event": event, "ref": ref,
-                "requester": requester, "band": band, "detail": detail}
-        rec = AuditRecord(**body, prev=prev, mac=self._mac(prev, body))
-        self.path.parent.mkdir(parents=True, exist_ok=True)
-        line = json.dumps({**body, "prev": prev, "mac": rec.mac},
-                          sort_keys=True, separators=(",", ":"))
-        fd = os.open(self.path, os.O_WRONLY | os.O_CREAT | os.O_APPEND, 0o600)
-        with os.fdopen(fd, "a") as f:
-            f.write(line + "\n")
-            f.flush()
-            os.fsync(f.fileno())
+        with self._lock:  # read-tail + write must be atomic (see __init__)
+            prev = self._tail_mac()
+            body = {"ts": time.time(), "event": event, "ref": ref,
+                    "requester": requester, "band": band, "detail": detail}
+            rec = AuditRecord(**body, prev=prev, mac=self._mac(prev, body))
+            self.path.parent.mkdir(parents=True, exist_ok=True)
+            line = json.dumps({**body, "prev": prev, "mac": rec.mac},
+                              sort_keys=True, separators=(",", ":"))
+            fd = os.open(self.path, os.O_WRONLY | os.O_CREAT | os.O_APPEND, 0o600)
+            with os.fdopen(fd, "a") as f:
+                f.write(line + "\n")
+                f.flush()
+                os.fsync(f.fileno())
         return rec
 
     def records(self) -> list[dict]:

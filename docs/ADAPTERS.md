@@ -1,5 +1,57 @@
 # Guard adapters
 
+## Package boundaries — why "the adapter," not an import
+
+Three packages ship in this repo, and the dependency arrow only ever
+points one way:
+
+```
+custodian/  (kernel + adapter framework)  ←──┐
+                                              │  talaria/ imports both.
+paladin/    (credential broker)           ←──┘  Nothing imports talaria.
+```
+
+- **`custodian/` never imports `paladin/` or `talaria/`.** The kernel
+  and the built-in adapters are brand-neutral: they know nothing about
+  Hermes, and nothing about the broker's Python API.
+- **`paladin/` never imports `custodian/` or `talaria/`.** The broker
+  is a standalone credential vault — usable with zero AI-agent
+  framework installed at all (`pip install custodian-kernel[paladin]`
+  and you have `paladin init`/`add`/`exec`, nothing else required).
+- **`talaria/` is the only package that imports both.** Wiring a
+  specific broker to a specific kernel's adapters for a specific agent
+  (Hermes) is talaria's entire job. A future Claude/Codex integration
+  package would sit at this same layer — never inside `custodian/` or
+  `paladin/` — importing both the same way talaria does.
+
+This isn't just a convention — `tests/test_architecture_boundaries.py`
+parses every file in `custodian/` and `paladin/` with `ast` and fails
+the suite if either one ever imports the other or `talaria`. Run it
+directly any time you want to re-check the boundary yourself:
+
+```bash
+pytest tests/test_architecture_boundaries.py -v
+```
+
+**How custodian's adapters reference `paladin://` without importing
+`paladin` at all** — two ways, both string/config level, never code:
+
+1. **Protocol-string awareness.** `egress-domain-guard` and
+   `secret-leak-guard` recognize the literal `paladin://` URI prefix
+   with a regex, the same way they'd recognize `https://` — they parse
+   a string pattern, not a `SecretRef` object from the `paladin`
+   package. `path-fence` uses the same trick to protect the vault's
+   home directory (`~/.paladin`) without importing anything to learn
+   that path.
+2. **Plain-dict configuration, populated by the caller.** `talaria/policy.py`'s
+   `build_pipeline()` is the one place that actually imports
+   `paladin.vault`, reads `vault.iter_meta()` for each secret's
+   `allowed_hosts`, and hands the *result* — an inert
+   `{secret_name: [host, ...]}` dict — to `EgressDomainGuard(
+   {"ref_hosts": ref_hosts})`. The adapter never sees the vault object,
+   never imports `paladin`, and would work identically if some other
+   caller populated that same dict from a config file instead.
+
 Guard adapters are pluggable pre/post hooks around every governed action.
 The kernel decides *whether* an action is allowed (bands, caps, envelopes,
 kill switch). Adapters decide whether an allowed action is *sane* — they
@@ -29,7 +81,7 @@ declared `fail_closed`, else a WARN — the pipeline never dies mid-run.
 |---|---|---|
 | `spend-sentinel` | money | duplicate spends, spend loops, cap-probing |
 | `prompt-injection-guard` | security | instruction-override / exfil / role-hijack payloads in tool args (incl. base64-smuggled) |
-| `secret-leak-guard` | security | credentials in args (deny) or output (redact); Warden-value tripwire |
+| `secret-leak-guard` | security | credentials in args (deny) or output (redact); Paladin-value tripwire |
 | `kernel-self-protection` | security | writes to policy, vault, kill switch, adapters, or the skills tree |
 | `pii-redactor` | privacy | emails, phones, SSNs, Luhn-checked cards, IPs |
 | `context-anchor` | guardrail | tool fences + session budget, enforced regardless of what the model remembers |
@@ -37,7 +89,7 @@ declared `fail_closed`, else a WARN — the pipeline never dies mid-run.
 | `tool-confabulation-guard` | guardrail | calls to tools/args that don't exist (with `did you mean…`) |
 | `scope-fence` | guardrail | file/host/arg reach outside the current task scope |
 | `path-fence` | security | denylist read/write fence (`~/.ssh`, `*.env`, ...), reads AND writes, including shell-command paths |
-| `egress-domain-guard` | security | a host-restricted `warden://` secret sent to a non-approved destination |
+| `egress-domain-guard` | security | a host-restricted `paladin://` secret sent to a non-approved destination |
 
 ## CLI
 

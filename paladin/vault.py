@@ -6,7 +6,7 @@ file learns only its size. Writes are atomic (tmp file + rename in the
 same directory) and permission-hardened (0700 dir, 0600 file).
 
 The vault is the *human's* API surface. Agents never touch this class;
-they go through :class:`warden.broker.Broker`, which enforces grants
+they go through :class:`paladin.broker.Broker`, which enforces grants
 and audits every access.
 """
 from __future__ import annotations
@@ -21,20 +21,20 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Iterator, Optional
 
-from warden import crypto
-from warden.errors import (
+from paladin import crypto
+from paladin.errors import (
     UnknownRefError,
     VaultCorruptError,
     VaultLockedError,
     VaultMissingError,
-    WardenError,
+    PaladinError,
 )
-from warden.refs import SecretRef, valid_name
+from paladin.refs import SecretRef, valid_name
 
-DEFAULT_VAULT_DIR = Path(os.environ.get("WARDEN_HOME", "~/.warden")).expanduser()
-VAULT_FILENAME = "vault.warden"
-PASSPHRASE_ENV = "WARDEN_PASSPHRASE"
-KEYFILE_ENV = "WARDEN_KEYFILE"
+DEFAULT_VAULT_DIR = Path(os.environ.get("PALADIN_HOME", "~/.paladin")).expanduser()
+VAULT_FILENAME = "vault.paladin"
+PASSPHRASE_ENV = "PALADIN_PASSPHRASE"
+KEYFILE_ENV = "PALADIN_KEYFILE"
 
 
 @dataclass
@@ -83,15 +83,15 @@ def _load_key_material(passphrase: Optional[str], keyfile: Optional[Path],
             # these must fail as a clean VaultLockedError, not a raw
             # traceback. This is the single, shared choke point: every
             # caller that opens a vault by keyfile (open_from_env's
-            # WARDEN_KEYFILE path, the CLI's --keyfile flag, direct
+            # PALADIN_KEYFILE path, the CLI's --keyfile flag, direct
             # Vault.open(keyfile=...) calls) routes through here, so fixing
             # it here — once — covers all of them instead of requiring each
             # call site to duplicate the check.
             raise VaultLockedError(
                 f"keyfile {str(keyfile)!r} could not be read "
-                f"({type(e).__name__}: {e}). If this came from WARDEN_KEYFILE, "
-                f"fix the path, regenerate the keyfile, or unset WARDEN_KEYFILE "
-                f"to fall back to WARDEN_PASSPHRASE instead."
+                f"({type(e).__name__}: {e}). If this came from PALADIN_KEYFILE, "
+                f"fix the path, regenerate the keyfile, or unset PALADIN_KEYFILE "
+                f"to fall back to PALADIN_PASSPHRASE instead."
             ) from e
         if len(raw) != crypto.KEY_LEN:
             raise VaultLockedError("keyfile must be exactly 32 raw bytes")
@@ -152,9 +152,9 @@ class Vault:
 
     @classmethod
     def default_path(cls) -> Path:
-        # Resolve WARDEN_HOME at call time, not import time, so a value set
+        # Resolve PALADIN_HOME at call time, not import time, so a value set
         # after import (tests, or a process that changes it) is honored.
-        base = Path(os.environ.get("WARDEN_HOME", "~/.warden")).expanduser()
+        base = Path(os.environ.get("PALADIN_HOME", "~/.paladin")).expanduser()
         return base / VAULT_FILENAME
 
     @classmethod
@@ -162,7 +162,7 @@ class Vault:
                keyfile: Optional[Path] = None) -> "Vault":
         path = Path(path) if path else cls.default_path()
         if path.exists():
-            raise WardenError(f"a vault already exists at {path}")
+            raise PaladinError(f"a vault already exists at {path}")
         crypto.require_crypto()
         params = crypto.KdfParams.fresh()
         key = _load_key_material(passphrase, keyfile, params)
@@ -175,7 +175,7 @@ class Vault:
              keyfile: Optional[Path] = None) -> "Vault":
         path = Path(path) if path else cls.default_path()
         if not path.exists():
-            raise VaultMissingError(f"no vault at {path} — run `warden init` first")
+            raise VaultMissingError(f"no vault at {path} — run `paladin init` first")
         blob = path.read_bytes()
         header, _, _ = crypto.split_blob(blob)
         params = crypto.KdfParams.from_header(header)
@@ -192,10 +192,10 @@ class Vault:
     @classmethod
     def open_from_env(cls, path: Optional[Path] = None,
                       interactive: bool = False) -> "Vault":
-        """Unlock using WARDEN_KEYFILE / WARDEN_PASSPHRASE, optionally
+        """Unlock using PALADIN_KEYFILE / PALADIN_PASSPHRASE, optionally
         falling back to an interactive prompt (CLI use only).
 
-        A WARDEN_KEYFILE that doesn't exist (or can't be read) is a
+        A PALADIN_KEYFILE that doesn't exist (or can't be read) is a
         configuration error, not a signal to quietly try the passphrase
         instead — silently falling back could unlock a *different* vault
         than the caller thinks they're using, which is worse for a
@@ -203,7 +203,7 @@ class Vault:
         single shared choke point every keyfile-opening path already
         goes through, _load_key_material() (see its docstring) — not
         duplicated here — so a missing *vault* (VaultMissingError, "run
-        `warden init` first") is still reported first if both are wrong,
+        `paladin init` first") is still reported first if both are wrong,
         which is the more fundamental problem for a first-time user.
         """
         keyfile = os.environ.get(KEYFILE_ENV)
@@ -219,7 +219,7 @@ class Vault:
 
         Holds an exclusive flock on a sibling ``.lock`` file for the
         duration of the write so two concurrent ``save()`` calls (e.g.
-        two ``warden`` CLI invocations racing) serialize instead of one
+        two ``paladin`` CLI invocations racing) serialize instead of one
         silently clobbering the other's write — found missing in review.
         This narrows but doesn't eliminate the lost-update window: it
         protects the write itself, not the whole open→modify→save
@@ -275,9 +275,9 @@ class Vault:
             env_var: Optional[str] = None, note: str = "", overwrite: bool = False,
             allowed_hosts: Optional[list] = None) -> SecretRef:
         if not valid_name(name):
-            raise WardenError(f"invalid secret name {name!r}")
+            raise PaladinError(f"invalid secret name {name!r}")
         if name in self._entries and not overwrite:
-            raise WardenError(f"entry {name!r} already exists (use overwrite/edit)")
+            raise PaladinError(f"entry {name!r} already exists (use overwrite/edit)")
         prior = self._entries.get(name)
         entry = Entry(name=name, value=value, kind=kind, profile=profile,
                       env_var=env_var or _default_env_var(name), note=note,

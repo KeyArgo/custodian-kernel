@@ -12,7 +12,7 @@ Protected by default:
 
 * the Custodian state dir (``~/.custodian`` — policy, authority,
   kill switch, adapter manifests),
-* any Warden home (``~/.warden`` — vault, audit chain),
+* any Paladin home (``~/.paladin`` — vault, audit chain),
 * the active skills trees (``skills/``, ``bundled_skills/``) — an agent
   authoring a new skill is an agent minting itself a new capability;
   skill drafts belong in the configured ``quarantine`` dir, where a
@@ -42,8 +42,8 @@ def _default_protected() -> list[str]:
     home = os.path.expanduser("~")
     return [
         os.path.join(home, ".custodian"),
-        os.path.join(home, ".warden"),
-        os.environ.get("WARDEN_HOME", os.path.join(home, ".warden")),
+        os.path.join(home, ".paladin"),
+        os.environ.get("PALADIN_HOME", os.path.join(home, ".paladin")),
         "skills", "bundled_skills",
         "SOUL.md", "policy.yaml", "COORDINATION.md",
     ]

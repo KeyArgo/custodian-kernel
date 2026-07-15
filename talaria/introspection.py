@@ -8,9 +8,9 @@ any environment the agent can reach:
 * ``custodian-status``    — session state: band, spend, denials, age.
 * ``custodian-anchor``    — the full re-anchoring block on demand, so a
   model that *feels* itself losing the thread can ask to be re-grounded.
-* ``warden-vault-list``   — names/profiles/env-vars of vault entries
+* ``paladin-vault-list``   — names/profiles/env-vars of vault entries
   (metadata only, values structurally absent), so the model knows which
-  ``warden://`` refs exist instead of guessing.
+  ``paladin://`` refs exist instead of guessing.
 
 Not enabling this adapter removes the capability entirely — the skills
 aren't stubbed, they're gone. Modularity over built-ins.
@@ -21,11 +21,11 @@ from typing import Optional
 
 from custodian.adapters.base import ActionContext, Adapter
 
-META_SKILLS = ("custodian-status", "custodian-anchor", "warden-vault-list")
+META_SKILLS = ("custodian-status", "custodian-anchor", "paladin-vault-list")
 
 
 class IntrospectionAdapter(Adapter):
-    """Serves custodian-status / custodian-anchor / warden-vault-list."""
+    """Serves custodian-status / custodian-anchor / paladin-vault-list."""
 
     name = "hermes-introspection"
     category = "integration"
@@ -57,18 +57,18 @@ class IntrospectionAdapter(Adapter):
                 return {"ok": False, "error": "no session capsule wired"}
             return {"ok": True, "anchor": self.capsule.render_anchor()}
 
-        if ctx.skill == "warden-vault-list":
+        if ctx.skill == "paladin-vault-list":
             if self.broker is None:
-                return {"ok": False, "error": "no warden broker wired"}
-            self.broker.audit.append("meta", "-", "skill:warden-vault-list",
+                return {"ok": False, "error": "no paladin broker wired"}
+            self.broker.audit.append("meta", "-", "skill:paladin-vault-list",
                                      ctx.band, "vault inventory listed")
             entries = [
-                {"ref": f"warden://{m['name']}", "profile": m["profile"],
+                {"ref": f"paladin://{m['name']}", "profile": m["profile"],
                  "env_var": m["env_var"], "kind": m["kind"]}
                 for m in self.broker.vault.iter_meta()
             ]
             return {"ok": True, "entries": entries,
                     "note": "values are never accessible; pass the ref string "
-                            "in tool arguments and Warden injects at egress"}
+                            "in tool arguments and Paladin injects at egress"}
 
         return None

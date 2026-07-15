@@ -1,10 +1,10 @@
 """``talaria`` — the one command Hermes users need to learn.
 
-Talaria wraps the credential broker (``warden``) and the guard-adapter
+Talaria wraps the credential broker (``paladin``) and the guard-adapter
 registry (``custodian.adapters``) under a single CLI, so a Hermes user
 never has to know three tool names to get governed credentials and
 guardrails working. Nothing here duplicates logic — every subcommand
-delegates straight to the same code the standalone ``warden``/
+delegates straight to the same code the standalone ``paladin``/
 ``custodian adapters`` CLIs call.
 
     talaria vault add stripe_sk --env-var STRIPE_SECRET_KEY
@@ -13,7 +13,7 @@ delegates straight to the same code the standalone ``warden``/
     talaria session status ./hermes-session.capsule.json
     talaria init ./hermes-session.yaml
 
-``talaria vault ...`` and ``warden ...`` are the same broker underneath —
+``talaria vault ...`` and ``paladin ...`` are the same broker underneath —
 use whichever name you like; both work standalone too.
 """
 from __future__ import annotations
@@ -27,8 +27,8 @@ from pathlib import Path
 
 from custodian.cli import cmd_adapters
 from custodian.cli._version import LazyVersionAction
-from warden import cli as warden_cli
-from warden.errors import WardenError
+from paladin import cli as paladin_cli
+from paladin.errors import PaladinError
 
 _SESSION_YAML_TEMPLATE = """\
 goal: {goal}
@@ -60,8 +60,8 @@ guards:                # all default true; set false to drop one
 
 
 def cmd_vault(args) -> int:
-    """Forward every arg after `vault` straight to warden's own CLI."""
-    return warden_cli.main(args.vault_args)
+    """Forward every arg after `vault` straight to paladin's own CLI."""
+    return paladin_cli.main(args.vault_args)
 
 
 def _load_capsule(path_str: str):
@@ -126,7 +126,7 @@ _DIM = "\033[2m"
 
 def cmd_log(args) -> int:
     from talaria.denial_log import DenialLog
-    from warden.errors import AuditChainBrokenError
+    from paladin.errors import AuditChainBrokenError
 
     log = DenialLog()
 
@@ -173,6 +173,29 @@ def cmd_log(args) -> int:
               f"{r.get('ref', '-')}  {_DIM}(by {adapter}){_RESET}")
         print(f"      {r.get('detail', '')}")
     print()
+    return 0
+
+
+def cmd_dashboard(args) -> int:
+    from talaria.dashboard import run_dashboard
+    from talaria.denial_log import DenialLog
+    from paladin.vault import Vault
+
+    vault = None
+    try:
+        vault = Vault.open_from_env(interactive=True)
+    except Exception as e:
+        print(f"talaria: dashboard starting without an open vault "
+              f"({type(e).__name__}: {e}) — the Vault section will show "
+              f"an error, everything else still works", file=sys.stderr)
+
+    denial_log = None
+    try:
+        denial_log = DenialLog()
+    except Exception as e:
+        print(f"talaria: denial log unavailable: {e}", file=sys.stderr)
+
+    run_dashboard(host=args.host, port=args.port, vault=vault, denial_log=denial_log)
     return 0
 
 
@@ -236,7 +259,7 @@ def cmd_hermes(args) -> int:
 
         # Create the vault if missing (keyfile-based, zero-friction).
         try:
-            from warden.vault import Vault
+            from paladin.vault import Vault
             vpath = Vault.default_path()
             if not vpath.exists():
                 keyfile = vpath.parent / "vault.key"
@@ -248,7 +271,7 @@ def cmd_hermes(args) -> int:
                         f.write(os.urandom(32))
                 Vault.create(path=vpath, keyfile=keyfile)
                 print(f"✓ created credential vault → {vpath}")
-                print(f"  (set WARDEN_KEYFILE={keyfile} in your shell to use it)")
+                print(f"  (set PALADIN_KEYFILE={keyfile} in your shell to use it)")
             else:
                 print(f"• vault already exists → {vpath} (left as-is)")
         except Exception as e:
@@ -296,7 +319,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     sp = sub.add_parser(
         "vault",
-        help="Manage credentials (same broker as the standalone `warden` command)",
+        help="Manage credentials (same broker as the standalone `paladin` command)",
         add_help=False,
     )
     sp.add_argument("vault_args", nargs=argparse.REMAINDER)
@@ -345,6 +368,15 @@ def build_parser() -> argparse.ArgumentParser:
                     help="install the plugin + starter policy + vault, or show status")
     sp.set_defaults(func=cmd_hermes)
 
+    sp = sub.add_parser(
+        "dashboard",
+        help="Local web UI: denial log, vault entries, and policy toggles in one place",
+    )
+    sp.add_argument("--host", default="127.0.0.1",
+                    help="bind address (default 127.0.0.1 — not exposed off this machine)")
+    sp.add_argument("--port", type=int, default=8765)
+    sp.set_defaults(func=cmd_dashboard)
+
     return p
 
 
@@ -354,13 +386,13 @@ def main(argv=None) -> int:
         code = args.func(args)
         return code if isinstance(code, int) else 0
     except SystemExit as e:
-        # cmd_vault forwards straight into warden.cli.main(), whose own
+        # cmd_vault forwards straight into paladin.cli.main(), whose own
         # argparse instance calls sys.exit() directly on a malformed
         # subcommand (e.g. `talaria vault grant x` missing --to) — that
         # must come back as a return code like every other error here,
         # not escape as an uncaught exception from a function typed -> int.
         return e.code if isinstance(e.code, int) else 1
-    except WardenError as e:
+    except PaladinError as e:
         print(f"talaria: {e}", file=sys.stderr)
         return 1
 

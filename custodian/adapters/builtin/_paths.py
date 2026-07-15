@@ -28,7 +28,7 @@ def looks_like_path(value: str) -> bool:
     can't be paths at all (empty, or obviously a URL)."""
     if not value:
         return False
-    if value.startswith(("http://", "https://", "warden://")):
+    if value.startswith(("http://", "https://", "paladin://")):
         return False
     return True
 

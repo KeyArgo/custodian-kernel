@@ -4,7 +4,7 @@ import pytest
 from custodian.adapters.base import ActionContext, Adapter, Verdict
 from custodian.adapters.pipeline import AdapterPipeline
 from talaria.denial_log import DenialLog
-from warden.errors import AuditChainBrokenError
+from paladin.errors import AuditChainBrokenError
 
 
 def ctx(skill, args=None, **kw):

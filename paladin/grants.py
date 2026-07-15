@@ -5,7 +5,7 @@ A requester is a namespaced identity string:
 * ``skill:stripe-spend``   — a Hermes/Custodian skill by name
 * ``adapter:spend-sentinel`` — a Custodian adapter
 * ``sandbox:hermes-hackathon`` — a NemoClaw sandbox
-* ``user:cli``             — the human at the Warden CLI
+* ``user:cli``             — the human at the Paladin CLI
 
 Deny-by-default: with no matching grant, resolution fails. Wildcards are
 allowed only in the *ref* position (``stripe/*``), never for requesters —
@@ -21,7 +21,7 @@ import time
 from dataclasses import dataclass, field, asdict
 from typing import Optional
 
-from warden.errors import GrantDeniedError, WardenError
+from paladin.errors import GrantDeniedError, PaladinError
 
 # Custodian authority bands, lowest to highest.
 BAND_ORDER = ["L0", "L1", "L2", "L3", "L4"]
@@ -31,7 +31,7 @@ def band_index(band: str) -> int:
     try:
         return BAND_ORDER.index(band)
     except ValueError:
-        raise WardenError(f"unknown band {band!r} (expected one of {BAND_ORDER})")
+        raise PaladinError(f"unknown band {band!r} (expected one of {BAND_ORDER})")
 
 
 @dataclass
@@ -44,10 +44,19 @@ class Grant:
     expires_at: Optional[float] = None  # unix time; None = no expiry
     note: str = ""
     created_at: float = field(default_factory=time.time)
+    # Egress scope — all empty = unrestricted (the default, so old vault
+    # grant dicts load unchanged: Grant(**old_dict) fills these in). When
+    # set they NARROW what a sandboxed egress call may do with the resolved
+    # secret; they never widen the entry's own allowed_hosts ceiling
+    # (Entry.allowed_hosts, enforced separately) — a request must satisfy
+    # both. See Broker.egress_request.
+    allowed_hosts: list = field(default_factory=list)  # exact hostnames
+    methods: list = field(default_factory=list)        # HTTP methods, any case
+    path_prefix: str = ""                              # URL path must start with
 
     def __post_init__(self) -> None:
         if ":" not in self.requester or "*" in self.requester:
-            raise WardenError(
+            raise PaladinError(
                 f"requester must be an exact 'namespace:name' id, got {self.requester!r}"
             )
         band_index(self.max_band)  # validate
@@ -60,6 +69,20 @@ class Grant:
         if band_index(band) > band_index(self.max_band):
             return False
         return fnmatch.fnmatchcase(ref_name, self.ref_pattern)
+
+    def scope_allows(self, host: str, method: str, path: str) -> bool:
+        """Does this grant's egress scope permit (host, method, path)?
+
+        Empty constraint = no restriction on that dimension. This is only
+        the grant's half of the check; the entry's ``allowed_hosts`` ceiling
+        is enforced independently by the caller (both must pass)."""
+        if self.allowed_hosts and host not in self.allowed_hosts:
+            return False
+        if self.methods and method.upper() not in {m.upper() for m in self.methods}:
+            return False
+        if self.path_prefix and not path.startswith(self.path_prefix):
+            return False
+        return True
 
 
 # Requesters that hold an implicit all-refs grant: the human at the CLI has
@@ -80,11 +103,14 @@ class GrantPolicy:
         return list(self._grants)
 
     def grant(self, ref_pattern: str, requester: str, max_band: str = "L2",
-              ttl_seconds: Optional[float] = None, note: str = "") -> Grant:
+              ttl_seconds: Optional[float] = None, note: str = "",
+              allowed_hosts: Optional[list] = None,
+              methods: Optional[list] = None, path_prefix: str = "") -> Grant:
         g = Grant(
             ref_pattern=ref_pattern, requester=requester, max_band=max_band,
             expires_at=(time.time() + ttl_seconds) if ttl_seconds else None,
-            note=note,
+            note=note, allowed_hosts=list(allowed_hosts or []),
+            methods=list(methods or []), path_prefix=path_prefix,
         )
         self._grants.append(g)
         self._persist()

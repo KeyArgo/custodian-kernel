@@ -3,17 +3,17 @@
 BlindKey-style domain allowlisting: a secret marked "only for
 api.stripe.com" must never ride along in a request to any other host,
 even a legitimate-looking one. This closes the gap where an agent holds
-a valid ``warden://`` reference and a prompt-injected (or merely
+a valid ``paladin://`` reference and a prompt-injected (or merely
 confused) tool call points it at an exfiltration endpoint — the kernel
 lets the *reference* be used, but this guard checks the *destination*.
 
-The guard stays brand-neutral (no warden import): it's configured with a
+The guard stays brand-neutral (no paladin import): it's configured with a
 ``ref_hosts`` map — ``{secret_name: [allowed_host, ...]}`` — that the
 integration layer (talaria) populates from each vault entry's
 ``allowed_hosts`` metadata. An empty/absent host list means unrestricted
 (preserving current behavior), so this only ever *adds* restriction.
 
-Trigger: a tool call whose arguments contain BOTH a ``warden://<name>``
+Trigger: a tool call whose arguments contain BOTH a ``paladin://<name>``
 reference for a restricted secret AND a destination host not in that
 secret's allow-list → DENY.
 
@@ -43,7 +43,7 @@ from custodian.adapters.base import ActionContext, Adapter, Verdict
 # skipped any token containing "://", so a scheme-prefixed non-HTTP
 # destination was a double-miss, worse than having no scheme at all.
 _URL_RE = re.compile(r"[a-zA-Z][a-zA-Z0-9+.-]*://[^\s\"'<>]+")
-_REF_RE = re.compile(r"warden://([a-zA-Z0-9][a-zA-Z0-9_.\-/]{0,127})")
+_REF_RE = re.compile(r"paladin://([a-zA-Z0-9][a-zA-Z0-9_.\-/]{0,127})")
 # Bare-host token: two or more dot-separated labels, optionally followed by
 # a port and/or path — catches a destination expressed without a literal
 # "http(s)://" prefix.
@@ -59,8 +59,8 @@ def _hosts_in(text: str) -> set[str]:
     hosts: set[str] = set()
     for u in _URL_RE.findall(text):
         parsed = urlparse(u)
-        if parsed.scheme.lower() == "warden":
-            continue  # a warden:// secret reference, not a network destination
+        if parsed.scheme.lower() == "paladin":
+            continue  # a paladin:// secret reference, not a network destination
         if parsed.hostname:
             hosts.add(parsed.hostname.lower())
     for tok in _TOKEN_SPLIT.split(text):
@@ -108,7 +108,7 @@ class EgressDomainGuard(Adapter):
             if bad:
                 return Verdict.deny(
                     self.name,
-                    f"secret warden://{ref} may only be sent to {sorted(allowed)}, "
+                    f"secret paladin://{ref} may only be sent to {sorted(allowed)}, "
                     f"but this call targets {sorted(bad)} — refusing to leak it there.",
                 )
         return Verdict.allow(self.name)

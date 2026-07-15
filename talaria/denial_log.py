@@ -7,7 +7,7 @@ hash-chained and HMAC-signed so the log can't be quietly edited or
 truncated after the fact — a real receipt of "the agent tried to read
 ~/.ssh, and we stopped it."
 
-It reuses warden's already-proven :class:`warden.audit.AuditLog`
+It reuses paladin's already-proven :class:`paladin.audit.AuditLog`
 (hash-chained JSONL) verbatim rather than reinventing the chain — the
 denial log is just an audit log with denial-shaped records mapped onto
 its (event, ref, requester, band, detail) columns:
@@ -33,8 +33,8 @@ import os
 from pathlib import Path
 from typing import Optional
 
-from warden import crypto
-from warden.audit import AuditLog
+from paladin import crypto
+from paladin.audit import AuditLog
 
 LOG_FILENAME = "denials.jsonl"
 KEY_FILENAME = "denial.key"
