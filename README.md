@@ -15,16 +15,16 @@ custodian-verify
 
 `custodian-verify` runs 3 checks: a planted-lie case through the deterministic verifier (CONTRADICTED), a live audit feed pull from the production dashboard, and a checkout-or-skip proof. 0 credentials, 0 cloning, 0 setup.
 
-**Or, for the deeper proof:**
+**Or, for the deeper proof — clone this repo and run the suite yourself:**
 
 ```bash
-git clone https://github.com/KeyArgo/hermes-hackathon-2026
-cd hermes-hackathon-2026
+git clone https://github.com/KeyArgo/custodian-kernel
+cd custodian-kernel
 pip install -e ".[dev]"
-python3 verify_kit.py
+pytest tests/
 ```
 
-`verify_kit.py` runs 5 phases end-to-end with no credentials: re-introduces the self-approval bug to prove the test catches it, runs the 1,346-test suite, runs a planted-lie case, pulls the real Stripe PaymentIntent `pi_3TkZWEPfSF4TGXT90AWlrnle`, and tests the kill switch end-to-end.
+That's the same 1,346-test suite this release shipped with, running against the exact source in this repo — no credentials needed.
 
 ## What you get when the kernel runs
 
@@ -55,8 +55,7 @@ Any company running an AI agent with a Stripe account, a Modal spend, a NIM infe
 
 ## Links
 
-- **Repo (GitHub):** https://github.com/KeyArgo/hermes-hackathon-2026
-- **Repo (Gitea):** https://git.argobox.com/KeyArgo/hermes-hackathon-2026
+- **Repo (GitHub):** https://github.com/KeyArgo/custodian-kernel
 - **PyPI:** https://pypi.org/project/custodian-kernel/
 - **Live dashboard:** https://getcustodian.xyz
 - **Operator panel:** https://getcustodian.xyz/operator
@@ -115,13 +114,9 @@ human approval required via Twilio Verify). The agent never holds the keys to
 both sides of that decision, so self-approval is structurally impossible, not
 just discouraged.
 
-**New here? Read [`docs/WHAT_THIS_IS.md`](docs/WHAT_THIS_IS.md) first** — a plain-language
-walkthrough of what this actually does, why it needs AI in exactly one place and nowhere
-else, and a worked real example end to end.
-
-**Wondering what this is actually for beyond one demo?** See
-[`docs/BUSINESSES_THIS_UNLOCKS.md`](docs/BUSINESSES_THIS_UNLOCKS.md) — the same enforcement
-pattern applied to five concrete, named business shapes, not just the one shown here.
+The sections below cover the mechanism (how a request becomes an autonomous
+grant or an escalation), what's genuinely wired up versus a stub, and where
+the design still has sharp edges.
 
 ## Installation
 
@@ -142,7 +137,6 @@ pip install -e ".[dev]"
 custodian init --dir myagent
 
 # Edit the generated policy.yaml to configure authority bands
-# (see docs/POLICY_LANGUAGE.md)
 
 # Autonomous request (under the $2.00 default cap)
 custodian request --amount 1.00 --description "API credits"
@@ -156,18 +150,6 @@ custodian status
 # View audit log
 custodian audit
 ```
-
-## Documentation
-
-- [Architecture](docs/ARCHITECTURE.md) — design, flow diagram, privilege separation model
-- [Policy Language](docs/POLICY_LANGUAGE.md) — complete YAML format reference
-- [Security](docs/SECURITY.md) — threat model, self-approval fix, verification model
-- [Security Hardening](docs/SECURITY-HARDENING.md) — credential/adapter/bridge scan and findings
-- [Caduceus](docs/CADUCEUS.md) — the credential broker (the agent never sees the value)
-- [Guard Adapters](docs/ADAPTERS.md) — money/security/privacy/guardrail hooks around every action
-- [Hermes Bridge](docs/HERMES-BRIDGE.md) — governed invoke surface + context-loss re-anchoring
-- [Verification](docs/VERIFICATION.md) — how to check every claim yourself
-- [Getting Started](docs/GETTING_STARTED.md) — 10-minute walkthrough
 
 ## Tool Layer — 102 governed tools
 
@@ -229,7 +211,7 @@ with their band and description so the capability surface is visible during revi
   test for the exact security bug this design prevents. The fix was proven
   by deliberately reintroducing the bug, confirming the test failed, then
   restoring the fix. That test exists so the bug can never silently return.
-- Public commit history at `github.com/KeyArgo/hermes-hackathon-2026`.
+- Public commit history at `github.com/KeyArgo/custodian-kernel`.
 
 **Don't take any of this on faith.** Everything verifiable from pip:
 
@@ -237,10 +219,8 @@ with their band and description so the capability surface is visible during revi
 pip install custodian-kernel       # install the kernel
 custodian demo-verify              # live claim check against the running system
 pip install custodian-kernel[dev] && pytest tests/   # 1,346 tests, 0 failures
-git clone https://github.com/KeyArgo/hermes-hackathon-2026  # read every line
+git clone https://github.com/KeyArgo/custodian-kernel  # read every line
 ```
-
-See `docs/VERIFICATION.md` for the full manual breakdown.
 
 ## Limitations
 
