@@ -27,7 +27,6 @@ import collections
 import hashlib
 import hmac
 import os
-import subprocess
 import time
 from functools import wraps
 from pathlib import Path
@@ -86,29 +85,33 @@ def require_operator(f):
     return wrapper
 
 
-import shutil as _shutil
+from custodian.adapters.nemoclaw import NemoClawExecutor
+from custodian.exceptions import SandboxGatewayDownError, SandboxTimeoutError
 
-def _nemohermes_bin() -> str:
+_sandbox = NemoClawExecutor(
+    sandbox_name=SANDBOX_NAME,
     # nemohermes may not be on the PATH when Flask starts from a venv;
     # fall back to the known install location.
-    return (
-        _shutil.which('nemohermes')
-        or '/home/argonaut/.local/bin/nemohermes'
-    )
+    fallback_binary_path='/home/argonaut/.local/bin/nemohermes',
+)
 
 
 def _run_script(script: str, *script_args: str, timeout: int = 30):
-    cmd = [_nemohermes_bin(), SANDBOX_NAME, 'exec', '--', 'python3',
-           f'{SCRIPTS_DIR}/{script}', *script_args]
+    """Kept as a thin dict-returning shim so every existing call site
+    (earn/spend/refund/approve/kill/resume) is unchanged -- only the
+    implementation moved to the reusable NemoClawExecutor adapter
+    (custodian/adapters/nemoclaw.py). Infrastructure failures (gateway
+    down / timeout) are converted back to the same dict shape a genuine
+    script failure would have produced, so callers and the frontend don't
+    need to distinguish -- but the raised exception types are still there
+    for anything (e.g. /sandbox/status below) that wants to tell them apart."""
     try:
-        proc = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
-        return {
-            'returncode': proc.returncode,
-            'stdout': proc.stdout.strip(),
-            'stderr': proc.stderr.strip(),
-        }
-    except subprocess.TimeoutExpired:
+        result = _sandbox.run(f'{SCRIPTS_DIR}/{script}', *script_args, timeout=timeout)
+        return result.to_dict()
+    except SandboxTimeoutError:
         return {'returncode': -1, 'stdout': '', 'stderr': f'timed out after {timeout}s'}
+    except SandboxGatewayDownError as e:
+        return {'returncode': -1, 'stdout': '', 'stderr': str(e)}
 
 
 @bp.route('/login', methods=['POST'])
@@ -252,49 +255,62 @@ def resume():
 
 import json
 import os
-_STATE_BASE = Path(os.getenv(
-    'HERMES_SKILL_STATE_PATH',
-    '/tmp/hermes-mount/sandbox/.hermes/skills/payments/stripe-spend/state',
-))
-_PENDING_CODE_PATH = _STATE_BASE / 'pending_approval.json'
-# notify.py's send_approval_code() writes the real, server-generated 6-digit
-# code here (deliberately, so the operator panel can display it on screen --
-# see the module docstring in notify.py) -- a SEPARATE file from
-# pending_approval.json above, which only carries escalation metadata
-# (amount/description/reason) and never has a code field. Reading only
-# pending_approval.json here meant `code` was always None: the escalation
-# banner ("SMS confirmed delivered") showed correctly, but the code itself
-# never auto-filled into Step 3/Step 8, forcing every judge to squint at the
-# masked ****** in the phone mockup with no way to actually get the digits.
-_PENDING_APPROVAL_CODE_PATH = _STATE_BASE / 'pending_code.json'
+
+SKILL_STATE_DIR = '/sandbox/.hermes/skills/payments/stripe-spend/state'
+
+# Escalation metadata (amount/description/reason) — written by
+# notify.write_pending(). Never has a code field.
+_PENDING_APPROVAL_PATH = f'{SKILL_STATE_DIR}/pending_approval.json'
+# The real, server-generated 6-digit code — written by notify.py's
+# send_approval_code() (deliberately server-known, so the operator panel can
+# display/auto-fill it on screen; see notify.py's module docstring). A
+# SEPARATE file from pending_approval.json above.
+_PENDING_CODE_PATH = f'{SKILL_STATE_DIR}/pending_code.json'
 
 
 @bp.route('/pending_code', methods=['GET'])
 def pending_code():
-    if not _PENDING_CODE_PATH.exists():
-        return jsonify({'pending': False, 'code': None, 'reason': 'no pending code'})
+    """Previously this read both paths through a host-side bind mount that
+    doesn't exist on this container (2026-07-14 finding), so it always fell
+    through to 'no pending code' regardless of what was actually pending —
+    and separately, the two path variables were named backwards from what
+    they pointed to, so even a working mount would have gated the whole
+    response on the wrong file's existence. Both fixed here: read via
+    nemohermes exec (custodian.adapters.nemoclaw), and the code file is now
+    treated as the primary source of truth for `pending`, not a fallback."""
     try:
-        data = json.loads(_PENDING_CODE_PATH.read_text())
-    except (ValueError, OSError):
-        return jsonify({'pending': False, 'code': None, 'reason': 'unreadable'})
+        meta_raw = _sandbox.read_file(_PENDING_APPROVAL_PATH)
+        code_raw = _sandbox.read_file(_PENDING_CODE_PATH)
+    except (SandboxGatewayDownError, SandboxTimeoutError) as e:
+        return jsonify({'pending': False, 'code': None, 'reason': str(e)})
 
-    code = data.get('code') or data.get('otp_code') or data.get('approval_code')
-    if code is None and _PENDING_APPROVAL_CODE_PATH.exists():
+    meta = {}
+    if meta_raw:
         try:
-            code_data = json.loads(_PENDING_APPROVAL_CODE_PATH.read_text())
+            meta = json.loads(meta_raw)
+        except ValueError:
+            meta = {}
+
+    code = None
+    if code_raw:
+        try:
+            code_data = json.loads(code_raw)
             if time.time() <= code_data.get('expires_at', 0):
                 code = code_data.get('code')
-        except (ValueError, OSError):
+        except ValueError:
             pass
+
+    if code is None and not meta:
+        return jsonify({'pending': False, 'code': None, 'reason': 'no pending code'})
 
     # Return the escalation metadata and the code so the UI can auto-fill it.
     return jsonify({
         'pending': True,
         'code': code,
-        'amount': data.get('amount'),
-        'description': data.get('description'),
-        'kind': data.get('kind', 'spend'),
-        'created_at': data.get('created_at'),
+        'amount': meta.get('amount'),
+        'description': meta.get('description'),
+        'kind': meta.get('kind', 'spend'),
+        'created_at': meta.get('created_at'),
     })
 
 
@@ -376,10 +392,9 @@ def forward_code():
         return jsonify({'ok': False, 'error': str(e), 'to': phone}), 502
 
 
-_STATE_DIR = _STATE_BASE
-_AUDIT_LOG_PATH = _STATE_DIR / 'audit_log.jsonl'
-_AUTHORITY_PATH = _STATE_DIR / 'authority.json'
-_REASONING_LOG_PATH = _STATE_DIR / 'reasoning_log.jsonl'
+_AUDIT_LOG_PATH = f'{SKILL_STATE_DIR}/audit_log.jsonl'
+_AUTHORITY_PATH = f'{SKILL_STATE_DIR}/authority.json'
+_REASONING_LOG_PATH = f'{SKILL_STATE_DIR}/reasoning_log.jsonl'
 
 
 def _write_reasoning(script: str, result: dict):
@@ -397,8 +412,7 @@ def _write_reasoning(script: str, result: dict):
         'iso': __import__('datetime').datetime.now(__import__('datetime').timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ'),
     }
     try:
-        with open(_REASONING_LOG_PATH, 'a') as f:
-            f.write(json.dumps(event) + '\n')
+        _sandbox.write_file(_REASONING_LOG_PATH, json.dumps(event) + '\n', append=True)
     except Exception:
         pass
 
@@ -419,26 +433,27 @@ def reset_demo():
     steps = []
     try:
         # Archive audit log
-        if _AUDIT_LOG_PATH.exists():
+        if _sandbox.read_file(_AUDIT_LOG_PATH) is not None:
             ts = int(time.time())
-            archive = _AUDIT_LOG_PATH.with_suffix(f'.jsonl.reset-{ts}')
-            _AUDIT_LOG_PATH.rename(archive)
-            steps.append(f'audit_log archived → {archive.name}')
+            archive = f'{_AUDIT_LOG_PATH}.reset-{ts}'
+            _sandbox.move_file(_AUDIT_LOG_PATH, archive)
+            steps.append(f'audit_log archived → {archive.rsplit("/", 1)[-1]}')
         else:
             steps.append('audit_log not found — skipped')
 
         # Zero session spend in authority.json, preserve band and caps
-        if _AUTHORITY_PATH.exists():
-            auth = json.loads(_AUTHORITY_PATH.read_text())
+        auth_raw = _sandbox.read_file(_AUTHORITY_PATH)
+        if auth_raw is not None:
+            auth = json.loads(auth_raw)
             auth['spent_this_session'] = 0.0
-            _AUTHORITY_PATH.write_text(json.dumps(auth, indent=2))
+            _sandbox.write_file(_AUTHORITY_PATH, json.dumps(auth, indent=2))
             steps.append(f'session spend zeroed (band={auth.get("band")}, cap=${auth.get("per_action_cap")})')
         else:
             steps.append('authority.json not found — skipped')
 
         # Clear any pending escalation code
-        if _PENDING_CODE_PATH.exists():
-            _PENDING_CODE_PATH.unlink()
+        if _sandbox.read_file(_PENDING_CODE_PATH) is not None:
+            _sandbox.delete_file(_PENDING_CODE_PATH)
             steps.append('pending_code cleared')
 
         # Clear Flask-layer kill switch so post-reset spends aren't silently denied
@@ -482,3 +497,27 @@ def spark_enable_route():
         return jsonify({'ok': True, 'action': 'enabled', 'status': spark_health()})
     except ImportError:
         return jsonify({'ok': False, 'error': 'enforcer not loaded'})
+
+
+# ── NemoClaw sandbox health ─────────────────────────────────────────────────
+
+@bp.route('/sandbox/status', methods=['GET'])
+@require_operator
+def sandbox_status():
+    """Health of the NemoClaw sandbox that /earn, /spend, /refund, /approve,
+    and /kill all execute inside. Distinct from /spark/status -- Spark is the
+    enforcement *decision* layer, this is the script *execution* layer; a
+    sandbox gateway outage looks identical to a Spark outage from the
+    frontend's error text unless you check this route."""
+    try:
+        health = _sandbox.doctor()
+        return jsonify({
+            'ok': health.ok,
+            'sandbox': health.sandbox,
+            'status': health.status,
+            'failed': health.failed,
+            'warnings': health.warnings,
+            'checks': [c.__dict__ for c in health.checks],
+        })
+    except (SandboxGatewayDownError, SandboxTimeoutError) as e:
+        return jsonify({'ok': False, 'error': str(e)}), 503

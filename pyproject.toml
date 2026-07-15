@@ -51,6 +51,7 @@ include = ["custodian*", "warden*", "talaria*"]
 
 [tool.setuptools.package-data]
 "custodian" = ["bundled_skills/**/*", "bundled_skills/**", "packs/**/corpus/*.json", "packs/**/*.yaml", "packs/**/*.json"]
+"talaria" = ["hermes_plugin/plugin.yaml", "hermes_plugin/*.py"]
 
 [tool.pytest.ini_options]
 addopts = "-m 'not network'"

@@ -38,7 +38,7 @@ _PATTERNS: list[tuple[re.Pattern, str]] = [
     (re.compile(r"\bAIza[0-9A-Za-z_-]{35}\b"), "google-api-key"),
 ]
 
-_TOKEN_SPLIT = re.compile(r"[\s\"'`,;=(){}\[\]<>]+")
+_TOKEN_SPLIT = re.compile(r"[\s\"'`,;=(){}\[\]<>/\\]+")
 
 
 def _entropy(s: str) -> float:
@@ -52,7 +52,21 @@ def _entropy(s: str) -> float:
 
 
 def _scan(text: str, sentinel) -> list[tuple[str, str]]:
-    """Return [(matched_text, label)] for every finding in `text`."""
+    """Return [(matched_text, label)] for every finding in `text`.
+
+    _TOKEN_SPLIT includes '/' and '\\' (path separators) specifically so
+    the high-entropy fallback below evaluates path SEGMENTS rather than
+    a whole filesystem path as one token. Confirmed live against a real
+    Hermes Agent session: an ordinary file-write to a path containing a
+    UUID-bearing temp directory (e.g. .../0192eba3-ffe3-.../file.txt —
+    common for session/container/scratch dirs) was a false positive
+    before this fix, because the *whole path* (80+ chars, high per-char
+    entropy from the hex+dash UUID) tripped the len>=32/entropy>=4.5
+    threshold. Once split on '/', the UUID segment alone (36 chars,
+    entropy ~3.8) falls under the threshold — while a genuine freestanding
+    credential (which is never itself a filesystem path) is unaffected
+    either way.
+    """
     findings = []
     for pattern, label in _PATTERNS:
         for m in pattern.finditer(text):

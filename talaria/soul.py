@@ -8,7 +8,7 @@ so what the model is told always equals what the kernel enforces.
 
 Usage::
 
-    from integrations.hermes.soul import compile_soul_section
+    from talaria.soul import compile_soul_section
     section = compile_soul_section(policy_path="policy.yaml", capsule=capsule)
     soul = base_soul_text + "\n\n" + section
 """

@@ -6,9 +6,9 @@ import pytest
 from custodian.tools.registry import ToolRegistry
 from custodian.adapters.pipeline import AdapterPipeline
 from custodian.adapters.builtin import ContextAnchor, PiiRedactor
-from integrations.hermes.bridge import HermesBridge
-from integrations.hermes.capsule import SessionCapsule
-from integrations.hermes.introspection import IntrospectionAdapter
+from talaria.bridge import HermesBridge
+from talaria.capsule import SessionCapsule
+from talaria.introspection import IntrospectionAdapter
 
 
 @pytest.fixture
@@ -136,3 +136,82 @@ def test_introspection_vault_list_metadata_only(echo_registry, tmp_path):
     blob = json.dumps(r)
     assert "warden://stripe_sk" in blob
     assert "sk_live_secretzzz" not in blob  # value never present
+
+
+# -- CLI ------------------------------------------------------------------
+
+def test_cli_version_flags():
+    import pytest as _pytest
+    from talaria.cli import main as talaria_main
+    from warden.cli import main as warden_main
+    from custodian.cli.main import main as custodian_main
+    # argparse's version action exits at parse time in every CLI.
+    for entry in (talaria_main, warden_main, custodian_main):
+        with _pytest.raises(SystemExit) as exc:
+            entry(["--version"])
+        assert exc.value.code == 0
+
+
+def test_cli_init_yaml_escapes_goal(tmp_path):
+    import yaml
+    from talaria.cli import main as talaria_main
+    out = tmp_path / "s.yaml"
+    rc = talaria_main(["init", str(out), "--goal", 'tricky: "quoted" #goal'])
+    assert rc == 0
+    doc = yaml.safe_load(out.read_text())
+    assert doc["goal"] == 'tricky: "quoted" #goal'
+
+
+def test_cli_session_corrupt_capsule_clean_error(tmp_path, capsys):
+    from talaria.cli import main as talaria_main
+    bad = tmp_path / "corrupt.json"
+    bad.write_text("{not json at all")
+    rc = talaria_main(["session", "status", str(bad)])
+    assert rc == 1
+    err = capsys.readouterr().err
+    assert "not a readable session capsule" in err
+
+
+# -- session_policy.build_bridge() — had zero test coverage before review,
+#    which is how a second copy of the disableable-kernel-guard bug and
+#    the empty-redact-skips-pii bug (already fixed in talaria/policy.py)
+#    went unnoticed in this separate, parallel compiler. -------------------
+
+def _write_session_policy(tmp_path, doc):
+    import yaml
+    path = tmp_path / "session.yaml"
+    path.write_text(yaml.dump(doc))
+    return path
+
+
+def test_build_bridge_kernel_grade_guards_cannot_be_disabled(tmp_path):
+    from talaria.session_policy import build_bridge
+    path = _write_session_policy(tmp_path, {
+        "goal": "test",
+        "guards": {"self_protection": False, "prompt_injection": False,
+                   "secret_leak": False},
+    })
+    bridge = build_bridge(path)
+    names = [a.name for a in bridge.pipeline.adapters]
+    assert "kernel-self-protection" in names
+    assert "prompt-injection-guard" in names
+    assert "secret-leak-guard" in names
+
+
+def test_build_bridge_optional_guard_can_be_disabled(tmp_path):
+    from talaria.session_policy import build_bridge
+    path = _write_session_policy(tmp_path, {
+        "goal": "test", "guards": {"repetition": False, "pii": False},
+    })
+    bridge = build_bridge(path)
+    names = [a.name for a in bridge.pipeline.adapters]
+    assert "repetition-breaker" not in names
+    assert "pii-redactor" not in names
+
+
+def test_build_bridge_empty_redact_still_enables_pii_guard(tmp_path):
+    from talaria.session_policy import build_bridge
+    path = _write_session_policy(tmp_path, {"goal": "test"})
+    bridge = build_bridge(path)
+    names = [a.name for a in bridge.pipeline.adapters]
+    assert "pii-redactor" in names

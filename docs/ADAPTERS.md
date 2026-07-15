@@ -36,6 +36,8 @@ declared `fail_closed`, else a WARN — the pipeline never dies mid-run.
 | `repetition-breaker` | guardrail | hammering, ping-pong, retry storms |
 | `tool-confabulation-guard` | guardrail | calls to tools/args that don't exist (with `did you mean…`) |
 | `scope-fence` | guardrail | file/host/arg reach outside the current task scope |
+| `path-fence` | security | denylist read/write fence (`~/.ssh`, `*.env`, ...), reads AND writes, including shell-command paths |
+| `egress-domain-guard` | security | a host-restricted `warden://` secret sent to a non-approved destination |
 
 ## CLI
 
@@ -72,7 +74,19 @@ group, or `custodian adapters install ./business_hours.py` locally.
 
 ## In Talaria
 
-The bridge builds a pipeline from a single session-policy YAML (see
-`docs/TALARIA.md`) and runs it around every skill call, so all of
-the above applies to Hermes automatically with granular per-session
-control over tools, files, hosts, spend, and privacy.
+Two independent compilers build a pipeline from YAML (see
+`docs/TALARIA.md` for which one applies to you):
+
+- `talaria/policy.py`'s `build_pipeline()` compiles `~/.talaria/policy.yaml`
+  into the pipeline the Hermes plugin runs on every tool call
+  (`talaria hermes install`) — the everyday "keep the agent out of my
+  files and secrets" surface.
+- `talaria/session_policy.py`'s `build_bridge()` compiles a
+  `hermes-session.yaml` into a full `HermesBridge` with kernel spend
+  governance (bands, budget, kill switch) layered in — for embedding
+  directly, not wired into the plugin path.
+
+Both expose the same `guards:` shape (kernel-grade guards always on,
+`pii`/`repetition`/etc. togglable) and all of the above applies to
+Hermes automatically with granular per-session control over tools,
+files, hosts, spend, and privacy.

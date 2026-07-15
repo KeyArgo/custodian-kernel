@@ -30,7 +30,7 @@ from typing import Optional
 from custodian.adapters.base import ActionContext
 from custodian.adapters.pipeline import AdapterPipeline
 from custodian.adapters.builtin import ToolConfabulationGuard
-from integrations.hermes.capsule import SessionCapsule
+from talaria.capsule import SessionCapsule
 
 
 class HermesBridge:

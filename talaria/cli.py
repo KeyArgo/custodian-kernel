@@ -20,7 +20,9 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
+import time
 from pathlib import Path
 
 from custodian.cli import cmd_adapters
@@ -113,6 +115,176 @@ def cmd_init(args) -> int:
     return 0
 
 
+# ANSI colors for the denial-log timeline, keyed by adapter category.
+_CAT_COLOR = {
+    "security": "\033[31m", "money": "\033[32m", "privacy": "\033[35m",
+    "guardrail": "\033[36m", "integration": "\033[33m",
+}
+_RESET = "\033[0m"
+_DIM = "\033[2m"
+
+
+def cmd_log(args) -> int:
+    from talaria.denial_log import DenialLog
+    from warden.errors import AuditChainBrokenError
+
+    log = DenialLog()
+
+    if args.log_action == "verify":
+        try:
+            n = log.verify()
+        except AuditChainBrokenError as e:
+            print(f"talaria: denial log FAILED integrity check — {e}", file=sys.stderr)
+            return 2
+        print(f"denial log chain OK — {n} record(s) verified")
+        return 0
+
+    records = log.records()
+    if args.tail:
+        records = records[-args.tail:]
+
+    if args.log_action == "export" or args.json:
+        print(json.dumps(records, indent=2))
+        return 0
+    if args.csv:
+        import csv
+        import io
+        buf = io.StringIO()
+        w = csv.writer(buf)
+        w.writerow(["ts", "event", "tool", "denied_by", "reason"])
+        for r in records:
+            w.writerow([r.get("ts"), r.get("event"), r.get("ref"),
+                        r.get("requester"), r.get("detail")])
+        print(buf.getvalue(), end="")
+        return 0
+
+    # Default: human timeline.
+    if not records:
+        print("No denied attempts logged yet. "
+              "(This is the record of things the agent tried but wasn't allowed to do.)")
+        return 0
+    print(f"\nDenied agent attempts — {len(records)} record(s)\n")
+    for r in records:
+        ts = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(r.get("ts", 0)))
+        adapter = r.get("requester", "-")
+        color = _CAT_COLOR.get(_adapter_category(adapter), "")
+        event = r.get("event", "deny").upper()
+        print(f"  {_DIM}{ts}{_RESET}  {color}{event}{_RESET}  "
+              f"{r.get('ref', '-')}  {_DIM}(by {adapter}){_RESET}")
+        print(f"      {r.get('detail', '')}")
+    print()
+    return 0
+
+
+def _adapter_category(adapter_name: str) -> str:
+    try:
+        from custodian.adapters.registry import AdapterRegistry
+        for name, info in AdapterRegistry().available().items():
+            if name == adapter_name:
+                return info.get("category", "")
+    except Exception:
+        pass
+    return ""
+
+
+def _hermes_home() -> Path:
+    """Resolve the active Hermes profile dir (where plugins live). Prefers
+    HERMES_HOME, then the active-profile layout, then the plain default."""
+    env = os.environ.get("HERMES_HOME")
+    if env:
+        return Path(env)
+    base = Path("~/.hermes").expanduser()
+    prof = base / "active_profile"
+    if prof.exists():
+        name = prof.read_text().strip()
+        # A profile name is a single path segment, never a path itself.
+        # pathlib's `/` operator lets an absolute string fully override
+        # the left side (Path('~/.hermes/profiles') / '/etc' == Path('/etc')),
+        # and '..' escapes the profiles dir the same way a shell would —
+        # found in review. Reject anything shaped like either rather than
+        # let unexpected active_profile contents redirect `talaria hermes
+        # install`'s rmtree/copytree target outside ~/.hermes entirely.
+        if name and os.sep not in name and "/" not in name and name not in ("..", "."):
+            cand = base / "profiles" / name
+            if cand.is_dir():
+                return cand
+    return base
+
+
+def cmd_hermes(args) -> int:
+    from talaria import policy as tpolicy
+
+    if args.hermes_action == "install":
+        src = Path(__file__).resolve().parent / "hermes_plugin"
+        dest = _hermes_home() / "plugins" / "talaria-guard"
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        import shutil
+        if dest.exists():
+            shutil.rmtree(dest)
+        shutil.copytree(src, dest, ignore=shutil.ignore_patterns("__pycache__"))
+        print(f"✓ installed talaria-guard plugin → {dest}")
+
+        # Starter policy (don't clobber an existing one).
+        pol = tpolicy.default_policy_path()
+        if not pol.exists():
+            pol.parent.mkdir(parents=True, exist_ok=True)
+            os.chmod(pol.parent, 0o700)
+            pol.write_text(tpolicy.STARTER_POLICY)
+            print(f"✓ wrote starter policy → {pol}")
+        else:
+            print(f"• policy already exists → {pol} (left as-is)")
+
+        # Create the vault if missing (keyfile-based, zero-friction).
+        try:
+            from warden.vault import Vault
+            vpath = Vault.default_path()
+            if not vpath.exists():
+                keyfile = vpath.parent / "vault.key"
+                keyfile.parent.mkdir(parents=True, exist_ok=True)
+                os.chmod(keyfile.parent, 0o700)
+                if not keyfile.exists():
+                    fd = os.open(keyfile, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+                    with os.fdopen(fd, "wb") as f:
+                        f.write(os.urandom(32))
+                Vault.create(path=vpath, keyfile=keyfile)
+                print(f"✓ created credential vault → {vpath}")
+                print(f"  (set WARDEN_KEYFILE={keyfile} in your shell to use it)")
+            else:
+                print(f"• vault already exists → {vpath} (left as-is)")
+        except Exception as e:
+            print(f"• vault setup skipped: {e}")
+
+        print("\nNext:")
+        print("  1. enable it in Hermes:  hermes plugins enable talaria-guard")
+        print(f"  2. edit your rules:      {pol}")
+        print("  3. run Hermes — every tool call is now governed.")
+        print("  4. see blocked attempts: talaria log")
+        return 0
+
+    # status
+    dest = _hermes_home() / "plugins" / "talaria-guard"
+    pol = tpolicy.default_policy_path()
+    print(f"plugin installed: {'yes' if dest.exists() else 'no'}  ({dest})")
+    print(f"policy file:      {'yes' if pol.exists() else 'no'}  ({pol})")
+    if pol.exists():
+        p = tpolicy.load_policy()
+        forbid_tools = p.get("tools", {}).get("forbid", [])
+        forbid_paths = p.get("paths", {}).get("forbid", [])
+        print(f"forbidden tools:  {forbid_tools or '(none)'}")
+        print(f"forbidden paths:  {forbid_paths or '(none)'}")
+        print(f"denial logging:   {'on' if p.get('log_denials', True) else 'off'}")
+    try:
+        n = 0
+        from talaria.denial_log import DenialLog
+        dl = DenialLog()
+        if dl.path.exists():
+            n = len(dl.records())
+        print(f"denials logged:   {n}  (talaria log to view)")
+    except Exception:
+        pass
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(
         prog="talaria",
@@ -151,6 +323,27 @@ def build_parser() -> argparse.ArgumentParser:
     sp.add_argument("--workspace", default=None)
     sp.add_argument("--force", action="store_true")
     sp.set_defaults(func=cmd_init)
+
+    sp = sub.add_parser(
+        "log",
+        help="Show denied agent attempts (what it tried but wasn't allowed to do)",
+    )
+    sp.add_argument("log_action", nargs="?", default="show",
+                    choices=["show", "verify", "export"],
+                    help="show timeline (default), verify chain integrity, or export JSON")
+    sp.add_argument("--tail", type=int, default=None, help="only the last N records")
+    sp.add_argument("--json", action="store_true", help="machine-readable JSON")
+    sp.add_argument("--csv", action="store_true", help="CSV export")
+    sp.set_defaults(func=cmd_log)
+
+    sp = sub.add_parser(
+        "hermes",
+        help="Install/inspect the Hermes Agent plugin (one-command onboarding)",
+    )
+    sp.add_argument("hermes_action", nargs="?", default="status",
+                    choices=["install", "status"],
+                    help="install the plugin + starter policy + vault, or show status")
+    sp.set_defaults(func=cmd_hermes)
 
     return p
 

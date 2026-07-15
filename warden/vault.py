@@ -11,6 +11,7 @@ and audits every access.
 """
 from __future__ import annotations
 
+import fcntl
 import getpass
 import json
 import os
@@ -49,6 +50,11 @@ class Entry:
     created_at: float = field(default_factory=time.time)
     updated_at: float = field(default_factory=time.time)
     rotations: int = 0
+    # Hosts this secret may be sent to. Empty = unrestricted (the default,
+    # so old vaults with no such key load unchanged — the dataclass default
+    # fills in). When set, egress-domain-guard denies any tool call that
+    # would send this secret to a host not on the list.
+    allowed_hosts: list = field(default_factory=list)
 
     def meta(self) -> dict:
         """Everything about the entry EXCEPT the value — safe to show."""
@@ -61,6 +67,7 @@ class Entry:
             "created_at": self.created_at,
             "updated_at": self.updated_at,
             "rotations": self.rotations,
+            "allowed_hosts": list(self.allowed_hosts),
             "length": len(self.value),
         }
 
@@ -104,16 +111,51 @@ class Vault:
     def __init__(self, path: Path, key: bytes, params: crypto.KdfParams,
                  entries: dict[str, Entry], grants: list[dict]):
         self.path = Path(path)
-        self._key = key
+        # A bytearray (not bytes) so close()/__exit__ can actually zero it —
+        # bytes are immutable, there'd be nothing to wipe. See close().
+        self._key = bytearray(key)
         self._params = params
         self._entries = entries
         self._grants = grants  # raw grant dicts; wrapped by GrantPolicy
+        self._closed = False
 
     # -- lifecycle -----------------------------------------------------------
 
+    def __enter__(self) -> "Vault":
+        return self
+
+    def __exit__(self, *exc_info) -> None:
+        self.close()
+
+    def close(self) -> None:
+        """Best-effort cleanup of secret material held in this process.
+
+        Zeroes the master key in place (it's a bytearray specifically so
+        this is possible — bytes are immutable) and drops references to
+        every decrypted Entry so they become eligible for GC instead of
+        sitting in RAM for the rest of the process's life. This is NOT a
+        guarantee: CPython may have copied the key/values elsewhere (e.g.
+        during scrypt/AESGCM calls, or if a caller holds their own
+        reference to an Entry — see the module docstring's note on
+        _require()), and Python's own string immutability means a
+        decrypted Entry.value can't be zeroed in place at all, only
+        dereferenced. Still, closing a Vault you're done with shrinks the
+        window plaintext sits in RAM, which is strictly better than
+        relying on non-deterministic GC alone. Found missing in review —
+        crypto.wipe() existed but nothing ever called it."""
+        if self._closed:
+            return
+        crypto.wipe(self._key)
+        self._entries = {}
+        self._grants = []
+        self._closed = True
+
     @classmethod
     def default_path(cls) -> Path:
-        return DEFAULT_VAULT_DIR / VAULT_FILENAME
+        # Resolve WARDEN_HOME at call time, not import time, so a value set
+        # after import (tests, or a process that changes it) is honored.
+        base = Path(os.environ.get("WARDEN_HOME", "~/.warden")).expanduser()
+        return base / VAULT_FILENAME
 
     @classmethod
     def create(cls, path: Optional[Path] = None, passphrase: Optional[str] = None,
@@ -173,35 +215,53 @@ class Vault:
         return cls.open(path, passphrase=passphrase)
 
     def save(self) -> None:
-        """Atomic, permission-hardened write of the encrypted vault."""
-        doc = {
-            "entries": {name: vars(e) for name, e in self._entries.items()},
-            "grants": self._grants,
-        }
-        blob = crypto.encrypt_blob(
-            self._key, json.dumps(doc).encode("utf-8"),
-            self._params.to_header(),
-        )
+        """Atomic, permission-hardened write of the encrypted vault.
+
+        Holds an exclusive flock on a sibling ``.lock`` file for the
+        duration of the write so two concurrent ``save()`` calls (e.g.
+        two ``warden`` CLI invocations racing) serialize instead of one
+        silently clobbering the other's write — found missing in review.
+        This narrows but doesn't eliminate the lost-update window: it
+        protects the write itself, not the whole open→modify→save
+        lifecycle across two separate processes (that would need a lock
+        held from open() through save(), a larger change than this)."""
         self.path.parent.mkdir(parents=True, exist_ok=True)
         os.chmod(self.path.parent, 0o700)
-        tmp = self.path.with_suffix(".tmp")
-        fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+        lock_path = self.path.with_suffix(".lock")
+        lock_fd = os.open(lock_path, os.O_CREAT | os.O_RDWR, 0o600)
         try:
-            with os.fdopen(fd, "wb") as f:
-                f.write(blob)
-                f.flush()
-                os.fsync(f.fileno())
-            os.replace(tmp, self.path)
-            _harden_permissions(self.path)
+            fcntl.flock(lock_fd, fcntl.LOCK_EX)
+            doc = {
+                "entries": {name: vars(e) for name, e in self._entries.items()},
+                "grants": self._grants,
+            }
+            blob = crypto.encrypt_blob(
+                self._key, json.dumps(doc).encode("utf-8"),
+                self._params.to_header(),
+            )
+            tmp = self.path.with_suffix(".tmp")
+            fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+            try:
+                with os.fdopen(fd, "wb") as f:
+                    f.write(blob)
+                    f.flush()
+                    os.fsync(f.fileno())
+                os.replace(tmp, self.path)
+                _harden_permissions(self.path)
+            finally:
+                if tmp.exists():
+                    tmp.unlink(missing_ok=True)
         finally:
-            if tmp.exists():
-                tmp.unlink(missing_ok=True)
+            fcntl.flock(lock_fd, fcntl.LOCK_UN)
+            os.close(lock_fd)
 
     def rotate_master(self, new_passphrase: Optional[str] = None,
                       new_keyfile: Optional[Path] = None) -> None:
         """Re-encrypt the vault under a new master key (new salt too)."""
         params = crypto.KdfParams.fresh()
-        self._key = _load_key_material(new_passphrase, new_keyfile, params)
+        new_key = _load_key_material(new_passphrase, new_keyfile, params)
+        crypto.wipe(self._key)  # old key is retired; zero it before dropping
+        self._key = bytearray(new_key)
         self._params = params
         self.save()
 
@@ -212,23 +272,28 @@ class Vault:
     # -- entry management (human/CLI surface) --------------------------------
 
     def add(self, name: str, value: str, kind: str = "secret", profile: str = "default",
-            env_var: Optional[str] = None, note: str = "", overwrite: bool = False) -> SecretRef:
+            env_var: Optional[str] = None, note: str = "", overwrite: bool = False,
+            allowed_hosts: Optional[list] = None) -> SecretRef:
         if not valid_name(name):
             raise WardenError(f"invalid secret name {name!r}")
         if name in self._entries and not overwrite:
             raise WardenError(f"entry {name!r} already exists (use overwrite/edit)")
         prior = self._entries.get(name)
         entry = Entry(name=name, value=value, kind=kind, profile=profile,
-                      env_var=env_var or _default_env_var(name), note=note)
+                      env_var=env_var or _default_env_var(name), note=note,
+                      allowed_hosts=list(allowed_hosts or []))
         if prior is not None:
             entry.created_at = prior.created_at
             entry.rotations = prior.rotations + 1
+            if allowed_hosts is None:
+                entry.allowed_hosts = list(prior.allowed_hosts)  # preserve on re-add
         self._entries[name] = entry
         self.save()
         return SecretRef(name)
 
     def update_meta(self, name: str, profile: Optional[str] = None,
-                    env_var: Optional[str] = None, note: Optional[str] = None) -> None:
+                    env_var: Optional[str] = None, note: Optional[str] = None,
+                    allowed_hosts: Optional[list] = None) -> None:
         entry = self._require(name)
         if profile is not None:
             entry.profile = profile
@@ -236,6 +301,8 @@ class Vault:
             entry.env_var = env_var
         if note is not None:
             entry.note = note
+        if allowed_hosts is not None:
+            entry.allowed_hosts = list(allowed_hosts)
         entry.updated_at = time.time()
         self.save()
 

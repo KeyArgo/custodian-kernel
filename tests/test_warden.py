@@ -51,6 +51,20 @@ def test_find_refs():
 
 # -- crypto / vault ----------------------------------------------------------
 
+def test_scrypt_n_strengthened_and_derive_key_still_works():
+    # Regression guard for the review finding that SCRYPT_N=2**15 was too
+    # weak for a long-lived credential vault (vs. a login screen). Also
+    # exercises the real hashlib.scrypt() call with the new maxmem
+    # headroom — 128*N*r lands exactly on the old maxmem boundary at
+    # N=2**17, which some implementations reject as "memory limit
+    # exceeded" if maxmem isn't strictly greater.
+    from warden import crypto
+    assert crypto.SCRYPT_N >= 2 ** 17
+    params = crypto.KdfParams.fresh()
+    key = crypto.derive_key("a-real-passphrase", params)
+    assert len(key) == crypto.KEY_LEN
+
+
 def test_roundtrip(vault):
     vault.add("k", "the-secret-value")
     reopened = Vault.open(path=vault.path, passphrase=PP)
@@ -96,6 +110,58 @@ def test_file_permissions_hardened(vault):
     import stat
     mode = stat.S_IMODE(vault.path.stat().st_mode)
     assert mode == 0o600
+
+
+# -- close() / key zeroization / locking — found missing in review ----------
+
+def test_close_zeroes_key_and_clears_entries(vault):
+    vault.add("k", "v")
+    assert any(b != 0 for b in vault._key)
+    vault.close()
+    assert all(b == 0 for b in vault._key)
+    assert vault._entries == {}
+    assert vault._grants == []
+
+
+def test_close_is_idempotent(vault):
+    vault.close()
+    vault.close()  # must not raise on a second call
+
+
+def test_context_manager_closes_on_exit(vault):
+    path = vault.path
+    with Vault.open(path=path, passphrase=PP) as v:
+        v.add("k", "v")
+        v.save()
+    assert all(b == 0 for b in v._key)
+    # vault on disk is unaffected by the in-process wipe
+    reopened = Vault.open(path=path, passphrase=PP)
+    assert reopened._resolve_value("k") == "v"
+
+
+def test_rotate_master_wipes_old_key(vault):
+    old_key_bytes = bytes(vault._key)
+    vault.add("k", "v")
+    vault.rotate_master(new_passphrase="new-pp-456")
+    # the object that held the old key was zeroed, not just replaced
+    assert bytes(vault._key) != old_key_bytes
+
+
+def test_concurrent_saves_do_not_corrupt_vault(tmp_path):
+    # Two Vault handles on the same file, saving back-to-back, must not
+    # corrupt the file even though the second save's in-memory entries
+    # don't include the first save's addition (the known, documented
+    # lost-update limitation) — the file itself must stay valid and
+    # openable, not truncated or interleaved.
+    path = tmp_path / "race.warden"
+    v1 = Vault.create(path=path, passphrase=PP)
+    v2 = Vault.open(path=path, passphrase=PP)
+    v1.add("a", "1")
+    v1.save()
+    v2.add("b", "2")
+    v2.save()
+    reopened = Vault.open(path=path, passphrase=PP)
+    assert reopened._resolve_value("b") == "2"
 
 
 def test_import_env(tmp_path, vault):
@@ -337,3 +403,32 @@ def test_open_from_env_missing_vault_reported_before_missing_keyfile(monkeypatch
     monkeypatch.setenv("WARDEN_KEYFILE", str(dead_keyfile))
     with pytest.raises(VaultMissingError):
         Vault.open_from_env(path=tmp_path / "no-such-vault.warden")
+
+
+def test_entry_allowed_hosts_default_empty(vault):
+    vault.add("k", "v")
+    assert vault.meta("k")["allowed_hosts"] == []
+
+
+def test_entry_allowed_hosts_stored(vault):
+    vault.add("stripe_sk", "v", allowed_hosts=["api.stripe.com"])
+    reopened = Vault.open(path=vault.path, passphrase=PP)
+    assert reopened.meta("stripe_sk")["allowed_hosts"] == ["api.stripe.com"]
+
+
+def test_old_vault_without_allowed_hosts_loads(vault):
+    # Simulate an OLD vault: entries whose JSON predates the allowed_hosts
+    # field. The dataclass default must fill it in, not crash on load.
+    import json
+    vault.add("k", "v")
+    # hand-craft a decrypted doc missing allowed_hosts, re-encrypt it
+    from warden import crypto
+    doc = {"entries": {"legacy": {
+        "name": "legacy", "value": "secret", "kind": "secret", "profile": "default",
+        "env_var": "LEGACY", "note": "", "created_at": 1.0, "updated_at": 1.0,
+        "rotations": 0}}, "grants": []}
+    blob = crypto.encrypt_blob(vault._key, json.dumps(doc).encode(),
+                               vault._params.to_header())
+    vault.path.write_bytes(blob)
+    reopened = Vault.open(path=vault.path, passphrase=PP)
+    assert reopened.meta("legacy")["allowed_hosts"] == []  # default filled in

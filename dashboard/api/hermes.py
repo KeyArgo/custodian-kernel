@@ -1,8 +1,14 @@
 """Hermes Agent API endpoints - autonomous spend authority, live audit feed.
 
-argobox-command-center runs on the same host (argobox-lite) as the NemoClaw
-sandbox, so this reads the mounted sandbox state directly off disk — no SSH,
-no extra network hop, one less thing that can fail during a demo.
+Sandbox state is read via `nemohermes exec` (custodian.adapters.nemoclaw),
+never a host-side bind mount. A mount was used here previously; it went
+through two failure modes — first staleness (lagged real writes by a sync
+interval, misreported a real spend as unverified: see the history in
+dashboard/scripts/agent_task_verified.py), then not existing on the
+container at all (2026-07-14: this file was silently serving
+DEFAULT_AUTHORITY fallback data and reporting connected:false on every
+request, because the mount path had nothing behind it). exec is slower
+per-call but is the only path that's actually correct.
 """
 import json
 import os
@@ -11,15 +17,21 @@ from pathlib import Path
 
 from flask import Blueprint, jsonify
 
+from custodian.adapters.nemoclaw import NemoClawExecutor
+from custodian.exceptions import NemoClawError
+
 bp = Blueprint('hermes', __name__)
 
 _cache = {}
 _cache_ttl = 3  # seconds — fast enough to feel live, slow enough not to thrash disk
 
-SKILL_PATH = Path(os.getenv(
-    'HERMES_SKILL_STATE_PATH',
-    '/tmp/hermes-mount/sandbox/.hermes/skills/payments/stripe-spend/state',
-))
+SANDBOX_NAME = os.environ.get('HERMES_SANDBOX_NAME', 'hermes-hackathon')
+SKILL_STATE_DIR = '/sandbox/.hermes/skills/payments/stripe-spend/state'
+
+_sandbox = NemoClawExecutor(
+    sandbox_name=SANDBOX_NAME,
+    fallback_binary_path='/home/argonaut/.local/bin/nemohermes',
+)
 
 OCSF_LOG_PATH = Path(os.getenv(
     'HERMES_OCSF_LOG_PATH',
@@ -45,14 +57,15 @@ def _cached(key, ttl=None):
 
 
 def _read_remote_file(filename):
-    """Read a state file out of the sandbox's mounted state dir. Returns text or None."""
-    path = SKILL_PATH / filename
+    """Read a state file from inside the sandbox. Returns text or None
+    (None covers both 'file doesn't exist yet' and 'sandbox unreachable' —
+    existing callers already treat a None/empty result as 'nothing to show
+    yet', which is the right degraded behavior for a health/summary read)."""
     try:
-        if path.exists():
-            return path.read_text()
-    except Exception as e:
-        print(f"[hermes] Error reading {path}: {e}")
-    return None
+        return _sandbox.read_file(f'{SKILL_STATE_DIR}/{filename}')
+    except NemoClawError as e:
+        print(f"[hermes] Error reading {filename}: {e}")
+        return None
 
 
 def get_authority_state():

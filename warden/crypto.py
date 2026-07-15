@@ -2,8 +2,15 @@
 
 Design notes
 ------------
-* One key per vault, derived from either a passphrase (scrypt, N=2**15,
-  r=8, p=1 — interactive-grade work factor) or a raw 32-byte keyfile.
+* One key per vault, derived from either a passphrase (scrypt, N=2**17,
+  r=8, p=1 — ~128MB memory cost, still well under a second) or a raw
+  32-byte keyfile. Bumped from the original 2**15 in review: 2**15 is
+  fine for an interactive login screen but this key protects a
+  credential vault against offline brute-force of a stolen file
+  indefinitely, which calls for a higher work factor. KDF params are
+  stored per-vault in the header, so this only affects newly created
+  vaults — existing ones keep working with whatever N they were made
+  with until rotated.
 * The whole entry table is encrypted as a single blob, so at rest the
   vault leaks nothing — not entry names, not counts beyond ciphertext
   size, not metadata.
@@ -38,9 +45,11 @@ KEY_LEN = 32
 NONCE_LEN = 12
 SALT_LEN = 16
 
-# scrypt parameters — interactive-grade (~100ms) so `warden` CLI stays
-# snappy while brute force on a stolen vault file stays expensive.
-SCRYPT_N = 2 ** 15
+# scrypt parameters. N=2**17 (~128MB, well under a second on modern
+# hardware) — high enough to make offline brute-force of a stolen vault
+# file expensive, since unlike a login screen this key protects
+# long-lived credentials, not a single session.
+SCRYPT_N = 2 ** 17
 SCRYPT_R = 8
 SCRYPT_P = 1
 
@@ -82,10 +91,13 @@ def derive_key(passphrase: str, params: KdfParams) -> bytes:
     """Derive the vault key from a passphrase."""
     if not passphrase:
         raise VaultLockedError("empty passphrase")
+    # scrypt's own memory requirement is 128*N*r bytes — with the current
+    # SCRYPT_N that's exactly 128MiB, so maxmem must have headroom above
+    # it (some implementations reject an exact boundary as "exceeded").
     return hashlib.scrypt(
         passphrase.encode("utf-8"),
         salt=params.salt, n=params.n, r=params.r, p=params.p,
-        maxmem=128 * 1024 * 1024, dklen=KEY_LEN,
+        maxmem=192 * 1024 * 1024, dklen=KEY_LEN,
     )
 
 

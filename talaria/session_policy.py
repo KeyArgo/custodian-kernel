@@ -27,13 +27,12 @@ authoring, and privacy — in one reviewable artifact::
       duplicate_window_s: 900
 
     privacy:
-      redact: [email, phone, ssn, card]
+      redact: []          # empty = redact every kind pii-redactor knows about
 
-    guards:                        # defaults shown; set false to drop one
-      prompt_injection: true
-      secret_leak: true
-      repetition: true
-      self_protection: true
+    guards:                # togglable; set false to drop one.
+      repetition: true     # self_protection/prompt_injection/secret_leak are
+      pii: true             # NOT listed here — they're kernel-grade and
+      introspection: true  # always on, not settable via policy.
 
 Everything unspecified stays enforced at safe defaults — the file can
 only *narrow* sensible baselines, not silently widen them (e.g. there
@@ -57,8 +56,8 @@ from custodian.adapters.builtin import (
     SecretLeakGuard,
     SpendSentinel,
 )
-from integrations.hermes.bridge import HermesBridge
-from integrations.hermes.capsule import SessionCapsule
+from talaria.bridge import HermesBridge
+from talaria.capsule import SessionCapsule
 
 
 def load_session_policy(path: str | Path) -> dict:
@@ -85,18 +84,19 @@ def build_bridge(policy_path: str | Path, registry=None, broker=None,
     pipeline = AdapterPipeline()
 
     # Security first — self-protection and injection guards run before
-    # anything else can be steered by hostile arguments.
-    if guards.get("self_protection", True):
-        pipeline.add(KernelSelfProtection({
-            "quarantine": doc.get("files", {}).get("skill_quarantine", ""),
-            "protected_paths": doc.get("files", {}).get("protected", []),
-        }))
-    if guards.get("prompt_injection", True):
-        pipeline.add(PromptInjectionGuard(
-            {"strict": bool(guards.get("strict_injection", False))}))
-    if guards.get("secret_leak", True):
-        pipeline.add(SecretLeakGuard(
-            leak_sentinel=broker.leak_sentinel if broker else None))
+    # anything else can be steered by hostile arguments. Unconditional:
+    # these are kernel-grade and cannot be disabled by policy (same fix
+    # as talaria/policy.py's build_pipeline() — found in review that
+    # this was a separate, parallel copy of the identical bug: a policy
+    # file with self_protection: false silently dropped it).
+    pipeline.add(KernelSelfProtection({
+        "quarantine": doc.get("files", {}).get("skill_quarantine", ""),
+        "protected_paths": doc.get("files", {}).get("protected", []),
+    }))
+    pipeline.add(PromptInjectionGuard(
+        {"strict": bool(guards.get("strict_injection", False))}))
+    pipeline.add(SecretLeakGuard(
+        leak_sentinel=broker.leak_sentinel if broker else None))
 
     # Invariants: tool fences + budget, enforced and re-anchorable.
     tools = doc.get("tools", {})
@@ -124,16 +124,25 @@ def build_bridge(policy_path: str | Path, registry=None, broker=None,
         pipeline.add(RepetitionBreaker(doc.get("repetition", {})))
 
     privacy = doc.get("privacy", {})
-    if privacy.get("redact"):
-        pipeline.add(PiiRedactor({
-            "kinds": list(privacy["redact"]),
+    if guards.get("pii", True):
+        # Same fix as talaria/policy.py: an empty/absent redact list must
+        # mean "redact every kind" (PiiRedactor's own default when no
+        # kinds= key is given at all), not "add nothing" — the previous
+        # `if privacy.get("redact"):` gate silently skipped this guard
+        # whenever redact was unset, even though pii-style guards should
+        # be on by default.
+        redact = privacy.get("redact") or []
+        config = {
             "deny_on_args": bool(privacy.get("deny_on_args", False)),
             "allowlist": list(privacy.get("allowlist", [])),
-        }))
+        }
+        if redact:
+            config["kinds"] = list(redact)
+        pipeline.add(PiiRedactor(config))
 
     # Capability adapters (answer actions rather than veto them) — all opt-out.
     if guards.get("introspection", True):
-        from integrations.hermes.introspection import IntrospectionAdapter
+        from talaria.introspection import IntrospectionAdapter
         pipeline.add(IntrospectionAdapter(capsule=capsule, broker=broker))
 
     return HermesBridge(registry=registry, pipeline=pipeline, broker=broker,

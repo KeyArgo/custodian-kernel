@@ -1,0 +1,7 @@
+name: talaria-guard
+version: "0.2.0"
+description: "Talaria — governs every Hermes Agent tool call through the Custodian guard pipeline: blocks secret leaks, prompt injection, and forbidden tools/paths (read AND write) declared in ~/.talaria/policy.yaml, and logs every denied attempt to a tamper-evident record. Enforced mechanically — the model cannot talk its way around the rules."
+author: "InovinLabs"
+hooks:
+  - pre_tool_call
+  - transform_tool_result
