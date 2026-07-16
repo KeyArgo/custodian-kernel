@@ -20,7 +20,7 @@ from typing import Optional
 
 from custodian.exceptions import StorageError
 from custodian.storage.base import StorageBackend
-from custodian.types import AuditEntry, AuthorityState, KillSwitchState, PendingApproval
+from custodian.types import AuditEntry, AuthorityState, Band, KillSwitchState, PendingApproval
 
 _SCHEMA_SQL = """
 CREATE TABLE IF NOT EXISTS authority_state (
@@ -93,7 +93,15 @@ class SqliteStorage(StorageBackend):
             if row is None:
                 return None
             return AuthorityState(
-                band=row["band"],
+                # Coerce to Band. sqlite hands back a plain str, and
+                # save_authority_state reads state.band.value -- so any
+                # load -> modify -> save cycle (the normal way to record a
+                # spend) died on AttributeError: 'str' object has no attribute
+                # 'value', and the write was lost. Band subclasses str, so
+                # Band.L2 == "L2" and an equality assertion on the loaded
+                # dataclass passes either way: the round-trip test could not
+                # see this.
+                band=Band(row["band"]),
                 per_action_cap=row["per_action_cap"],
                 session_cap=row["session_cap"],
                 spent_this_session=row["spent_this_session"],

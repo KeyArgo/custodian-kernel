@@ -42,6 +42,82 @@ class TestInit:
         assert (target / "policy.yaml").read_text() == "# custom policy\n"
         assert "skipping" in capsys.readouterr().out
 
+    def test_init_writes_authority_state(self, tmp_path, capsys):
+        """init must actually initialize. It used to create an empty state/
+        dir, so every following command printed "no authority state found" and
+        `custodian status` reported "No authority state initialized" -- right
+        after init announced the opposite."""
+        target = tmp_path / "workspace"
+        rc = main(["init", "--dir", str(target)])
+        assert rc == 0
+        assert (target / "state" / "custodian.db").exists()
+
+        state = SqliteStorage(target / "state" / "custodian.db").load_authority_state()
+        assert state is not None
+        assert state.band == Band.L2
+        assert state.per_action_cap == 2.00
+        assert state.spent_this_session == 0.0
+
+    def test_init_takes_the_per_action_cap_from_the_policy(self, tmp_path):
+        """Not a hardcoded 2.0: an operator who edits policy.yaml before their
+        first request must be governed by the cap their policy states."""
+        target = tmp_path / "workspace"
+        main(["init", "--dir", str(target)])
+        policy = target / "policy.yaml"
+        policy.write_text(policy.read_text().replace("max_spend: 2.00", "max_spend: 25.00"))
+        (target / "state" / "custodian.db").unlink()
+
+        main(["init", "--dir", str(target)])
+        state = SqliteStorage(target / "state" / "custodian.db").load_authority_state()
+        assert state.per_action_cap == 25.00
+
+    def test_init_session_cap_flag(self, tmp_path):
+        """The session budget has no policy field, so it is only settable here."""
+        target = tmp_path / "workspace"
+        rc = main(["init", "--dir", str(target), "--session-cap", "100"])
+        assert rc == 0
+        state = SqliteStorage(target / "state" / "custodian.db").load_authority_state()
+        assert state.session_cap == 100.00
+
+    def test_init_warns_when_the_band_cap_exceeds_the_session_cap(self, tmp_path, capsys):
+        """A per-action cap above the session budget can never be reached, so
+        the band's max_spend is dead config -- and session_cap is not editable
+        in policy.yaml, so the operator has nowhere to look."""
+        target = tmp_path / "workspace"
+        main(["init", "--dir", str(target)])
+        policy = target / "policy.yaml"
+        policy.write_text(policy.read_text().replace("max_spend: 2.00", "max_spend: 25.00"))
+        (target / "state" / "custodian.db").unlink()
+
+        main(["init", "--dir", str(target)])
+        out = capsys.readouterr().out
+        assert "warning" in out and "--session-cap" in out
+
+    def test_init_is_idempotent_and_preserves_spend(self, tmp_path):
+        """Re-running init must not silently reset a live session's spend."""
+        target = tmp_path / "workspace"
+        main(["init", "--dir", str(target)])
+        db = target / "state" / "custodian.db"
+        storage = SqliteStorage(db)
+        state = storage.load_authority_state()
+        state.spent_this_session = 7.50
+        storage.save_authority_state(state)
+
+        rc = main(["init", "--dir", str(target)])
+        assert rc == 0
+        assert SqliteStorage(db).load_authority_state().spent_this_session == 7.50
+
+    def test_init_survives_a_half_written_policy(self, tmp_path, capsys):
+        """A stub policy.yaml is a normal in-progress state, not a reason to
+        fail the scaffold -- but init must say what it skipped."""
+        target = tmp_path / "workspace"
+        target.mkdir()
+        (target / "policy.yaml").write_text("# WIP\n")
+        rc = main(["init", "--dir", str(target)])
+        assert rc == 0
+        assert not (target / "state" / "custodian.db").exists()
+        assert "authority state not initialized" in capsys.readouterr().out
+
 
 class TestValidate:
     def test_valid_policy_prints_bands_and_rules(self, tmp_policy_file, capsys):

@@ -114,6 +114,12 @@ def main(argv: list[str] | None = None) -> int:
         description="Create a workspace directory with a policy.yaml, state store, and README.",
     )
     p.add_argument("--dir", default=".", help="Target directory (default: current directory)")
+    p.add_argument(
+        "--session-cap", type=float, default=None, metavar="USD",
+        help=(f"Total spend allowed per session (default: ${cmd_init.DEFAULT_SESSION_CAP:.2f}). "
+              "Bands in policy.yaml set the PER-ACTION cap; the session budget has no policy "
+              "field, so it is set here."),
+    )
     p.set_defaults(func=cmd_init.run)
 
     # ── validate ──────────────────────────────────────────────────────────────

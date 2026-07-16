@@ -5,6 +5,7 @@ import sys
 from pathlib import Path
 
 from custodian.backends.twilio_verify import TwilioVerifyBackend
+from custodian.cli.cmd_init import DEFAULT_SESSION_CAP
 from custodian.exceptions import BackendConfigurationError, PolicyNotFoundError, PolicyValidationError
 from custodian.policy.evaluator import decide
 from custodian.policy.loader import load_policy
@@ -67,8 +68,19 @@ def run(args) -> None:
         raise SystemExit(1)
 
     if state is None:
-        state = AuthorityState(band=policy.default_band, per_action_cap=2.0, session_cap=10.0, spent_this_session=0.0)
-        print("warning: no authority state found, using defaults (L2, $2.00 cap, $10.00 session)")
+        # Derive the cap from the policy rather than hardcoding 2.0: an
+        # operator who edits policy.yaml and then runs a request before any
+        # state exists would otherwise be governed by a cap their policy never
+        # mentions. `custodian init` now writes state up front, so this path is
+        # for a workspace that was not scaffolded.
+        band = policy.default_band
+        cap = policy.bands[band].max_spend
+        per_action = DEFAULT_SESSION_CAP if cap is None else float(cap)
+        state = AuthorityState(band=band, per_action_cap=per_action,
+                               session_cap=DEFAULT_SESSION_CAP, spent_this_session=0.0)
+        print(f"warning: no authority state found, using policy defaults "
+              f"({band.value}, ${per_action:.2f} cap, ${DEFAULT_SESSION_CAP:.2f} session). "
+              f"Run 'custodian init' to create it.")
 
     if args.amount <= 0:
         print("error: amount must be positive", file=sys.stderr)

@@ -30,6 +30,32 @@ class TestAuthorityState:
         assert loaded.session_cap == 10.0
         assert loaded.spent_this_session == 3.0
 
+    def test_loaded_band_is_a_Band_not_a_str(self, storage: SqliteStorage):
+        """Band subclasses str, so `loaded.band == Band.L2` is True even when
+        sqlite hands back a plain "L2" -- every assertion in the tests above
+        passes either way, and none of them could see this.
+
+        It surfaced on the NEXT write: save_authority_state reads
+        state.band.value, so a load -> modify -> save cycle (the normal way to
+        record a spend) died on AttributeError: 'str' object has no attribute
+        'value', and the spend was silently never persisted.
+        """
+        storage.save_authority_state(
+            AuthorityState(band=Band.L2, per_action_cap=2.0, session_cap=10.0)
+        )
+        loaded = storage.load_authority_state()
+        assert isinstance(loaded.band, Band), f"got a bare {type(loaded.band).__name__}"
+
+    def test_load_modify_save_persists(self, storage: SqliteStorage):
+        """The cycle that recording a spend actually performs."""
+        storage.save_authority_state(
+            AuthorityState(band=Band.L2, per_action_cap=2.0, session_cap=10.0)
+        )
+        state = storage.load_authority_state()
+        state.spent_this_session += 7.50
+        storage.save_authority_state(state)
+        assert storage.load_authority_state().spent_this_session == 7.50
+
     def test_round_trip_equality(self, storage: SqliteStorage):
         state = AuthorityState(band=Band.L3, per_action_cap=50.0, session_cap=100.0, spent_this_session=0.0)
         storage.save_authority_state(state)
