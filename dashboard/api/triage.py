@@ -363,23 +363,15 @@ def custom():
     if pack is None:
         return jsonify({"error": f"{name} pack unavailable"}), 500
 
-    if not _NVIDIA_SECRET.exists():
-        return jsonify({"error": "NVIDIA API key not configured on this server"}), 503
-
     extractor = _EXTRACTORS.get(name, refunds_extract_envelope)
-    client = _make_client()
-    # No retry (tried and reverted 2026-07-05): this reasoning model spends
-    # real generation time (10-25s+) on every call regardless of whether the
-    # output ends up parsing -- a "retry only on parse error" attempt still
-    # measured 65s+ end-to-end on some inputs, blowing past the Worker's own
-    # 55s slow-path ceiling and turning a parse failure into a visitor-facing
-    # timeout, which is strictly worse. One clean attempt; the token-budget
-    # fix above (1200 -> 2200) already fixes most of what used to fail here.
-    try:
-        envelope = extractor(case_input, client)
-        source = client.name
-    except (EnvelopeParseError, OSError, KeyError, RuntimeError) as e:
-        envelope = Envelope.from_dict({
+
+    def _conservative_envelope() -> Envelope:
+        # Redundancy: the kernel fact-check (Phase 2) is deterministic and
+        # needs ZERO AI, so a missing or unreachable reasoning layer must never
+        # take triage down. We degrade to a conservative escalate envelope and
+        # still run the real kernel verification this demo is about — the page
+        # stays up and labels the source honestly.
+        return Envelope.from_dict({
             "case_id": "visitor-custom",
             "customer_id": sandbox["customer_id"],
             "order_id": sandbox["order_id"],
@@ -387,11 +379,35 @@ def custom():
             "requested_action": sandbox["action"],
             "recommended_disposition": "escalate_ambiguous",
             "confidence": 0.5,
-            "agent_summary": "Could not reach Nemotron model; showing conservative escalation.",
+            "agent_summary": "AI reasoning layer offline; the kernel still fact-checks every claim.",
             "policy_clauses_cited": [],
             "claims": [],
         })
-        source = f"fallback (live call failed: {e})"
+
+    # Proceed if EITHER reasoning key is present — the router's primary is
+    # OpenRouter (_KEYS_ENV), with NIM (_NVIDIA_SECRET) as fallback, so
+    # gating solely on the NVIDIA file (old behavior) 503'd even when
+    # OpenRouter could have served it. With neither key, skip the live call
+    # entirely and degrade instead of failing the whole request.
+    have_reasoning = _NVIDIA_SECRET.exists() or _KEYS_ENV.exists()
+    if not have_reasoning:
+        envelope = _conservative_envelope()
+        source = "fallback (reasoning offline — kernel verification still live)"
+    else:
+        client = _make_client()
+        # No retry (tried and reverted 2026-07-05): this reasoning model spends
+        # real generation time (10-25s+) on every call regardless of whether the
+        # output ends up parsing -- a "retry only on parse error" attempt still
+        # measured 65s+ end-to-end on some inputs, blowing past the Worker's own
+        # 55s slow-path ceiling and turning a parse failure into a visitor-facing
+        # timeout, which is strictly worse. One clean attempt; the token-budget
+        # fix above (1200 -> 2200) already fixes most of what used to fail here.
+        try:
+            envelope = extractor(case_input, client)
+            source = client.name
+        except (EnvelopeParseError, OSError, KeyError, RuntimeError) as e:
+            envelope = _conservative_envelope()
+            source = f"fallback (live call failed: {e})"
 
     result = triage(pack, envelope, kernel_policy, _STATE())
     panel = result.to_panel()

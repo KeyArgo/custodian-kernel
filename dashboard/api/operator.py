@@ -419,16 +419,28 @@ def _write_reasoning(script: str, result: dict):
 
 @bp.route('/reset', methods=['POST'])
 def reset_demo():
-    """Password-gated reset: archives audit log, zeroes session spend, clears pending code.
-    Requires OPERATOR_PANEL_PASSWORD — NOT protected by the no-op require_operator."""
+    """Reset the demo: archives audit log, zeroes session spend, clears pending code.
+
+    Auth accepts EITHER a valid operator token (from /login) OR the
+    OPERATOR_PANEL_PASSWORD. The token path is what makes the demo durable —
+    it lets the panel offer one-click "reset & retry" without re-prompting for
+    the password every time the session budget runs out between runs, which is
+    the exact silent breakage this endpoint exists to undo."""
     data = request.get_json(force=True, silent=True) or {}
-    password = str(data.get('password', ''))
+    token = request.headers.get('X-Operator-Token', '')
+    authed = False
     try:
-        real_password = _secret('OPERATOR_PANEL_PASSWORD')
-    except RuntimeError:
-        return jsonify({'error': 'Server not configured for reset (no operator secret file)'}), 503
-    if not hmac.compare_digest(password, real_password):
-        return jsonify({'error': 'wrong password'}), 401
+        authed = _token_valid(token)
+    except Exception:
+        authed = False
+    if not authed:
+        password = str(data.get('password', ''))
+        try:
+            real_password = _secret('OPERATOR_PANEL_PASSWORD')
+        except RuntimeError:
+            return jsonify({'error': 'Server not configured for reset (no operator secret file)'}), 503
+        if not hmac.compare_digest(password, real_password):
+            return jsonify({'error': 'wrong password'}), 401
 
     steps = []
     try:
