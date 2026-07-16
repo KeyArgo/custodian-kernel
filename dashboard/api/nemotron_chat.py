@@ -212,6 +212,34 @@ def _strip_thinking(text: str) -> str:
         re.IGNORECASE,
     )
 
+    # A word count can appear for two opposite reasons, and only one is a leak:
+    #   TALLY  — the model counting what it wrote ("that's 120 words. Let me
+    #            add one more") — deliberation, cut it.
+    #   ECHO   — the model restating its own instruction ("Must keep under 150
+    #            words. Let's draft:") — preamble that PRECEDES a real reply.
+    # The tally pattern cannot tell them apart, so it fired on the echo, cut at
+    # that offset, discarded the quoted draft that followed, and then the
+    # end-on-punctuation guard below blanked the remainder — leaving the
+    # visitor an empty response while the model had in fact answered well.
+    _CONSTRAINT_ECHO_RE = re.compile(
+        r'\b(?:under|below|within|beneath|at most|no more than|fewer than|'
+        r'less than|max|maximum|limit(?:ed)?\s+to|keep\s+(?:it\s+)?(?:to|under))'
+        r'\s*\d+\s*words\b',
+        re.IGNORECASE,
+    )
+
+    def _tally_start(s: str):
+        """First genuine tally marker, skipping constraint echoes."""
+        for m in _TALLY_MARKER_RE.finditer(s):
+            # Look back far enough to catch the qualifier in front of the
+            # number ("keep under 150 words"), not so far that an unrelated
+            # earlier sentence bleeds in.
+            window = s[max(0, m.start() - 24):m.end()]
+            if _CONSTRAINT_ECHO_RE.search(window):
+                continue
+            return m.start()
+        return None
+
     # v8 (live leak 2026-07-05): the model dumping the raw audit-log JSON
     # it was given as context ("ts": 169..., "event": "reasoning", "text":
     # "[authority] L2 cap OK...") straight into its deliberation, then
@@ -227,7 +255,7 @@ def _strip_thinking(text: str) -> str:
 
     _cut_candidates = [i for i in (
         _selfcount_run_start(text),
-        (lambda m: m.start() if m else None)(_TALLY_MARKER_RE.search(text)),
+        _tally_start(text),
         _json_dump_start(text),
     ) if i is not None]
     if _cut_candidates:

@@ -20,6 +20,7 @@ import json
 import os
 import re
 import subprocess
+import sys
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Optional
@@ -270,7 +271,14 @@ class CustodianTool:
 
         _event_bus.emit("pre_execute", {"tool": self.name, "band": self.band, "kwargs": kwargs})
 
-        cmd = ["python3", str(self.execute_script)]
+        # sys.executable, not "python3": the literal is not on PATH on Windows
+        # (where it hits the App Execution Alias and prints "Python was not
+        # found; install from the Microsoft Store" to stderr, so every tool
+        # invocation returned ok=False), and even on POSIX it can resolve to a
+        # different interpreter than the one running Custodian — one without
+        # the skill's dependencies installed. sys.executable is the venv's own
+        # Python by construction.
+        cmd = [sys.executable, str(self.execute_script)]
         for k, v in kwargs.items():
             cmd += [f"--{k.replace('_', '-')}", str(v)]
         try:

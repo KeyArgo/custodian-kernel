@@ -22,11 +22,20 @@ def test_home_page_has_mode_chooser_buttons():
     assert src.count('id="tour-offer"') == 1, "tour-offer container must appear exactly once"
 
 
-def test_mode_chooser_routes_to_hermes_not_console():
-    """This repo's console-equivalent page is /hermes, not /console."""
+def test_mode_chooser_routes_to_console():
+    """The console page is /console.
+
+    This assertion used to be exactly inverted -- it required '/hermes' and
+    forbade '/console'. It was ported verbatim from hermes-hackathon-2026 and
+    never updated after 817d7b0 renamed the route: hermes.html no longer
+    exists, and pages-frontend/_worker.js now 301s /hermes -> /console purely
+    so old shared links keep working. The test was asserting the opposite of a
+    deliberate design decision, and index.html was right all along.
+    """
     src = read_text("pages-frontend/index.html")
-    assert "window.location.href = '/hermes'" in src
-    assert "window.location.href = '/console'" not in src
+    assert "window.location.href = '/console'" in src
+    assert "window.location.href = '/hermes'" not in src, \
+        "/hermes is a legacy redirect target, not a navigation destination"
 
 
 def test_mode_chooser_guards_missing_custodian_tour():

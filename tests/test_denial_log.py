@@ -1,4 +1,6 @@
 """Denial log + pipeline observer tests."""
+import sys
+
 import pytest
 
 from custodian.adapters.base import ActionContext, Adapter, Verdict
@@ -65,6 +67,15 @@ def test_denial_log_records_and_verifies(tmp_path):
     assert recs[0]["event"] == "deny"
 
 
+@pytest.mark.skipif(
+    sys.platform == "win32",
+    reason=(
+        "os.chmod on Windows only toggles the read-only bit and cannot express "
+        "0600 — the mode is 0666 regardless. The HMAC key's at-rest protection "
+        "on Windows is filesystem ACLs, not POSIX modes. Meaningful on POSIX; "
+        "unsatisfiable here."
+    ),
+)
 def test_denial_log_key_is_0600(tmp_path):
     import stat
     DenialLog(dir_path=tmp_path)

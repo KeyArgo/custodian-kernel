@@ -128,8 +128,20 @@ class TestTotalSpent:
 
 
 class TestErrorHandling:
-    def test_append_to_readonly_dir_fails(self):
-        log = AuditLog(Path("/dev/null/audit.jsonl"))
+    def test_append_to_unusable_path_fails(self, tmp_path):
+        """An unwritable audit path must raise, never silently drop the entry.
+
+        Uses a regular file as the parent directory, which is unusable on every
+        platform (ENOTDIR on POSIX, FileExistsError on Windows -- both OSError,
+        both caught by AuditLog.append). The previous version hardcoded
+        "/dev/null/audit.jsonl", which is only special on POSIX: on Windows it
+        resolved to C:\\dev\\null\\audit.jsonl, which mkdir(parents=True)
+        happily CREATED -- so the test failed with DID NOT RAISE and left a
+        stray directory tree on the developer's actual filesystem.
+        """
+        blocker = tmp_path / "not-a-directory"
+        blocker.write_text("a file, not a directory")
+        log = AuditLog(blocker / "audit.jsonl")
         entry = AuditEntry(event="executed", amount=1.0, description="test", band=Band.L2)
         with pytest.raises(AuditWriteError):
             log.append(entry)

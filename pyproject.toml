@@ -12,6 +12,13 @@ keywords = ["ai", "agent", "authority", "spend", "kernel", "enforcement"]
 dependencies = [
     "pyyaml",
     "requests",
+    # zoneinfo reads the OS tz database, which Windows does not have at all and
+    # slim container images (including our own python:3.13-slim base) do not
+    # reliably carry — so timezone-lookup failed with "No time zone found with
+    # key America/New_York" while passing on a developer's full Linux box.
+    # Declared unconditionally rather than `; sys_platform == "win32"`: ~500KB
+    # buys identical behaviour on every platform we ship to.
+    "tzdata",
 ]
 classifiers = [
     "Development Status :: 3 - Alpha",

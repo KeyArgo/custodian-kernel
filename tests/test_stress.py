@@ -557,9 +557,19 @@ class TestAuditLogWritten:
         """The default audit handler should write events to ~/.custodian/bus_events.log."""
         fake_home = tmp_path / "home"
         fake_home.mkdir()
+        # Path.home() resolves via os.path.expanduser("~"), which reads
+        # USERPROFILE on Windows and HOME on POSIX. Setting only HOME left this
+        # test writing to the developer's REAL ~/.custodian/bus_events.log on
+        # Windows -- so it both failed and polluted the actual home directory.
         monkeypatch.setenv("HOME", str(fake_home))
+        monkeypatch.setenv("USERPROFILE", str(fake_home))
 
-        @govern(band="L2", cap=50.00)
+        # An explicit state_dir keeps the tamper snapshot hermetic. Without it
+        # this test read a snapshot shared through the default dir and keyed by
+        # the bare name "fn", so ANY edit to this file drifted the hash and the
+        # call was denied before it ever emitted -- the failure looked like a
+        # HOME problem and was not one.
+        @govern(band="L2", cap=50.00, state_dir=str(tmp_path / "tamper"))
         def fn(amount: float) -> dict:
             return {"ok": True}
 

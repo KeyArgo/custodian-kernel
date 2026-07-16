@@ -262,8 +262,18 @@ class TestShellExec:
         assert "not allowed" in r.get("error", "").lower()
 
     def test_find_without_dangerous_flags_allowed(self):
+        """Asserts the GUARD's verdict, not the command's exit code.
+
+        The pair with test_find_exec_flag_blocked is the point: `-exec` is
+        rejected by the allowlist, a plain `find` is not. Asserting
+        r["ok"] is True also required GNU find to actually run — and on Windows
+        `find` resolves to the string-search find.exe, which rejects -maxdepth
+        ("FIND: Invalid switch"). So the test failed for a reason that had
+        nothing to do with the allowlist it exists to test. Checking that the
+        guard did not block it isolates this from whichever `find` the OS has.
+        """
         r = run_tool("skills/files/shell-exec/scripts/execute.py", "--cmd", "find /tmp -maxdepth 0")
-        assert r["ok"] is True
+        assert "not allowed" not in r.get("error", "").lower()
 
     def test_curl_output_flag_blocked(self):
         r = run_tool("skills/files/shell-exec/scripts/execute.py",

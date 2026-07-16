@@ -26,6 +26,38 @@ def _source_sha(func: Callable) -> Optional[str]:
         return None
 
 
+def _default_tamper_dir() -> str:
+    """Where tamper snapshots live when the caller names no state_dir.
+
+    NOT /tmp, which is what this used to default to. /tmp is world-writable
+    (mode 1777 on POSIX) and is not on kernel-self-protection's protected list,
+    so the agent this check exists to catch could simply delete its own
+    snapshot: `rm /tmp/charge.bk.sha`, edit the source, and the next run finds
+    no stored hash, takes the "first run" branch, and re-snapshots the tampered
+    source as legitimate. A tamper check whose state the tampering party can
+    erase is not a check.
+
+    ~/.custodian IS on the protected list, so a write there is denied to the
+    agent by the same adapter that guards the policy and the kill switch.
+    """
+    return os.environ.get(
+        "CUSTODIAN_STATE_DIR",
+        os.path.join(os.path.expanduser("~"), ".custodian", "tamper"),
+    )
+
+
+def _tamper_key(func: Callable) -> str:
+    """A filename that identifies THIS function, not merely its bare name.
+
+    Keying on __name__ alone made every `charge` in the codebase share one
+    snapshot file: a false drift (denying an untouched function) when two
+    modules disagree, and a false OK when they happen to match. Qualified
+    module+qualname, hashed so it is a safe filename.
+    """
+    ident = f"{getattr(func, '__module__', '?')}.{getattr(func, '__qualname__', getattr(func, '__name__', 'unknown'))}"
+    return hashlib.sha256(ident.encode("utf-8")).hexdigest()[:32]
+
+
 def _tamper_check(
     func: Callable, state_dir: Optional[str]
 ) -> Tuple[Optional[str], Optional[str]]:
@@ -33,21 +65,20 @@ def _tamper_check(
     On subsequent runs, verify it matches. Returns (snapshot_sha, verdict).
 
     Pattern from cyberware's executor.py .bk: the source is hashed on first
-    run and stored in <state_dir>/<func_name>.bk.sha. Subsequent runs re-read
-    the source and compare — a drift means the function's source changed
-    between the policy check and execution (agent editing source between
-    audit and runtime).
+    run and stored in <state_dir>/<key>.bk.sha. Subsequent runs re-read the
+    source and compare — a drift means the function's source changed between
+    the policy check and execution (agent editing source between audit and
+    runtime).
 
-    Verdict: "ok" = matches, "drift" = tampered, "disabled" = no source available.
+    Verdict: "ok" = matches, "drift" = tampered, "disabled" = no source
+    available, "unprotected" = the snapshot could not be persisted.
     """
-    func_name = getattr(func, "__name__", "unknown")
     source_sha = _source_sha(func)
     if source_sha is None:
         return None, "disabled"
 
-    state_dir = state_dir or os.environ.get("CUSTODIAN_STATE_DIR", "/tmp")
-    os.makedirs(state_dir, exist_ok=True)
-    bk_path = os.path.join(state_dir, f"{func_name}.bk.sha")
+    state_dir = state_dir or _default_tamper_dir()
+    bk_path = os.path.join(state_dir, f"{_tamper_key(func)}.bk.sha")
 
     try:
         stored = open(bk_path, "r").read().strip()
@@ -55,11 +86,17 @@ def _tamper_check(
             return source_sha, "drift"  # tamper detected
         return source_sha, "ok"
     except FileNotFoundError:
-        # First run: write the snapshot
+        # First run: write the snapshot.
         try:
+            os.makedirs(state_dir, exist_ok=True)
             open(bk_path, "w").write(source_sha)
         except OSError:
-            pass
+            # Do NOT report "ok" here. A snapshot that was never written means
+            # every later run also takes this branch, so the check silently
+            # never fires -- the previous code swallowed the error and returned
+            # "ok", which reads identically to a verified function. Say so
+            # instead, and let the caller decide.
+            return source_sha, "unprotected"
         return source_sha, "ok"
 
 
@@ -155,7 +192,20 @@ def govern(
             tamper_verdict = None
             if tamper_check:
                 _, tv = _tamper_check(fn, state_dir)
+                tamper_verdict = tv
                 if tv == "drift":
+                    # Emit before returning. Every other denial path on this
+                    # function emits (kernel_denied, escalation_required); this
+                    # one returned silently, so the single most security-
+                    # relevant denial -- the source changed between the policy
+                    # check and execution -- left no trace in the audit chain
+                    # at all.
+                    _bus.emit("kernel_denied", {
+                        "audit_id": f"{fn.__name__}:-1", "amount": amount,
+                        "reason": "tamper check: source file changed since the "
+                                  "snapshot was taken",
+                        "fn": fn.__name__,
+                    })
                     return GovernedResult(
                         value=None, verdict="denied",
                         audit_id=f"{fn.__name__}:-1",

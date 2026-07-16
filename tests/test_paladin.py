@@ -106,6 +106,16 @@ def test_rotate_master(vault):
     assert Vault.open(path=vault.path, passphrase="new-pp-456")._resolve_value("k") == "v"
 
 
+@pytest.mark.skipif(
+    sys.platform == "win32",
+    reason=(
+        "os.chmod on Windows only toggles the read-only bit and cannot express "
+        "0600, so this asserts a guarantee the OS does not offer — see the note "
+        "at paladin/vault.py:177, which states the 0600/0700 guarantee holds on "
+        "POSIX only and that AEAD encryption is the sole at-rest protection on "
+        "Windows. Meaningful on POSIX; unsatisfiable here."
+    ),
+)
 def test_file_permissions_hardened(vault):
     import stat
     mode = stat.S_IMODE(vault.path.stat().st_mode)

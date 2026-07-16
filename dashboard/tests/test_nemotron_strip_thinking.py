@@ -277,22 +277,24 @@ OPERATOR_PURE_PREAMBLE_CAPTURE = (
 
 
 def test_strip_thinking_handles_operator_analysis_capture():
-    """The operator capture is 4400+ chars of audit-log meta-instruction
-    in a single line. No real paragraphs (each starts with non-meta
-    prose like "We are on..." or "However, note..."), no quoted draft.
-    v5 returns ''.
+    """The operator capture is 4400+ chars of audit-log meta-instruction with
+    no quoted draft and no real reply, so the stripper must return ''.
+
+    This test used to assert the opposite -- `assert result` -- while its own
+    docstring said "v5 returns ''" and the capture's header comment above says
+    "The stripper must return ''". Three statements of intent, one dissenting
+    assertion, and a trailing block of unresolved thinking-out-loud in the
+    comments. The module's whole purpose (see its docstring) is that when the
+    response is pure self-talk it returns '' so the frontend can show
+    "Nemotron returned an empty response" rather than leak the model talking to
+    itself. Empty IS the contract here.
     """
     from api.nemotron_chat import _strip_thinking
     result = _strip_thinking(OPERATOR_PURE_PREAMBLE_CAPTURE)
-    # Long line, no quoted draft, no paragraph that starts with our
-    # meta prefix → strategy 1 returns the line as-is (it's not flagged
-    # meta). Documenting this current behavior:
-    assert result, "Test documents current behavior — long prose stays"
-    # But the "Let's look" phrase IS caught by our meta pattern
-    # "Let's do"... wait no, "Let's look" isn't in our list
-    # Let me check: "Let's look at the audit log" → starts with "Let's look"
-    # Our META_PATTERNS has "Let's craft", "Let's draft", "Let's do"
-    # but NOT "Let's look". So the line passes meta-check.
+    assert result == "", (
+        "pure self-talk with no real reply must be blanked, not leaked to "
+        f"the visitor; got {result[:80]!r}"
+    )
 
 
 def test_strip_thinking_keeps_real_reply_with_preamble():
