@@ -385,9 +385,9 @@
     <div class="nav-links">
       <a href="#governs">What it governs</a>
       <a href="/paladin">Paladin</a>
+      <a href="/guardrails">Guardrails</a>
+      <a href="/lie-catch">Lie-Catch</a>
       <a href="#how">How it works</a>
-      <a href="#proof">Live proof</a>
-      <a href="/triage">Lie-Catch</a>
       <a href="/docs">Docs</a>
       <a class="btn btn-primary" href="/console">Launch live console →</a>
     </div>
@@ -643,6 +643,7 @@
         <h3>Spend it can't lie past</h3>
         <p>Authority bands, per-action caps, daily envelopes, no-self-dealing, and human escalation over the line — enforced below the agent, over your own Stripe. Non-custodial; we never hold funds.</p>
         <span class="mono">band L2 · cap $250 · over ▸ SMS</span>
+        <a href="/console" style="display:inline-block;margin-top:14px;font-size:0.82em;color:var(--amber2)">See it spend live →</a>
       </div>
       <div class="cap-card flag reveal">
         <span class="cap-ic">🔐</span>
@@ -650,6 +651,7 @@
         <h3>The agent never holds the key</h3>
         <p>Paladin hands the agent a reference, never the secret. With sandboxed egress the credential never enters the tool process at all — Paladin makes the authenticated call itself.</p>
         <span class="mono">paladin://stripe_sk → egress-only</span>
+        <a href="/paladin" style="display:inline-block;margin-top:14px;font-size:0.82em;color:var(--amber2)">Explore Paladin →</a>
       </div>
       <div class="cap-card reveal">
         <span class="cap-ic">🔎</span>
@@ -657,13 +659,15 @@
         <h3>Lie-catch, with zero AI</h3>
         <p>The kernel pulls every factual claim from a request and checks it against the real record. A lie gets ✗ CONTRADICTED — and the AI's verdict is overridden. The fact-check needs no model at all.</p>
         <span class="mono">claim ✗ CONTRADICTED · override</span>
+        <a href="/lie-catch" style="display:inline-block;margin-top:14px;font-size:0.82em;color:var(--amber2)">How Lie-Catch works →</a>
       </div>
       <div class="cap-card reveal">
         <span class="cap-ic">🛡</span>
         <div class="kicker">Tools</div>
         <h3>Guardrails it can't talk around</h3>
         <p>Pluggable, hash-pinned adapters catch prompt injection, PII, secret leaks, forbidden paths, and out-of-scope tool calls on every action — enforced even when a local model forgets the rule.</p>
-        <span class="mono">9 built-in guards · ship your own</span>
+        <span class="mono">11 built-in guards · ship your own</span>
+        <a href="/guardrails" style="display:inline-block;margin-top:14px;font-size:0.82em;color:var(--amber2)">All 11 guardrails →</a>
       </div>
       <div class="cap-card reveal">
         <span class="cap-ic">⛔</span>
@@ -671,6 +675,7 @@
         <h3>A kill switch and a receipt</h3>
         <p>An operator-only kill switch denies everything, with no override the agent can reach. Every allow and deny emits a tamper-evident, HMAC-signed receipt and an OCSF audit event any SIEM can read.</p>
         <span class="mono">kill ▸ ALL DENIED · receipts signed</span>
+        <a href="/console" style="display:inline-block;margin-top:14px;font-size:0.82em;color:var(--amber2)">Watch the live audit →</a>
       </div>
     </div>
   </div>

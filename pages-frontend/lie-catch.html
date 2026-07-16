@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Custodian Lie-Catch — The AI reads it. The kernel checks if it's true.</title>
+<meta name="description" content="The AI reasons and recommends. Then the kernel — zero AI — extracts every factual claim and checks it against the real record. A lie gets CONTRADICTED and the AI's verdict is overridden. The gap between the AI being fooled and the kernel not caring is what Custodian is.">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<meta property="og:title" content="Custodian Lie-Catch — The AI reads it. The kernel checks if it's true.">
+<meta property="og:description" content="The AI can be fooled. The kernel checks every claim against the real record and overrides the AI when the facts don't hold. Zero AI in the verification.">
+<meta property="og:url" content="https://getcustodian.xyz/lie-catch">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Custodian Lie-Catch — The AI reads it. The kernel checks if it's true.">
+<meta name="twitter:description" content="The AI can be fooled. The kernel checks every claim against the real record and overrides the AI. Zero AI in the verification.">
+<link rel="canonical" href="https://getcustodian.xyz/lie-catch">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#06070b;--bg2:#0a0c13;--panel:rgba(255,255,255,0.025);
+  --line:rgba(255,255,255,0.09);--line2:rgba(255,255,255,0.14);
+  --text:#eceef5;--muted:#8d93a6;--dim:#5d6273;
+  --amber:#ffb000;--amber2:#ffd060;--green:#2ee6a6;--red:#ff5c5c;
+  --violet:#8b7bff;--cyan:#49d6e8;--nvidia:#76b900;
+  --mono:'JetBrains Mono','Fira Code',monospace;
+}
+html{scroll-behavior:smooth}
+body{font-family:var(--mono);background:var(--bg);color:var(--text);line-height:1.55;-webkit-font-smoothing:antialiased}
+a{color:inherit;text-decoration:none}
+code{font-family:var(--mono)}
+
+.k-nav{position:sticky;top:0;z-index:100;display:flex;align-items:center;height:52px;padding:0 24px;
+  background:rgba(6,7,11,0.95);border-bottom:1px solid rgba(255,176,0,0.12);backdrop-filter:blur(14px);
+  font-family:var(--mono);font-size:14px;gap:0}
+.k-brand{display:flex;align-items:center;gap:8px;color:var(--amber);text-decoration:none;font-size:0.8em;
+  font-weight:700;letter-spacing:0.1em;text-transform:uppercase;margin-right:20px;flex-shrink:0}
+.k-brand svg{width:20px;height:20px}
+.k-links{display:flex;align-items:center;gap:2px;flex:1}
+.k-links a{color:var(--muted);text-decoration:none;font-size:0.72em;font-weight:600;letter-spacing:0.1em;
+  text-transform:uppercase;padding:6px 12px;border-bottom:2px solid transparent;transition:color .15s,border-color .15s}
+.k-links a:hover{color:var(--text)}
+.k-links a.active{color:var(--amber);border-bottom-color:var(--amber)}
+.k-status{display:flex;align-items:center;gap:6px;font-size:0.65em;letter-spacing:0.12em;text-transform:uppercase;
+  color:var(--green);border:1px solid rgba(46,230,166,0.25);padding:4px 10px;border-radius:4px;flex-shrink:0}
+.k-dot{width:6px;height:6px;border-radius:50%;background:var(--green);animation:k-pulse 2s infinite;flex-shrink:0}
+@keyframes k-pulse{0%,100%{opacity:1}50%{opacity:0.3}}
+@media(max-width:760px){.k-links a{font-size:0.65em;padding:6px 8px}.k-brand span{display:none}}
+@media(max-width:480px){.k-links a:not(.active){display:none}.k-brand span{display:inline}}
+
+.wrap{max-width:1120px;margin:0 auto;padding:0 28px}
+.mesh{position:fixed;inset:0;z-index:-1;pointer-events:none;
+  background:radial-gradient(55% 45% at 82% 0%,rgba(255,92,92,0.05),transparent 70%),
+             radial-gradient(50% 40% at 10% 8%,rgba(46,230,166,0.05),transparent 70%)}
+
+.p-hero{padding:74px 0 44px}
+.eyebrow{display:inline-flex;align-items:center;gap:9px;font-family:var(--mono);font-size:0.7em;letter-spacing:0.14em;
+  text-transform:uppercase;color:var(--green);border:1px solid rgba(46,230,166,0.3);background:rgba(46,230,166,0.05);
+  padding:6px 14px;border-radius:100px;margin-bottom:22px}
+.p-hero h1{font-size:clamp(2em,5vw,3.3em);font-weight:700;line-height:1.08;letter-spacing:-0.02em;margin-bottom:18px}
+.p-hero h1 .grad{background:linear-gradient(100deg,var(--green),var(--cyan));-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+.p-hero .lede{color:var(--muted);font-size:1.08em;max-width:660px;line-height:1.7;margin-bottom:28px}
+.p-hero .lede b{color:var(--text)}
+.cta-row{display:flex;gap:13px;flex-wrap:wrap}
+.btn{font-family:var(--mono);font-size:0.82em;font-weight:600;padding:12px 22px;border-radius:10px;cursor:pointer;
+  transition:transform .15s,box-shadow .15s;border:1px solid transparent;display:inline-flex;align-items:center;gap:8px}
+.btn-primary{background:var(--amber);color:#06070b}
+.btn-primary:hover{transform:translateY(-2px);box-shadow:0 12px 30px -10px rgba(255,176,0,0.5)}
+.btn-ghost{background:rgba(255,255,255,0.02);border-color:var(--line2);color:var(--text)}
+.btn-ghost:hover{border-color:var(--amber);color:var(--amber2)}
+
+section{padding:52px 0;border-top:1px solid var(--line)}
+.sec-eyebrow{font-family:var(--mono);font-size:0.7em;letter-spacing:0.16em;text-transform:uppercase;color:var(--amber);margin-bottom:12px}
+h2{font-size:clamp(1.5em,3.4vw,2.1em);font-weight:700;margin-bottom:14px;line-height:1.15}
+.sec-sub{color:var(--muted);font-size:1.02em;max-width:700px;line-height:1.65}
+
+/* two phases */
+.phases{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-top:34px}
+@media(max-width:760px){.phases{grid-template-columns:1fr}}
+.phase{border-radius:16px;padding:28px;border:1px solid var(--line);background:var(--panel)}
+.phase.ai{border-color:rgba(139,123,255,0.25)}
+.phase.kern{border-color:rgba(46,230,166,0.28);background:linear-gradient(180deg,rgba(46,230,166,0.04),rgba(255,255,255,0.01))}
+.ph-tag{font-family:var(--mono);font-size:0.66em;letter-spacing:0.12em;text-transform:uppercase;margin-bottom:12px}
+.phase.ai .ph-tag{color:var(--violet)} .phase.kern .ph-tag{color:var(--green)}
+.phase h3{font-size:1.2em;margin-bottom:10px}
+.phase p{color:var(--muted);font-size:0.94em;line-height:1.6}
+.phase p b{color:var(--text)}
+
+/* the moment */
+.moment{margin-top:36px;border:1px solid rgba(255,176,0,0.3);border-radius:16px;padding:30px;background:linear-gradient(180deg,rgba(255,176,0,0.04),transparent)}
+.moment .row{display:flex;gap:14px;flex-wrap:wrap;align-items:center;font-family:var(--mono);font-size:0.9em;margin-bottom:14px}
+.badge{padding:5px 12px;border-radius:8px;font-weight:700;font-size:0.82em}
+.b-ai{color:var(--green);background:rgba(46,230,166,0.1);border:1px solid rgba(46,230,166,0.3)}
+.b-kern{color:var(--red);background:rgba(255,92,92,0.1);border:1px solid rgba(255,92,92,0.3)}
+.arrow{color:var(--dim)}
+.moment p{color:var(--muted);line-height:1.7;max-width:760px}.moment p b{color:var(--text)}
+
+/* scenarios */
+.scen-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px;margin-top:32px}
+.scen{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:18px 20px;transition:border-color .2s,transform .2s}
+.scen:hover{border-color:var(--line2);transform:translateY(-2px)}
+.scen .ic{font-size:1.2em;margin-bottom:8px;display:block}
+.scen h3{font-size:0.98em;margin-bottom:5px}
+.scen p{color:var(--muted);font-size:0.84em;line-height:1.5}
+
+.final{padding:64px 0;text-align:center;background:linear-gradient(180deg,transparent,rgba(46,230,166,0.03))}
+.final h2{margin-bottom:14px}.final p{color:var(--muted);max-width:580px;margin:0 auto 26px;line-height:1.65}.final .cta-row{justify-content:center}
+footer{border-top:1px solid var(--line);padding:30px 0;color:var(--dim);font-size:0.82em;text-align:center}
+footer a{color:var(--muted)}
+</style>
+</head>
+<body>
+<div class="mesh"></div>
+
+<nav class="k-nav">
+  <a href="/" class="k-brand">
+    <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <polygon points="56,42 42,56 22,56 8,42 8,22 22,8 42,8 56,22" stroke="#ffb000" stroke-width="2.5" stroke-linejoin="round"/>
+      <path d="M 40.5,23.5 A 12,12 0 1,0 40.5,40.5" stroke="#ffb000" stroke-width="2.5" stroke-linecap="round"/>
+    </svg>
+    <span>CUSTODIAN</span>
+  </a>
+  <div class="k-links">
+    <a href="/">Home</a>
+    <a href="/paladin">Paladin</a>
+    <a href="/guardrails">Guardrails</a>
+    <a href="/lie-catch" class="active">Lie-Catch</a>
+    <a href="/console">Console</a>
+    <a href="/tools">Tools</a>
+    <a href="/docs">Docs</a>
+  </div>
+  <div class="k-status"><span class="k-dot"></span><span>Kernel Live</span></div>
+</nav>
+
+<header class="p-hero">
+  <div class="wrap">
+    <div class="eyebrow"><span>🔎</span> Custodian Lie-Catch · Claim Verification</div>
+    <h1>The AI reads it.<br><span class="grad">The kernel checks if it's true.</span></h1>
+    <p class="lede">Two phases, separated by design. The AI reasons and recommends — and it can be tricked. Then the kernel, with <b>zero AI</b>, extracts every factual claim from the request and resolves each against the real record. A lie gets ✗ CONTRADICTED, and the AI's verdict is overridden. No other AI payment system can show this, because they stop at "did the agent ask nicely?"</p>
+    <div class="cta-row">
+      <a class="btn btn-primary" href="/triage">Try it live — lie to it →</a>
+      <a class="btn btn-ghost" href="/docs">Docs</a>
+    </div>
+  </div>
+</header>
+
+<!-- TWO PHASES -->
+<section id="how">
+  <div class="wrap">
+    <div class="sec-eyebrow">How it works</div>
+    <h2>Reasoning and enforcement, kept apart</h2>
+    <div class="phases">
+      <div class="phase ai">
+        <div class="ph-tag">Phase 1 · the AI reads</div>
+        <h3>The model forms a recommendation</h3>
+        <p>Nemotron reads the customer's message and proposes <b>APPROVE</b> or <b>DENY</b> based on what they claimed. It can be prompt-injected, flattered, or lied to. That's fine — <b>it isn't the last line of defense.</b></p>
+      </div>
+      <div class="phase kern">
+        <div class="ph-tag">Phase 2 · the kernel checks</div>
+        <h3>Zero AI. The facts decide.</h3>
+        <p>The enforcement engine extracts every factual claim and resolves each against the real order database. A false claim gets <b>✗ CONTRADICTED</b>. The AI's verdict is then <b>overridden</b> if the facts don't hold.</p>
+      </div>
+    </div>
+    <div class="moment">
+      <div class="row">
+        <span class="badge b-ai">AI says: APPROVE</span>
+        <span class="arrow">→</span>
+        <span class="badge b-kern">KERNEL says: DENY</span>
+      </div>
+      <p>The moment to watch is when the AI says approve and the kernel says deny. <b>That gap — the AI being fooled and the kernel not caring — is what Custodian is.</b> Because the verification is deterministic, it needs no model, no key, and no trust in the agent.</p>
+    </div>
+  </div>
+</section>
+
+<!-- SCENARIOS -->
+<section id="packs">
+  <div class="wrap">
+    <div class="sec-eyebrow">Not just refunds</div>
+    <h2>Any decision with a checkable claim</h2>
+    <p class="sec-sub">The same two-phase pattern applies wherever a request makes factual assertions that a ledger can confirm or contradict.</p>
+    <div class="scen-grid">
+      <div class="scen"><span class="ic">🔄</span><h3>Refunds</h3><p>"The package never arrived." The ledger says it was delivered and signed for.</p></div>
+      <div class="scen"><span class="ic">📦</span><h3>Procurement</h3><p>PO amounts, vendor terms, and approval thresholds checked against the record.</p></div>
+      <div class="scen"><span class="ic">☁️</span><h3>Cloud ops</h3><p>Unapproved providers, cost anomalies, and NVIDIA NIM job claims verified.</p></div>
+      <div class="scen"><span class="ic">⚖️</span><h3>Contracts</h3><p>Payment window, indemnification, auto-renewal — every clause checked against the template.</p></div>
+    </div>
+  </div>
+</section>
+
+<div class="final">
+  <div class="wrap">
+    <h2>Try to lie to it.</h2>
+    <p>Say the package never arrived, or the amount was different, or legal verbally agreed. The kernel knows the truth — and it doesn't care how convincingly the agent asks.</p>
+    <div class="cta-row">
+      <a class="btn btn-primary" href="/triage">Run the live demo →</a>
+      <a class="btn btn-ghost" href="/">← Back to Custodian</a>
+    </div>
+  </div>
+</div>
+
+<footer>
+  <div class="wrap">
+    Lie-Catch runs the real deterministic engine · <a href="/">Custodian home</a> · <a href="/triage">Live demo</a> · <a href="/docs">Docs</a>
+  </div>
+</footer>
+</body>
+</html>
