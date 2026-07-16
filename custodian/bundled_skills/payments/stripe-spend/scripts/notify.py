@@ -46,7 +46,11 @@ class PendingEscalationExistsError(Exception):
 
 
 def _atomic_write(path: Path, content: str) -> None:
-    """Atomic write: temp file + rename on same fs.
+    """Atomic write: temp file + rename on same fs. Matters here for the
+    same reason write_pending() now refuses to clobber a live pending
+    escalation — a torn/partial write from a non-atomic write_text(),
+    raced by a concurrent read from approve.py, could itself surface as
+    a phantom 'no pending escalation' or a corrupt-JSON read.
 
     fsync's fd must come from the SAME file object the whole way through
     (via a `with` block) — a previous version called
@@ -63,7 +67,12 @@ def _atomic_write(path: Path, content: str) -> None:
             f.write(content)
             f.flush()
             os.fsync(f.fileno())
-        os.rename(str(tmp_path), str(path))
+        # os.replace, not os.rename: POSIX rename(2) silently replaces an
+        # existing target, but on Windows os.rename raises FileExistsError
+        # (WinError 183) -- so rewriting a pending-escalation file that already
+        # existed failed there while passing on Linux. os.replace is the
+        # portable form and is atomic on both.
+        os.replace(str(tmp_path), str(path))
     except Exception:
         try:
             tmp_path.unlink(missing_ok=True)

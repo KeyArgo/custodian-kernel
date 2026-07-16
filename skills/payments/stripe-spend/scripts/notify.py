@@ -67,7 +67,12 @@ def _atomic_write(path: Path, content: str) -> None:
             f.write(content)
             f.flush()
             os.fsync(f.fileno())
-        os.rename(str(tmp_path), str(path))
+        # os.replace, not os.rename: POSIX rename(2) silently replaces an
+        # existing target, but on Windows os.rename raises FileExistsError
+        # (WinError 183) -- so rewriting a pending-escalation file that already
+        # existed failed there while passing on Linux. os.replace is the
+        # portable form and is atomic on both.
+        os.replace(str(tmp_path), str(path))
     except Exception:
         try:
             tmp_path.unlink(missing_ok=True)

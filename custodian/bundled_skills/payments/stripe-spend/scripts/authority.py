@@ -12,14 +12,23 @@ LOG_FILE = SKILL_DIR / "state" / "audit_log.jsonl"
 
 
 def _atomic_write(path: Path, content: str) -> None:
-    """Atomic write: temp file + rename on same fs."""
+    """Atomic write: temp file + replace on same fs.
+
+    fsync's fd must come from the SAME file object throughout (via a `with`
+    block). `os.fsync(tmp_path.open("rb").fileno())` hands fsync an fd whose
+    file object is already refcount-freed -- OSError: [Errno 9] Bad file
+    descriptor, on every call. os.replace rather than os.rename so an existing
+    target is replaced on Windows instead of raising FileExistsError.
+    """
     dir_path = path.parent
     dir_path.mkdir(parents=True, exist_ok=True)
     tmp_path = Path(str(path) + f".tmp.{os.getpid()}.{random.randint(100000, 999999)}")
     try:
-        tmp_path.write_text(content)
-        os.fsync(tmp_path.open("rb").fileno())
-        os.rename(str(tmp_path), str(path))
+        with open(tmp_path, "w") as f:
+            f.write(content)
+            f.flush()
+            os.fsync(f.fileno())
+        os.replace(str(tmp_path), str(path))
     except Exception:
         try:
             tmp_path.unlink(missing_ok=True)

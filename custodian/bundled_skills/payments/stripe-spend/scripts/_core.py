@@ -44,17 +44,30 @@ DEFAULT_STATE = {
 def _atomic_write(path: Path, content: str) -> None:
     """Write content atomically: write to random-named temp file, then rename.
 
-    os.rename on the same filesystem is atomic on Linux.  If the process is
-    killed mid-write the old file is untouched — no corruption window.
+    os.replace on the same filesystem is atomic, and unlike os.rename it also
+    replaces an existing target on Windows rather than raising FileExistsError.
+
+    fsync's fd must come from the SAME file object the whole way through (via
+    a `with` block). A previous version called
+    `os.fsync(tmp_path.open("rb").fileno())`, whose anonymous file object has
+    no reference held once .fileno() returns, so CPython's refcounting GC
+    closes it immediately and hands fsync an already-closed fd -- reproducible
+    as OSError: [Errno 9] Bad file descriptor. Because _atomic_write is the
+    last step of save_state(), and save_state() runs AFTER the charge, this
+    raised on every successful spend: money moved, budget never decremented,
+    no audit entry written. notify.py fixed this and documented it; the fix
+    was never propagated here.
     """
     dir_path = path.parent
     dir_path.mkdir(parents=True, exist_ok=True)
     tmp_name = str(path) + f".tmp.{os.getpid()}.{random.randint(100000, 999999)}"
     tmp_path = Path(tmp_name)
     try:
-        tmp_path.write_text(content)
-        os.fsync(tmp_path.open("rb").fileno())
-        os.rename(str(tmp_path), str(path))
+        with open(tmp_path, "w") as f:
+            f.write(content)
+            f.flush()
+            os.fsync(f.fileno())
+        os.replace(str(tmp_path), str(path))
     except Exception:
         try:
             tmp_path.unlink(missing_ok=True)
@@ -92,7 +105,19 @@ def stripe_key():
     raise RuntimeError("STRIPE_API_KEY not found in secrets file")
 
 
+def _mock_intent() -> dict:
+    return {"id": f"pi_mock_{int(time.time()*1000)}", "status": "succeeded"}
+
+
 def create_payment_intent(amount_dollars, description):
+    # Checked BEFORE the network call, matching create_refund and matching what
+    # this module's docstring promises ("simulate all charges instead of calling
+    # Stripe"). A previous version checked it only in the failure path, so mock
+    # mode called Stripe for real first and fell back to a mock ONLY if the call
+    # errored -- i.e. enabling mock mode on a live key charged the card for real
+    # and returned a successful-looking result.
+    if _STRIPE_MOCK:
+        return _mock_intent()
     key = stripe_key()
     cents = int(round(amount_dollars * 100))
     data = {
@@ -110,6 +135,17 @@ def create_payment_intent(amount_dollars, description):
         # not just policy-disabled, but rejected by Stripe itself if it ever runs.
         data["payment_method"] = "pm_card_visa"
         data["confirm"] = "true"
+    # One key for BOTH attempts, generated before the loop. requests' timeout is
+    # a RequestException, and a timeout does not mean the charge didn't land --
+    # it means we don't know. Retrying without this header is how the same intent
+    # gets created twice: first POST succeeds at Stripe, its response is lost,
+    # the retry charges the card again. With it, Stripe returns the ORIGINAL
+    # result instead of charging, so the retry is safe.
+    #
+    # Scope: this makes the retry *inside one call* at-most-once. It does NOT
+    # survive a crash-and-reinvoke, which mints a fresh key -- that needs the
+    # plan-bound authorization in docs/DESIGN-authorization-primitive.md.
+    idempotency_key = secrets.token_hex(16)
     last_err = None
     for attempt in (1, 2):
         try:
@@ -117,6 +153,7 @@ def create_payment_intent(amount_dollars, description):
                 "https://api.stripe.com/v1/payment_intents",
                 auth=(key, ""),
                 data=data,
+                headers={"Idempotency-Key": idempotency_key},
                 timeout=10,
             )
             r.raise_for_status()
@@ -127,10 +164,11 @@ def create_payment_intent(amount_dollars, description):
                 time.sleep(1)
                 continue
 
-    # Stripe consistently down — auto-fallback to mock mode if enabled.
-    if _STRIPE_MOCK:
-        return {"id": f"pi_mock_{int(time.time()*1000)}", "status": "succeeded"}
-
+    # Deliberately no mock fallback here. Mock mode is decided up front, so
+    # reaching this point means it is off and the operator wants a real charge.
+    # The previous fallback returned {"status": "succeeded"} when Stripe was
+    # unreachable -- reporting a charge that never happened, which the caller
+    # then recorded as spend. A failed charge must fail.
     raise RuntimeError(f"Stripe call failed after retry: {last_err}")
 
 
