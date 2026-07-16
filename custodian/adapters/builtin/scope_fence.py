@@ -35,8 +35,11 @@ import re
 from urllib.parse import urlparse
 
 from custodian.adapters.base import ActionContext, Adapter, Verdict
+from custodian.adapters.builtin._paths import path_values
 
-_PATH_ARG_HINT = re.compile(r"(path|file|dir|dest|src|output|input)", re.I)
+# The path-arg hint lives in _paths.PATH_ARG_HINT (reached via path_values) so
+# all three fences agree on what counts as a path argument. This module used to
+# carry its own byte-identical copy.
 _URL_RE = re.compile(r"https?://[^\s\"'<>]+")
 
 
@@ -92,9 +95,12 @@ class ScopeFence(Adapter):
         # skips the check entirely just because it doesn't look enough
         # like a path.
         if self.path_prefixes or self.path_globs:
-            for key, value in ctx.args.items():
-                if not isinstance(value, str) or not _PATH_ARG_HINT.search(key):
-                    continue
+            # path_values recurses into containers. The previous
+            # `not isinstance(value, str): continue` meant {"path": ["/etc/passwd"]}
+            # -- an ordinary JSON tool-call shape -- skipped the fence entirely,
+            # which is exactly the "shape of input that silently skips the
+            # check" this comment warns against.
+            for value in path_values(ctx.args):
                 resolved = os.path.normpath(os.path.join("/", value)
                                             if not os.path.isabs(value) else value)
                 if self.path_prefixes and not any(

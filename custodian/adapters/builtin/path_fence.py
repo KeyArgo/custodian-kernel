@@ -53,6 +53,7 @@ from custodian.adapters.base import ActionContext, Adapter, Verdict
 from custodian.adapters.builtin._paths import (
     PATH_ARG_HINT,
     looks_like_path,
+    path_values,
     resolve,
     under_prefix,
 )
@@ -166,9 +167,10 @@ class PathFence(Adapter):
         """Every path-shaped value this tool call would touch."""
         out: list[str] = []
         # Direct path arguments (read_file/write_file: path, file_path).
-        for key, value in ctx.args.items():
-            if isinstance(value, str) and PATH_ARG_HINT.search(key) and looks_like_path(value):
-                out.append(value)
+        # path_values recurses into lists/dicts: {"paths": ["~/.ssh/id_rsa"]}
+        # is an ordinary JSON tool-call shape, and the previous
+        # isinstance(value, str) skip meant it was never checked at all.
+        out.extend(path_values(ctx.args))
         # patch/diff-shaped tools: the real target lives inside the diff
         # body under a key ("diff", "patch") PATH_ARG_HINT never matches.
         if ctx.skill in ("patch", "edit_file"):

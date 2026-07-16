@@ -31,10 +31,17 @@ import os
 import re
 
 from custodian.adapters.base import ActionContext, Adapter, Verdict
+from custodian.adapters.builtin._paths import path_values, resolve as _resolve
 
 _WRITE_SKILLS = {"file-write", "file-delete", "file-move", "shell-exec"}
 _WRITE_HINT = re.compile(r"(write|delete|remove|move|append|edit|patch|chmod|chown)", re.I)
-_PATH_HINT = re.compile(r"(path|file|dest|target|output)", re.I)
+# A unified-diff target marker. patch/edit_file carry the real target path
+# INSIDE the diff body, under a key ("diff", "patch") that no path-arg hint
+# matches — so a diff rewriting SOUL.md sailed through while the identical
+# write via a "path" arg was denied. PathFence has caught this since it was
+# written; this adapter had no equivalent.
+_DIFF_TARGET_RE = re.compile(r"^[+-]{3} [ab]/(.+)$", re.MULTILINE)
+_DIFF_SKILLS = ("patch", "edit_file")
 # shell-exec commands that can write through the fence
 _SHELL_WRITE = re.compile(r"(>|>>|\btee\b|\bmv\b|\bcp\b|\brm\b|\bsed\s+-i|\bchmod\b|\btruncate\b)")
 
@@ -79,7 +86,18 @@ class KernelSelfProtection(Adapter):
         self.protected = [os.path.normpath(p) for p in (_default_protected() + list(extra))]
 
     def _is_protected(self, path: str) -> bool:
-        resolved = os.path.normpath(os.path.abspath(os.path.expanduser(path)))
+        # _paths.resolve, not abspath: it follows symlinks. abspath does not,
+        # so a link (or a Windows junction) planted outside a protected dir but
+        # pointing into one resolved to its own path string and matched
+        # nothing -- writes to ~/.custodian/kill_switch, authority.json and
+        # adapters.yaml all went through. This adapter is the categorical,
+        # no-override backstop against the agent editing what governs it, and
+        # it was the only path guard not following links; PathFence and
+        # ScopeFence already route through _paths.resolve, whose docstring
+        # says a traversal/symlink fix must apply to every guard at once.
+        # (policy.yaml appeared safe only because its BASENAME matches a
+        # relative protected entry below -- which masked the hole in testing.)
+        resolved = _resolve(path)
         basename = os.path.basename(resolved)
         for p in self.protected:
             if os.path.isabs(p):
@@ -103,12 +121,23 @@ class KernelSelfProtection(Adapter):
         if not writeish:
             return Verdict.allow(self.name)
 
-        # Direct path arguments.
-        for key, value in ctx.args.items():
-            if not isinstance(value, str):
-                continue
-            if _PATH_HINT.search(key) and self._is_protected(value):
+        # Direct path arguments, including ones nested in lists/dicts —
+        # path_values recurses, so {"path": ["~/.custodian/policy.yaml"]} is no
+        # longer invisible. It also uses the shared PATH_ARG_HINT, which is
+        # wider than the hint this adapter used to carry (that one lacked
+        # dir/src/input).
+        for value in path_values(ctx.args):
+            if self._is_protected(value):
                 return self._deny(value)
+
+        # patch/edit_file: the target lives inside the diff body.
+        if ctx.skill in _DIFF_SKILLS:
+            for raw in ctx.args.values():
+                if not isinstance(raw, str):
+                    continue
+                for target in _DIFF_TARGET_RE.findall(raw):
+                    if self._is_protected(target):
+                        return self._deny(target)
 
         # shell-exec: any protected path co-occurring with a write operator.
         if ctx.skill == "shell-exec":
@@ -116,8 +145,12 @@ class KernelSelfProtection(Adapter):
             if _SHELL_WRITE.search(command):
                 for token in re.split(r"[\s;|&]+", command):
                     tok = token.strip("'\"")
-                    if tok and ("/" in tok or tok in self.protected) \
-                            and self._is_protected(tok):
+                    # No "/" gate: it excluded native Windows paths
+                    # (C:\Users\...\.custodian\policy.yaml contains no forward
+                    # slash and is not a literal member of self.protected), so
+                    # the check simply never ran for them. _is_protected is
+                    # cheap and authoritative — just ask it about every token.
+                    if tok and self._is_protected(tok):
                         return self._deny(tok)
         return Verdict.allow(self.name)
 

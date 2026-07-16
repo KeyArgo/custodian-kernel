@@ -12,6 +12,9 @@ from __future__ import annotations
 
 import os
 import re
+from typing import Any, Mapping
+
+from custodian.adapters.base import _strings_of
 
 # Argument keys that carry a filesystem path across the tools we govern
 # (Hermes: read_file/write_file use "path"/"file_path"; generic tools use
@@ -34,6 +37,27 @@ def looks_like_path(value: str) -> bool:
     if value.startswith(("http://", "https://", "paladin://", "warden://")):
         return False
     return True
+
+
+def path_values(args: Mapping[str, Any]) -> list[str]:
+    """Every path-shaped string in ``args``, including ones nested in
+    containers.
+
+    Guards that walk ``args.items()`` and ``continue`` on
+    ``not isinstance(value, str)`` never inspect ``{"path": ["/etc/passwd"]}``
+    or ``{"path": {"value": "..."}}`` — ordinary JSON tool-call shapes. That
+    contradicts ``looks_like_path``'s own promise above: a fail-closed fence
+    must not have an input shape that silently skips the check. The recursion
+    mirrors ``base._strings_of``, which every text-scanning guard already
+    relies on, so a container arg is no longer invisible to only the path
+    guards.
+    """
+    out: list[str] = []
+    for key, value in args.items():
+        if not PATH_ARG_HINT.search(key):
+            continue
+        out.extend(s for s in _strings_of(value) if looks_like_path(s))
+    return out
 
 
 def resolve(value: str, base: str = "/") -> str:

