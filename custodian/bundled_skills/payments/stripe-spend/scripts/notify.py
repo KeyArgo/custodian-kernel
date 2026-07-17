@@ -27,7 +27,7 @@ import requests  # noqa: E402
 SECRET_FILE = Path("/sandbox/.hermes/secrets/twilio.env")
 PENDING_FILE = SKILL_DIR / "state" / "pending_approval.json"
 PENDING_CODE_FILE = SKILL_DIR / "state" / "pending_code.json"
-OPERATOR_PHONE = os.environ.get("HERMES_OPERATOR_PHONE", "+17196487887")
+OPERATOR_PHONE = os.environ.get("HERMES_OPERATOR_PHONE", "")  # e.g. +15551234567
 CODE_TTL = 600
 
 

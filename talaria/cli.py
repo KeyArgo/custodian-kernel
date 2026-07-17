@@ -291,7 +291,7 @@ def build_parser() -> argparse.ArgumentParser:
         description="Talaria — the Hermes Agent + NemoClaw integration suite.",
     )
     p.add_argument("--version", action=LazyVersionAction,
-                   fmt="%(prog)s {version} (custodian-kernel)")
+                   fmt="%(prog)s {version}")
     sub = p.add_subparsers(dest="command", required=True)
 
     sp = sub.add_parser(
@@ -349,6 +349,11 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main(argv=None) -> int:
+    try:
+        from custodian._encoding import force_utf8_io
+        force_utf8_io()
+    except Exception:
+        pass
     args = build_parser().parse_args(argv)
     try:
         code = args.func(args)

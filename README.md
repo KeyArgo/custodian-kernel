@@ -1,6 +1,6 @@
 # Custodian
 
-**The kernel that decides whether an AI agent's action is allowed — with 1,346 tests, cryptographic receipts, and 60-second verification.**
+**The kernel that decides whether an AI agent's action is allowed — with 1,747 tests, cryptographic receipts, and 60-second verification.**
 
 When an AI agent can spend money, change infrastructure, or write to production, someone has to decide what's allowed. That decision can't live in the agent — the agent is the thing you're worried about. The decision has to live in a kernel that's outside the agent's process and outside the agent's own code path. Rules don't work. A smart enough model routes around rules. Prompts don't work. Prompts are soft. A model that reasons itself into approving its own refund will approve its own refund.
 
@@ -18,19 +18,19 @@ custodian-verify
 **Or, for the deeper proof:**
 
 ```bash
-git clone https://github.com/KeyArgo/hermes-hackathon-2026
-cd hermes-hackathon-2026
+git clone https://github.com/KeyArgo/custodian-kernel
+cd custodian-kernel
 pip install -e ".[dev]"
 python3 verify_kit.py
 ```
 
-`verify_kit.py` runs 5 phases end-to-end with no credentials: re-introduces the self-approval bug to prove the test catches it, runs the 1,346-test suite, runs a planted-lie case, pulls the real Stripe PaymentIntent `pi_3TkZWEPfSF4TGXT90AWlrnle`, and tests the kill switch end-to-end.
+`verify_kit.py` runs 5 phases end-to-end with no credentials: re-introduces the self-approval bug to prove the test catches it, runs the 1,747-test suite, runs a planted-lie case, pulls the real Stripe PaymentIntent `pi_3TkZWEPfSF4TGXT90AWlrnle`, and tests the kill switch end-to-end.
 
 ## What you get when the kernel runs
 
 - **`@govern` decorator** — wrap any function with implicit kernel enforcement. Band, cap, kill switch — all automatic. Zero kernel imports in user code.
 - **CustodianMiddleware** — drop-in ASGI middleware for FastAPI/Flask/Starlette. Governed routes return 402 on escalation, 403 on denial.
-- **GovernedReceipt** — SHA-256 fingerprint of every governed action. The receipt is verifiable and cannot be forged.
+- **GovernedReceipt** — SHA-256 fingerprint of every governed action: tamper-evident (change any field and `verify()` fails). For full authenticity, receipts can be **Ed25519-signed** by the kernel's private key (`custodian.signing`) so they cannot be forged by anyone without that key.
 - **EventBus** — pub/sub hooks for kernel lifecycle events. Wire Twilio SMS, Slack alerts, or any consumer.
 - **CustodianSession** — sub-session band inheritance. A child session cannot exceed the parent.
 - **Authority bands L0-L4** — per-action caps, daily envelopes, margin gates, no-self-dealing, all opt-in.
@@ -44,7 +44,7 @@ Any company running an AI agent with a Stripe account, a Modal spend, a NIM infe
 
 ## What's real
 
-- 1,346 passing tests, 0 failed, 4 deselected (network only)
+- 1,747 passing tests, 0 failed, 4 deselected (network only)
 - Real Stripe test-mode PaymentIntent on record: `pi_3TkZWEPfSF4TGXT90AWlrnle`
 - Real Twilio SMS escalation path
 - Real OpenRouter API key wired in
@@ -55,8 +55,7 @@ Any company running an AI agent with a Stripe account, a Modal spend, a NIM infe
 
 ## Links
 
-- **Repo (GitHub):** https://github.com/KeyArgo/hermes-hackathon-2026
-- **Repo (Gitea):** https://git.argobox.com/KeyArgo/hermes-hackathon-2026
+- **Repo (GitHub):** https://github.com/KeyArgo/custodian-kernel
 - **PyPI:** https://pypi.org/project/custodian-kernel/
 - **Live dashboard:** https://getcustodian.xyz
 - **Operator panel:** https://getcustodian.xyz/operator
@@ -66,22 +65,22 @@ Any company running an AI agent with a Stripe account, a Modal spend, a NIM infe
 ## Features
 
 ### Core
-- 1,346 tests, 0 failures (network tests excluded)
+- 1,747 tests, 0 failures (network tests excluded)
 - Deterministic claim verifier (CONTRADICTED / VERIFIED / UNVERIFIABLE)
 - Operator-only kill switch with resume logic
 - Authority bands L0-L4 with per-request caps
 - Real Stripe PaymentIntent on record (`pi_3TkZWEPfSF4TGXT90AWlrnle`)
 - Real Twilio SMS escalation
 - Self-approval regression test (proves the kernel fix)
-- 100 governed tools in `custodian/bundled_skills/`
+- 105 governed tools in `custodian/bundled_skills/`
 
 ### CLI Commands
 - `custodian request` — spend decision with policy evaluation
 - `custodian audit` — full audit ledger
-- `custodian demo-verify` — 4 claim-verification scenarios (no creds)
-- `custodian earn-and-buy` — closes the economic cycle on camera (no creds)
+- `custodian demo verify` — 4 claim-verification scenarios (no creds)
+- `custodian demo cycle` — closes the economic cycle on camera (no creds)
 - `custodian status-banner` — one-screen kernel state (totals + last 5)
-- `custodian poison-tests` — 5 planted-bad-claim tests (no creds)
+- `custodian demo attacks` — 5 planted-bad-claim tests (no creds)
 - `custodian beancount` — export ledger to Beancount v2
 - `custodian confirm <id>` — post-action confirm (60s deadline)
 
@@ -92,14 +91,14 @@ Any company running an AI agent with a Stripe account, a Modal spend, a NIM infe
 - `policies: { no_self_dealing: true }` — block self-paying agents
 
 ### Verify Kit
-- `python3 verify_kit.py` — 4-phase self-verifying proof
+- `python3 verify_kit.py` — 5-phase self-verifying proof
   - Regresses the self-approval bug live
   - Pulls fresh dashboard + Stripe data
   - Runs the full test suite
   - Tests the kill switch end-to-end
-- `custodian demo-verify` — 4 claim-verifier scenarios
-- `custodian poison-tests` — 5 attack patterns the kernel catches
-- `custodian earn-and-buy` — full economic cycle (earn → gate → spend → verify)
+- `custodian demo verify` — 4 claim-verifier scenarios
+- `custodian demo attacks` — 5 attack patterns the kernel catches
+- `custodian demo cycle` — full economic cycle (earn → gate → spend → verify)
 
 ## What Custodian is
 
@@ -157,6 +156,32 @@ custodian status
 custodian audit
 ```
 
+## Backup & moving to another machine
+
+Your data is never trapped on one computer, and losing it takes real effort:
+
+```bash
+# Workspace (policy + spend history + audit trail) → one .zip
+custodian backup                       # → ~/custodian-backups/custodian-backup-<time>.zip
+custodian restore <backup.zip>         # bring it back, here or on a new machine
+
+# Credential vault (paladin) → one ENCRYPTED file, vault + audit chain
+paladin backup                         # → ~/paladin-backups/paladin-backup-<time>.zip
+paladin restore <backup.zip>           # needs the same passphrase (or keyfile)
+```
+
+Safety properties, on purpose:
+
+- `paladin backup` proves your passphrase opens the vault **before** writing the
+  backup — you'll never discover an unopenable backup during a disaster.
+- The paladin backup stays **encrypted end to end** (AES-256-GCM); the passphrase
+  and keyfile are never inside it.
+- `custodian backup` snapshots the database with SQLite's online-backup API, so
+  it's consistent even mid-write.
+- `restore` (both tools) verifies the backup **before** touching anything,
+  refuses to overwrite without `--force`, and even then saves your current data
+  first (`*.pre-restore` / `pre-restore-<time>.zip`). A restore can't lose data.
+
 ## Documentation
 
 - [Architecture](docs/ARCHITECTURE.md) — design, flow diagram, privilege separation model
@@ -169,14 +194,14 @@ custodian audit
 - [Verification](docs/VERIFICATION.md) — how to check every claim yourself
 - [Getting Started](docs/GETTING_STARTED.md) — 10-minute walkthrough
 
-## Tool Layer — 102 governed tools
+## Tool Layer — 105 governed tools
 
 Custodian ships a governed tool library. Every tool is a Hermes-compatible
 skill (SKILL.md frontmatter) that declares a `custodian-band` from L0–L4.
 The ToolRegistry auto-discovers them — no registration code needed.
 
 ```
-custodian tools list              # show all 102 tools grouped by band
+custodian tools list              # show all 105 tools grouped by band
 custodian tools run http-get --url https://example.com
 custodian tools summary           # JSON band breakdown
 ```
@@ -224,20 +249,20 @@ with their band and description so the capability surface is visible during revi
   the kill switch was engaged, the exact same request was denied by the real
   script running inside the live sandbox, then released, then the real spend
   succeeded again. The full sequence is in the real audit log.
-- 1,346 passing tests (4 network-dependent tests deselected by default), tested with Python 3.11+.
+- 1,747 passing tests (4 network-dependent tests deselected by default), tested with Python 3.11+.
 - The test suite includes `test_self_approval_regression.py` — a regression
   test for the exact security bug this design prevents. The fix was proven
   by deliberately reintroducing the bug, confirming the test failed, then
   restoring the fix. That test exists so the bug can never silently return.
-- Public commit history at `github.com/KeyArgo/hermes-hackathon-2026`.
+- Public commit history at `github.com/KeyArgo/custodian-kernel`.
 
 **Don't take any of this on faith.** Everything verifiable from pip:
 
 ```bash
 pip install custodian-kernel       # install the kernel
-custodian demo-verify              # live claim check against the running system
-pip install custodian-kernel[dev] && pytest tests/   # 1,346 tests, 0 failures
-git clone https://github.com/KeyArgo/hermes-hackathon-2026  # read every line
+custodian demo verify              # live claim check against the running system
+pip install custodian-kernel[dev] && pytest tests/   # 1,747 tests, 0 failures
+git clone https://github.com/KeyArgo/custodian-kernel  # read every line
 ```
 
 See `docs/VERIFICATION.md` for the full manual breakdown.

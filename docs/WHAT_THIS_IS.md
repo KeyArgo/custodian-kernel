@@ -83,7 +83,7 @@ built so the AI can never get near it."**
 exist on Stripe's servers, checkable, but no actual currency changes hands. See
 `docs/VERIFICATION.md` for exactly what "real" does and doesn't mean here.
 
-**How would a judge actually verify any of this?** Run `pip install custodian-kernel && custodian demo-verify` — pulls fresh data from the real public dashboard, runs 4 live claim-verification scenarios against the running system. For the full test suite: `pip install custodian-kernel[dev] && pytest tests/`. See `docs/VERIFICATION.md` for the complete breakdown, including the one thing that can't be self-served (Stripe account-scoping) and why.
+**How would a judge actually verify any of this?** Run `pip install custodian-kernel && custodian demo verify` — pulls fresh data from the real public dashboard, runs 4 live claim-verification scenarios against the running system. For the full test suite: `pip install custodian-kernel[dev] && pytest tests/`. See `docs/VERIFICATION.md` for the complete breakdown, including the one thing that can't be self-served (Stripe account-scoping) and why.
 
 **What's the kill switch for, again?** An emergency stop a human can pull that
 overrides everything else — every cap, every band, instantly — if something seems

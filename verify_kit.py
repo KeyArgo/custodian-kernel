@@ -174,7 +174,7 @@ def step4_live_dashboard() -> bool:
     try:
         req = urllib.request.Request(
             DASHBOARD_URL,
-            headers={"User-Agent": "Mozilla/5.0 (verify_kit.py; +https://git.argobox.com/KeyArgo/hermes-hackathon-2026)"},
+            headers={"User-Agent": "Mozilla/5.0 (verify_kit.py; +https://github.com/KeyArgo/custodian-kernel)"},
         )
         with urllib.request.urlopen(req, timeout=10) as resp:
             data = json.loads(resp.read())

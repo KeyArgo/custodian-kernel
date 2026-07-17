@@ -64,7 +64,7 @@ def run(args) -> int:
         print("usage: custodian confirm <request-id>", file=sys.stderr)
         return 1
 
-    deadline = int(getattr(args, "deadline", _default_deadline_seconds()))
+    deadline = int(getattr(args, "deadline", None) or _default_deadline_seconds())
 
     state_dir_raw = getattr(args, "state_dir", None)
     if state_dir_raw:

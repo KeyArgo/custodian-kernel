@@ -67,6 +67,28 @@ def test_output_hash_deterministic():
     assert receipt.output_hash == expected_hash
 
 
+def test_fingerprint_is_cross_platform_deterministic():
+    """Receipt hashing must be byte-identical on every OS (Windows, Linux,
+    macOS) and CI. output_hash covers the payload — the non-ASCII 'café'
+    guards against encoding drift (json ensure_ascii keeps it stable). The
+    fingerprint is checked via _compute_fingerprint with a fixed receipt_id,
+    because a live receipt_id is a random uuid. A change to either golden
+    value means receipts are no longer reproducible across platforms."""
+    r = GovernedReceipt.build(
+        fn_name="charge", band="L2", amount=5.0, description="api credits",
+        verdict="autonomous", reason="ok", elapsed_ms=0.0,
+        output={"ok": True, "items": [1, 2, 3], "note": "café"},
+        claim_proof="verified",
+    )
+    assert r.output_hash == "d1fa9fe487cf291c6f2836fab86c362fc0e6d24a00d25ccce692a5820f9c8c6a"
+
+    fp = GovernedReceipt._compute_fingerprint(
+        "fixed-receipt-id", "charge", "L2", 5.0, "autonomous", "ok",
+        "api credits", "verified", r.output_hash,
+    )
+    assert fp == "22c122905f0cb216bd02408d3ba3e5e1e0336c5c591e3036d3abdee2ffdab4ab"
+
+
 def test_claim_proof_none_by_default():
     receipt = GovernedReceipt.build(
         fn_name="fn", band="L2", amount=1.00,
@@ -84,4 +106,18 @@ def test_claim_proof_included():
         claim_proof="verified",
     )
     assert receipt.claim_proof == "verified"
-    assert receipt.verify()  # fingerprint excludes claim_proof; still valid
+    assert receipt.verify()
+
+
+def test_claim_proof_is_tamper_sensitive():
+    """A receipt cannot be forged to claim it passed verification when it did
+    not — claim_proof is inside the fingerprint."""
+    receipt = GovernedReceipt.build(
+        fn_name="fn", band="L2", amount=1.00,
+        description="fn", verdict="autonomous",
+        reason="ok", elapsed_ms=0.0, output={},
+        claim_proof="contradicted",
+    )
+    assert receipt.verify()
+    object.__setattr__(receipt, "claim_proof", "verified")
+    assert not receipt.verify()

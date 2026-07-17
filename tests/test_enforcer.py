@@ -15,13 +15,19 @@ from custodian.types import AuthorityState, Band, Decision, SpendRequest, Verdic
 
 @pytest.fixture(autouse=True)
 def _restore_spark_state():
-    """Never leave the runtime disable-flag set after a test touches it."""
-    was_enabled = enforcer.spark_enabled()
+    """Never leave the runtime disable-flag set after a test touches it.
+
+    Restores the literal flag-file state rather than spark_enabled()'s
+    composite answer: with no SPARK_ENFORCE_URLS configured (the default),
+    spark_enabled() is False even with no flag file, and "restoring" that by
+    writing the disable flag would leak a real /tmp file into every later test.
+    """
+    had_flag = os.path.exists(enforcer._DISABLE_FLAG)
     yield
-    if was_enabled:
-        enforcer.spark_enable()
-    else:
+    if had_flag:
         enforcer.spark_disable()
+    else:
+        enforcer.spark_enable()
 
 
 @pytest.fixture()
@@ -81,8 +87,59 @@ def test_spark_a_down_falls_through_to_spark_b(loaded_policy, default_authority,
     assert result.reason == "spark-b served it"
 
 
-def test_runtime_disable_flag_forces_local_path(loaded_policy, default_authority):
+def test_killed_never_consults_remote(loaded_policy, default_authority, monkeypatch):
+    """An engaged kill switch is enforced locally, unconditionally.
+
+    A remote node's verdict must never be able to override it -- the endpoint
+    is unauthenticated plaintext HTTP, and 'cannot be bypassed' is the one
+    absolute guarantee the kernel makes.
+    """
+    calls = []
+
+    def fake_try_node(url, request, state, policy, *, skill, context, killed):
+        calls.append(url)
+        return Decision(
+            verdict=Verdict.AUTONOMOUS, request=request,
+            reason="malicious node approves everything", band=state.band,
+        )
+
+    monkeypatch.setattr(enforcer, "SPARK_ENFORCE_URLS", ["http://192.168.50.101:8095/decide"])
+    monkeypatch.setattr(enforcer, "_remote_enabled", True)
+    monkeypatch.setattr(enforcer, "_try_spark_node", fake_try_node)
+
+    request = SpendRequest(amount=1.50, description="spend while killed")
+    result = enforcer.decide(request, default_authority, loaded_policy, killed=True)
+
+    assert calls == []  # remote never consulted
+    assert result.verdict == Verdict.DENIED
+
+
+def test_no_default_remote_nodes():
+    """Remote enforcement is opt-in: with no SPARK_ENFORCE_URLS/SPARK_ENFORCE_URL
+    env vars, no hardcoded LAN nodes may be probed."""
+    import importlib
+    import subprocess
+    import sys
+
+    code = (
+        "import os\n"
+        "os.environ.pop('SPARK_ENFORCE_URLS', None)\n"
+        "os.environ.pop('SPARK_ENFORCE_URL', None)\n"
+        "from custodian.policy import enforcer\n"
+        "assert enforcer.SPARK_ENFORCE_URLS == [], enforcer.SPARK_ENFORCE_URLS\n"
+        "assert enforcer.spark_enabled() is False\n"
+    )
+    r = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True, encoding="utf-8", errors="replace")
+    assert r.returncode == 0, r.stderr
+
+
+def test_runtime_disable_flag_forces_local_path(loaded_policy, default_authority, monkeypatch):
     """The admin-panel kill switch (spark_disable/_enable) must actually route locally."""
+    # Remote is opt-in now; simulate a configured deployment so the runtime
+    # disable flag is what's actually being exercised.
+    monkeypatch.setattr(enforcer, "SPARK_ENFORCE_URLS", ["http://127.0.0.1:1/decide"])
+    monkeypatch.setattr(enforcer, "_remote_enabled", True)
+
     enforcer.spark_disable()
     assert enforcer.spark_enabled() is False
 

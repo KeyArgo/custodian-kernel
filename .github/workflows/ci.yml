@@ -8,9 +8,11 @@ on:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
+        os: [ubuntu-latest, windows-latest]
         python-version: ["3.11", "3.13"]
 
     steps:
@@ -23,3 +25,40 @@ jobs:
         run: pip install -e ".[dev]"
       - name: Run tests
         run: pytest tests/ -v --cov=custodian
+
+  build:
+    # Prove the wheel installs clean and the flagship verify runs from it,
+    # on both OSes — the exact path a `pip install custodian-kernel` user hits.
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Build wheel
+        run: |
+          pip install build
+          python -m build
+      - name: Install from wheel (clean)
+        run: pip install dist/*.whl
+        shell: bash
+      - name: Smoke test the installed CLI
+        # Exercises the first commands a real user types, from the wheel —
+        # `init` caught a missing-package-data bug that source-tree tests
+        # can never see (0.1.2–0.3.1 all shipped with init broken).
+        run: |
+          custodian --version
+          custodian tools summary
+          custodian demo verify
+          mkdir smoke-ws && cd smoke-ws
+          custodian init
+          custodian request --amount 1.00 --description "smoke"
+          custodian backup ../smoke-backup.zip
+          mkdir ../smoke-ws2 && cd ../smoke-ws2
+          custodian restore ../smoke-backup.zip
+          custodian status
+        shell: bash

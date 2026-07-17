@@ -37,7 +37,12 @@ from custodian.types import AuthorityState, Band, Decision, SpendRequest, Verdic
 # SPARK_ENFORCE_URLS is not set. Point this at real hosts as they come online —
 # unreachable entries are skipped via the same timeout/fallback path as any
 # other outage, so it's safe to list a not-yet-provisioned node in advance.
-# Default: spark-a (primary) → spark-b (secondary) → local enforcement on argobox-lite.
+#
+# No default nodes: remote enforcement is strictly opt-in via env var. Shipping
+# hardcoded LAN IPs meant every fresh install burned a network timeout per
+# decision probing hosts that don't exist, and (worse) delegated enforcement to
+# whatever answered on an unauthenticated plaintext endpoint the installing
+# user never chose.
 _urls_env = os.environ.get('SPARK_ENFORCE_URLS')
 if _urls_env is not None:
     SPARK_ENFORCE_URLS = [u.strip() for u in _urls_env.split(',') if u.strip()]
@@ -46,10 +51,7 @@ else:
     if _url_env is not None:
         SPARK_ENFORCE_URLS = [u.strip() for u in _url_env.split(',') if u.strip()]
     else:
-        SPARK_ENFORCE_URLS = [
-            'http://10.0.0.50:8095/decide',
-            'http://10.0.0.51:8095/decide',
-        ]
+        SPARK_ENFORCE_URLS = []
 
 # Kept for anything importing the old singular name directly (e.g. tests, admin panel).
 SPARK_ENFORCE_URL = SPARK_ENFORCE_URLS[0] if SPARK_ENFORCE_URLS else ''
@@ -219,6 +221,14 @@ def decide(
     entirely and enforces locally regardless of Spark availability.
     """
     ctx = context or {}
+    # The kill switch is enforced locally, unconditionally. A remote node's
+    # verdict must never be able to override an engaged kill switch -- the
+    # endpoint is plain HTTP with no authentication, so trusting it with the
+    # one absolute guarantee the kernel makes ("an engaged kill switch cannot
+    # be bypassed") would let a MITM'd or misconfigured node approve requests
+    # the operator has explicitly stopped.
+    if killed:
+        return _local_decide(request, state, policy, skill=skill, context=ctx, killed=True)
     # Check enforcement mode — skip Spark if user chose local
     if _read_mode() != 'local':
         decision = _try_spark(request, state, policy, skill=skill, context=ctx, killed=killed)

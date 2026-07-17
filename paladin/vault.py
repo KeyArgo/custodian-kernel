@@ -181,6 +181,56 @@ def _harden_permissions(path: Path) -> None:
     os.chmod(path, stat.S_IRUSR | stat.S_IWUSR)  # 0600
 
 
+def copy_encrypted(src: Path, dest: Path) -> Path:
+    """Copy the encrypted vault file ``src`` → ``dest`` for backup/restore.
+
+    The copy stays ciphertext end to end — no plaintext is ever written, so a
+    backup is exactly as safe to store as the vault itself (an attacker with
+    it learns only its size). The read holds the same exclusive ``.lock`` that
+    :meth:`Vault.save` takes, so a backup can never capture a half-written
+    vault racing a concurrent ``add``/``edit``. The source bytes are checked to
+    be a well-formed AEAD blob before anything is written, and the write is
+    atomic (tmp + rename) and permission-hardened (0600), just like save().
+
+    This does NOT require the passphrase — copying ciphertext needs no key.
+    Callers that want to prove the copy is *restorable* (i.e. the passphrase
+    opens it) should ``Vault.open`` it separately; the CLI does exactly that.
+    """
+    src = Path(src)
+    dest = Path(dest)
+    if not src.exists():
+        raise VaultMissingError(f"no vault at {src} — nothing to copy")
+    if dest.resolve() == src.resolve():
+        raise PaladinError(f"source and destination are the same file ({src})")
+    lock_path = src.with_suffix(".lock")
+    lock_fd = os.open(lock_path, os.O_CREAT | os.O_RDWR, 0o600)
+    try:
+        _lock_exclusive(lock_fd)
+        blob = src.read_bytes()
+        # Reject an empty/torn/non-vault file loudly rather than writing a
+        # useless "backup" that would fail to restore. split_blob raises on
+        # anything that isn't our AEAD container.
+        crypto.split_blob(blob)
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        os.chmod(dest.parent, 0o700)
+        tmp = dest.with_suffix(dest.suffix + ".tmp")
+        fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+        try:
+            with os.fdopen(fd, "wb") as f:
+                f.write(blob)
+                f.flush()
+                os.fsync(f.fileno())
+            os.replace(tmp, dest)
+            _harden_permissions(dest)
+        finally:
+            if tmp.exists():
+                tmp.unlink(missing_ok=True)
+    finally:
+        _lock_release(lock_fd)
+        os.close(lock_fd)
+    return dest
+
+
 class Vault:
     """An unlocked vault. Construct via :meth:`create` or :meth:`open`."""
 

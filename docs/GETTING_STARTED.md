@@ -238,6 +238,35 @@ Kill switch released by Alice. Normal decisions will resume.
 This is the same mechanism wired into the real, live, authoritative
 `spend.py` script used elsewhere in this project — not a separate demo path.
 
+## Step 10: Back up your workspace
+
+Everything Custodian knows — your policy, spend history, and audit trail — can
+be saved to a single file and brought back anywhere:
+
+```bash
+custodian backup --state-dir /tmp/custodian-demo/state --policy /tmp/custodian-demo/policy.yaml
+```
+
+```
+Backed up 3 file(s) → ~/custodian-backups/custodian-backup-20260716-125900.zip
+  policy.yaml
+  state/custodian.db
+  state/kill_switch.json
+```
+
+To restore — on this machine or a brand-new one:
+
+```bash
+custodian restore <that .zip>
+```
+
+Restore is deliberately hard to get wrong: it refuses to overwrite an existing
+workspace unless you pass `--force`, and even then it first saves your current
+files to a `pre-restore-<time>.zip` so nothing is ever lost.
+
+If you use the paladin credential vault, back that up too (it's a separate,
+**encrypted** backup): `paladin backup`.
+
 ## Cleanup
 
 ```bash
@@ -257,10 +286,12 @@ rm -rf /tmp/custodian-demo
 | `custodian audit` | Shows audit log entries |
 | `custodian kill --by NAME` | Engages the kill switch -- denies everything until released |
 | `custodian resume --by NAME` | Releases the kill switch |
-| `custodian demo-verify` | Runs 4 live claim-verification scenarios (no credentials needed) |
-| `custodian earn-and-buy` | Closes the full earn→spend→net cycle on camera (test mode) |
+| `custodian backup [DEST]` | Saves policy + history + audit trail to one .zip |
+| `custodian restore FILE` | Brings a backup back (never overwrites without `--force`) |
+| `custodian demo verify` | Runs 4 live claim-verification scenarios (no credentials needed) |
+| `custodian demo cycle` | Closes the full earn→spend→net cycle on camera (test mode) |
 | `custodian status-banner` | Shows kernel state in a one-screen banner with last 5 entries |
-| `custodian poison-tests` | Runs 5 planted-bad-claim tests through the verifier |
+| `custodian demo attacks` | Runs 5 planted-bad-claim tests through the verifier |
 | `custodian beancount --since DATE` | Exports audit ledger to Beancount v2 format |
 | `custodian confirm REQUEST_ID` | Confirms a request-id within the 60s deadline |
 | `custodian tools list` | Lists all 102 registered tools grouped by band |

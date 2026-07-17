@@ -52,7 +52,17 @@ class TestGoverAmountEdgeCases:
 
         result = refund(amount=-5.00)
         assert result.amount == -5.00
-        assert result.ok  # negative amount < cap, should be autonomous
+        assert result.ok  # |−5| within the $10 cap, autonomous
+
+    def test_large_negative_amount_escalates(self):
+        """Caps are magnitude checks: a -$500 refund moves as much money as a
+        +$500 charge, so it must escalate the same way."""
+        @govern(band="L2", cap=10.00, raise_on_escalation=False)
+        def refund(amount: float) -> dict:
+            return {"refunded": amount}
+
+        result = refund(amount=-500.00)
+        assert result.verdict == "escalation_required"
 
     def test_float_precision_amount(self):
         @govern(band="L2", cap=10.00)
@@ -285,6 +295,10 @@ class TestReceiptAtScale:
             ("amount", 0.01),
             ("verdict", "denied"),
             ("output_hash", "a" * 64),
+            ("fn_name", "TAMPERED"),
+            ("description", "TAMPERED"),
+            ("reason", "TAMPERED"),
+            ("claim_proof", "verified"),
         ]
         for field, bad_value in fields_and_values:
             receipt = GovernedReceipt.build(
@@ -296,19 +310,16 @@ class TestReceiptAtScale:
             assert not receipt.verify(), f"Expected verify() to fail after tampering {field}"
 
     def test_non_fingerprinted_fields_do_not_affect_verify(self):
-        """Fields outside the fingerprint (ts, description, reason, elapsed_ms, fn_name)
-        can be altered without breaking verify() — by design."""
+        """Only the non-semantic timing fields (ts, elapsed_ms) are outside the
+        fingerprint; altering them must not break verify()."""
         receipt = GovernedReceipt.build(
             fn_name="fn", band="L2", amount=10.00,
             description="d", verdict="autonomous",
             reason="ok", elapsed_ms=0.0, output={},
         )
         object.__setattr__(receipt, "ts", 0.0)
-        object.__setattr__(receipt, "description", "TAMPERED")
-        object.__setattr__(receipt, "reason", "TAMPERED")
         object.__setattr__(receipt, "elapsed_ms", 9999.9)
-        object.__setattr__(receipt, "fn_name", "TAMPERED")
-        assert receipt.verify()  # these fields are outside the fingerprint scope
+        assert receipt.verify()  # timing fields are outside the fingerprint scope
 
     def test_output_hash_is_deterministic_for_complex_output(self):
         output = {"nested": {"a": 1, "b": [2, 3]}, "z": "last"}

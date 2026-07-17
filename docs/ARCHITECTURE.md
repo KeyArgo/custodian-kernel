@@ -28,7 +28,7 @@ Git remotes in that repo:
 - `custodian-kernel` → `https://github.com/inovinlabs/custodian-dev.git` (dev; ongoing work)
 - `gitea-custodian-public` → `https://git.argobox.com/KeyArgo/custodian.git` (internal mirror)
 - `origin` → `https://git.argobox.com/KeyArgo/hermes-hackathon-2026.git` (primary Gitea)
-- `github` → `https://github.com/KeyArgo/hermes-hackathon-2026.git` (GitHub mirror)
+- `github` → `https://github.com/KeyArgo/custodian-kernel.git` (GitHub mirror)
 
 Judge-facing public kernel repo: `https://github.com/KeyArgo/custodian-kernel`
 

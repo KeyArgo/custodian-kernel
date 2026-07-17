@@ -13,7 +13,7 @@ def test_demo_verify_all_cases():
     """demo-verify runs all 4 cases and returns exit code 0."""
     result = subprocess.run(
         ["custodian", "demo", "verify"],
-        capture_output=True, text=True,
+        capture_output=True, text=True, encoding="utf-8", errors="replace",
     )
     assert result.returncode == 0, f"demo-verify exited {result.returncode}\n{result.stdout}\n{result.stderr}"
     assert "VERIFIED" in result.stdout

@@ -84,4 +84,12 @@ def run(args) -> None:
     except Exception as e:
         print(f"warning: failed to write audit entry: {e}", file=sys.stderr)
 
+    # An operator-approved escalation consumes the session budget the same as
+    # an autonomous spend -- otherwise approvals are invisible to the cap.
+    if authority is not None:
+        try:
+            storage.record_spend(pending.amount)
+        except Exception as e:
+            print(f"warning: failed to record spend: {e}", file=sys.stderr)
+
     print(f"Approved: ${pending.amount:.2f} for '{pending.description}' by {args.approved_by}")

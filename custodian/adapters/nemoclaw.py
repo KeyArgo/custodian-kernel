@@ -104,8 +104,8 @@ class NemoClawExecutor:
     Usage:
         from custodian.adapters.nemoclaw import NemoClawExecutor
 
-        sandbox = NemoClawExecutor(sandbox_name="hermes-hackathon",
-                                    fallback_binary_path="/home/argonaut/.local/bin/nemohermes")
+        sandbox = NemoClawExecutor(sandbox_name="my-sandbox",
+                                    fallback_binary_path="/usr/local/bin/nemohermes")
         result = sandbox.run("earn.py", "--amount", "1200.00")
         if not result.ok:
             ...  # a real script failure, e.g. validation error — show it

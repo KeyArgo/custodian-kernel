@@ -50,9 +50,9 @@ fi
 
 # ── 3. Verify the install ──────────────────────────────────────────────────
 header "Running claim verifier demo"
-dim "custodian demo-verify"
+dim "custodian demo verify"
 echo ""
-custodian demo-verify
+custodian demo verify
 echo ""
 
 # ── 4. Scaffold a workspace ────────────────────────────────────────────────
@@ -66,22 +66,17 @@ dim "Edit $WORKSPACE/policy.yaml to configure spend caps and authority bands"
 header "Checking for Docker (NemoClaw sandbox)"
 if command -v docker &>/dev/null && docker info &>/dev/null 2>&1; then
     ok "Docker detected"
-    dim "Building the Custodian kernel container..."
-    if docker build -q -t custodian-kernel:latest "$(pip show custodian-kernel 2>/dev/null | grep Location | awk '{print $2}')/../../hermes-hackathon-2026" 2>/dev/null; then
-        ok "custodian-kernel Docker image built"
-        dim "Run: docker run --rm custodian-kernel:latest custodian demo-verify"
+    # The image builds from the repo checkout this script lives in — a pip
+    # install alone has no Dockerfile to build from.
+    REPO_DIR="$(dirname "$(realpath "${BASH_SOURCE[0]}")")"
+    if [ -f "$REPO_DIR/Dockerfile" ]; then
+        dim "Building the Custodian kernel container..."
+        docker build -q -t custodian-kernel:latest "$REPO_DIR"
+        ok "custodian-kernel:latest built from source"
+        dim "Run: docker run --rm custodian-kernel:latest custodian demo verify"
     else
-        # Fall back to pulling from source if available
-        REPO_DIR="$(dirname "$(realpath "${BASH_SOURCE[0]}")")"
-        if [ -f "$REPO_DIR/Dockerfile" ]; then
-            dim "Building from local repo..."
-            docker build -q -t custodian-kernel:latest "$REPO_DIR"
-            ok "custodian-kernel:latest built from source"
-            dim "Run: docker run --rm custodian-kernel:latest custodian demo-verify"
-        else
-            warn "Docker available but no image source found — skipping container build"
-            dim "Clone the repo and run: docker build -t custodian-kernel:latest ."
-        fi
+        warn "Docker available but no Dockerfile found — skipping container build"
+        dim "Clone https://github.com/KeyArgo/custodian-kernel and run: docker build -t custodian-kernel:latest ."
     fi
     echo ""
     dim "NemoClaw sandbox (full Landlock LSM isolation) requires Linux + NVIDIA drivers."
@@ -101,11 +96,11 @@ echo "  Quick commands:"
 echo -e "    ${AMBER}custodian request --amount 1.00 --description 'API call'${RESET}"
 echo -e "    ${AMBER}custodian status${RESET}"
 echo -e "    ${AMBER}custodian tools list${RESET}"
-echo -e "    ${AMBER}custodian demo-verify${RESET}   # run the claim verifier demo"
+echo -e "    ${AMBER}custodian demo verify${RESET}   # run the claim verifier demo"
 echo ""
 echo -e "  Prove the security guarantee:"
 echo -e "    ${AMBER}python3 verify_kit.py${RESET}   # 90-second self-verifying proof"
 echo ""
 echo -e "  Docs: ${DIM}https://getcustodian.xyz${RESET}"
-echo -e "  Repo: ${DIM}https://git.argobox.com/KeyArgo/hermes-hackathon-2026${RESET}"
+echo -e "  Repo: ${DIM}https://github.com/KeyArgo/custodian-kernel${RESET}"
 echo ""

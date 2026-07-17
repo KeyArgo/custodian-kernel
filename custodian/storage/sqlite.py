@@ -203,6 +203,28 @@ class SqliteStorage(StorageBackend):
         except sqlite3.Error as e:
             raise StorageError(f"failed to clear pending approval: {e}") from e
 
+    def record_spend(self, amount: float) -> bool:
+        """Atomically add `amount` to spent_this_session.
+
+        A single UPDATE rather than load-modify-save, so two concurrent spends
+        cannot overwrite each other's accounting. Returns False when no
+        authority row exists yet (workspace not scaffolded) -- the caller
+        already warned about that case and there is nothing to update.
+        """
+        try:
+            conn = self._connect()
+            cur = conn.execute(
+                "UPDATE authority_state "
+                "SET spent_this_session = spent_this_session + ? WHERE id = 1",
+                (float(amount),),
+            )
+            conn.commit()
+            updated = cur.rowcount > 0
+            conn.close()
+            return updated
+        except sqlite3.Error as e:
+            raise StorageError(f"failed to record spend: {e}") from e
+
     def get_kill_switch(self) -> KillSwitchState:
         try:
             conn = self._connect()
@@ -231,3 +253,30 @@ class SqliteStorage(StorageBackend):
             conn.close()
         except sqlite3.Error as e:
             raise StorageError(f"failed to set kill switch state: {e}") from e
+        # Mirror to the JSON stores the other two enforcement surfaces read, so
+        # an operator's `custodian kill` actually stops them. Without this the
+        # kill switch is bypassable: the @govern decorator reads
+        # <state_dir>/kill_switch.json and the tool registry reads
+        # ~/.custodian/kill_switch.json -- neither of which the SQLite write
+        # above touches. Mirror failures must not mask the authoritative DB
+        # write, so they are swallowed (the DB remains source of truth for the
+        # CLI request path).
+        self._mirror_kill_switch(state)
+
+    def _mirror_kill_switch(self, state: KillSwitchState) -> None:
+        payload = json.dumps({
+            "killed": bool(state.killed),
+            "reason": state.reason,
+            "by": state.by,
+            "changed_at": state.changed_at,
+        })
+        targets = [
+            self.path.parent / "kill_switch.json",          # read by @govern
+            Path.home() / ".custodian" / "kill_switch.json",  # read by ToolRegistry
+        ]
+        for target in targets:
+            try:
+                target.parent.mkdir(parents=True, exist_ok=True)
+                target.write_text(payload)
+            except OSError:
+                pass

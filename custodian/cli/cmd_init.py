@@ -107,3 +107,25 @@ def run(args) -> None:
                 raise SystemExit(1)
 
     print("\nCustodian workspace initialized. Edit policy.yaml to configure authority bands.")
+
+    # The other commands default to ./policy.yaml and ./state, so a workspace
+    # scaffolded into a subdirectory only works if the user cd's in (or passes
+    # --state-dir/--policy). Spell out the exact next steps rather than leaving
+    # `validate policy.yaml` / `status` to fail from the current directory.
+    cwd = Path.cwd().resolve()
+    if target != cwd:
+        try:
+            rel = target.relative_to(cwd)
+            hint = str(rel)
+        except ValueError:
+            hint = str(target)
+        print("\nNext steps:")
+        print(f"  cd {hint}")
+        print("  custodian validate policy.yaml")
+        print("  custodian request --amount 1.00 --description \"first request\"")
+        print("  custodian status")
+    else:
+        print("\nNext steps:")
+        print("  custodian validate policy.yaml")
+        print("  custodian request --amount 1.00 --description \"first request\"")
+        print("  custodian status")

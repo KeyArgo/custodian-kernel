@@ -131,8 +131,14 @@ def decide(
         except Exception as e:
             log.warning("self_dealing check failed, continuing: %s", e)
 
-    over_band_cap = band_cfg.max_spend is not None and request.amount > band_cfg.max_spend
-    over_session_cap = request.amount > state.remaining_session_budget()
+    # Caps compare the magnitude of the amount: a negative amount is an
+    # outbound credit (refund), and a -$500 refund moves as much money as a
+    # +$500 charge. Comparing the signed value let any negative amount pass
+    # every cap (-500 > cap is always False) -- an agent could issue unbounded
+    # refunds autonomously.
+    magnitude = abs(request.amount)
+    over_band_cap = band_cfg.max_spend is not None and magnitude > band_cfg.max_spend
+    over_session_cap = magnitude > state.remaining_session_budget()
 
     if band_cfg.requires_approval or over_band_cap or over_session_cap:
         reasons = []

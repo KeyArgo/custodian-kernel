@@ -12,6 +12,12 @@ keywords = ["ai", "agent", "authority", "spend", "kernel", "enforcement"]
 dependencies = [
     "pyyaml",
     "requests",
+    # Required by the paladin credential vault (scrypt + AES-256-GCM) and the
+    # talaria `vault` subcommands, both of which ship console scripts. Kept in
+    # base deps (not an optional extra) so `pip install custodian-kernel` gives
+    # a working `paladin`/`talaria` instead of a command that raises
+    # CryptoUnavailableError on first real use.
+    "cryptography>=42.0",
     # zoneinfo reads the OS tz database, which Windows does not have at all and
     # slim container images (including our own python:3.13-slim base) do not
     # reliably carry — so timezone-lookup failed with "No time zone found with
@@ -59,7 +65,7 @@ build-backend = "setuptools.build_meta"
 include = ["custodian*", "paladin*", "talaria*"]
 
 [tool.setuptools.package-data]
-"custodian" = ["bundled_skills/**/*", "bundled_skills/**", "packs/**/corpus/*.json", "packs/**/*.yaml", "packs/**/*.json"]
+"custodian" = ["bundled_skills/**/*", "bundled_skills/**", "packs/**/corpus/*.json", "packs/**/*.yaml", "packs/**/*.json", "policy/presets/*.yaml"]
 "talaria" = ["hermes_plugin/plugin.yaml", "hermes_plugin/*.py"]
 
 [tool.pytest.ini_options]

@@ -61,7 +61,7 @@ Band: L2 (auto-approve up to $2.00/action, $10.00/session)
 Spent this session: $0.45
 Remaining: $9.55
 
-$ python3 scripts/spend.py --amount 0.50 --description "Start monitoring worker for argobox.com"
+$ python3 scripts/spend.py --amount 0.50 --description "Start monitoring worker for example.com"
 [authority] L2 cap OK ($0.50 <= $9.55 remaining) — executing autonomously
 [stripe] PaymentIntent created: pi_3Tk... ($0.50, test mode)
 [audit] logged: executed

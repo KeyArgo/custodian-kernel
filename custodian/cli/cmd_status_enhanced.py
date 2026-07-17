@@ -19,17 +19,19 @@ from custodian.storage.sqlite import SqliteStorage
 
 # Map raw audit-log event names to the four "verdict" buckets the banner
 # surfaces. Anything not in this table is reported as UNVERIFIED so the
-# banner is forward-compatible with new event types.
+# banner is forward-compatible with new event types. The keys are the events
+# the CLI actually emits: executed/escalated/denied (cmd_request), approved
+# (cmd_approve), verified/unverified (cmd_confirm), and the kill-switch pair
+# (cmd_kill/cmd_resume).
 _VERDICT_FOR_EVENT = {
     "executed": "VERIFIED",
     "approved": "VERIFIED",
+    "verified": "VERIFIED",
     "denied": "CONTRADICTED",
-    "rejected": "CONTRADICTED",
     "escalated": "ESCALATED",
-    "error": "UNVERIFIED",
-    "failed": "UNVERIFIED",
-    "killed": "UNVERIFIED",
-    "resumed": "UNVERIFIED",
+    "unverified": "UNVERIFIED",
+    "kill_switch_engaged": "UNVERIFIED",
+    "kill_switch_released": "UNVERIFIED",
 }
 
 

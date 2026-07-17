@@ -17,7 +17,7 @@ def run_tool(path: str, *args) -> dict:
     script = REPO / path
     result = subprocess.run(
         [PYTHON, str(script)] + list(args),
-        capture_output=True, text=True, timeout=15,
+        capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=15,
         cwd=str(REPO),
     )
     assert result.stdout.strip(), f"No output from {path}: {result.stderr}"

@@ -115,3 +115,29 @@ the CLI writes to; `spend.py` has no write access to that table.
 | Agent calls `check_response()` with a fake answer | `check_response()` hits Twilio's servers, not local state |
 | Agent bypasses `check_response()` and writes approval audit entry directly | Requires a separate privileged process; the agent only has the request CLI |
 | Agent engages/clears its own kill switch | No code path from the agent's request CLI writes `kill_switch`; only `custodian kill`/`custodian resume` do, both requiring a human name |
+
+## Security posture vs. a signed-execution governor (cyberware.systems)
+
+Custodian and cyberware.systems share the same core idea — the agent proposes,
+a governor outside the agent's process decides — and Custodian implements the
+same building blocks:
+
+| Guarantee | Custodian | Notes |
+|---|---|---|
+| Value-free protocol (only metadata crosses the wire, never secrets) | Yes | `ValueFreeClient`, `sanitize_dict` (redacts secret keys incl. `authorization`/`cookie`, at any depth incl. inside lists), and the Paladin vault (values only leave via `paladin exec` into a child env) |
+| Secrets held in an encrypted vault | Yes | Paladin: scrypt KDF + AES-256-GCM; grants are deny-by-default and band-ceilinged; audit chain is HMAC-hash-chained with constant-time compare |
+| Content-addressed / tamper-checked skills | Partial | `@govern`'s tamper check snapshots each governed function's source SHA and denies on drift; snapshots live under `~/.custodian` (on the self-protection list) |
+| Tamper-evident receipts (integrity) | Yes | `GovernedReceipt` SHA-256 fingerprint covers every semantic field |
+| **Unforgeable receipts (authenticity)** | Yes | `custodian.signing`: Ed25519-signed receipts — a receipt cannot be forged by anyone without the kernel's private key. Verify against the kernel's public key. |
+| Cross-platform reproducibility | Yes | Receipt hashing is byte-identical on Linux/Windows/macOS (`json` `ensure_ascii`, pinned by a determinism test); CI runs the suite + a clean wheel install on Ubuntu **and** Windows |
+| Kill switch cannot be bypassed | Yes | Enforced fail-closed locally on every surface (CLI, `@govern`, tool registry); a configured remote enforcement node can never override an engaged kill switch |
+| Confined signed-execution principal (delegated mode) | No | cyberware's `exod` (Ed25519-signed step results from a confined Linux process) has no direct Custodian equivalent; Custodian governs in-process + optional remote enforcement |
+| Formal model-checking (TLA+/Apalache/TLAPS) | No | Custodian relies on a large regression suite and a self-approval regression test, not machine-checked proofs |
+
+**Honest bottom line.** For the guarantees most deployments depend on — secrets
+never crossing the wire, an encrypted vault, a kill switch that truly can't be
+bypassed, and receipts that are both tamper-evident and (when signed)
+unforgeable — Custodian is on par. cyberware goes further on two axes Custodian
+does not yet claim: a confined signed-execution principal and machine-checked
+formal proofs. Custodian does not fake either; both are listed as limitations
+above rather than advertised.

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 import sys
+import uuid
 from pathlib import Path
 
 from custodian.backends.twilio_verify import TwilioVerifyBackend
@@ -10,7 +11,7 @@ from custodian.exceptions import BackendConfigurationError, PolicyNotFoundError,
 from custodian.policy.evaluator import decide
 from custodian.policy.loader import load_policy
 from custodian.storage.sqlite import SqliteStorage
-from custodian.types import AuthorityState, PendingApproval, SpendRequest, Verdict
+from custodian.types import AuditEntry, AuthorityState, PendingApproval, SpendRequest, Verdict
 
 
 def _twilio_backend(state_dir: Path) -> TwilioVerifyBackend:
@@ -67,6 +68,7 @@ def run(args) -> None:
         print(f"error: failed to load state: {e}", file=sys.stderr)
         raise SystemExit(1)
 
+    state_persisted = state is not None
     if state is None:
         # Derive the cap from the policy rather than hardcoding 2.0: an
         # operator who edits policy.yaml and then runs a request before any
@@ -108,6 +110,29 @@ def run(args) -> None:
         print(f"Verdict: AUTONOMOUS")
         print(f"Reason: {decision.reason}")
         print(f"Band: {decision.band.value}")
+
+        # An AUTONOMOUS verdict grants authority, so it must consume the
+        # session budget and land in the audit ledger -- otherwise the session
+        # cap never decreases and `custodian confirm <id>` has nothing to find.
+        request_id = f"req_{uuid.uuid4().hex[:8]}"
+        try:
+            storage.append_audit_entry(AuditEntry(
+                event="executed", amount=args.amount, description=args.description,
+                band=decision.band, payment_intent_id=request_id,
+                reason=decision.reason,
+            ))
+            print(f"Request-ID: {request_id}  (confirm with: custodian confirm {request_id})")
+        except Exception as e:
+            print(f"warning: failed to write audit entry: {e}", file=sys.stderr)
+
+        if state_persisted:
+            try:
+                storage.record_spend(args.amount)
+                spent = state.spent_this_session + args.amount
+                print(f"Session spent: ${spent:.2f} of ${state.session_cap:.2f}")
+            except Exception as e:
+                print(f"warning: failed to record spend: {e}", file=sys.stderr)
+
         print("\n(No real payment was executed — this CLI exposes the decision only.)")
 
     elif decision.verdict == Verdict.ESCALATION_REQUIRED:
@@ -125,6 +150,14 @@ def run(args) -> None:
         except Exception as e:
             print(f"error: failed to save pending approval: {e}", file=sys.stderr)
             raise SystemExit(1)
+
+        try:
+            storage.append_audit_entry(AuditEntry(
+                event="escalated", amount=args.amount, description=args.description,
+                band=decision.band, reason=decision.reason,
+            ))
+        except Exception as e:
+            print(f"warning: failed to write audit entry: {e}", file=sys.stderr)
 
         if backend_name == "twilio_verify":
             try:
@@ -147,3 +180,11 @@ def run(args) -> None:
         print(f"Verdict: DENIED")
         print(f"Reason: {decision.reason}")
         print(f"Band: {decision.band.value}")
+
+        try:
+            storage.append_audit_entry(AuditEntry(
+                event="denied", amount=args.amount, description=args.description,
+                band=decision.band, reason=decision.reason,
+            ))
+        except Exception as e:
+            print(f"warning: failed to write audit entry: {e}", file=sys.stderr)

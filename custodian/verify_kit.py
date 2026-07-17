@@ -170,6 +170,9 @@ def step3_from_checkout() -> bool:
 
 
 def main() -> int:
+    from custodian._encoding import force_utf8_io
+    force_utf8_io()
+
     print(f"{BOLD}{'=' * 70}{RESET}")
     print(f"{BOLD}CUSTODIAN VERIFY KIT (installable){RESET}")
     print(f"{BOLD}Verifies the kernel's security guarantee from a pip install.{RESET}")

@@ -442,3 +442,171 @@ def test_old_vault_without_allowed_hosts_loads(vault):
     vault.path.write_bytes(blob)
     reopened = Vault.open(path=vault.path, passphrase=PP)
     assert reopened.meta("legacy")["allowed_hosts"] == []  # default filled in
+
+
+# -- backup / restore (data safety + machine migration) ----------------------
+
+from pathlib import Path
+from paladin.vault import copy_encrypted
+from paladin import cli as paladin_cli
+
+
+def test_copy_encrypted_roundtrips_and_stays_ciphertext(vault, tmp_path):
+    vault.add("stripe_sk", "sk_live_super_secret", note="prod key")
+    dest = tmp_path / "backup.paladin"
+    copy_encrypted(vault.path, dest)
+    # the backup must NOT contain the plaintext secret anywhere
+    assert b"sk_live_super_secret" not in dest.read_bytes()
+    # and it must open with the same passphrase, with the entry intact
+    restored = Vault.open(path=dest, passphrase=PP)
+    assert restored.names() == ["stripe_sk"]
+    assert restored.meta("stripe_sk")["note"] == "prod key"
+
+
+def test_copy_encrypted_rejects_same_file(vault):
+    with pytest.raises(PaladinError):
+        copy_encrypted(vault.path, vault.path)
+
+
+def test_copy_encrypted_rejects_missing_source(tmp_path):
+    with pytest.raises(VaultMissingError):
+        copy_encrypted(tmp_path / "nope.paladin", tmp_path / "out.paladin")
+
+
+def test_copy_encrypted_rejects_torn_source(tmp_path):
+    torn = tmp_path / "torn.paladin"
+    torn.write_bytes(b"not a real vault blob")
+    with pytest.raises(Exception):  # split_blob refuses a non-AEAD file
+        copy_encrypted(torn, tmp_path / "out.paladin")
+
+
+def test_cli_backup_then_restore_to_new_machine(monkeypatch, tmp_path):
+    """The migration story: back up here, restore into a fresh vault path
+    (simulating a second machine) with the same passphrase."""
+    monkeypatch.setenv("PALADIN_PASSPHRASE", PP)
+    monkeypatch.delenv("PALADIN_KEYFILE", raising=False)
+    src_vault = tmp_path / "machine1.paladin"
+    Vault.create(path=src_vault, passphrase=PP).add("api_key", "topsecret")
+
+    backup = tmp_path / "usb" / "vault.paladin"
+    assert paladin_cli.main(["--vault", str(src_vault), "backup", str(backup)]) == 0
+    assert backup.exists()
+
+    # "machine 2": a path with no vault yet
+    machine2 = tmp_path / "machine2.paladin"
+    assert paladin_cli.main(["--vault", str(machine2), "restore", str(backup)]) == 0
+    assert Vault.open(path=machine2, passphrase=PP).names() == ["api_key"]
+
+
+def test_cli_backup_to_directory_picks_a_name(monkeypatch, tmp_path):
+    monkeypatch.setenv("PALADIN_PASSPHRASE", PP)
+    src_vault = tmp_path / "v.paladin"
+    Vault.create(path=src_vault, passphrase=PP).add("k", "v")
+    outdir = tmp_path / "backups"
+    outdir.mkdir()
+    assert paladin_cli.main(["--vault", str(src_vault), "backup", str(outdir)]) == 0
+    made = list(outdir.glob("paladin-backup-*.zip"))
+    assert len(made) == 1
+
+
+def test_backup_archive_contains_vault_audit_and_manifest(monkeypatch, tmp_path):
+    """The backup is one self-describing file: encrypted vault + the HMAC
+    audit chain + a manifest. Losing the audit trail means losing the
+    forensic record of every credential access, so it rides along."""
+    import zipfile
+    monkeypatch.setenv("PALADIN_PASSPHRASE", PP)
+    src_vault = tmp_path / "v.paladin"
+    v = Vault.create(path=src_vault, passphrase=PP)
+    v.add("stripe_sk", "sk_live_super_secret")
+    Broker(v).audit.append("add", "stripe_sk", "user:cli", "-", "test")
+    dest = tmp_path / "b.zip"
+    assert paladin_cli.main(["--vault", str(src_vault), "backup", str(dest)]) == 0
+
+    with zipfile.ZipFile(dest) as zf:
+        names = set(zf.namelist())
+        assert {"vault.paladin", "audit.jsonl", "MANIFEST.json"} <= names
+        # ciphertext in, ciphertext out — plaintext never touches the archive
+        assert b"sk_live_super_secret" not in zf.read("vault.paladin")
+        manifest = json.loads(zf.read("MANIFEST.json"))
+        assert manifest["format"] == "paladin-backup/1"
+        assert manifest["entries"] == 1
+        assert manifest["audit_records"] >= 1
+
+
+def test_restore_brings_back_a_verifiable_audit_chain(monkeypatch, tmp_path):
+    """After a machine migration the audit chain must still verify — the
+    chain key derives from the vault master key, and both travel in the
+    backup, so `paladin audit verify` passes on the new machine."""
+    monkeypatch.setenv("PALADIN_PASSPHRASE", PP)
+    src_vault = tmp_path / "m1" / "vault.paladin"
+    src_vault.parent.mkdir()
+    v = Vault.create(path=src_vault, passphrase=PP)
+    v.add("k", "v")
+    Broker(v).audit.append("add", "k", "user:cli", "-", "")
+    Broker(v).audit.append("resolve", "k", "skill:x", "L1", "")
+    dest = tmp_path / "b.zip"
+    assert paladin_cli.main(["--vault", str(src_vault), "backup", str(dest)]) == 0
+
+    m2_vault = tmp_path / "m2" / "vault.paladin"
+    assert paladin_cli.main(["--vault", str(m2_vault), "restore", str(dest)]) == 0
+    restored = Vault.open(path=m2_vault, passphrase=PP)
+    assert Broker(restored).audit.verify() == 2  # chain intact on machine 2
+
+
+def test_restore_accepts_a_bare_vault_file(monkeypatch, tmp_path):
+    """Someone who salvaged only vault.paladin (no archive) is made whole."""
+    monkeypatch.setenv("PALADIN_PASSPHRASE", PP)
+    bare = tmp_path / "salvaged.paladin"
+    Vault.create(path=bare, passphrase=PP).add("k", "v")
+    dest = tmp_path / "new" / "vault.paladin"
+    assert paladin_cli.main(["--vault", str(dest), "restore", str(bare)]) == 0
+    assert Vault.open(path=dest, passphrase=PP).names() == ["k"]
+
+
+def test_restore_rejects_a_zip_that_is_not_a_backup(monkeypatch, tmp_path):
+    import zipfile
+    monkeypatch.setenv("PALADIN_PASSPHRASE", PP)
+    junk = tmp_path / "junk.zip"
+    with zipfile.ZipFile(junk, "w") as zf:
+        zf.writestr("random.txt", "hello")
+    assert paladin_cli.main(["--vault", str(tmp_path / "v.paladin"),
+                             "restore", str(junk)]) == 1
+
+
+def test_cli_restore_refuses_to_clobber_without_force(monkeypatch, tmp_path, capsys):
+    monkeypatch.setenv("PALADIN_PASSPHRASE", PP)
+    live = tmp_path / "live.paladin"
+    Vault.create(path=live, passphrase=PP).add("keep", "me")
+    backup = tmp_path / "b.paladin"
+    Vault.create(path=backup, passphrase=PP).add("other", "x")
+    rc = paladin_cli.main(["--vault", str(live), "restore", str(backup)])
+    assert rc == 1  # refused
+    # the live vault must be untouched
+    assert Vault.open(path=live, passphrase=PP).names() == ["keep"]
+
+
+def test_cli_restore_force_saves_pre_restore_copy(monkeypatch, tmp_path):
+    monkeypatch.setenv("PALADIN_PASSPHRASE", PP)
+    live = tmp_path / "live.paladin"
+    Vault.create(path=live, passphrase=PP).add("old", "data")
+    backup = tmp_path / "b.paladin"
+    Vault.create(path=backup, passphrase=PP).add("new", "data")
+    rc = paladin_cli.main(["--vault", str(live), "restore", str(backup), "--force"])
+    assert rc == 0
+    assert Vault.open(path=live, passphrase=PP).names() == ["new"]
+    # the overwritten vault was preserved
+    pre = Vault.open(path=Path(str(live) + ".pre-restore"), passphrase=PP)
+    assert pre.names() == ["old"]
+
+
+def test_cli_restore_rejects_backup_that_wont_open(monkeypatch, tmp_path):
+    """A backup made under a DIFFERENT passphrase must not silently replace a
+    good vault — restore verifies it opens first and aborts if it can't."""
+    live = tmp_path / "live.paladin"
+    Vault.create(path=live, passphrase=PP).add("keep", "me")
+    backup = tmp_path / "b.paladin"
+    Vault.create(path=backup, passphrase="a-totally-different-pass").add("x", "y")
+    monkeypatch.setenv("PALADIN_PASSPHRASE", PP)  # only knows the live pass
+    rc = paladin_cli.main(["--vault", str(live), "restore", str(backup), "--force"])
+    assert rc == 1  # could not open the backup → aborted
+    assert Vault.open(path=live, passphrase=PP).names() == ["keep"]  # untouched

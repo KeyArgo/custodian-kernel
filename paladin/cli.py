@@ -20,6 +20,8 @@ Examples::
     paladin exec --with stripe_sk -- python bill.py
     paladin exec --profile prod -- python agent.py
     paladin audit verify
+    paladin backup                              # encrypted backup, one file
+    paladin restore backups/paladin-backup-20260716-120000.zip
 """
 from __future__ import annotations
 
@@ -78,6 +80,12 @@ def cmd_init(args) -> int:
                 raise PaladinError("passphrases do not match")
             Vault.create(path=args.vault, passphrase=p1)
     print(f"vault created at {args.vault or Vault.default_path()}")
+    print()
+    print("Next steps:")
+    print("  paladin add my_api_key        store your first secret")
+    print("  paladin list                  see what's stored (never the values)")
+    print("  paladin backup                save an encrypted backup — do this")
+    print("                                once you've added real secrets")
     return 0
 
 
@@ -203,6 +211,83 @@ def cmd_audit(args) -> int:
     return 0
 
 
+def _plural(n: int, word: str = "entry") -> str:
+    if word == "entry":
+        return f"{n} entry" if n == 1 else f"{n} entries"
+    return f"{n} {word}" if n == 1 else f"{n} {word}s"
+
+
+def cmd_backup(args) -> int:
+    from paladin import backup as bk
+
+    src = Path(args.vault).expanduser() if args.vault else Vault.default_path()
+    if not src.exists():
+        raise PaladinError(
+            f"no vault at {src} — run `paladin init` first (nothing to back up yet)")
+
+    # Opening the vault IS the proof the backup will be restorable: if the
+    # passphrase (or keyfile) the user has right now can't open it, that must
+    # surface here — while they're at the keyboard — not months from now
+    # during a disaster recovery.
+    vault = Vault.open_from_env(path=src, interactive=True)
+    try:
+        dest = bk.resolve_backup_path(args.dest)
+        if dest.exists() and args.force:
+            dest.unlink()
+        info = bk.create_backup(vault, dest)
+    finally:
+        vault.close()
+
+    audit_note = (
+        f" + audit trail ({_plural(info.audit_records, 'record')})"
+        if info.has_audit else "")
+    print(f"backed up {_plural(info.entry_count)}{audit_note}")
+    print(f"  → {info.path}")
+    print()
+    print("The backup is ENCRYPTED — it can only be opened with your")
+    print("passphrase (or keyfile), which is NOT inside it. Keep them apart:")
+    print("the file alone reveals nothing, the passphrase alone opens nothing.")
+    if args.dest is None:
+        print()
+        print("NOTE: this backup lives on the SAME computer as the vault. For")
+        print("real protection, copy it to a USB drive, another machine, or")
+        print("cloud storage.")
+    print()
+    print(f"To restore (here or on another machine):")
+    print(f"  paladin restore \"{info.path}\"")
+    return 0
+
+
+def cmd_restore(args) -> int:
+    from paladin import backup as bk
+
+    dest = Path(args.vault).expanduser() if args.vault else Vault.default_path()
+    src = Path(args.source).expanduser()
+
+    # Passphrase/keyfile for verifying the backup opens. Interactive prompt
+    # mirrors open_from_env's behavior so `paladin restore` feels identical
+    # to every other command.
+    keyfile = os.environ.get("PALADIN_KEYFILE") or None
+    passphrase = os.environ.get("PALADIN_PASSPHRASE")
+    if keyfile is None and passphrase is None:
+        passphrase = getpass.getpass("vault passphrase: ")
+
+    info = bk.restore_backup(
+        src, dest, force=args.force, passphrase=passphrase,
+        keyfile=Path(keyfile) if keyfile else None)
+
+    audit_note = (
+        f" + audit trail ({_plural(info.audit_records, 'record')})"
+        if info.has_audit else "")
+    print(f"restored {_plural(info.entry_count)}{audit_note}")
+    print(f"  → {info.path}")
+    if args.force:
+        print(f"  (anything replaced was saved next to it as *.pre-restore)")
+    print()
+    print("Check it: paladin list")
+    return 0
+
+
 def cmd_rotate_master(args) -> int:
     vault = _open_vault(args)
     p1 = getpass.getpass("NEW vault passphrase: ")
@@ -212,6 +297,10 @@ def cmd_rotate_master(args) -> int:
     vault.rotate_master(new_passphrase=p1)
     Broker(vault).audit.append("rotate", "-", CLI_REQUESTER, "-", "master key rotated")
     print("vault re-encrypted under new master key")
+    print()
+    print("IMPORTANT: backups made BEFORE this rotation still require your OLD")
+    print("passphrase. If you no longer remember it, they are unrecoverable —")
+    print("make a fresh backup now:  paladin backup")
     return 0
 
 
@@ -240,7 +329,7 @@ class _LazyVersionAction(argparse.Action):
         super().__init__(option_strings=option_strings, dest=dest, nargs=0, help=help)
 
     def __call__(self, parser, namespace, values, option_string=None):
-        print(f"{parser.prog} {_pkg_version()} (custodian-kernel)")
+        print(f"{parser.prog} {_pkg_version()}")
         parser.exit()
 
 
@@ -331,10 +420,35 @@ def build_parser() -> argparse.ArgumentParser:
     sp = sub.add_parser("rotate-master", help="re-encrypt the vault under a new passphrase")
     sp.set_defaults(fn=cmd_rotate_master)
 
+    sp = sub.add_parser(
+        "backup",
+        help="save an encrypted backup of the vault + audit trail (one file)")
+    sp.add_argument("dest", nargs="?", default=None,
+                    help="destination file or directory "
+                         "(default: ~/paladin-backups/paladin-backup-<time>.zip)")
+    sp.add_argument("--force", action="store_true",
+                    help="overwrite the destination if it exists")
+    sp.set_defaults(fn=cmd_backup)
+
+    sp = sub.add_parser(
+        "restore",
+        help="restore from a backup (verified to open BEFORE anything is replaced)")
+    sp.add_argument("source",
+                    help="a backup .zip from `paladin backup`, or a bare vault file")
+    sp.add_argument("--force", action="store_true",
+                    help="replace an existing vault (it is saved to "
+                         "<vault>.pre-restore first — nothing is ever lost)")
+    sp.set_defaults(fn=cmd_restore)
+
     return p
 
 
 def main(argv=None) -> int:
+    try:
+        from custodian._encoding import force_utf8_io
+        force_utf8_io()
+    except Exception:
+        pass
     args = build_parser().parse_args(argv)
     if getattr(args, "cmd", None) and args.cmd and args.cmd[0] == "--":
         args.cmd = args.cmd[1:]

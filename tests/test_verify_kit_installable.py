@@ -122,11 +122,11 @@ def test_built_wheel_installs_and_runs():
     latest = max(wheels, key=lambda p: p.stat().st_mtime)
     # Install
     r = subprocess.run([str(py), "-m", "pip", "install", "--quiet", str(latest)],
-                       capture_output=True, text=True, timeout=60)
+                       capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=60)
     assert r.returncode == 0, f"install failed: {r.stderr[-500:]}"
     # Run
     r = subprocess.run([str(venv_dir / "bin" / "custodian-verify")],
-                       capture_output=True, text=True, timeout=60)
+                       capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=60)
     # Step 1 should always pass (deterministic, no network)
     # Step 2 may pass (live dashboard) or may fail if network is down — that's OK
     assert "STEP 1/3" in r.stdout, f"verify_kit didn't reach step 1: {r.stdout[:500]}"

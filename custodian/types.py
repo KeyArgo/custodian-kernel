@@ -85,6 +85,10 @@ _SECRET_SENTINELS = (
     "sshkey", "ssh-key", "private_key", "privatekey",
     "private-key", "access_key", "accesskey", "access-key",
     "auth_token", "bearer", "client_secret", "signing_key",
+    # HTTP Authorization / Cookie headers carry bearer tokens and session ids
+    # verbatim -- the most common place a secret value rides through a
+    # middleware-sanitized payload.
+    "authorization", "cookie", "set-cookie", "set_cookie",
 )
 
 
@@ -102,9 +106,10 @@ def _is_secret_key(key: str) -> bool:
 
 
 def sanitize_dict(d: Optional[dict]) -> dict:
-    """Return a shallow copy of *d* with secret-bearing keys stripped.
+    """Return a copy of *d* with secret-bearing keys stripped.
 
-    Top-level and one level of nesting are scanned.  This implements the
+    Scans to arbitrary depth, including dicts nested inside lists/tuples
+    (e.g. ``{"headers": [{"authorization": ...}]}``).  This implements the
     value-free protocol's **secret-key filtering** (cyberware pattern):
     only var *names* cross the governance wire — values are never logged
     or audited.
@@ -115,11 +120,18 @@ def sanitize_dict(d: Optional[dict]) -> dict:
     for k, v in d.items():
         if _is_secret_key(str(k)):
             out[k] = "[REDACTED]"
-        elif isinstance(v, dict):
-            out[k] = sanitize_dict(v)
         else:
-            out[k] = v
+            out[k] = _sanitize_value(v)
     return out
+
+
+def _sanitize_value(v):
+    if isinstance(v, dict):
+        return sanitize_dict(v)
+    if isinstance(v, (list, tuple)):
+        sanitized = [_sanitize_value(item) for item in v]
+        return type(v)(sanitized) if isinstance(v, tuple) else sanitized
+    return v
 
 
 @dataclass

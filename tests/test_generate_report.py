@@ -211,7 +211,7 @@ class TestGenerateReportCLI:
     def test_exits_1_without_inference_key(self):
         result = subprocess.run(
             ["custodian", "generate-report"],
-            capture_output=True, text=True,
+            capture_output=True, text=True, encoding="utf-8", errors="replace",
         )
         assert result.returncode == 1
         assert "Kernel verdict: AUTONOMOUS" in result.stdout
@@ -220,7 +220,7 @@ class TestGenerateReportCLI:
     def test_kernel_gate_fires_before_inference(self):
         result = subprocess.run(
             ["custodian", "generate-report"],
-            capture_output=True, text=True,
+            capture_output=True, text=True, encoding="utf-8", errors="replace",
         )
         stdout = result.stdout
         # Kernel gate output should appear before the unreachable message
@@ -233,7 +233,7 @@ class TestGenerateReportCLI:
         with tempfile.TemporaryDirectory() as td:
             result = subprocess.run(
                 ["custodian", "generate-report", "--out", td],
-                capture_output=True, text=True,
+                capture_output=True, text=True, encoding="utf-8", errors="replace",
             )
         # Should fail on inference (no key), not on arg parsing
         assert "Namespace" not in result.stderr
@@ -241,7 +241,7 @@ class TestGenerateReportCLI:
     def test_accepts_pi_id_and_amount_flags(self):
         result = subprocess.run(
             ["custodian", "generate-report", "--pi-id", "pi_custom", "--amount", "10.00"],
-            capture_output=True, text=True,
+            capture_output=True, text=True, encoding="utf-8", errors="replace",
         )
         # Should not crash on arg parsing
         assert "Namespace" not in result.stderr
@@ -273,7 +273,7 @@ class TestEarnAndBuyCLI:
     def test_cycle_exits_0_without_inference_key(self):
         result = subprocess.run(
             ["custodian", "demo", "cycle"],
-            capture_output=True, text=True,
+            capture_output=True, text=True, encoding="utf-8", errors="replace",
         )
         # Exits 0: earn + kernel gate pass; inference failure is a warning not hard failure
         assert result.returncode == 0, (
@@ -283,21 +283,21 @@ class TestEarnAndBuyCLI:
     def test_cycle_shows_earn_verified(self):
         result = subprocess.run(
             ["custodian", "demo", "cycle"],
-            capture_output=True, text=True,
+            capture_output=True, text=True, encoding="utf-8", errors="replace",
         )
         assert "VERIFIED" in result.stdout
 
     def test_cycle_shows_kernel_gate(self):
         result = subprocess.run(
             ["custodian", "demo", "cycle"],
-            capture_output=True, text=True,
+            capture_output=True, text=True, encoding="utf-8", errors="replace",
         )
         assert "AUTONOMOUS" in result.stdout
 
     def test_cycle_complete_message_present(self):
         result = subprocess.run(
             ["custodian", "demo", "cycle"],
-            capture_output=True, text=True,
+            capture_output=True, text=True, encoding="utf-8", errors="replace",
         )
         assert "CYCLE COMPLETE" in result.stdout
 
@@ -316,7 +316,7 @@ class TestDemoReceiptIsolation:
         monkeypatch.chdir(tmp_path)
         result = subprocess.run(
             ["custodian", "demo", "receipt"],
-            capture_output=True, text=True,
+            capture_output=True, text=True, encoding="utf-8", errors="replace",
             cwd=str(tmp_path),
         )
         assert result.returncode == 0, (

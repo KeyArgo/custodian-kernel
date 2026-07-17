@@ -288,6 +288,9 @@ class TestVerifyClaims:
             (make_claim(relation="lte", asserted=9, ledger_path="order.total"), {"order": {"total": 10}}, ClaimStatus.CONTRADICTED, 10),
             (make_claim(relation="exists", asserted=None, ledger_path="order.delivered"), {"order": {"delivered": False}}, ClaimStatus.VERIFIED, False),
             (make_claim(relation="exists", asserted=None, ledger_path="order.delivered"), {"order": {"delivered": None}}, ClaimStatus.CONTRADICTED, None),
+            # Refute-by-absence: an "exists" claim on a path the ledger does
+            # not even contain is a lie, not an unverifiable unknown.
+            (make_claim(relation="exists", asserted=None, ledger_path="order.authorization"), {"order": {}}, ClaimStatus.CONTRADICTED, None),
             (make_claim(relation="absent", asserted=None, ledger_path="order.missing"), {"order": {}}, ClaimStatus.VERIFIED, None),
             (make_claim(relation="absent", asserted=None, ledger_path="order.note"), {"order": {"note": None}}, ClaimStatus.VERIFIED, None),
             (make_claim(relation="absent", asserted=None, ledger_path="order.note"), {"order": {"note": "present"}}, ClaimStatus.CONTRADICTED, "present"),

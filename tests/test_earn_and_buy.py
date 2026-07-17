@@ -47,7 +47,7 @@ def _run(args: list[str] | None = None, env: dict | None = None, tmp_path: Path 
         }
     cwd = str(tmp_path) if tmp_path else None
     return subprocess.run(
-        cmd, capture_output=True, text=True, timeout=30, env=env, cwd=cwd,
+        cmd, capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=30, env=env, cwd=cwd,
     )
 
 
@@ -99,7 +99,7 @@ def test_earn_and_buy_refuses_live_mode():
     env["CUSTODIAN_STRIPE_LIVE"] = "1"
     env.pop("MODAL_TOKEN_ID", None)
     env.pop("MODAL_TOKEN_SECRET", None)
-    r = subprocess.run(CLI, capture_output=True, text=True, timeout=30, env=env)
+    r = subprocess.run(CLI, capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=30, env=env)
     assert r.returncode != 0
     assert "test mode" in r.stderr.lower() or "refusing" in r.stderr.lower()
 
@@ -114,7 +114,7 @@ def test_earn_and_buy_no_credentials_required(tmp_path):
                        "OPENROUTER")
         )
     }
-    r = subprocess.run(CLI, capture_output=True, text=True, timeout=30, env=env, cwd=str(tmp_path))
+    r = subprocess.run(CLI, capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=30, env=env, cwd=str(tmp_path))
     assert r.returncode == 0, f"failed without creds: {r.stderr}\n{r.stdout}"
     assert "CYCLE COMPLETE" in r.stdout
 

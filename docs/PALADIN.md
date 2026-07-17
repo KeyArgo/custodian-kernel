@@ -38,6 +38,33 @@ No `paladin` command ever prints a secret value — not `list`, not `show`,
 not errors. The only way a value leaves the vault is egress into a child
 process you launch.
 
+## Backup & moving machines
+
+```bash
+paladin backup                                  # → ~/paladin-backups/paladin-backup-<time>.zip
+paladin backup /mnt/usb/                        # or anywhere you point it
+paladin restore paladin-backup-20260716.zip     # here, or on a new machine
+```
+
+One backup file carries the **encrypted vault** and the **HMAC-chained audit
+trail** — after a restore on a new machine, `paladin audit verify` still
+passes. The guarantees, in order of what matters:
+
+- **The backup is proven restorable at creation.** `backup` opens the vault
+  with your passphrase first; if it can't, no backup is written. You will
+  never discover a dead backup during disaster recovery.
+- **Ciphertext in, ciphertext out.** The vault bytes are copied under the
+  same write lock `save()` uses and never decrypted into the archive. A
+  stolen backup reveals exactly what a stolen vault reveals: its size.
+- **Your keys are never inside it.** Keyfiles are deliberately excluded —
+  store the backup and the passphrase/keyfile in different places.
+- **Restore can't destroy data.** It verifies the backup decrypts *before*
+  touching anything, refuses to overwrite without `--force`, and even then
+  saves the current vault and audit log to `*.pre-restore` first. It also
+  accepts a bare `vault.paladin` file, so a partial salvage still restores.
+- **Rotation footgun handled:** `rotate-master` reminds you that backups
+  made before a rotation need the *old* passphrase — and to take a fresh one.
+
 ## Agents get one verb, through the broker
 
 ```bash
