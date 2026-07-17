@@ -72,7 +72,7 @@ Any company running an AI agent with a Stripe account, a Modal spend, a NIM infe
 - Real Stripe PaymentIntent on record (`pi_3TkZWEPfSF4TGXT90AWlrnle`)
 - Real Twilio SMS escalation
 - Self-approval regression test (proves the kernel fix)
-- 105 governed tools in `custodian/bundled_skills/`
+- 106 governed tools in `custodian/bundled_skills/`
 
 ### CLI Commands
 - `custodian request` — spend decision with policy evaluation
@@ -188,20 +188,20 @@ Safety properties, on purpose:
 - [Policy Language](docs/POLICY_LANGUAGE.md) — complete YAML format reference
 - [Security](docs/SECURITY.md) — threat model, self-approval fix, verification model
 - [Security Hardening](docs/SECURITY-HARDENING.md) — credential/adapter/bridge scan and findings
-- [Paladin](docs/PALADIN.md) — the credential broker (the agent never sees the value)
+- [Paladin](docs/PALADIN.md) — the credential broker (the agent never sees the value), with bulk import from .env/Bitwarden/1Password (`paladin import`)
 - [Guard Adapters](docs/ADAPTERS.md) — money/security/privacy/guardrail hooks around every action
 - [Talaria](docs/TALARIA.md) — the Hermes Agent + NemoClaw integration suite (governed invoke surface, context-loss re-anchoring)
 - [Verification](docs/VERIFICATION.md) — how to check every claim yourself
 - [Getting Started](docs/GETTING_STARTED.md) — 10-minute walkthrough
 
-## Tool Layer — 105 governed tools
+## Tool Layer — 106 governed tools
 
 Custodian ships a governed tool library. Every tool is a Hermes-compatible
 skill (SKILL.md frontmatter) that declares a `custodian-band` from L0–L4.
 The ToolRegistry auto-discovers them — no registration code needed.
 
 ```
-custodian tools list              # show all 105 tools grouped by band
+custodian tools list              # show all 106 tools grouped by band
 custodian tools run http-get --url https://example.com
 custodian tools summary           # JSON band breakdown
 ```

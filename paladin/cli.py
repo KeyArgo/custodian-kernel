@@ -14,6 +14,9 @@ Examples::
 
     paladin init
     paladin add stripe_sk --profile prod --env-var STRIPE_SECRET_KEY
+    paladin import discover                     # where do credentials live?
+    paladin import env ~/projects --recursive   # bulk-import every .env*
+    paladin import bitwarden --search "api key"
     paladin list
     paladin show stripe_sk                      # metadata only
     paladin grant 'stripe*' --to skill:stripe-spend --max-band L2
@@ -153,6 +156,105 @@ def cmd_import_env(args) -> int:
         print(f"imported paladin://{n}")
     print(f"\n{len(names)} entries imported. The plaintext file {args.file} "
           f"still exists — shred it when ready:  shred -u {args.file}")
+    return 0
+
+
+def _print_import_report(report, as_json: bool) -> None:
+    d = report.to_dict()
+    if as_json:
+        print(json.dumps(d, indent=2))
+        return
+    verb = "would import" if report.dry_run else "imported"
+    print(f"{verb} {d['imported_count']} entr"
+          f"{'y' if d['imported_count'] == 1 else 'ies'}")
+    for e in report.imported:
+        flag = f"  ⚠ {','.join(e['flags'])}" if e["flags"] else ""
+        print(f"  paladin://{e['name']:<28} {e['kind']:<9} ({e['source']}){flag}")
+    if report.skipped_existing:
+        print(f"skipped {len(report.skipped_existing)} already in the vault: "
+              f"{', '.join(report.skipped_existing[:8])}"
+              f"{' …' if len(report.skipped_existing) > 8 else ''}")
+    if report.skipped_invalid:
+        print(f"skipped {len(report.skipped_invalid)} with unusable names/values")
+    if report.flagged:
+        print()
+        print(f"⚠ {len(report.flagged)} entr"
+              f"{'y' if len(report.flagged) == 1 else 'ies'} came from files "
+              f"exposed to git (tracked or not ignored).")
+        print("  Vaulting them does not un-expose them — rotate those "
+              "credentials and delete/gitignore the files.")
+    if not report.dry_run and report.imported:
+        print()
+        print("Check them:  paladin list")
+
+
+def cmd_import(args) -> int:
+    from paladin import importer as imp
+
+    if args.source == "discover":
+        report = imp.discover()
+        if args.json:
+            print(json.dumps(report, indent=2))
+            return 0
+        print("Where credentials live on this machine (nothing was imported):\n")
+        if report["env_files"]:
+            print(".env files:")
+            for f in report["env_files"]:
+                flag = f"  ⚠ {','.join(f['flags'])}" if f["flags"] else ""
+                print(f"  {f['path']}  ({f['entries']} entries){flag}")
+                print(f"      → {f['import_with']}")
+        if report["shell_rc_exports"]:
+            print("shell-rc exports (credential-looking names):")
+            for f in report["shell_rc_exports"]:
+                print(f"  {f['path']}:  {', '.join(f['names'][:6])}"
+                      f"{' …' if len(f['names']) > 6 else ''}")
+                print(f"      → {f['import_with']}")
+        for label, key in (("Bitwarden", "bitwarden"), ("1Password", "onepassword")):
+            st = report[key]
+            if not st["installed"]:
+                print(f"{label}: CLI not installed")
+            elif not st.get("unlocked", st.get("signed_in")):
+                print(f"{label}: installed but locked — {st['hint']}")
+            else:
+                print(f"{label}: ready → {st['import_with']}")
+        if not report["env_files"] and not report["shell_rc_exports"]:
+            print("no .env files or credential-looking shell exports found "
+                  "in ~ or the current directory")
+        return 0
+
+    if args.source == "env":
+        if not args.path:
+            raise PaladinError("`paladin import env` needs a path: a .env file "
+                               "or a directory to scan")
+        root = Path(args.path).expanduser()
+        if not root.exists():
+            raise PaladinError(f"no such file or directory: {root}")
+        files = imp.collect_env_files(root, pattern=args.pattern,
+                                      recursive=args.recursive)
+        if not files:
+            raise PaladinError(f"no files matching {args.pattern!r} under {root}")
+        candidates = [c for f in files for c in imp.candidates_from_env(f)]
+        source_desc = f"env:{root}"
+    elif args.source == "bitwarden":
+        candidates = imp.bitwarden_candidates(search=args.search,
+                                              folder=args.folder)
+        source_desc = "bitwarden"
+    elif args.source == "1password":
+        candidates = imp.onepassword_candidates(vault=args.from_vault,
+                                                search=args.search)
+        source_desc = "1password"
+    else:  # pragma: no cover - argparse restricts choices
+        raise PaladinError(f"unknown source {args.source!r}")
+
+    vault = _open_vault(args)
+    report = imp.import_candidates(
+        vault, candidates, profile=args.profile, dry_run=args.dry_run,
+        skip_existing=not args.overwrite)
+    if not args.dry_run:
+        Broker(vault).audit.append(
+            "add", f"import:{source_desc}", CLI_REQUESTER, "-",
+            f"count={len(report.imported)} skipped={len(report.skipped_existing)}")
+    _print_import_report(report, args.json)
     return 0
 
 
@@ -387,6 +489,41 @@ def build_parser() -> argparse.ArgumentParser:
     sp.add_argument("--force", action="store_true")
     sp.set_defaults(fn=cmd_import_env)
 
+    sp = sub.add_parser(
+        "import",
+        help="bulk-import credentials: .env files, Bitwarden, 1Password, or discover",
+        description=(
+            "Import credentials in bulk. Sources: `env <path>` (a .env file or a "
+            "directory of them), `bitwarden` / `1password` (via their CLIs, which "
+            "must be installed and unlocked), or `discover` (report-only: shows "
+            "where credentials live and the exact command to import each source). "
+            "Already-vaulted names are skipped unless --overwrite. Values are "
+            "never printed."
+        ))
+    sp.add_argument("source", choices=["env", "bitwarden", "1password", "discover"],
+                    help="where to import from")
+    sp.add_argument("path", nargs="?", default=None,
+                    help="for `env`: the .env file or directory to scan")
+    sp.add_argument("--recursive", action="store_true",
+                    help="env: also scan subdirectories (skips node_modules/.git/...)")
+    sp.add_argument("--pattern", default=".env*",
+                    help="env: filename pattern to match (default: .env*)")
+    sp.add_argument("--search", default=None,
+                    help="bitwarden/1password: only items matching this term")
+    sp.add_argument("--folder", default=None,
+                    help="bitwarden: only items in this folder")
+    sp.add_argument("--from-vault", default=None, metavar="NAME",
+                    help="1password: only items in this 1Password vault")
+    sp.add_argument("--profile", default="default",
+                    help="paladin profile to import into (default: default)")
+    sp.add_argument("--dry-run", action="store_true",
+                    help="show what would be imported without adding anything")
+    sp.add_argument("--overwrite", action="store_true",
+                    help="replace entries that already exist (default: skip them)")
+    sp.add_argument("--json", action="store_true",
+                    help="machine-readable report (names/kinds only, never values)")
+    sp.set_defaults(fn=cmd_import)
+
     sp = sub.add_parser("grant", help="allow a requester to resolve matching refs")
     sp.add_argument("pattern", help="ref name or glob, e.g. 'stripe/*'")
     sp.add_argument("--to", required=True,
@@ -441,6 +578,19 @@ def build_parser() -> argparse.ArgumentParser:
     sp.set_defaults(fn=cmd_restore)
 
     return p
+
+
+def main_import(argv=None) -> int:
+    """Entry point for the `paladin-import` console script — sugar for
+    `paladin import …` so the one-command bulk-import story reads naturally:
+
+        paladin-import discover
+        paladin-import env ~/projects --recursive
+        paladin-import bitwarden --search "api key"
+    """
+    if argv is None:
+        argv = sys.argv[1:]
+    return main(["import", *argv])
 
 
 def main(argv=None) -> int:

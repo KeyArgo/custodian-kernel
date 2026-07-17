@@ -38,6 +38,41 @@ No `paladin` command ever prints a secret value — not `list`, not `show`,
 not errors. The only way a value leaves the vault is egress into a child
 process you launch.
 
+## Bulk import: .env files, Bitwarden, 1Password
+
+Getting 28 secrets in shouldn't take 28 commands. `paladin import` (also
+installed as the `paladin-import` shorthand) onboards them in bulk:
+
+```bash
+paladin import discover                         # report-only: where do credentials live?
+paladin import env ./.env                       # one file
+paladin import env ~/projects --recursive       # every .env* under a tree
+paladin import bitwarden --search "api key"     # via the bw CLI (must be unlocked)
+paladin import 1password --from-vault "Main"    # via the op CLI (must be signed in)
+paladin import env ./.env --dry-run             # preview, write nothing
+```
+
+What it does for you:
+
+- **Kind inference** — `ghp_…` is a token, `sk_live_…` is a secret, no
+  matter what the entry was called; unlabeled values fall back to password.
+- **Idempotent** — already-vaulted names are skipped, so re-running an
+  import is safe. `--overwrite` turns a re-import into a rotation.
+- **Git-exposure flags** — a `.env` that is tracked (or not gitignored) in
+  a repo gets flagged `git-tracked`/`git-unignored`: vaulting a leaked
+  credential does not un-leak it — rotate it and delete the file.
+- **`discover` never imports.** It reports .env files, credential-looking
+  export NAMES in your shell rc, and whether `bw`/`op` are ready — with the
+  exact command to import each source. Importing is always an explicit act.
+- **Values are never printed** — reports (including `--json`) carry names,
+  kinds, and counts only, like every other paladin command.
+
+Agents get the same capability through the governed tool
+**`paladin-import`** (band L2, kernel-gated, audited): the secret values
+flow source → vault inside the tool's process, and the tool's output to
+the agent is the same value-free report. An agent can onboard your
+credentials without ever being able to read them.
+
 ## Backup & moving machines
 
 ```bash

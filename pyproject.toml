@@ -55,6 +55,7 @@ paladin = [
 custodian = "custodian.cli.main:main"
 custodian-verify = "custodian.verify_kit:main"
 paladin = "paladin.cli:main"
+paladin-import = "paladin.cli:main_import"
 talaria = "talaria.cli:main"
 
 [build-system]
