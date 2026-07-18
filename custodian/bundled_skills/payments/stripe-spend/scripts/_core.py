@@ -5,6 +5,7 @@ flag as trusted input — that pattern is what created the self-approval hole.
 The only privileged caller of execute_spend() for over-cap amounts is
 approve.py, immediately after a real Twilio Verify check it performs itself.
 """
+import contextlib
 import json
 import os
 import random
@@ -86,6 +87,76 @@ def load_state():
 
 def save_state(state):
     _atomic_write(STATE_FILE, json.dumps(state, indent=2))
+
+
+# -- cross-process state lock -------------------------------------------------
+#
+# The spend path is a read-modify-write on spent_this_session across a slow
+# network call, which is a classic TOCTOU: two concurrent spends both loaded
+# spent=$0 before either wrote, both charged, and the second save clobbered the
+# first's increment -- $1000 charged, $250 recorded, and the kernel then
+# believed it still had budget it had already spent. An OS advisory lock makes
+# the check-and-reserve atomic; the charge itself stays OUTSIDE the lock so
+# network latency never serializes unrelated spends.
+try:  # POSIX
+    import fcntl
+
+    def _lock_fd(fd):
+        fcntl.flock(fd, fcntl.LOCK_EX)
+
+    def _unlock_fd(fd):
+        fcntl.flock(fd, fcntl.LOCK_UN)
+except ImportError:  # Windows
+    import msvcrt
+
+    def _lock_fd(fd):
+        os.lseek(fd, 0, os.SEEK_SET)
+        msvcrt.locking(fd, msvcrt.LK_LOCK, 1)
+
+    def _unlock_fd(fd):
+        os.lseek(fd, 0, os.SEEK_SET)
+        msvcrt.locking(fd, msvcrt.LK_UNLCK, 1)
+
+
+@contextlib.contextmanager
+def _state_lock():
+    STATE_FILE.parent.mkdir(parents=True, exist_ok=True)
+    lock_path = STATE_FILE.parent / ".state.lock"
+    fd = os.open(str(lock_path), os.O_RDWR | os.O_CREAT, 0o600)
+    try:
+        _lock_fd(fd)
+        try:
+            yield
+        finally:
+            _unlock_fd(fd)
+    finally:
+        os.close(fd)
+
+
+def reserve_spend(amount, session_cap):
+    """Atomically check the session cap and reserve `amount` against it.
+
+    Returns (ok, new_total). The check and the write happen under one lock, so
+    two concurrent spends can never both pass a cap that only one fits under.
+    The reservation is taken BEFORE charging; a failed charge releases it."""
+    with _state_lock():
+        state = load_state()
+        new_total = round(state.get("spent_this_session", 0.0) + amount, 2)
+        if session_cap is not None and new_total > round(session_cap, 2):
+            return False, state.get("spent_this_session", 0.0)
+        state["spent_this_session"] = new_total
+        save_state(state)
+        return True, new_total
+
+
+def release_spend(amount):
+    """Return a previously reserved `amount` to the session budget (charge
+    failed). Clamped at zero so a double-release can never mint budget."""
+    with _state_lock():
+        state = load_state()
+        state["spent_this_session"] = round(
+            max(0.0, state.get("spent_this_session", 0.0) - amount), 2)
+        save_state(state)
 
 
 def append_log(record):
@@ -174,11 +245,33 @@ def create_payment_intent(amount_dollars, description):
 
 def execute_spend(amount, description, approved_by, recipe=None, to=None, message=None):
     """Actually move money. Caller is responsible for having verified
-    authorization BEFORE calling this — this function does not re-check."""
+    authorization BEFORE calling this — but the session cap is ALSO re-checked
+    here, atomically, as the last line of defense against concurrent spends.
+
+    Order: reserve budget under a lock, THEN charge. A failed charge releases
+    the reservation. This closes the TOCTOU where two concurrent spends each
+    read a stale spent_this_session, both charged, and the second write lost
+    the first's increment (money moved > money recorded)."""
     state = load_state()
+    session_cap = state.get("session_cap")
+
+    # Reserve first. If the cap can't fit this spend (e.g. a concurrent spend
+    # already consumed the budget between the caller's check and now), refuse
+    # BEFORE any money moves -- fail-safe.
+    ok, _new_total = reserve_spend(amount, session_cap)
+    if not ok:
+        append_log({
+            "event": "execution_denied", "amount": amount, "description": description,
+            "band": state["band"], "approved_by": approved_by,
+            "reason": f"session cap ${session_cap:.2f} would be exceeded",
+        })
+        print(f"[authority] DENIED -- session cap ${session_cap:.2f} would be exceeded.")
+        return False
+
     try:
         pi = create_payment_intent(amount, description)
     except Exception as e:
+        release_spend(amount)  # charge never happened — return the reservation
         append_log({
             "event": "execution_failed", "amount": amount, "description": description,
             "band": state["band"], "approved_by": approved_by, "error": str(e),
@@ -186,8 +279,8 @@ def execute_spend(amount, description, approved_by, recipe=None, to=None, messag
         print(f"[stripe] FAILED: {e}")
         return False
 
-    state["spent_this_session"] += amount
-    save_state(state)
+    # Charge succeeded; the reservation already recorded the spend. Do NOT
+    # increment again here -- that double-counted before this function reserved.
 
     recipe_result, recipe_error = None, None
     if recipe:

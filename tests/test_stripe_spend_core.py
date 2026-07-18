@@ -26,6 +26,7 @@ Nothing covered this module before, and all three regressions below shipped:
 import importlib.util
 import json
 import sys
+import time
 import types
 from pathlib import Path
 
@@ -220,3 +221,54 @@ def test_partial_refunds_sum_to_the_original(core):
     # The books are now settled; a further cent must be refused.
     assert core.execute_refund("pi_Y", 0.01, "extra", approved_by="op") is False
     assert core.refunded_amount("pi_Y") == 100.0
+
+
+# -- concurrent-spend TOCTOU --------------------------------------------------
+
+def test_concurrent_spends_never_lose_updates_or_exceed_cap(core):
+    """8 concurrent $250 spends against a $1000 session cap.
+
+    The old path did load_state() -> charge -> increment the STALE state ->
+    save, so concurrent spends both read spent=$0, both charged, and the second
+    save clobbered the first's increment: money moved > money recorded, and the
+    session cap was blown. execute_spend now reserves under an OS lock before
+    charging, so recorded always equals charged and the cap holds exactly.
+    """
+    import threading
+    from concurrent.futures import ThreadPoolExecutor
+
+    core.save_state({"band": "L2", "per_action_cap": 1000.0,
+                     "session_cap": 1000.0, "spent_this_session": 0.0})
+    charged = []
+    guard = threading.Lock()
+
+    def _charge(amount, desc):
+        time.sleep(0.005)  # widen the race window
+        with guard:
+            charged.append(amount)
+        return {"id": f"pi_{len(charged)}", "status": "succeeded"}
+
+    core.create_payment_intent = _charge
+
+    with ThreadPoolExecutor(max_workers=8) as ex:
+        results = list(ex.map(
+            lambda i: core.execute_spend(250.0, f"spend {i}", approved_by="op"),
+            range(8)))
+
+    recorded = core.load_state()["spent_this_session"]
+    assert sum(charged) == recorded, "recorded spend must equal money actually charged"
+    assert sum(charged) <= 1000.0, "session cap must never be exceeded"
+    assert sum(results) == 4, "exactly four $250 spends fit under a $1000 cap"
+
+
+def test_failed_charge_releases_the_reservation(core):
+    """A charge that raises must return its reserved budget, not leak it."""
+    core.save_state({"band": "L2", "per_action_cap": 1000.0,
+                     "session_cap": 1000.0, "spent_this_session": 0.0})
+
+    def _boom(amount, desc):
+        raise RuntimeError("stripe down")
+    core.create_payment_intent = _boom
+
+    assert core.execute_spend(250.0, "doomed", approved_by="op") is False
+    assert core.load_state()["spent_this_session"] == 0.0, "reservation must be released"
