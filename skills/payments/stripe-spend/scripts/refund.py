@@ -86,9 +86,17 @@ def main():
         print(f'[authority] REJECTED -- {args.payment_intent_id} is not a real, prior executed '
               'charge in this skill\'s own audit log. Cannot refund a payment that never happened.')
         sys.exit(1)
-    if args.amount > original_amount:
-        print(f'[authority] REJECTED -- refund amount ${args.amount:.2f} exceeds the original '
-              f'charge of ${original_amount:.2f} for {args.payment_intent_id}.')
+    # Cumulative check: compare against what's LEFT to refund, not the original
+    # charge. Without subtracting prior refunds, three $100 refunds against a
+    # $100 charge each passed (>$100 total refunded). execute_refund re-checks
+    # this authoritatively; rejecting here avoids escalating a doomed refund to
+    # a human for a Twilio code.
+    already_refunded = _core.refunded_amount(args.payment_intent_id)
+    remaining = round(original_amount - already_refunded, 2)
+    if args.amount > remaining:
+        print(f'[authority] REJECTED -- refund amount ${args.amount:.2f} exceeds the ${remaining:.2f} '
+              f'still refundable on {args.payment_intent_id} '
+              f'(${original_amount:.2f} charged, ${already_refunded:.2f} already refunded).')
         sys.exit(1)
 
     import notify

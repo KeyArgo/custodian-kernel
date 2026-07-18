@@ -206,6 +206,33 @@ def _try_spark(
     return None
 
 
+def _requires_local_enforcement(policy: Policy) -> bool:
+    """True if the policy configures a gate a Spark node cannot enforce.
+
+    The payload sent to a Spark node (see _try_spark_node) carries only the
+    amount, description, band and caps. It does NOT carry the 24h ledger, the
+    margins config, or the no-self-dealing flag -- so a remote node physically
+    cannot evaluate:
+
+      * daily_envelope  (needs the rolling 24h spend ledger)
+      * margins         (needs the policy's margin thresholds)
+      * no_self_dealing (needs the recipient/self policy)
+
+    Delegating to Spark when any of these is configured would silently skip it
+    -- the request would come back "autonomous" having never been checked
+    against the gate. Local enforcement always evaluates every gate, so when
+    one of these exists we enforce locally and never delegate. Fail-safe: local
+    is always at least as strict as the remote node would have been.
+    """
+    if policy.margins is not None:
+        return True
+    if policy.policies is not None and policy.policies.no_self_dealing:
+        return True
+    return any(
+        band_cfg.daily_envelope is not None for band_cfg in policy.bands.values()
+    )
+
+
 def decide(
     request: SpendRequest,
     state: AuthorityState,
@@ -214,11 +241,15 @@ def decide(
     skill: Optional[str] = None,
     context: Optional[dict] = None,
     killed: bool = False,
+    ledger_storage=None,
 ) -> Decision:
     """Enforce on the first reachable Spark node, otherwise enforce locally.
 
     Checks the runtime enforcement mode flag: if set to "local", skips Spark
     entirely and enforces locally regardless of Spark availability.
+
+    ``ledger_storage`` is forwarded to local enforcement so daily_envelope can
+    be checked against real spend history; without it that gate cannot run.
     """
     ctx = context or {}
     # The kill switch is enforced locally, unconditionally. A remote node's
@@ -228,11 +259,16 @@ def decide(
     # be bypassed") would let a MITM'd or misconfigured node approve requests
     # the operator has explicitly stopped.
     if killed:
-        return _local_decide(request, state, policy, skill=skill, context=ctx, killed=True)
-    # Check enforcement mode — skip Spark if user chose local
-    if _read_mode() != 'local':
+        return _local_decide(request, state, policy, skill=skill, context=ctx,
+                             killed=True, ledger_storage=ledger_storage)
+    # Skip Spark if the operator chose local, OR if the policy configures a gate
+    # a remote node cannot enforce (daily_envelope / margins / no_self_dealing).
+    # The second condition is a fail-safe: delegating those would silently drop
+    # the check, so we keep enforcement here where the full context lives.
+    if _read_mode() != 'local' and not _requires_local_enforcement(policy):
         decision = _try_spark(request, state, policy, skill=skill, context=ctx, killed=killed)
         if decision is not None:
             return decision
     # All configured Spark nodes unreachable, or mode is local — silent fallback to local enforcement
-    return _local_decide(request, state, policy, skill=skill, context=ctx, killed=killed)
+    return _local_decide(request, state, policy, skill=skill, context=ctx,
+                         killed=killed, ledger_storage=ledger_storage)

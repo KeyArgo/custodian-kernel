@@ -29,6 +29,7 @@ def triage(
     state: AuthorityState,
     *,
     killed: bool = False,
+    ledger_storage=None,
 ) -> TriageResult:
     """Run one case end to end.
 
@@ -51,6 +52,7 @@ def triage(
         skill=pack.requested_action,
         context={"disposition": disposition},
         killed=killed,
+        ledger_storage=ledger_storage,
     )
 
     # The single honest outcome: money moves on its own ONLY when the domain

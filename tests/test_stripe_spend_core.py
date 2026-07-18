@@ -187,3 +187,36 @@ def test_distinct_calls_use_distinct_idempotency_keys(core, monkeypatch):
         with pytest.raises(RuntimeError):
             core.create_payment_intent(10.00, "x")
     assert len(set(seen)) == 2, "separate charges must not share a key"
+
+
+# -- cumulative refund guard --------------------------------------------------
+
+def test_refund_cannot_exceed_original_charge_across_multiple_refunds(core):
+    """$100 charge, three $100 refunds: only the first may pass.
+
+    The request-time check in refund.py compared each refund to the ORIGINAL
+    charge, never to what was already refunded, so N full refunds each passed
+    ($300 back on a $100 charge). execute_refund now sums prior refund_executed
+    records and refuses once the total would exceed the charge.
+    """
+    core.create_refund = lambda pi, a, d: {"id": "re_mock_1", "status": "succeeded"}
+    core.append_log({"event": "executed", "amount": 100.0, "description": "order",
+                     "band": "L2", "payment_intent_id": "pi_X", "stripe_status": "succeeded"})
+
+    results = [core.execute_refund("pi_X", 100.0, "refund", approved_by="op")
+               for _ in range(3)]
+    assert results == [True, False, False]
+    assert core.refunded_amount("pi_X") == 100.0
+
+
+def test_partial_refunds_sum_to_the_original(core):
+    """Legitimate partial refunds are allowed up to — but not past — the total."""
+    core.create_refund = lambda pi, a, d: {"id": "re_mock", "status": "succeeded"}
+    core.append_log({"event": "executed", "amount": 100.0, "description": "order",
+                     "band": "L2", "payment_intent_id": "pi_Y", "stripe_status": "succeeded"})
+
+    assert core.execute_refund("pi_Y", 60.0, "partial", approved_by="op") is True
+    assert core.execute_refund("pi_Y", 40.0, "rest", approved_by="op") is True
+    # The books are now settled; a further cent must be refused.
+    assert core.execute_refund("pi_Y", 0.01, "extra", approved_by="op") is False
+    assert core.refunded_amount("pi_Y") == 100.0

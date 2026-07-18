@@ -257,12 +257,58 @@ def create_refund(payment_intent_id, amount_dollars, reason):
     return r.json()
 
 
+def _sum_events(event, payment_intent_id):
+    """Total amount across audit records of one event kind for one PaymentIntent."""
+    if not LOG_FILE.exists():
+        return 0.0
+    total = 0.0
+    for line in LOG_FILE.read_text().splitlines():
+        try:
+            rec = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if rec.get('event') == event and rec.get('payment_intent_id') == payment_intent_id:
+            total += float(rec.get('amount', 0.0))
+    return round(total, 2)
+
+
+def charged_amount(payment_intent_id):
+    """Total genuinely charged against this PaymentIntent (normally one 'executed')."""
+    return _sum_events('executed', payment_intent_id)
+
+
+def refunded_amount(payment_intent_id):
+    """Total already refunded against this PaymentIntent across ALL prior refunds."""
+    return _sum_events('refund_executed', payment_intent_id)
+
+
 def execute_refund(payment_intent_id, amount, description, approved_by):
     """Move money back to the customer. Mirrors execute_spend's shape exactly --
     same audit log, same caller-must-have-verified-authorization contract. The only
     caller of this for any amount is approve.py, after a real Twilio Verify check --
     refunds have no autonomous path at all, unlike spend, which has graduated bands."""
     state = load_state()
+
+    # Authoritative cumulative-refund guard, checked at the point money actually
+    # moves. The request-time check in refund.py compared a single refund to the
+    # ORIGINAL charge only, so N separate refunds of the full amount each passed
+    # ($100 charge -> $300 refunded across three approvals). Summing prior
+    # refund_executed records makes over-refunding structurally impossible even
+    # if a caller skips the request-time check or two approvals race.
+    original = charged_amount(payment_intent_id)
+    already = refunded_amount(payment_intent_id)
+    if round(already + amount, 2) > original:
+        append_log({
+            'event': 'refund_denied', 'amount': amount, 'description': description,
+            'payment_intent_id': payment_intent_id, 'approved_by': approved_by,
+            'reason': (f'cumulative refund ${already + amount:.2f} would exceed the '
+                       f'${original:.2f} originally charged (already refunded '
+                       f'${already:.2f})'),
+        })
+        print(f'[authority] REFUND DENIED -- ${already + amount:.2f} cumulative would '
+              f'exceed the ${original:.2f} charged (${already:.2f} already refunded).')
+        return False
+
     try:
         refund = create_refund(payment_intent_id, amount, description)
     except Exception as e:
