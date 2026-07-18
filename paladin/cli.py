@@ -16,6 +16,8 @@ Examples::
     paladin add stripe_sk --profile prod --env-var STRIPE_SECRET_KEY
     paladin import discover                     # where do credentials live?
     paladin import env ~/projects --recursive   # bulk-import every .env*
+    paladin import csv ~/Downloads/export.csv   # a password-manager export
+    paladin import json secrets.json --dry-run  # preview a secrets dump
     paladin import bitwarden --search "api key"
     paladin list
     paladin show stripe_sk                      # metadata only
@@ -209,6 +211,12 @@ def cmd_import(args) -> int:
                 print(f"  {f['path']}:  {', '.join(f['names'][:6])}"
                       f"{' …' if len(f['names']) > 6 else ''}")
                 print(f"      → {f['import_with']}")
+        if report.get("export_files"):
+            print("password-manager exports (CSV/JSON in Downloads/Desktop/here):")
+            for f in report["export_files"]:
+                flag = f"  ⚠ {','.join(f['flags'])}" if f["flags"] else ""
+                print(f"  {f['path']}  [{f['type']}]{flag}")
+                print(f"      → {f['import_with']}")
         for label, key in (("Bitwarden", "bitwarden"), ("1Password", "onepassword")):
             st = report[key]
             if not st["installed"]:
@@ -235,6 +243,17 @@ def cmd_import(args) -> int:
             raise PaladinError(f"no files matching {args.pattern!r} under {root}")
         candidates = [c for f in files for c in imp.candidates_from_env(f)]
         source_desc = f"env:{root}"
+    elif args.source in ("csv", "json"):
+        if not args.path:
+            raise PaladinError(f"`paladin import {args.source}` needs a path to "
+                               f"a .{args.source} file")
+        fpath = Path(args.path).expanduser()
+        if not fpath.is_file():
+            raise PaladinError(f"no such file: {fpath}")
+        reader = (imp.candidates_from_csv if args.source == "csv"
+                  else imp.candidates_from_json)
+        candidates = reader(fpath)
+        source_desc = f"{args.source}:{fpath}"
     elif args.source == "bitwarden":
         candidates = imp.bitwarden_candidates(search=args.search,
                                               folder=args.folder)
@@ -494,16 +513,18 @@ def build_parser() -> argparse.ArgumentParser:
         help="bulk-import credentials: .env files, Bitwarden, 1Password, or discover",
         description=(
             "Import credentials in bulk. Sources: `env <path>` (a .env file or a "
-            "directory of them), `bitwarden` / `1password` (via their CLIs, which "
-            "must be installed and unlocked), or `discover` (report-only: shows "
-            "where credentials live and the exact command to import each source). "
-            "Already-vaulted names are skipped unless --overwrite. Values are "
-            "never printed."
+            "directory of them), `csv <file>` / `json <file>` (a password-manager "
+            "export or a secrets dump — offline, no CLI needed), `bitwarden` / "
+            "`1password` (via their CLIs, which must be installed and unlocked), "
+            "or `discover` (report-only: shows where credentials live and the "
+            "exact command to import each source). Already-vaulted names are "
+            "skipped unless --overwrite. Values are never printed."
         ))
-    sp.add_argument("source", choices=["env", "bitwarden", "1password", "discover"],
+    sp.add_argument("source",
+                    choices=["env", "csv", "json", "bitwarden", "1password", "discover"],
                     help="where to import from")
     sp.add_argument("path", nargs="?", default=None,
-                    help="for `env`: the .env file or directory to scan")
+                    help="for `env`/`csv`/`json`: the file (or directory, for env) to read")
     sp.add_argument("--recursive", action="store_true",
                     help="env: also scan subdirectories (skips node_modules/.git/...)")
     sp.add_argument("--pattern", default=".env*",

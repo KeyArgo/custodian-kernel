@@ -1,4 +1,5 @@
-"""Bulk credential import: .env files, Bitwarden, 1Password, discovery.
+"""Bulk credential import: .env files, CSV/JSON exports, Bitwarden, 1Password,
+discovery.
 
 The pipeline is: a *source* yields :class:`Candidate` objects (name, value,
 kind, provenance), and :func:`import_candidates` feeds them into the vault
@@ -245,6 +246,213 @@ def candidates_from_env(path: Path) -> list[Candidate]:
     return cands
 
 
+# -- source: CSV --------------------------------------------------------------
+#
+# Every password manager exports CSV (Chrome, Firefox, 1Password, Bitwarden,
+# LastPass, KeePass, Dashlane), so one good CSV reader is an OFFLINE importer
+# for all of them -- no CLI, no unlock, no network. The trick is that each tool
+# names its columns differently, so we detect the value column and the name
+# column from a set of known aliases rather than hard-coding one layout.
+
+# Column headers (lowercased) that hold the SECRET, most-preferred first.
+_CSV_VALUE_COLUMNS = [
+    "password", "value", "secret", "token", "api_key", "apikey", "key",
+    "credential", "pass",
+]
+# Column headers that hold the NAME/label, most-preferred first. "username" is
+# last: it is a name only when nothing better exists (many exports pair a
+# username with a password, and the login URL or title is the better label).
+_CSV_NAME_COLUMNS = [
+    "name", "title", "label", "item", "account", "service", "site", "url",
+    "login_uri", "key", "username", "user",
+]
+
+
+def _pick_column(header: list[str], aliases: list[str]) -> Optional[int]:
+    """Index of the header cell best matching an alias (case-insensitive).
+
+    Exact match wins over a suffix match, and earlier aliases win over later
+    ones. The suffix pass is what makes real exports work: Bitwarden's password
+    column is ``login_password``, 1Password's is ``password`` -- matching a
+    column that ENDS WITH the alias (on a word boundary) catches both without
+    hard-coding every tool's prefix.
+    """
+    lowered = [h.strip().lower() for h in header]
+    # Pass 1: exact match, aliases in preference order.
+    for alias in aliases:
+        if alias in lowered:
+            return lowered.index(alias)
+    # Pass 2: suffix match on a "_"/" " boundary (login_password -> password).
+    for alias in aliases:
+        for i, col in enumerate(lowered):
+            if col == alias or col.endswith("_" + alias) or col.endswith(" " + alias):
+                return i
+    return None
+
+
+_ENV_VAR_NAME_RE = re.compile(r"^[A-Z][A-Z0-9_]*$")
+
+
+def _looks_like_data_not_header(first_cell: str, second_cell: str) -> bool:
+    """For a 2-column CSV: is row 0 DATA (headerless key,value) not a header?
+
+    True when the first cell is an ENV_VAR-style name (STRIPE_KEY) or the second
+    cell already looks like a credential (matches a known key prefix, or is a
+    long value with no spaces). A real header row ("name,password") trips
+    neither test.
+    """
+    if _ENV_VAR_NAME_RE.match(first_cell.strip()):
+        return True
+    v = second_cell.strip()
+    if any(v.startswith(p) for p, _ in VALUE_KIND_PATTERNS):
+        return True
+    return len(v) >= 16 and " " not in v
+
+
+def _csv_key_value(rows: list[list[str]], source: str) -> list[Candidate]:
+    out: list[Candidate] = []
+    for raw_name, value in rows:
+        value = value.strip()
+        name = _safe_name(raw_name)
+        if not value or name is None:
+            continue
+        out.append(Candidate(name=name, value=value, source=source))
+    return out
+
+
+def parse_csv_text(text: str, source: str) -> list[Candidate]:
+    """Rows of a password-manager CSV export → candidates.
+
+    Two shapes are understood:
+
+    * **Labelled columns** (the common export): a header row names the columns,
+      and we pick the value column (password/secret/token/...) and a name column
+      (name/title/url/username/...) from known aliases.
+    * **Two-column key,value** with no header: a hand-rolled ``KEY,secret``
+      file. Detected up front, because a 2-column file is otherwise ambiguous
+      with a real ``name,password`` header.
+
+    Values are never logged; only names/kinds reach any report.
+    """
+    import csv
+    import io
+
+    rows = list(csv.reader(io.StringIO(text)))
+    rows = [r for r in rows if any(cell.strip() for cell in r)]  # drop blank lines
+    if not rows:
+        return []
+
+    # Resolve the header-vs-headerless ambiguity for 2-column files FIRST.
+    if all(len(r) == 2 for r in rows):
+        if _looks_like_data_not_header(rows[0][0], rows[0][1]):
+            return _csv_key_value(rows, source)
+        # else: row 0 is a real 2-column header -> fall through to labelled.
+
+    header = rows[0]
+    value_idx = _pick_column(header, _CSV_VALUE_COLUMNS)
+    name_idx = _pick_column(header, _CSV_NAME_COLUMNS)
+
+    if value_idx is None:
+        raise PaladinError(
+            "could not read this CSV: no recognized password/secret column and "
+            "it is not a simple two-column name,value file. Expected a header "
+            f"naming one of {_CSV_VALUE_COLUMNS[:5]}...")
+
+    # If the only name column found IS the value column, pick the next-best name
+    # column that isn't the value column -- never label a secret with itself.
+    if name_idx == value_idx:
+        name_idx = _pick_column(
+            [h if i != value_idx else "" for i, h in enumerate(header)],
+            _CSV_NAME_COLUMNS)
+
+    out: list[Candidate] = []
+    for row in rows[1:]:
+        if value_idx >= len(row):
+            continue
+        value = row[value_idx].strip()
+        if not value:
+            continue
+        raw_name = (row[name_idx].strip()
+                    if name_idx is not None and name_idx < len(row) else "")
+        name = _safe_name(raw_name) or _safe_name(f"secret_{len(out) + 1}")
+        if name is None:
+            continue
+        out.append(Candidate(name=name, value=value, source=source))
+    return out
+
+
+def candidates_from_csv(path: Path) -> list[Candidate]:
+    path = Path(path)
+    flags = git_exposure_flags(path)
+    cands = parse_csv_text(path.read_text(encoding="utf-8", errors="replace"),
+                           source=f"csv:{path}")
+    for c in cands:
+        c.flags = list(flags)
+    return cands
+
+
+# -- source: JSON -------------------------------------------------------------
+
+def parse_json_text(text: str, source: str) -> list[Candidate]:
+    """A JSON secrets dump → candidates. Two shapes:
+
+    * a flat object ``{"STRIPE_KEY": "sk_...", ...}`` (values must be scalars);
+    * an array of objects ``[{"name": "...", "value": "..."}, ...]`` using the
+      same name/value column aliases as the CSV reader.
+
+    Nested objects in the flat form are skipped (a config tree is not a
+    credential list); scalars only.
+    """
+    try:
+        data = json.loads(text)
+    except json.JSONDecodeError as e:
+        raise PaladinError(f"not valid JSON: {e}") from e
+
+    out: list[Candidate] = []
+
+    if isinstance(data, dict):
+        for key, value in data.items():
+            if not isinstance(value, (str, int, float)) or isinstance(value, bool):
+                continue  # skip nested objects/lists/bools — not credentials
+            value = str(value).strip()
+            name = _safe_name(str(key))
+            if not value or name is None:
+                continue
+            out.append(Candidate(name=name, value=value, env_var=str(key),
+                                 source=source))
+        return out
+
+    if isinstance(data, list):
+        for i, item in enumerate(data):
+            if not isinstance(item, dict):
+                continue
+            lowered = {k.lower(): v for k, v in item.items()
+                       if isinstance(v, (str, int, float)) and not isinstance(v, bool)}
+            value = next((str(lowered[a]) for a in _CSV_VALUE_COLUMNS if a in lowered), None)
+            raw_name = next((str(lowered[a]) for a in _CSV_NAME_COLUMNS if a in lowered), None)
+            if value is None:
+                continue
+            value = value.strip()
+            name = _safe_name(raw_name or f"secret_{i + 1}")
+            if not value or name is None:
+                continue
+            out.append(Candidate(name=name, value=value, source=source))
+        return out
+
+    raise PaladinError("JSON must be an object of name→value or an array of "
+                       "{name, value} objects")
+
+
+def candidates_from_json(path: Path) -> list[Candidate]:
+    path = Path(path)
+    flags = git_exposure_flags(path)
+    cands = parse_json_text(path.read_text(encoding="utf-8", errors="replace"),
+                            source=f"json:{path}")
+    for c in cands:
+        c.flags = list(flags)
+    return cands
+
+
 # -- source: Bitwarden (bw CLI) ------------------------------------------------
 
 def _run_json(cmd: list[str], timeout: float = 30) -> object:
@@ -448,17 +656,61 @@ def discover(home: Optional[Path] = None, cwd: Optional[Path] = None) -> dict:
             rc_exports.append({"path": str(p), "names": names,
                                "import_with": f"paladin import env \"{p}\""})
 
+    export_files = _discover_export_files(home, cwd)
+
     bw = bitwarden_status()
     op = onepassword_status()
     return {
         "ok": True,
         "env_files": env_files,
         "shell_rc_exports": rc_exports,
+        "export_files": export_files,
         "bitwarden": {**bw, "import_with":
                       "paladin import bitwarden [--search TERM] [--folder NAME]"},
         "onepassword": {**op, "import_with":
                         "paladin import 1password [--vault NAME] [--search TERM]"},
     }
+
+
+# Filename fragments that mark a .csv/.json as a probable credential export
+# rather than arbitrary data. Kept deliberately tight to avoid flagging every
+# spreadsheet in Downloads.
+_EXPORT_NAME_HINTS = re.compile(
+    r"(export|password|passwords|credential|secret|vault|"
+    r"bitwarden|lastpass|1password|keepass|dashlane|logins?)",
+    re.IGNORECASE,
+)
+_EXPORT_SEARCH_DIRS = ("Downloads", "Desktop", ".")
+
+
+def _discover_export_files(home: Path, cwd: Path) -> list[dict]:
+    """Likely password-manager CSV/JSON exports in the usual drop spots.
+
+    Report-only, like the rest of discover(): it never reads values, only the
+    filename and (for CSV/JSON) whether it parses. Scoped to a few directories
+    and gated on a name hint so it does not flag every spreadsheet."""
+    found: list[dict] = []
+    seen: set = set()
+    bases = [cwd] + [home / d for d in _EXPORT_SEARCH_DIRS if d != "."]
+    for base in bases:
+        if not base.is_dir():
+            continue
+        for pattern in ("*.csv", "*.json"):
+            for p in sorted(base.glob(pattern)):
+                rp = p.resolve()
+                if rp in seen or not p.is_file():
+                    continue
+                if not _EXPORT_NAME_HINTS.search(p.name):
+                    continue
+                seen.add(rp)
+                kind = "csv" if p.suffix.lower() == ".csv" else "json"
+                found.append({
+                    "path": str(p),
+                    "type": kind,
+                    "flags": git_exposure_flags(p),
+                    "import_with": f"paladin import {kind} \"{p}\" --dry-run",
+                })
+    return found
 
 
 # -- the sink: import into the vault --------------------------------------------

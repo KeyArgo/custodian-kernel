@@ -40,7 +40,7 @@ def _bool(v):
 def main() -> int:
     p = argparse.ArgumentParser()
     p.add_argument("--source", required=True,
-                   choices=["discover", "env", "bitwarden", "1password"])
+                   choices=["discover", "env", "csv", "json", "bitwarden", "1password"])
     p.add_argument("--path", default=None)
     p.add_argument("--recursive", default="false")
     p.add_argument("--pattern", default=".env*")
@@ -75,6 +75,16 @@ def main() -> int:
             if not files:
                 raise PaladinError(f"no files matching {a.pattern!r} under {root}")
             candidates = [c for f in files for c in imp.candidates_from_env(f)]
+        elif a.source in ("csv", "json"):
+            if not a.path:
+                raise PaladinError(f"source={a.source} requires path=<file>")
+            from pathlib import Path
+            fpath = Path(a.path).expanduser()
+            if not fpath.is_file():
+                raise PaladinError(f"no such file: {fpath}")
+            reader = (imp.candidates_from_csv if a.source == "csv"
+                      else imp.candidates_from_json)
+            candidates = reader(fpath)
         elif a.source == "bitwarden":
             candidates = imp.bitwarden_candidates(search=a.search, folder=a.folder)
         else:

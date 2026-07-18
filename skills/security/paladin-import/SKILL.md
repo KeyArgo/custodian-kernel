@@ -1,6 +1,6 @@
 ---
 name: paladin-import
-description: "Bulk-import credentials into the Paladin vault from .env files, Bitwarden, or 1Password — or discover where credentials live. Returns names/kinds/counts only; secret values never enter the agent's context."
+description: "Bulk-import credentials into the Paladin vault from .env files, CSV/JSON exports, Bitwarden, or 1Password — or discover where credentials live. Returns names/kinds/counts only; secret values never enter the agent's context."
 version: 1.0.0
 author: argobox
 license: MIT
@@ -29,14 +29,20 @@ process.
 | Find where credentials live (report-only) | `source=discover` |
 | Import a .env file | `source=env, path=/path/to/.env` |
 | Import every .env under a directory | `source=env, path=/dir, recursive=true` |
+| Import a password-manager CSV export | `source=csv, path=/path/to/export.csv` |
+| Import a JSON secrets dump | `source=json, path=/path/to/secrets.json` |
 | Import from Bitwarden | `source=bitwarden, search="api key"` |
 | Import from 1Password | `source=1password, from_vault="Main"` |
 | Preview without writing | any of the above + `dry_run=true` |
 
+CSV covers Chrome, Firefox, Bitwarden, LastPass, 1Password, and KeePass exports
+offline (no CLI needed) — the value column is auto-detected from the header.
+JSON accepts a flat `{"NAME": "value"}` object or an array of `{name, value}`.
+
 ## Arguments
 
-- `source` (required): `discover` | `env` | `bitwarden` | `1password`
-- `path`: for `env` — a .env file or a directory to scan
+- `source` (required): `discover` | `env` | `csv` | `json` | `bitwarden` | `1password`
+- `path`: for `env` — a .env file or a directory to scan; for `csv`/`json` — the file
 - `recursive`: for `env` — `true` to scan subdirectories
 - `pattern`: for `env` — filename pattern (default `.env*`)
 - `search`: for `bitwarden`/`1password` — only matching items
