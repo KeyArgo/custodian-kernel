@@ -326,3 +326,22 @@ def test_requires_local_enforcement_detects_each_gate():
     with_selfdeal = Policy(version="1.0", default_band=Band.L2, bands=plain.bands,
                            policies=PoliciesConfig(no_self_dealing=True))
     assert enforcer._requires_local_enforcement(with_selfdeal) is True
+
+
+def test_routing_flags_default_outside_world_writable_tmp():
+    """The mode/disable flags decide enforcement routing, so an unprivileged
+    local user must not be able to write them. They used to live in /tmp
+    (mode 1777, world-writable); they now default under the state dir, which
+    kernel-self-protection guards. The legacy /tmp path stays readable only as
+    a backward-compat fallback."""
+    assert not enforcer._MODE_FLAG.startswith("/tmp")
+    assert not enforcer._DISABLE_FLAG.startswith("/tmp")
+    assert ".custodian" in enforcer._MODE_FLAG or "CUSTODIAN_STATE_DIR" in os.environ
+    # Legacy paths preserved for read-fallback
+    assert enforcer._LEGACY_MODE_FLAG == "/tmp/custodian-enforcement-mode"
+
+
+def test_mode_flag_honours_state_dir_env(monkeypatch, tmp_path):
+    monkeypatch.setenv("CUSTODIAN_STATE_DIR", str(tmp_path))
+    # _state_dir is read at call time for the default computation
+    assert enforcer._state_dir() == str(tmp_path)

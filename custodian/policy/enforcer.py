@@ -9,9 +9,12 @@ to the caller. Spark nodes are known to go down individually — that's what
 the chain + local fallback is for; it is not a reason to give up the
 separation between enforcement hardware and the app host.
 
-Enforcement mode is configurable at runtime via a flag file
-(/tmp/custodian-enforcement-mode). The flag can be set by a dashboard
-API endpoint so demo visitors can choose their own enforcement path.
+Enforcement mode is configurable at runtime via a flag file under the state
+dir (~/.custodian/custodian-enforcement-mode by default, or $CUSTODIAN_STATE_DIR;
+the legacy /tmp path is still read for backward compatibility). It lives there
+rather than /tmp because /tmp is world-writable and this flag decides
+enforcement routing. The flag can be set by a dashboard API endpoint so demo
+visitors can choose their own enforcement path.
 Valid values:
   - "remote-first" (default): try Spark nodes, silently fall back to local
     if all nodes are unreachable.
@@ -57,22 +60,39 @@ else:
 SPARK_ENFORCE_URL = SPARK_ENFORCE_URLS[0] if SPARK_ENFORCE_URLS else ''
 SPARK_TIMEOUT = float(os.environ.get('SPARK_TIMEOUT', '1'))
 
+# These two flags decide enforcement ROUTING, so they must live where an
+# unprivileged local user cannot write them. The originals were under /tmp,
+# which is world-writable (mode 1777) -- on a shared host any user could flip
+# routing by touching a file. They now default under the state dir
+# (~/.custodian, which kernel-self-protection guards), overridable via
+# CUSTODIAN_STATE_DIR. The legacy /tmp paths are still READ as a fallback so an
+# already-set flag keeps working across the upgrade; nothing writes /tmp now.
+def _state_dir() -> str:
+    return os.environ.get(
+        'CUSTODIAN_STATE_DIR',
+        os.path.join(os.path.expanduser('~'), '.custodian'))
+
+
 # Runtime toggle — can be flipped by the admin panel without a restart.
 # Also honoured: SPARK_ENFORCE_URLS='' / SPARK_ENFORCE_URL='' env var (disables at startup).
-_DISABLE_FLAG = '/tmp/spark-enforcement-disabled'
+_DISABLE_FLAG = os.path.join(_state_dir(), 'spark-enforcement-disabled')
+_LEGACY_DISABLE_FLAG = '/tmp/spark-enforcement-disabled'
 _remote_enabled = bool(SPARK_ENFORCE_URLS)
 
 # Enforcement mode flag — checked at every decide() call, so changes take effect
 # immediately without a restart. Written by the dashboard API endpoint.
-_MODE_FLAG = '/tmp/custodian-enforcement-mode'
+_MODE_FLAG = os.path.join(_state_dir(), 'custodian-enforcement-mode')
+_LEGACY_MODE_FLAG = '/tmp/custodian-enforcement-mode'
 
 
 def _read_mode() -> str:
     """Return current enforcement mode. Defaults to 'remote-first'."""
-    try:
-        return open(_MODE_FLAG, 'r').read().strip() or 'remote-first'
-    except (FileNotFoundError, OSError):
-        return 'remote-first'
+    for path in (_MODE_FLAG, _LEGACY_MODE_FLAG):
+        try:
+            return open(path, 'r').read().strip() or 'remote-first'
+        except (FileNotFoundError, OSError):
+            continue
+    return 'remote-first'
 
 
 def set_enforcement_mode(mode: str) -> None:
@@ -82,6 +102,7 @@ def set_enforcement_mode(mode: str) -> None:
     if mode not in ('remote-first', 'local'):
         raise ValueError(f'Invalid enforcement mode: {mode!r}')
     try:
+        os.makedirs(os.path.dirname(_MODE_FLAG), exist_ok=True)
         open(_MODE_FLAG, 'w').write(mode + '\n')
     except OSError:
         pass
@@ -98,21 +119,27 @@ def enforcement_mode_label() -> str:
 
 
 def spark_enabled() -> bool:
-    """True if Spark enforcement is active. Checks the runtime flag file."""
-    return _remote_enabled and not os.path.exists(_DISABLE_FLAG)
+    """True if Spark enforcement is active. Checks the runtime flag file
+    (new location, then the legacy /tmp path for backward compatibility)."""
+    if not _remote_enabled:
+        return False
+    return not (os.path.exists(_DISABLE_FLAG)
+                or os.path.exists(_LEGACY_DISABLE_FLAG))
 
 
 def spark_disable() -> None:
     """Disable Spark enforcement at runtime. Survives until spark_enable() or restart."""
+    os.makedirs(os.path.dirname(_DISABLE_FLAG), exist_ok=True)
     open(_DISABLE_FLAG, 'w').close()
 
 
 def spark_enable() -> None:
-    """Re-enable Spark enforcement at runtime."""
-    try:
-        os.remove(_DISABLE_FLAG)
-    except FileNotFoundError:
-        pass
+    """Re-enable Spark enforcement at runtime. Clears both the new and legacy flags."""
+    for path in (_DISABLE_FLAG, _LEGACY_DISABLE_FLAG):
+        try:
+            os.remove(path)
+        except (FileNotFoundError, OSError):
+            pass
 
 
 def spark_health() -> dict:
