@@ -163,8 +163,16 @@ def parse_env_text(text: str, source: str) -> list[Candidate]:
         m = _EXPORT_RE.match(stripped)
         if not m:
             continue
-        key, value = m.group(1), m.group(2)
-        value = value.split(" #")[0].strip().strip("'\"")
+        key, raw_value = m.group(1), m.group(2).strip()
+        # Quotes FIRST, then comments -- and only strip a trailing comment from
+        # an UNQUOTED value. Doing it the other way round silently truncated any
+        # quoted credential that contained " #": PASS="Str0ng #Pass!" became
+        # "Str0ng", so the user vaulted a broken value and hit baffling auth
+        # failures with no error. A quoted value is literal: spaces and # kept.
+        if len(raw_value) >= 2 and raw_value[0] in "'\"" and raw_value[-1] == raw_value[0]:
+            value = raw_value[1:-1]
+        else:
+            value = raw_value.split(" #")[0].strip()
         if not key or not value:
             continue
         # $VAR / $(cmd) / `cmd` values are references, not credentials.

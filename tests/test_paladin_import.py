@@ -71,6 +71,24 @@ SPACED = padded   # trailing comment
     assert cands["lower_case"].name == "lower_case"
 
 
+def test_quoted_values_containing_hash_are_not_truncated():
+    """Regression: comments were stripped BEFORE quotes, so a quoted credential
+    containing " #" was silently cut short — PASS="Str0ng #Pass!" vaulted as
+    "Str0ng", causing baffling downstream auth failures. A quoted value is
+    literal; only an UNQUOTED trailing comment is stripped."""
+    text = (
+        'PASS="Str0ng #Pass!"\n'
+        "TOK='ghp_abc #still-part-of-token'\n"
+        'PLAIN=value #this is a real comment\n'
+        'QUOTED_SPACES="a b c"\n'
+    )
+    cands = {c.env_var: c for c in imp.parse_env_text(text, "env:test")}
+    assert cands["PASS"].value == "Str0ng #Pass!"
+    assert cands["TOK"].value == "ghp_abc #still-part-of-token"
+    assert cands["PLAIN"].value == "value"          # unquoted comment stripped
+    assert cands["QUOTED_SPACES"].value == "a b c"  # inner spaces preserved
+
+
 def test_collect_env_files_recursive_skips_junk_dirs(tmp_path):
     (tmp_path / ".env").write_text("A=1")
     sub = tmp_path / "proj"
