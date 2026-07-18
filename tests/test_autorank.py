@@ -130,3 +130,40 @@ class TestAutorankEdgeCases:
         assert "a" not in _autorank._downgrade_table
         assert "b" not in _autorank._downgrade_table
         assert "c" in _autorank._downgrade_table
+
+
+class TestNeverEscalates:
+    """A downgrade table may only ever LOWER authority.
+
+    Regression: apply_autorank returned the stored band unconditionally, so a
+    downgrade recorded from a high-band task (L4 -> stored L3) raised a later
+    request that had routed to a LOWER band (L1) up to L3's higher cap -- a
+    privilege escalation. It now takes the stricter of stored vs routed band.
+    (The earlier hunt missed this because it needs the routed band to ALSO
+    carry a band_after_task, else apply_autorank early-returns before the
+    table is consulted.)
+    """
+
+    def _req(self, agent="agentX"):
+        r = SpendRequest(amount=1.0, description="x")
+        r.requester_agent_id = agent
+        return r
+
+    def test_stored_downgrade_never_raises_a_lower_routed_band(self):
+        l4 = BandConfig(name=Band.L4, max_spend=None, requires_approval=True,
+                        band_after_task=Band.L3)
+        record_successful_request(None, Band.L4, l4, self._req())
+
+        # Routed to L1, and L1 also has a band_after_task so the table IS read.
+        l1 = BandConfig(name=Band.L1, max_spend=0.50, requires_approval=False,
+                        band_after_task=Band.L0)
+        assert apply_autorank(None, Band.L1, l1, self._req()) == Band.L1
+
+    def test_legit_downgrade_to_lower_band_still_applies(self):
+        l3 = BandConfig(name=Band.L3, max_spend=50.0, requires_approval=True,
+                        band_after_task=Band.L1)
+        record_successful_request(None, Band.L3, l3, self._req())
+
+        l2 = BandConfig(name=Band.L2, max_spend=2.0, requires_approval=False,
+                        band_after_task=Band.L1)
+        assert apply_autorank(None, Band.L2, l2, self._req()) == Band.L1

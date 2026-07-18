@@ -49,6 +49,25 @@ from custodian.types import Band
 # immediate follow-up request is correctly re-routed.
 DOWNGRADE_TTL_SECONDS = 60
 
+# The authority ladder, lowest to highest. Used to guarantee autorank only ever
+# LOWERS authority: a "downgrade" table must never be able to raise the band a
+# request was routed to.
+_BAND_LADDER = [Band.L0, Band.L1, Band.L2, Band.L3, Band.L4]
+
+
+def _rank(band: Band) -> int:
+    try:
+        return _BAND_LADDER.index(band)
+    except ValueError:
+        # Unknown band -> treat as maximally strict so it can never widen
+        # authority through this path.
+        return -1
+
+
+def _stricter(a: Band, b: Band) -> Band:
+    """Return whichever band grants LESS authority (lower on the ladder)."""
+    return a if _rank(a) <= _rank(b) else b
+
 # Per-process downgrade table. Cleared on process restart by
 # definition (in-memory dict), which is consistent with the
 # "this only affects the next request from the same agent"
@@ -97,7 +116,12 @@ def apply_autorank(
     entry = _downgrade_table.get(agent_id)
     if entry is None:
         return band
-    return entry[0]
+    # A downgrade may ONLY lower authority. Returning the stored band blindly
+    # let a downgrade from a prior high-band task (e.g. L4 -> stored L3) raise a
+    # later request that had routed to a LOWER band (L1): the L1 request would
+    # then run under L3's higher cap -- a privilege escalation. Take the
+    # stricter of the two so autorank can subtract authority but never add it.
+    return _stricter(entry[0], band)
 
 
 def record_successful_request(
