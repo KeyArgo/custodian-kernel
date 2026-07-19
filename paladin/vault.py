@@ -340,7 +340,8 @@ class Vault:
         if keyfile:
             return cls.open(path, keyfile=Path(keyfile))
         if passphrase is None and interactive:
-            passphrase = getpass.getpass("vault passphrase: ")
+            from paladin._prompt import read_secret
+            passphrase = read_secret("vault passphrase: ")
         return cls.open(path, passphrase=passphrase)
 
     def save(self) -> None:

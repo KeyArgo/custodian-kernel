@@ -38,6 +38,7 @@ import sys
 import time
 from pathlib import Path
 
+from paladin._prompt import read_secret
 from paladin.broker import Broker
 from paladin.errors import PaladinError
 from paladin.refs import SecretRef
@@ -57,7 +58,7 @@ def _broker(args) -> Broker:
 def _read_value(prompt: str, from_stdin: bool) -> str:
     if from_stdin:
         return sys.stdin.readline().rstrip("\n")
-    value = getpass.getpass(prompt)
+    value = read_secret(prompt)
     if not value:
         raise PaladinError("empty value")
     return value
@@ -79,8 +80,8 @@ def cmd_init(args) -> int:
             # Non-interactive setup (CI/services): trust the env passphrase.
             Vault.create(path=args.vault, passphrase=env_pp)
         else:
-            p1 = getpass.getpass("new vault passphrase: ")
-            p2 = getpass.getpass("repeat: ")
+            p1 = read_secret("new vault passphrase: ")
+            p2 = read_secret("repeat: ")
             if p1 != p2:
                 raise PaladinError("passphrases do not match")
             Vault.create(path=args.vault, passphrase=p1)
@@ -440,7 +441,7 @@ def cmd_restore(args) -> int:
     keyfile = os.environ.get("PALADIN_KEYFILE") or None
     passphrase = os.environ.get("PALADIN_PASSPHRASE")
     if keyfile is None and passphrase is None:
-        passphrase = getpass.getpass("vault passphrase: ")
+        passphrase = read_secret("vault passphrase: ")
 
     info = bk.restore_backup(
         src, dest, force=args.force, passphrase=passphrase,
@@ -460,8 +461,8 @@ def cmd_restore(args) -> int:
 
 def cmd_rotate_master(args) -> int:
     vault = _open_vault(args)
-    p1 = getpass.getpass("NEW vault passphrase: ")
-    p2 = getpass.getpass("repeat: ")
+    p1 = read_secret("NEW vault passphrase: ")
+    p2 = read_secret("repeat: ")
     if p1 != p2:
         raise PaladinError("passphrases do not match")
     vault.rotate_master(new_passphrase=p1)
