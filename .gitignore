@@ -47,3 +47,36 @@ PII-EXPOSURE-PRIVATE.md
 
 # runtime earn ledger (created by the dashboard demo-earn endpoint)
 skills/earnings/
+
+# ── Credential safety: never commit secrets, vaults, keyfiles, or backups ──
+# Belt-and-suspenders — the vault normally lives in ~/.paladin (outside the
+# repo), but this guarantees that even a vault/keyfile/backup created INSIDE the
+# checkout can never be staged. Enforced by tests/test_no_credentials_tracked.py.
+*.paladin
+*.warden
+vault.paladin
+vault.warden
+.paladin/
+.warden/
+paladin-backup-*.zip
+*-backup-*.zip
+*.pre-restore
+# env files (allow committed *.example / *.template / *.sample only)
+.env
+.env.*
+!.env.example
+!*.env.example
+!*.env.template
+!*.env.sample
+secrets/
+!secrets/README.md
+!secrets/.gitkeep
+# private keys / keyfiles
+*.pem
+*.key
+id_rsa
+id_ed25519
+*.keyfile
+# runtime state that can hold amounts / ids
+skills/**/state/
+custodian/bundled_skills/**/state/
