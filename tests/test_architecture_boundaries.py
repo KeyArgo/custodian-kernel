@@ -36,10 +36,19 @@ def _imported_top_level_packages(py_file: Path) -> set[str]:
     return names
 
 
+# Runtime skill scripts are NOT part of the package's import graph -- they are
+# sandboxed scripts loaded dynamically by the tool registry, and an integration
+# skill legitimately bridges to another system (the `paladin-import` skill's
+# entire job is importing into paladin). The brand-neutrality contract is about
+# the kernel + adapter framework, which is exactly what this excludes.
+_SKILL_TREES = {"bundled_skills", "skills"}
+
+
 def _check_package_forbids(package_dir: str, forbidden: set[str]) -> list[str]:
     violations = []
     for py_file in (REPO_ROOT / package_dir).rglob("*.py"):
-        if "__pycache__" in py_file.parts:
+        parts = py_file.parts
+        if "__pycache__" in parts or _SKILL_TREES & set(parts):
             continue
         hits = _imported_top_level_packages(py_file) & forbidden
         if hits:

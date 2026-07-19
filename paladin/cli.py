@@ -696,7 +696,7 @@ def cmd_menu(args) -> int:
 
 def main(argv=None) -> int:
     try:
-        from custodian._encoding import force_utf8_io
+        from paladin._encoding import force_utf8_io
         force_utf8_io()
     except Exception:
         pass
