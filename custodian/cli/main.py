@@ -76,6 +76,11 @@ def _print_welcome() -> int:
     return 0
 
 
+def _run_menu() -> int:
+    from custodian.cli.menu import run_menu
+    return run_menu()
+
+
 def _print_guide() -> int:
     print(_GUIDE)
     return 0
@@ -222,6 +227,9 @@ def main(argv: list[str] | None = None) -> int:
     p.set_defaults(func=lambda args: _print_guide())
     p = sub.add_parser("help", help="Show the full list of commands and what they do")
     p.set_defaults(func=lambda args: (parser.print_help() or 0))
+
+    p = sub.add_parser("menu", help="Interactive menu — no syntax to memorize")
+    p.set_defaults(func=lambda args: _run_menu())
 
     # ── init ──────────────────────────────────────────────────────────────────
     p = sub.add_parser(
@@ -530,6 +538,10 @@ def main(argv: list[str] | None = None) -> int:
 
     args = parser.parse_args(argv)
     if getattr(args, "command", None) is None or not hasattr(args, "func"):
+        # A human at a terminal gets the interactive menu; a pipe/script/CI
+        # gets the (non-blocking) welcome text as before.
+        if sys.stdin.isatty() and sys.stdout.isatty():
+            return _run_menu()
         return _print_welcome()
     try:
         code = args.func(args)
