@@ -674,6 +674,22 @@ def build_parser() -> argparse.ArgumentParser:
     sp = sub.add_parser("menu", help="interactive menu — no syntax to memorize")
     sp.set_defaults(fn=cmd_menu)
 
+    sp = sub.add_parser(
+        "git-setup",
+        help="configure git to pull a host's token from the vault (no more tokens in URLs)")
+    sp.add_argument("host", help="the git host, e.g. github.com")
+    sp.add_argument("ref", help="the vault entry holding the token, e.g. github_token")
+    sp.add_argument("--local", action="store_true",
+                    help="configure the current repo only (default: --global)")
+    sp.set_defaults(fn=cmd_git_setup)
+
+    sp = sub.add_parser(
+        "git-credential",
+        help="git credential helper (git calls this; you use `git-setup`)")
+    sp.add_argument("action", choices=["get", "store", "erase"])
+    sp.add_argument("--ref", required=True, help="vault entry holding the token")
+    sp.set_defaults(fn=cmd_git_credential)
+
     return p
 
 
@@ -693,6 +709,17 @@ def main_import(argv=None) -> int:
 def cmd_menu(args) -> int:
     from paladin.menu import run_menu
     return run_menu()
+
+
+def cmd_git_credential(args) -> int:
+    from paladin import git_credential
+    return git_credential.run(args.action, args.ref, vault_path=args.vault)
+
+
+def cmd_git_setup(args) -> int:
+    from paladin import git_credential
+    return git_credential.setup(args.host, args.ref,
+                                scope="local" if args.local else "global")
 
 
 def main(argv=None) -> int:
