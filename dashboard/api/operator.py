@@ -118,7 +118,13 @@ def _run_script(script: str, *script_args: str, timeout: int = 30):
 def login():
     data = request.get_json(force=True, silent=True) or {}
     password = str(data.get('password', ''))
-    real_password = _secret('OPERATOR_PANEL_PASSWORD')
+    try:
+        real_password = _secret('OPERATOR_PANEL_PASSWORD')
+    except RuntimeError:
+        # Operator panel not configured on this host (secrets/operator.env
+        # missing). Return clean JSON the frontend can parse, not a raw HTML
+        # 500 that breaks its r.json().
+        return jsonify({'error': 'operator panel is not configured on this server'}), 503
     if not hmac.compare_digest(password, real_password):
         return jsonify({'error': 'wrong password'}), 401
     return jsonify({'token': _make_token(), 'expires_in': TOKEN_TTL_SECONDS})

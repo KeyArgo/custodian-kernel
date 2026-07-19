@@ -17,11 +17,17 @@ from flask import Blueprint, jsonify, request
 
 bp = Blueprint("stripe_webhook", __name__)
 
-LEDGER = Path(__file__).resolve().parents[2] / "skills" / "earnings" / "hermes-earn-ledger.json"  # volatile /tmp — acceptable for demo only (earn events are ephemeral by nature)
-# Production: use a persistent path like Path(os.environ.get("HERMES_EARN_LEDGER", "/var/lib/custodian/earn_ledger.jsonl"))
+LEDGER = Path(__file__).resolve().parents[2] / "skills" / "earnings" / "hermes-earn-ledger.json"
+# Repo-relative demo ledger (created on first write, see _append). Production:
+# point HERMES_EARN_LEDGER at a persistent path outside the checkout.
 
 
 def _append(entry: dict) -> None:
+    # Create the parent dir first: skills/earnings/ does not exist in a fresh
+    # checkout, so append-mode open() raised FileNotFoundError and any visitor
+    # hitting the public /demo-earn or /webhook route got an uncaught 500.
+    # _read_all already guards with .exists(); this makes the write symmetric.
+    LEDGER.parent.mkdir(parents=True, exist_ok=True)
     with LEDGER.open("a") as f:
         f.write(json.dumps(entry) + "\n")
 

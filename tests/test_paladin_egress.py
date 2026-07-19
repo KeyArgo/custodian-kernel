@@ -6,9 +6,18 @@ the child-facing surface (descriptor in, {status,headers,body} out) never
 carries the value. The actual OS isolation is exercised separately in
 test_paladin_sandbox.py (Linux + bwrap gated)."""
 import http.server
+import socket
 import threading
 
 import pytest
+
+# The egress gateway is a Unix-domain-socket transport (POSIX only); Windows
+# has no socket.AF_UNIX. The feature is Linux-deployment-only (like bwrap), so
+# skip here and let it run on the Linux CI target.
+pytestmark = pytest.mark.skipif(
+    not hasattr(socket, "AF_UNIX"),
+    reason="sandboxed egress needs Unix domain sockets (POSIX only)",
+)
 
 from paladin.vault import Vault
 from paladin.broker import Broker

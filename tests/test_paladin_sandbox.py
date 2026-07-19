@@ -9,10 +9,18 @@ Hostile corpus: prove that a child launched via spawn_sandboxed()
 Plus: the runner fails closed when the sandbox is unavailable.
 """
 import http.server
+import socket
 import textwrap
 import threading
 
 import pytest
+
+# Sandboxed egress (Unix domain sockets + bwrap) is POSIX/Linux-only; Windows
+# has no socket.AF_UNIX. Skip on platforms that can't run it.
+pytestmark = pytest.mark.skipif(
+    not hasattr(socket, "AF_UNIX"),
+    reason="sandboxed egress needs Unix domain sockets (POSIX only)",
+)
 
 from paladin.vault import Vault
 from paladin.broker import Broker

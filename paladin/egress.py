@@ -66,6 +66,15 @@ class EgressGateway:
     # -- lifecycle -----------------------------------------------------------
 
     def start(self) -> str:
+        # The gateway is a Unix-domain-socket transport, so it is POSIX-only.
+        # On Windows socket.AF_UNIX does not exist; fail with the module's own
+        # clean error rather than a bare AttributeError, so a `--sandbox`
+        # request on Windows reports "sandbox unavailable" and fails closed.
+        if not hasattr(socket, "AF_UNIX"):
+            from paladin.errors import SandboxUnavailableError
+            raise SandboxUnavailableError(
+                "sandboxed egress requires Unix domain sockets (POSIX only); "
+                "this platform has no socket.AF_UNIX")
         srv = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
         srv.bind(self.socket_path)
         os.chmod(self.socket_path, 0o600)

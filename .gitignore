@@ -44,3 +44,6 @@ docs/HANDOVER-2026-07-01.md
 
 # Private PII/exposure tracking note — remediation TODO list, author eyes only.
 PII-EXPOSURE-PRIVATE.md
+
+# runtime earn ledger (created by the dashboard demo-earn endpoint)
+skills/earnings/
