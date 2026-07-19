@@ -511,7 +511,11 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--version", action=_LazyVersionAction)
     p.add_argument("--vault", type=Path, default=None,
                    help="vault path (default: ~/.paladin/vault.paladin, or $PALADIN_HOME)")
-    sub = p.add_subparsers(dest="command", required=True)
+    # Not required: running `paladin` with no subcommand is valid and launches
+    # the interactive menu (for a human) or prints help (for a script/pipe),
+    # handled in main(). A required subparser would reject bare `paladin` with
+    # an argparse error before that handling could run.
+    sub = p.add_subparsers(dest="command", required=False)
 
     sp = sub.add_parser("init", help="create a new vault")
     sp.add_argument("--keyfile", help="use a random 32-byte keyfile instead of a passphrase")
@@ -666,6 +670,9 @@ def build_parser() -> argparse.ArgumentParser:
     sp = sub.add_parser("doctor", help="report whether sandboxed egress is available here")
     sp.set_defaults(fn=cmd_doctor)
 
+    sp = sub.add_parser("menu", help="interactive menu — no syntax to memorize")
+    sp.set_defaults(fn=cmd_menu)
+
     return p
 
 
@@ -682,13 +689,27 @@ def main_import(argv=None) -> int:
     return main(["import", *argv])
 
 
+def cmd_menu(args) -> int:
+    from paladin.menu import run_menu
+    return run_menu()
+
+
 def main(argv=None) -> int:
     try:
         from custodian._encoding import force_utf8_io
         force_utf8_io()
     except Exception:
         pass
-    args = build_parser().parse_args(argv)
+    parser = build_parser()
+    args = parser.parse_args(argv)
+    # No subcommand: launch the interactive menu if a human is at the terminal,
+    # otherwise print help (so pipes/scripts/CI still get predictable output
+    # instead of a menu that would hang waiting on stdin).
+    if getattr(args, "fn", None) is None:
+        if sys.stdin.isatty() and sys.stdout.isatty():
+            return cmd_menu(args)
+        parser.print_help()
+        return 0
     if getattr(args, "cmd", None) and args.cmd and args.cmd[0] == "--":
         args.cmd = args.cmd[1:]
     try:
