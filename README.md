@@ -6,6 +6,21 @@ When an AI agent can spend money, change infrastructure, or write to production,
 
 Custodian is that kernel. The model proposes. The kernel decides. The verifier proves. The kill switch stops. The receipt cryptographically records everything.
 
+### Package boundaries
+
+- `custodian` is the provider-neutral governance kernel.
+- `paladin` is the provider-neutral credential vault and egress broker.
+- `talaria` is an optional integration layer for Hermes-compatible agents.
+- A consuming website or business application owns its routes, branding,
+  credentials, prompts, and deployment configuration. Custodian does not know
+  about or call back to getcustodian.xyz unless that deployment explicitly
+  supplies its own endpoint.
+
+All three Python packages ship in the 0.4.0 distribution so installation and
+Windows testing remain one step. Their import dependency direction is still
+enforced: integrations may depend on the kernel or broker; the kernel and
+broker never depend on a particular website or agent framework.
+
 **Verify in 60 seconds, no credentials, no cloning:**
 
 ```bash
@@ -13,7 +28,15 @@ pip install custodian-kernel
 custodian-verify
 ```
 
-`custodian-verify` runs 3 checks: a planted-lie case through the deterministic verifier (CONTRADICTED), a live audit feed pull from the production dashboard, and a checkout-or-skip proof. 0 credentials, 0 cloning, 0 setup.
+`custodian-verify` runs deterministic package and regression checks with 0
+credentials, 0 cloning, and 0 setup. To verify a deployment too, its owner can
+explicitly supply the compatible audit endpoint:
+
+```bash
+custodian-verify --dashboard-url https://your-service.example/api/audit-summary
+```
+
+Custodian never assumes that an installation belongs to getcustodian.xyz.
 
 **Or, for the deeper proof:**
 

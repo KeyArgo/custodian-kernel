@@ -62,6 +62,14 @@ def test_curl_buttons_are_browser_executable():
     assert "fetch(url" in html or "fetch(" in html
 
 
+def test_operator_actions_use_short_lived_login_token():
+    html = read_operator()
+    assert "API + '/login'" in html
+    assert "sessionStorage.setItem(OPERATOR_TOKEN_KEY" in html
+    assert "'X-Operator-Token': getOperatorToken()" in html
+    assert "the API is public" not in html
+
+
 def test_treasury_panel_present():
     """The Treasury panel must show real money in / out / net P&L (HermesCo parity)."""
     html = read_operator()

@@ -266,6 +266,18 @@ class TestSendReportNoKey:
         out = capsys.readouterr().out
         assert "AUTONOMOUS" in out
 
+    def test_kernel_gate_fails_closed_when_evaluation_breaks(self, monkeypatch):
+        import importlib
+        govern = importlib.import_module("custodian.govern")
+        monkeypatch.setattr(govern, "_evaluate", lambda *a, **k: (_ for _ in ()).throw(RuntimeError("broken")))
+        assert _kernel_gate_email() is False
+
+    def test_sender_identity_belongs_to_deployment_not_package(self):
+        import inspect
+        import custodian.cli.cmd_send_report as sr
+        source = inspect.getsource(sr)
+        assert "custodian@getcustodian.xyz" not in source
+
 
 # ── earn-and-buy CLI ───────────────────────────────────────────────────────────
 

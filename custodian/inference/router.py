@@ -86,8 +86,12 @@ class NemoClawRouter:
             key = self._openrouter_key()
             if key:
                 headers["Authorization"] = f"Bearer {key}"
-            headers["HTTP-Referer"] = "https://getcustodian.xyz"
-            headers["X-Title"] = "Custodian"
+            # OpenRouter attribution is deployment metadata, not a property of
+            # the reusable kernel.  A consuming application may opt in without
+            # every Custodian install advertising the maintainer's website.
+            if referer := os.environ.get("CUSTODIAN_HTTP_REFERER"):
+                headers["HTTP-Referer"] = referer
+            headers["X-Title"] = os.environ.get("CUSTODIAN_APP_TITLE", "Custodian")
         return headers
 
     @staticmethod

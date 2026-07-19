@@ -49,6 +49,27 @@ to fail against the pre-fix code).
 
 ### Security
 
+- **Kernel and middleware inputs fail closed.** Non-finite monetary values,
+  malformed or oversized governed request bodies, explicitly missing policies,
+  and corrupted authority state can no longer fall through to permissive
+  defaults.
+- **Operator controls are authenticated end to end.** Money movement, approval,
+  kill/resume, pending-code, SMS-forwarding, sandbox, and enforcement-mode
+  mutations require a short-lived operator token; the getcustodian.xyz frontend
+  obtains and supplies that token while read-only evidence remains public.
+- **Tool subprocess environments are least privilege.** Tools no longer inherit
+  unrelated host secrets, governance failure escalates instead of executing,
+  event payloads are sanitized, and known credentials are redacted if a child
+  echoes them.
+- **Paladin egress requires HTTPS outside loopback**, rejects URL credentials,
+  fragments, control characters, and request-framing headers, and removes a
+  credential even when an upstream service reflects it in its response.
+- Windows-shaped backslash paths are normalized before adapter path checks on
+  every platform, closing a cross-platform self-protection bypass.
+- Report delivery no longer succeeds when its kernel gate errors and no longer
+  assumes the maintainer's email identity. Deployments configure their own
+  verified sender.
+
 - **Auto-downgrade can no longer escalate authority.** A downgrade recorded
   from a high-band task could raise a later request that had routed to a lower
   band; autorank now only ever lowers authority.
@@ -62,6 +83,15 @@ to fail against the pre-fix code).
   (the on-disk format magic is honored, so existing vaults keep opening).
 
 ### Correctness / portability
+
+- The installable verification kit is deployment-neutral: its optional live
+  audit endpoint is supplied with `--dashboard-url` or
+  `CUSTODIAN_VERIFY_DASHBOARD_URL`, never hardcoded to getcustodian.xyz.
+- Nemotron visitor chat now drops an additional class of untagged response-
+  construction directives observed in production instead of displaying model
+  self-talk.
+- Bundled tools never install packages dynamically at runtime; dependencies are
+  resolved during the normal package installation process.
 
 - Governed tools now run under `sys.executable`, not a hardcoded `python3`
   (the tool registry was non-functional on Windows).

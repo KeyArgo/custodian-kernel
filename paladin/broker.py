@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import hashlib
 import http.client
+import ipaddress
 import os
 import re
 import ssl
@@ -47,6 +48,26 @@ _HTTP_METHODS = frozenset(
 # RFC 7230 header field-name token — used to reject any child-supplied or
 # inject header name that could smuggle CRLF / control chars into the request.
 _HEADER_NAME_RE = re.compile(r"^[!#$%&'*+.^_`|~0-9A-Za-z-]+$")
+_RESERVED_REQUEST_HEADERS = frozenset({
+    "host", "content-length", "transfer-encoding", "connection",
+    "proxy-connection", "upgrade", "trailer", "te",
+})
+
+
+def _is_loopback_host(host: str) -> bool:
+    if host.lower() == "localhost":
+        return True
+    try:
+        return ipaddress.ip_address(host).is_loopback
+    except ValueError:
+        return False
+
+
+def _safe_header_value(value: object) -> str:
+    text = str(value)
+    if any(ord(ch) < 32 or ord(ch) == 127 for ch in text):
+        raise EgressDeniedError("header values cannot contain control characters")
+    return text
 
 
 class LeakSentinel:
@@ -183,7 +204,16 @@ class Broker:
         parts = urlsplit(str(descriptor.get("url", "")))
         if parts.scheme not in ("http", "https") or not parts.hostname:
             raise EgressDeniedError("url must be an absolute http(s) URL with a host")
+        if parts.username is not None or parts.password is not None:
+            raise EgressDeniedError("url must not contain user information")
+        if parts.fragment:
+            raise EgressDeniedError("url fragments are not permitted for egress")
         host = parts.hostname
+        if parts.scheme != "https" and not _is_loopback_host(host):
+            raise EgressDeniedError(
+                "credential egress requires HTTPS (plain HTTP is allowed only "
+                "for loopback development endpoints)"
+            )
         path = parts.path or "/"
 
         # -- per-run allow-list (cheapest deny, before any vault access) ------
@@ -228,6 +258,7 @@ class Broker:
                 headers, parts, descriptor.get("inject"), value)
             body = descriptor.get("body")
             result = self._perform(method, final_url, headers, body, timeout)
+            result = self._redact_response(result, value)
         finally:
             value = None  # drop the plaintext reference promptly
         self.audit.append("egress", ref.name, requester, band,
@@ -247,9 +278,11 @@ class Broker:
             name = str(name)
             if not _HEADER_NAME_RE.match(name):
                 raise EgressDeniedError(f"invalid header name {name!r}")
-            if name.lower() == "host":
-                continue
-            headers[name] = str(val)
+            if name.lower() in _RESERVED_REQUEST_HEADERS:
+                raise EgressDeniedError(
+                    f"request framing header {name!r} is controlled by Paladin"
+                )
+            headers[name] = _safe_header_value(val)
         return headers
 
     def _apply_injection(self, headers: dict, parts, inject, value: str):
@@ -269,7 +302,7 @@ class Broker:
             # Drop any client-supplied header of the same name (any case) so it
             # cannot pre-seed or shadow the injected credential header.
             headers = {k: v for k, v in headers.items() if k.lower() != name.lower()}
-            headers[name] = fmt.replace("{value}", value)
+            headers[name] = _safe_header_value(fmt.replace("{value}", value))
             return headers, url
         if "query" in inject:
             param = str(inject["query"])
@@ -279,6 +312,20 @@ class Broker:
                               urlencode(q), parts.fragment))
             return headers, url
         raise EgressDeniedError("inject must specify 'header' or 'query'")
+
+    @staticmethod
+    def _redact_response(result: dict, value: str) -> dict:
+        """Ensure a reflecting upstream cannot return a credential to a child."""
+        if not value:
+            return result
+        marker = "[REDACTED:paladin-value]"
+        cleaned = dict(result)
+        cleaned["body"] = str(cleaned.get("body", "")).replace(value, marker)
+        cleaned["headers"] = {
+            str(key): str(header_value).replace(value, marker)
+            for key, header_value in (cleaned.get("headers") or {}).items()
+        }
+        return cleaned
 
     def _perform(self, method: str, url: str, headers: dict, body,
                  timeout: float) -> dict:

@@ -22,6 +22,10 @@ WORK="$(mktemp -d 2>/dev/null || echo "${TMPDIR:-/tmp}/custodian-accept.$$")"
 mkdir -p "$WORK"
 export PALADIN_HOME="$WORK/.paladin"
 export PALADIN_PASSPHRASE="acceptance-passphrase"
+# A developer or CI runner may normally unlock Paladin with a keyfile. This
+# test deliberately creates a fresh passphrase vault; ambient keyfile aliases
+# would otherwise override that choice and redirect every command elsewhere.
+unset PALADIN_KEYFILE WARDEN_KEYFILE WARDEN_PASSPHRASE
 export PYTHONUTF8=1
 cleanup() { rm -rf "$WORK"; }
 trap cleanup EXIT
@@ -34,9 +38,34 @@ hasnt(){ case "$3" in *"$2"*) bad "$1" "did NOT expect: $2";; *) ok "$1";; esac;
 
 section() { printf '\n\033[1m%s\033[0m\n' "$1"; }
 
-# Resolve the CLIs. Prefer console scripts; fall back to `python -m`.
-if command -v custodian >/dev/null 2>&1; then CUSTODIAN="custodian"; else CUSTODIAN="python -m custodian.cli.main"; fi
-if command -v paladin   >/dev/null 2>&1; then PALADIN="paladin";     else PALADIN="python -m paladin.cli"; fi
+# Resolve the CLIs.  When the repository's development virtualenv exists, use
+# its scripts explicitly: a same-version global install can otherwise make a
+# source-tree acceptance run silently exercise stale code.  Packaged/fresh
+# install tests still use the active PATH, then fall back to ``python -m``.
+REPO_ROOT="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"
+if [ -x "$REPO_ROOT/.venv-dev/bin/python" ]; then
+    PYTHON="$REPO_ROOT/.venv-dev/bin/python"
+elif [ -x "$REPO_ROOT/.venv-dev/Scripts/python.exe" ]; then
+    PYTHON="$REPO_ROOT/.venv-dev/Scripts/python.exe"
+elif command -v python3 >/dev/null 2>&1; then
+    PYTHON="python3"
+else
+    PYTHON="python"
+fi
+if [ -x "$REPO_ROOT/.venv-dev/bin/custodian" ]; then
+    CUSTODIAN="$REPO_ROOT/.venv-dev/bin/custodian"
+elif command -v custodian >/dev/null 2>&1; then
+    CUSTODIAN="custodian"
+else
+    CUSTODIAN="$PYTHON -m custodian.cli.main"
+fi
+if [ -x "$REPO_ROOT/.venv-dev/bin/paladin" ]; then
+    PALADIN="$REPO_ROOT/.venv-dev/bin/paladin"
+elif command -v paladin >/dev/null 2>&1; then
+    PALADIN="paladin"
+else
+    PALADIN="$PYTHON -m paladin.cli"
+fi
 
 printf 'custodian-kernel acceptance test\n'
 printf 'work dir: %s\n' "$WORK"
@@ -81,10 +110,12 @@ out="$($PALADIN list 2>&1)"
 has "list shows the ref name" "stripe_key" "$out"
 hasnt "list never prints the value" "sk_test_ABC123SECRET" "$out"
 
-# credential injection: value appears ONLY in the child process env
+# Credential injection is proven without printing the value.  Paladin's leak
+# guard must redact a child that echoes a secret, so checking the raw value here
+# would make the acceptance test demand the vulnerability we just closed.
 out="$($PALADIN exec --with stripe_key=STRIPE_KEY -- \
-        python -c "import os;print('CHILD',os.environ.get('STRIPE_KEY'))" 2>&1)"
-has "exec injects the value into the child" "sk_test_ABC123SECRET" "$out"
+        "$PYTHON" -c "import os,sys; ok=os.environ.get('STRIPE_KEY')=='sk_test_ABC123SECRET'; print('injected-ok' if ok else 'injected-wrong'); sys.exit(0 if ok else 1)" 2>&1)"
+has "exec injects the value into the child" "injected-ok" "$out"
 
 # ---------------------------------------------------------------------------
 section "paladin import — .env / CSV / JSON (value-free reports)"
@@ -107,8 +138,8 @@ hasnt "json import hides values" "sk-jsonsecret" "$out"
 # quoted .env value containing '#' must survive intact (regression)
 $PALADIN import env "$WORK/.env" >/dev/null 2>&1
 out="$($PALADIN exec --with db_pass=DB -- \
-        python -c "import os;print('DBVAL',os.environ.get('DB'))" 2>&1)"
-has "quoted '#' value not truncated" "P@ss #withhash" "$out"
+        "$PYTHON" -c "import os,sys; ok=os.environ.get('DB')=='P@ss #withhash'; print('quoted-value-ok' if ok else 'quoted-value-wrong'); sys.exit(0 if ok else 1)" 2>&1)"
+has "quoted '#' value not truncated" "quoted-value-ok" "$out"
 
 # ---------------------------------------------------------------------------
 section "paladin backup / restore (round-trip)"

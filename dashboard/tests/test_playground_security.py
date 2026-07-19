@@ -68,3 +68,9 @@ def test_raw_input_is_reflected_verbatim_in_json(client):
     r = client.post('/api/v1/playground/try-approve', json={'code': payload})
     assert r.status_code == 200
     assert payload in r.get_json()['message']
+
+
+@pytest.mark.parametrize("amount", ["NaN", "Infinity", "-Infinity"])
+def test_decide_rejects_nonfinite_amounts(client, amount):
+    response = client.post('/api/v1/playground/decide', json={'amount': amount})
+    assert response.status_code == 400

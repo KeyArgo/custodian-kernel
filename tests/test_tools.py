@@ -60,6 +60,65 @@ class TestToolRegistry:
         s = default_registry().load().summary()
         assert s["configured"] >= 30
 
+    def test_tool_subprocess_does_not_inherit_unrelated_secret(self, tmp_path, monkeypatch):
+        from custodian.tools.registry import ToolRegistry
+        d = tmp_path / "skills" / "probe"
+        (d / "scripts").mkdir(parents=True)
+        (d / "SKILL.md").write_text(
+            "---\nname: env-probe\ndescription: probe\n"
+            "metadata:\n  custodian:\n    band: L0\n    configured: true\n---\n"
+        )
+        (d / "scripts" / "execute.py").write_text(
+            "import json,os; print(json.dumps({'ok':True,'seen':bool(os.environ.get('HOST_UNRELATED_SECRET'))}))\n"
+        )
+        monkeypatch.setenv("HOST_UNRELATED_SECRET", "must-not-cross")
+        result = ToolRegistry(tmp_path / "skills").run("env-probe")
+        assert result["ok"] is True
+        assert result["seen"] is False
+
+    def test_l2_tool_kernel_failure_escalates_before_execution(self, tmp_path, monkeypatch):
+        from custodian.tools.registry import CustodianTool
+        script = tmp_path / "execute.py"
+        script.write_text("raise AssertionError('must not execute')\n")
+        tool = CustodianTool(name="danger", description="", band="L2",
+                             configured=True, execute_script=script)
+        monkeypatch.setattr(tool, "_kernel_decide", lambda: {
+            "verdict": "escalation_required", "reason": "kernel unavailable",
+            "band": "L2",
+        })
+        result = tool.invoke()
+        assert result["ok"] is False
+        assert result["verdict"] == "escalation_required"
+
+    def test_known_credential_is_redacted_from_tool_output(self, tmp_path):
+        from custodian.tools.registry import CustodianTool
+        script = tmp_path / "execute.py"
+        script.write_text(
+            "import json,os; print(json.dumps({'ok':True,'value':os.environ['STRIPE_SECRET_KEY']}))\n"
+        )
+        tool = CustodianTool(name="stripe-balance", description="", band="L0",
+                             configured=True, execute_script=script)
+        result = tool.invoke(_env={
+            "PATH": os.environ.get("PATH", ""),
+            "STRIPE_SECRET_KEY": "sk_live_never_return_this",
+        })
+        assert result["ok"] is True
+        assert result["value"] == "[REDACTED:credential]"
+        assert "sk_live" not in str(result)
+
+    def test_explicit_paladin_environment_supports_custom_ref_names(self, tmp_path):
+        from custodian.tools.registry import CustodianTool
+        script = tmp_path / "execute.py"
+        script.write_text(
+            "import json,os; print(json.dumps({'ok':True,'present':bool(os.environ.get('CUSTOM_TOKEN'))}))\n"
+        )
+        tool = CustodianTool(name="custom-tool", description="", band="L0",
+                             configured=True, execute_script=script)
+        result = tool.invoke(_env={
+            "PATH": os.environ.get("PATH", ""), "CUSTOM_TOKEN": "vaulted-value",
+        })
+        assert result == {"ok": True, "present": True, "tool": "custom-tool"}
+
     def test_api_endpoint(self):
         """Flask /api/v1/tools/list returns correct structure."""
         sys.path.insert(0, str(REPO / "dashboard"))

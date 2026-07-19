@@ -8,7 +8,7 @@ import uuid
 from dataclasses import dataclass, field
 from typing import Any, Callable, Optional, Tuple
 
-from custodian.types import Band, SpendRequest, Verdict
+from custodian.types import Band, Decision, SpendRequest, Verdict
 from custodian.bus import _bus
 
 
@@ -183,7 +183,11 @@ def govern(
             amount = float(kwargs.get("amount", cost_usd))
             if amount == 0.0 and args:
                 for arg in args:
-                    if isinstance(arg, (int, float)) and arg > 0:
+                    # Negative positional amounts are refunds/credits and must
+                    # be governed by magnitude. bool is an int subclass but is
+                    # never a meaningful monetary amount.
+                    if (isinstance(arg, (int, float))
+                            and not isinstance(arg, bool) and arg != 0):
                         amount = float(arg)
                         break
 
@@ -193,7 +197,7 @@ def govern(
             if tamper_check:
                 _, tv = _tamper_check(fn, state_dir)
                 tamper_verdict = tv
-                if tv == "drift":
+                if tv in ("drift", "unprotected"):
                     # Emit before returning. Every other denial path on this
                     # function emits (kernel_denied, escalation_required); this
                     # one returned silently, so the single most security-
@@ -202,8 +206,11 @@ def govern(
                     # at all.
                     _bus.emit("kernel_denied", {
                         "audit_id": f"{fn.__name__}:-1", "amount": amount,
-                        "reason": "tamper check: source file changed since the "
-                                  "snapshot was taken",
+                        "reason": (
+                            "tamper check: source file changed since the snapshot "
+                            "was taken" if tv == "drift" else
+                            "tamper check: snapshot could not be persisted"
+                        ),
                         "fn": fn.__name__,
                     })
                     return GovernedResult(
@@ -282,17 +289,29 @@ def _evaluate(request, band, cap, policy_path, state_dir):
     # Otherwise use the decorator's own cap parameter to drive the policy.
     # This preserves backward compat with the existing kernel CLI flow while
     # letting @govern work standalone without requiring a policy file on disk.
+    def fail_closed(reason: str) -> Decision:
+        try:
+            decision_band = Band(band)
+        except ValueError:
+            decision_band = Band.L0
+        return Decision(
+            verdict=Verdict.ESCALATION_REQUIRED,
+            request=request,
+            reason=f"{reason} -- escalating fail-closed",
+            band=decision_band,
+        )
+
     if policy_path:
         _policy_path = Path(policy_path)
         try:
             policy = load_policy(_policy_path)
-        except Exception:
-            policy = _minimal_policy(band, cap)
-    elif cfg.policy_path and Path(cfg.policy_path).exists():
+        except Exception as exc:
+            return fail_closed(f"configured policy could not be loaded ({exc})")
+    elif os.environ.get("CUSTODIAN_POLICY_PATH"):
         try:
             policy = load_policy(Path(cfg.policy_path))
-        except Exception:
-            policy = _minimal_policy(band, cap)
+        except Exception as exc:
+            return fail_closed(f"configured policy could not be loaded ({exc})")
     else:
         # No policy file on disk: honor the decorator's cap directly
         policy = _minimal_policy(band, cap)
@@ -302,8 +321,8 @@ def _evaluate(request, band, cap, policy_path, state_dir):
     if state_file.exists():
         try:
             state = AuthorityState.from_dict(json.loads(state_file.read_text()))
-        except Exception:
-            state = AuthorityState(band=Band(band), per_action_cap=cap, session_cap=cap * 10)
+        except Exception as exc:
+            return fail_closed(f"authority state could not be loaded ({exc})")
     else:
         state = AuthorityState(band=Band(band), per_action_cap=cap, session_cap=cap * 10)
 

@@ -288,12 +288,6 @@ def _strip_thinking(text: str) -> str:
         stronger, harder-to-evade signals than prefix matching alone.
         """
         s = p.strip()
-        if len(s) < 20:
-            # Short text is meta ONLY if it doesn't look like a complete
-            # short reply (e.g. "Approved.", "Denied.", "Go ahead.").
-            if len(s) >= 3 and re.match(r'^[A-Z].*[.!?]', s):
-                return False
-            return True
         META_PATTERNS = (
             r'^\s*We need to\b', r'^\s*We must\b', r'^\s*We should\b',
             r'^\s*We can say\b', r'^\s*We can mention\b', r'^\s*We can just\b',
@@ -313,10 +307,27 @@ def _strip_thinking(text: str) -> str:
             # short-line check (the lines run long).
             r'^\s*But note\b', r'^\s*The question is\b',
             r'^\s*The instructions\b', r'^\s*According to the\b',
+            # Imperative planning fragments from leaked response construction.
+            # These are not visitor-facing prose; they tell the model what its
+            # eventual prose should contain. Seen live 2026-07-19 without
+            # <think> tags, one directive per line.
+            r'^\s*Then (?:tell|mention|include|add)\b',
+            r'^\s*Mention\b', r'^\s*Include\b',
+            r'^\s*Provide\b', r'^\s*End with\b',
+            r'^\s*Make sure\b', r'^\s*Keep (?:it )?(?:under|below|within)\b',
+            r'^\s*Use plain language\b', r'^\s*No raw field names\b',
+            r'^\s*So (?:produce|write|answer|respond)\b',
         )
         for pat in META_PATTERNS:
             if re.match(pat, p):
                 return True
+
+        if len(s) < 20:
+            # Evaluate explicit planning signatures above before accepting a
+            # complete short reply ("Approved.", "Denied.", "Go ahead.").
+            if len(s) >= 3 and re.match(r'^[A-Z].*[.!?]', s):
+                return False
+            return True
 
         low = s.lower()
 

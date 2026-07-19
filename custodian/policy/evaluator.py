@@ -11,6 +11,7 @@ testable, reusable object instead of print statements and an exit code.
 from __future__ import annotations
 
 import logging
+import math
 from typing import Optional
 
 from custodian.policy.schema import Policy
@@ -42,6 +43,22 @@ def decide(
             verdict=Verdict.DENIED,
             request=request,
             reason="kill switch is engaged -- all requests denied until an operator releases it",
+            band=policy.default_band,
+        )
+
+    # IEEE-754 non-finite values defeat ordinary comparisons: ``nan > cap``
+    # and ``abs(nan) > cap`` are both False.  Without this guard a JSON NaN or
+    # an in-process float("nan") reached the autonomous return path.  Infinity
+    # is invalid input as well; reject both before policy routing.
+    try:
+        finite_amount = math.isfinite(float(request.amount))
+    except (TypeError, ValueError, OverflowError):
+        finite_amount = False
+    if not finite_amount:
+        return Decision(
+            verdict=Verdict.DENIED,
+            request=request,
+            reason="request amount must be a finite number -- denied fail-closed",
             band=policy.default_band,
         )
     band = policy.band_for(skill, context, request.amount)

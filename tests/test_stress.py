@@ -528,8 +528,8 @@ class TestConcurrentGovern:
 # ---------------------------------------------------------------------------
 
 class TestPolicyStateFallback:
-    def test_corrupted_authority_json_falls_back_to_decorator_cap(self, tmp_path):
-        """Corrupted authority.json should fall back to the decorator's own cap."""
+    def test_corrupted_authority_json_escalates_fail_closed(self, tmp_path):
+        """Corruption must not silently replace operator state with defaults."""
         auth = tmp_path / "authority.json"
         auth.write_bytes(b"\x00\xff corrupted")
 
@@ -537,9 +537,8 @@ class TestPolicyStateFallback:
         def fn(amount: float) -> dict:
             return {}
 
-        result = fn(amount=10.00)
-        # With fallback state using cap=50.00, a $10 charge is autonomous
-        assert result.verdict == "autonomous"
+        with pytest.raises(EscalationRequired, match="authority state could not be loaded"):
+            fn(amount=10.00)
 
     def test_missing_state_dir_uses_config_default(self):
         """No state_dir on decorator should not crash — config default is used."""
@@ -550,13 +549,13 @@ class TestPolicyStateFallback:
         result = fn(amount=1.00)
         assert result.ok
 
-    def test_nonexistent_policy_path_falls_back_to_minimal(self, tmp_path):
+    def test_explicit_nonexistent_policy_path_escalates_fail_closed(self, tmp_path):
         @govern(band="L2", cap=50.00, policy_path=str(tmp_path / "nonexistent.yaml"))
         def fn(amount: float) -> dict:
             return {}
 
-        result = fn(amount=10.00)
-        assert result.ok
+        with pytest.raises(EscalationRequired, match="configured policy could not be loaded"):
+            fn(amount=10.00)
 
 
 # ---------------------------------------------------------------------------

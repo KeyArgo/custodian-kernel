@@ -18,6 +18,7 @@ something a visitor can feel, not just read.
 from __future__ import annotations
 
 import sys
+import math
 import time
 from collections import defaultdict, deque
 from functools import wraps
@@ -94,7 +95,7 @@ def try_decide():
     critical = bool(data.get('critical', False))
     kill_switch = bool(data.get('kill_switch', False))
 
-    if amount <= 0:
+    if not math.isfinite(amount) or amount <= 0:
         return jsonify({'error': 'amount must be positive'}), 400
     if amount > 1_000_000:
         return jsonify({'error': 'amount too large for this demo'}), 400

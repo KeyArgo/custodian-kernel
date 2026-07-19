@@ -26,6 +26,7 @@ from __future__ import annotations
 import collections
 import hashlib
 import hmac
+import math
 import os
 import time
 from functools import wraps
@@ -133,11 +134,12 @@ def login():
 _DEMO_AMOUNT_MAX = 10_000.00  # test-mode Stripe limit for demo; prevents junk PI pollution
 
 @bp.route('/earn', methods=['POST'])
+@require_operator
 def earn():
     data = request.get_json(force=True, silent=True) or {}
     try:
         amount = float(data.get('amount', 0))
-        if amount <= 0 or amount > _DEMO_AMOUNT_MAX:
+        if not math.isfinite(amount) or amount <= 0 or amount > _DEMO_AMOUNT_MAX:
             return jsonify({'error': f'amount must be between 0 and {_DEMO_AMOUNT_MAX}'}), 400
     except (TypeError, ValueError):
         return jsonify({'error': 'amount must be a number'}), 400
@@ -168,11 +170,12 @@ def _write_flask_kill_switch(killed: bool, by: str, reason: str = '') -> None:
 
 
 @bp.route('/spend', methods=['POST'])
+@require_operator
 def spend():
     data = request.get_json(force=True, silent=True) or {}
     try:
         amount = float(data.get('amount', 0))
-        if amount <= 0 or amount > _DEMO_AMOUNT_MAX:
+        if not math.isfinite(amount) or amount <= 0 or amount > _DEMO_AMOUNT_MAX:
             return jsonify({'error': f'amount must be between 0 and {_DEMO_AMOUNT_MAX}'}), 400
     except (TypeError, ValueError):
         return jsonify({'error': 'amount must be a number'}), 400
@@ -200,12 +203,13 @@ def spend():
 
 
 @bp.route('/refund', methods=['POST'])
+@require_operator
 def refund():
     data = request.get_json(force=True, silent=True) or {}
     pi_id = str(data.get('payment_intent_id', ''))
     try:
         amount = float(data.get('amount', 0))
-        if amount <= 0 or amount > _DEMO_AMOUNT_MAX:
+        if not math.isfinite(amount) or amount <= 0 or amount > _DEMO_AMOUNT_MAX:
             return jsonify({'error': f'amount must be between 0 and {_DEMO_AMOUNT_MAX}'}), 400
     except (TypeError, ValueError):
         return jsonify({'error': 'amount must be a number'}), 400
@@ -223,6 +227,7 @@ def refund():
 
 
 @bp.route('/approve', methods=['POST'])
+@require_operator
 def approve():
     data = request.get_json(force=True, silent=True) or {}
     code = str(data.get('code', ''))[:32]
@@ -233,6 +238,7 @@ def approve():
 
 
 @bp.route('/kill', methods=['POST'])
+@require_operator
 def kill():
     data = request.get_json(force=True, silent=True) or {}
     by = str(data.get('by', 'Operator'))[:100]
@@ -249,6 +255,7 @@ def kill():
 
 
 @bp.route('/resume', methods=['POST'])
+@require_operator
 def resume():
     data = request.get_json(force=True, silent=True) or {}
     by = str(data.get('by', 'Operator'))[:100]
@@ -275,6 +282,7 @@ _PENDING_CODE_PATH = f'{SKILL_STATE_DIR}/pending_code.json'
 
 
 @bp.route('/pending_code', methods=['GET'])
+@require_operator
 def pending_code():
     """Previously this read both paths through a host-side bind mount that
     doesn't exist on this container (2026-07-14 finding), so it always fell
@@ -336,6 +344,7 @@ def _sms_allowed(ip: str) -> bool:
 
 
 @bp.route('/forward_code', methods=['POST'])
+@require_operator
 def forward_code():
     """Forward the pending SMS code to a visitor-supplied phone number via Twilio."""
     import urllib.request, urllib.parse, base64

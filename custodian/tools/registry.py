@@ -114,6 +114,41 @@ _ENV_REQUIREMENTS: dict[str, list[str]] = {
     "telegram-send":             ["TELEGRAM_BOT_TOKEN"],
 }
 
+_SAFE_RUNTIME_ENV = frozenset({
+    "PATH", "HOME", "USERPROFILE", "SYSTEMROOT", "WINDIR",
+    "TEMP", "TMP", "TMPDIR", "LANG", "LC_ALL", "PYTHONUTF8",
+    "SSL_CERT_FILE", "SSL_CERT_DIR", "REQUESTS_CA_BUNDLE",
+    "CUSTODIAN_KV_PATH", "CUSTODIAN_QUEUE_PATH", "CUSTODIAN_CRONS_PATH",
+    "CUSTODIAN_DB_PATH", "CUSTODIAN_ALLOWED_WRITE_DIR",
+    "CUSTODIAN_STRIPE_MOCK", "HERMES_OPERATOR_PHONE",
+    "DOCKER_EXEC_CONFIGURED",
+})
+
+
+def _tool_environment(name: str, supplied: Optional[dict] = None) -> dict:
+    """Build a least-privilege environment for one tool subprocess.
+
+    A supplied environment is already the complete, trusted environment
+    assembled by the Paladin bridge, including custom secret references whose
+    names cannot be known by this registry.  Never merge it with ``os.environ``.
+    """
+    if supplied is not None:
+        return {str(key): str(value) for key, value in supplied.items()
+                if value is not None}
+    source = os.environ
+    allowed = _SAFE_RUNTIME_ENV | frozenset(_ENV_REQUIREMENTS.get(name, []))
+    return {key: str(source[key]) for key in allowed if source.get(key) is not None}
+
+
+def _redact_credential_values(text: str, environment: dict, name: str) -> str:
+    """Remove known credential values before child output reaches the caller."""
+    redacted = text
+    for key in _ENV_REQUIREMENTS.get(name, []):
+        value = environment.get(key)
+        if value and len(str(value)) >= 4:
+            redacted = redacted.replace(str(value), "[REDACTED:credential]")
+    return redacted
+
 
 def _is_configured(name: str, skill_meta_flag: bool,
                    env: Optional[dict] = None) -> bool:
@@ -155,11 +190,8 @@ class CustodianTool:
     def _kernel_decide(self) -> Optional[dict]:
         """Consult the kernel policy engine for L2+ tools.
 
-        Returns None if the kernel state isn't available (e.g. no workspace
-        initialized) — callers treat None as "proceed" so tools aren't broken
-        in environments without a full Custodian workspace.
-
         Returns a dict with keys: verdict, reason, band.
+        Any loading/evaluation error returns escalation_required (fail closed).
         """
         try:
             from custodian.policy import load_policy
@@ -202,8 +234,15 @@ class CustodianTool:
                 "reason": decision.reason,
                 "band": decision.band.value,
             }
-        except Exception:
-            return None  # kernel unavailable → allow through
+        except Exception as exc:
+            return {
+                "verdict": "escalation_required",
+                "reason": (
+                    "kernel decision could not be evaluated "
+                    f"({type(exc).__name__}: {exc}) -- escalating fail-closed"
+                ),
+                "band": self.band,
+            }
 
     def invoke(self, _env: Optional[dict] = None, **kwargs) -> dict:
         """Run the skill's execute.py script with kwargs as --key value args.
@@ -211,10 +250,10 @@ class CustodianTool:
         For L2/L3/L4 tools the kernel's decide() is called first. If it
         returns anything other than AUTONOMOUS the tool does not execute.
 
-        `_env`, when given, is the complete environment for the script
+        `_env`, when given, is the complete trusted environment for the script
         subprocess (Paladin egress injection: the credential exists in the
-        skill's process, never the agent's). Defaults to inheriting the
-        parent environment, matching the old behavior.
+        skill's process, never the agent's). Without it, only runtime plumbing
+        and the exact declared requirements for this tool are inherited.
 
         Returns dict with at minimum {"ok": bool}.
         """
@@ -269,7 +308,11 @@ class CustodianTool:
                 "tool": self.name,
             }
 
-        _event_bus.emit("pre_execute", {"tool": self.name, "band": self.band, "kwargs": kwargs})
+        from custodian.types import sanitize_dict
+        _event_bus.emit("pre_execute", {
+            "tool": self.name, "band": self.band,
+            "kwargs": sanitize_dict(kwargs),
+        })
 
         # sys.executable, not "python3": the literal is not on PATH on Windows
         # (where it hits the App Execution Alias and prints "Python was not
@@ -282,18 +325,21 @@ class CustodianTool:
         for k, v in kwargs.items():
             cmd += [f"--{k.replace('_', '-')}", str(v)]
         try:
+            tool_env = _tool_environment(self.name, _env)
             result = subprocess.run(
                 cmd, capture_output=True, text=True, timeout=30,
                 cwd=str(self.skill_dir) if self.skill_dir else None,
-                env=_env,
+                env=tool_env,
             )
+            stdout = _redact_credential_values(result.stdout, tool_env, self.name)
+            stderr = _redact_credential_values(result.stderr, tool_env, self.name)
             try:
-                parsed = json.loads(result.stdout.strip())
+                parsed = json.loads(stdout.strip())
             except (json.JSONDecodeError, ValueError):
-                parsed = {"ok": result.returncode == 0, "output": result.stdout.strip()}
+                parsed = {"ok": result.returncode == 0, "output": stdout.strip()}
             parsed["tool"] = self.name
-            if result.stderr.strip():
-                parsed.setdefault("stderr", result.stderr.strip())
+            if stderr.strip():
+                parsed.setdefault("stderr", stderr.strip())
             _event_bus.emit("post_execute", {
                 "tool": self.name,
                 "band": self.band,

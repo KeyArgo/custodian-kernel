@@ -6,6 +6,7 @@ must be correctly bundled in the wheel.
 """
 import subprocess
 import sys
+import os
 from pathlib import Path
 
 
@@ -31,6 +32,17 @@ def test_verify_kit_console_script_in_pyproject():
     pyproject = (REPO_ROOT / "pyproject.toml").read_text()
     assert "custodian-verify" in pyproject, "pyproject.toml must register custodian-verify"
     assert "custodian.verify_kit" in pyproject, "console script must point to custodian.verify_kit"
+
+
+def test_verify_kit_does_not_hardcode_maintainer_deployment():
+    source = VERIFY_KIT.read_text(encoding="utf-8")
+    assert "https://getcustodian.xyz/api" not in source
+
+
+def test_verify_kit_dashboard_is_explicit_and_optional(capsys):
+    from custodian.verify_kit import step2_live_dashboard
+    assert step2_live_dashboard(None) is True
+    assert "Optional deployment check skipped" in capsys.readouterr().out
 
 
 def test_verify_kit_finds_corpus_via_importlib():
@@ -121,8 +133,19 @@ def test_built_wheel_installs_and_runs():
         return  # skip if no wheel
     latest = max(wheels, key=lambda p: p.stat().st_mtime)
     # Install
+    install_env = os.environ.copy()
+    # Some CI/sandbox launchers inject a short-lived CA bundle path into the
+    # parent process.  A nested fresh-venv pip then inherits that path after
+    # the mount has disappeared and cannot even install a local wheel's
+    # dependencies.  Keep valid operator CA configuration, but discard only
+    # overrides that point to files which do not exist in this process.
+    for name in ("PIP_CERT", "REQUESTS_CA_BUNDLE", "CURL_CA_BUNDLE", "SSL_CERT_FILE"):
+        configured = install_env.get(name)
+        if configured and not Path(configured).is_file():
+            install_env.pop(name, None)
     r = subprocess.run([str(py), "-m", "pip", "install", "--quiet", str(latest)],
-                       capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=60)
+                       capture_output=True, text=True, encoding="utf-8", errors="replace",
+                       timeout=60, env=install_env)
     assert r.returncode == 0, f"install failed: {r.stderr[-500:]}"
     # Run
     r = subprocess.run([str(venv_dir / "bin" / "custodian-verify")],

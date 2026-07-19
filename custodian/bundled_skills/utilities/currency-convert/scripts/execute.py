@@ -1,10 +1,6 @@
 #!/usr/bin/env python3
 import argparse, json
-try:
-    import requests
-except ImportError:
-    import subprocess, sys; subprocess.check_call([sys.executable,"-m","pip","install","requests","-q"])
-    import requests
+import requests
 def main():
     p = argparse.ArgumentParser()
     p.add_argument("--amount",type=float,required=True)

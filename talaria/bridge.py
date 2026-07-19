@@ -77,7 +77,7 @@ class HermesBridge:
         if self.broker is None:
             return None
         from paladin.refs import find_refs
-        from custodian.tools.registry import _ENV_REQUIREMENTS
+        from custodian.tools.registry import _ENV_REQUIREMENTS, _tool_environment
 
         requester = f"skill:{skill}"
         refs: dict[str, object] = {}
@@ -99,7 +99,10 @@ class HermesBridge:
 
         if not refs:
             return None
-        return self.broker.build_env(refs, requester=requester, band=band)
+        return self.broker.build_env(
+            refs, requester=requester, band=band,
+            base_env=_tool_environment(skill),
+        )
 
     # -- the one call surface ------------------------------------------------------
 

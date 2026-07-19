@@ -124,6 +124,19 @@ def test_strip_thinking_handles_empty_input():
     assert _strip_thinking(None) is None
 
 
+def test_strip_thinking_drops_live_2026_07_19_instruction_leak():
+    """A provider may return untagged planning directives and no final answer."""
+    from api.nemotron_chat import _strip_thinking
+    leaked = """We need to respond in 2-3 sentences: who we are and what dashboard watches.
+Then tell them the most important thing is to try the live demo themselves.
+Mention audit feed as secondary.
+End with 2-3 chips.
+Make sure no bullet list, no raw field names.
+Use plain language. Keep under 120 words.
+So produce maybe 2 sentences?"""
+    assert _strip_thinking(leaked) == ""
+
+
 def test_strip_thinking_handles_multiline_constraint_then_real_answer():
     """Regression: when the preamble spans multiple lines (one
     constraint line, one blank line, one more constraint line, then

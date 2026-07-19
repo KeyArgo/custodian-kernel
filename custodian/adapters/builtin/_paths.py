@@ -75,7 +75,17 @@ def resolve(value: str, base: str = "/") -> str:
     this through). ``realpath`` degrades to normpath-only behavior for a
     path that doesn't exist on disk yet — nothing to follow — so this is a
     pure strengthening with no new failure mode for ordinary paths."""
-    expanded = os.path.expanduser(value)
+    # Tool calls may carry paths authored for a remote/other platform.  On
+    # POSIX, backslash is an ordinary character, so a native Windows-shaped
+    # path (or a POSIX absolute path rendered with backslashes) previously
+    # never matched a protected POSIX prefix.  Normalise the alternate
+    # separator before applying the host's path rules.  Windows already
+    # accepts forward slashes, so the inverse conversion is unnecessary.
+    if os.sep == "\\":
+        portable = value
+    else:
+        portable = value.replace("\\", "/")
+    expanded = os.path.expanduser(portable)
     if not os.path.isabs(expanded):
         expanded = os.path.join(base, expanded)
     return os.path.realpath(expanded)

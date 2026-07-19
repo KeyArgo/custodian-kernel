@@ -302,6 +302,17 @@
 <h1>Custodian <span class="h1-accent">— Operator Panel</span></h1>
 <div class="ok-banner">● Live — every action below creates a real Stripe PaymentIntent, a real Twilio SMS, and a real audit log entry. The amounts are small test charges you can verify on the public Stripe dashboard.</div>
 
+<div class="instructions" id="operator-auth">
+  <h2>Operator sign-in</h2>
+  <p>Read-only evidence is public. Actions that move test money, send SMS, reveal a pending code, or change enforcement require the operator password.</p>
+  <div class="row">
+    <input id="operator-password" type="password" autocomplete="current-password" placeholder="Operator password">
+    <button id="operator-login-btn">Unlock operator actions</button>
+  </div>
+  <div id="login-err" role="alert"></div>
+  <div id="login-ok" style="display:none;color:var(--green);font-size:0.82em;margin-top:8px">✓ Operator actions unlocked for this browser session.</div>
+</div>
+
 <div class="op-grid">
 <div class="op-main">
 
@@ -523,6 +534,9 @@
 <script>
 const API = '/api/v1/operator';
 let spendPI = '';
+const OPERATOR_TOKEN_KEY = 'operator_token';
+const getOperatorToken = () => { try { return sessionStorage.getItem(OPERATOR_TOKEN_KEY) || ''; } catch { return ''; } };
+const setOperatorToken = token => { try { if (token) sessionStorage.setItem(OPERATOR_TOKEN_KEY, token); } catch {} };
 const siteTour = window.CustodianTour || null;
 if (siteTour) siteTour.onPage('operator');
 if (window.TourTracker) TourTracker.track('page_visit', '/operator');
@@ -557,6 +571,39 @@ const esc = s => (s == null ? '' : String(s).replace(/[&<>"']/g, c => ({'&':'&am
 
 document.addEventListener('DOMContentLoaded', function () {
 
+const loginButton = document.getElementById('operator-login-btn');
+const loginPassword = document.getElementById('operator-password');
+const loginError = document.getElementById('login-err');
+const loginOk = document.getElementById('login-ok');
+function showAuthenticated() {
+    loginError.style.display = 'none';
+    loginOk.style.display = 'block';
+    loginPassword.value = '';
+}
+if (getOperatorToken()) showAuthenticated();
+loginButton.addEventListener('click', async () => {
+    loginButton.disabled = true;
+    loginError.style.display = 'none';
+    try {
+        const response = await fetch(API + '/login', {
+            method: 'POST', headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({password: loginPassword.value}),
+        });
+        const data = await response.json();
+        if (!response.ok || !data.token) throw new Error(data.error || 'Sign-in failed');
+        setOperatorToken(data.token);
+        showAuthenticated();
+    } catch (error) {
+        loginError.textContent = error.message || String(error);
+        loginError.style.display = 'block';
+    } finally {
+        loginButton.disabled = false;
+    }
+});
+loginPassword.addEventListener('keydown', event => {
+    if (event.key === 'Enter') loginButton.click();
+});
+
 async function call(path, body) {
     // No error handling here used to mean any hiccup (a stray non-2xx, a
     // non-JSON body, a network blip) threw inside an unhandled async click
@@ -566,7 +613,7 @@ async function call(path, body) {
     try {
         const res = await fetch(API + path, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', 'X-Operator-Token': getOperatorToken() },
             body: JSON.stringify(body || {}),
         });
         let data;
@@ -763,7 +810,9 @@ function startCodePoll(codeElId, approveInputId, noteId) {
     if (_codePoller) clearInterval(_codePoller);
     _codePoller = setInterval(async () => {
         try {
-            const res = await fetch(API + '/pending_code');
+            const res = await fetch(API + '/pending_code', {
+                headers: { 'X-Operator-Token': getOperatorToken() },
+            });
             if (!res.ok) return;
             const d = await res.json();
             // Twilio Verify never returns the code to the server by design — that's
@@ -1093,9 +1142,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // short-lived operator token (NOT the password) so later recoveries are
     // one-click. The demo session's spend budget runs out between runs and
     // this is the undo that keeps it from silently breaking.
-    const TOKEN_KEY = 'op-reset-token';
-    const getTok = () => { try { return sessionStorage.getItem(TOKEN_KEY) || ''; } catch { return ''; } };
-    const setTok = t => { try { if (t) sessionStorage.setItem(TOKEN_KEY, t); } catch {} };
+    const getTok = getOperatorToken;
+    const setTok = setOperatorToken;
 
     async function retryStep1AfterReset() {
         const warn = document.getElementById('step1-budget-warn');
@@ -1144,7 +1192,7 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             const r = await fetch(API + '/reset', {
                 method: 'POST',
-                headers: {'Content-Type': 'application/json'},
+                headers: {'Content-Type': 'application/json', 'X-Operator-Token': getOperatorToken()},
                 body: JSON.stringify({ password: pw }),
             });
             const d = await r.json();
@@ -1264,7 +1312,7 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             const r = await fetch(API + '/earn', {
                 method: 'POST',
-                headers: {'Content-Type': 'application/json'},
+                headers: {'Content-Type': 'application/json', 'X-Operator-Token': getOperatorToken()},
                 body: JSON.stringify({
                     amount: '25.00',
                     description: 'judge self-test: $25 charge via Stripe (test mode)'
@@ -1310,7 +1358,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const body = btn.getAttribute('data-body');
                 const r = await fetch(url, {
                     method: method,
-                    headers: {'Content-Type': 'application/json'},
+                    headers: {'Content-Type': 'application/json', 'X-Operator-Token': getOperatorToken()},
                     body: body,
                 });
                 const text = await r.text();
@@ -1377,12 +1425,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
 <!-- SELF-VERIFY: any judge can hit the live API from their own terminal -->
 <div class="curl-panel">
-  <h2>Self-Verify — the API is public, you can hit it from your own terminal</h2>
-  <p>These commands work right now against the live system. Each one creates a real Stripe PaymentIntent, returns a real ID, and appears in the live activity feed above.</p>
+  <h2>Self-Verify — authenticated, reproducible API calls</h2>
+  <p>Operator actions are intentionally not public. Sign in above, then run them from this page; judges receiving a test account can also use the API with the short-lived operator token.</p>
 
   <div style="font-size:0.82em;color:#888;margin-bottom:6px">1. Earn $0.50 (no band, no cap, no approval)</div>
   <pre id="curl-earn" class="curl-block">curl -X POST https://getcustodian.xyz/api/v1/operator/earn \
   -H "Content-Type: application/json" \
+  -H "X-Operator-Token: $OPERATOR_TOKEN" \
   -d '{"amount":"0.50","description":"judge self-test: earn"}'</pre>
   <button class="curl-btn" data-target="curl-earn-out" data-cmd='curl -X POST https://getcustodian.xyz/api/v1/operator/earn -H "Content-Type: application/json" -d "{\"amount\":\"0.50\",\"description\":\"judge self-test: earn\"}"' data-body='{"amount":"0.50","description":"judge self-test: earn"}'>▶ Run from this page</button>
   <pre id="curl-earn-out" class="curl-out"></pre>
@@ -1390,6 +1439,7 @@ document.addEventListener('DOMContentLoaded', () => {
   <div style="font-size:0.82em;color:#888;margin:14px 0 6px">2. Spend $0.50 (autonomous, within L2 band)</div>
   <pre id="curl-spend" class="curl-block">curl -X POST https://getcustodian.xyz/api/v1/operator/spend \
   -H "Content-Type: application/json" \
+  -H "X-Operator-Token: $OPERATOR_TOKEN" \
   -d '{"amount":"0.50","description":"judge self-test: spend"}'</pre>
   <button class="curl-btn" data-target="curl-spend-out" data-cmd='curl -X POST https://getcustodian.xyz/api/v1/operator/spend -H "Content-Type: application/json" -d "{\"amount\":\"0.50\",\"description\":\"judge self-test: spend\"}"' data-body='{"amount":"0.50","description":"judge self-test: spend"}'>▶ Run from this page</button>
   <pre id="curl-spend-out" class="curl-out"></pre>
@@ -1397,6 +1447,7 @@ document.addEventListener('DOMContentLoaded', () => {
   <div style="font-size:0.82em;color:#888;margin:14px 0 6px">3. Refund the PaymentIntent from step 1 or 2 (always escalates to Twilio SMS)</div>
   <pre id="curl-refund" class="curl-block">curl -X POST https://getcustodian.xyz/api/v1/operator/refund \
   -H "Content-Type: application/json" \
+  -H "X-Operator-Token: $OPERATOR_TOKEN" \
   -d '{"payment_intent_id":"pi_xxx","amount":"0.50","description":"judge self-test: refund"}'</pre>
   <p style="font-size:0.78em;color:#666;margin:0 0 0">Replace <code>pi_xxx</code> with a real ID from the live activity feed above. Refunds always require a human approval code via Twilio.</p>
 </div>

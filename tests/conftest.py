@@ -11,6 +11,28 @@ from custodian.policy.loader import load_policy
 from custodian.storage.sqlite import SqliteStorage
 from custodian.types import AuthorityState, Band
 
+
+@pytest.fixture(autouse=True)
+def isolate_host_configuration(monkeypatch, tmp_path):
+    """The test suite must not consume security state from the host.
+
+    A developer machine with PALADIN_KEYFILE set caused every passphrase-based
+    CLI test to use that unrelated keyfile and report a tampered vault. Tests
+    that exercise env unlocking set their own values after this fixture runs.
+
+    Tamper snapshots are deliberately persistent in production.  Sharing the
+    developer's real snapshot directory in tests, however, makes an intentional
+    source edit look like a runtime attack on the next test run.  Give each test
+    a protected-by-isolation state root so it still exercises snapshot creation
+    and comparison without consuming or modifying operator state.
+    """
+    for name in (
+        "PALADIN_KEYFILE", "PALADIN_PASSPHRASE",
+        "WARDEN_KEYFILE", "WARDEN_PASSPHRASE",
+    ):
+        monkeypatch.delenv(name, raising=False)
+    monkeypatch.setenv("CUSTODIAN_STATE_DIR", str(tmp_path / "custodian-state"))
+
 DEFAULT_POLICY_YAML = """\
 version: "1.0"
 default_band: L2
@@ -84,5 +106,3 @@ def partial_authority() -> AuthorityState:
 @pytest.fixture
 def tmp_db(tmp_path: Path) -> SqliteStorage:
     return SqliteStorage(tmp_path / "test.db")
-
-

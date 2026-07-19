@@ -113,3 +113,51 @@ def test_govern_zero_cost_function():
     result = read_data()
     assert result.ok
     assert result.value == [1, 2, 3]
+
+
+def test_negative_positional_amount_is_governed_by_magnitude():
+    @govern(band="L2", cap=5.00, raise_on_escalation=False)
+    def refund(amount: float) -> dict:
+        return {"amount": amount}
+
+    result = refund(-100.00)
+    assert result.verdict == "escalation_required"
+    assert result.value is None
+
+
+@pytest.mark.parametrize("amount", [float("nan"), float("inf"), float("-inf")])
+def test_non_finite_amount_is_denied(amount):
+    @govern(band="L2", cap=100.00, raise_on_escalation=False)
+    def charge(amount: float) -> dict:
+        return {"amount": amount}
+
+    result = charge(amount=amount)
+    assert result.verdict == "denied"
+    assert result.value is None
+
+
+def test_explicit_invalid_policy_escalates_fail_closed(tmp_path):
+    policy = tmp_path / "policy.yaml"
+    policy.write_text("not: a valid custodian policy\n")
+
+    @govern(band="L2", cap=100.00, policy_path=str(policy),
+            raise_on_escalation=False)
+    def charge(amount: float) -> dict:
+        return {"amount": amount}
+
+    result = charge(amount=1.00)
+    assert result.verdict == "escalation_required"
+    assert result.value is None
+
+
+def test_corrupt_existing_authority_state_escalates_fail_closed(tmp_path):
+    (tmp_path / "authority.json").write_text("not-json")
+
+    @govern(band="L2", cap=100.00, state_dir=str(tmp_path),
+            raise_on_escalation=False)
+    def charge(amount: float) -> dict:
+        return {"amount": amount}
+
+    result = charge(amount=1.00)
+    assert result.verdict == "escalation_required"
+    assert result.value is None

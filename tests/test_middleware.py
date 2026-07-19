@@ -78,6 +78,50 @@ async def test_governed_escalation_returns_402():
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize("body,error", [
+    (b"not-json", "invalid-json"),
+    (b"[]", "json-object-required"),
+    (b"{}", "missing-amount"),
+    (b'{"amount": true}', "invalid-amount"),
+    (b'{"amount": "nope"}', "invalid-amount"),
+    (b'{"amount": NaN}', "non-finite-amount"),
+    (b'{"amount": Infinity}', "non-finite-amount"),
+])
+async def test_governed_invalid_amount_never_reaches_application(body, error):
+    called = False
+
+    async def should_not_run(scope, receive, send):
+        nonlocal called
+        called = True
+
+    app = CustodianMiddleware(should_not_run)
+    app.register_path("/charge", band="L2", cap=100.00)
+    send_fn, messages = collect_send()
+    await app(make_scope("/charge"), make_receive(body), send_fn)
+    assert not called
+    assert messages[0]["status"] == 400
+    assert json.loads(messages[1]["body"])["error"] == error
+
+
+@pytest.mark.asyncio
+async def test_governed_body_size_is_bounded():
+    app = CustodianMiddleware(stub_app, max_body_bytes=8)
+    app.register_path("/charge")
+    send_fn, messages = collect_send()
+    await app(make_scope("/charge"), make_receive(b'{"amount": 1}'), send_fn)
+    assert messages[0]["status"] == 413
+
+
+@pytest.mark.asyncio
+async def test_value_free_plan_rejects_string_var_keys():
+    app = CustodianMiddleware(stub_app)
+    body = json.dumps({"skill": "x", "perk": "y", "var_keys": "TOKEN"}).encode()
+    send_fn, messages = collect_send()
+    await app(make_scope("/__custodian__/plan"), make_receive(body), send_fn)
+    assert messages[0]["status"] == 400
+
+
+@pytest.mark.asyncio
 async def test_websocket_scope_passes_through():
     app = CustodianMiddleware(stub_app)
     app.register_path("/ws", band="L2", cap=10.00)

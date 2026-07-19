@@ -21,6 +21,7 @@ pytestmark = pytest.mark.skipif(
 
 from paladin.vault import Vault
 from paladin.broker import Broker
+from paladin.errors import EgressDeniedError
 from paladin.egress import EgressGateway
 from paladin.egress_client import Session, EgressError
 
@@ -47,9 +48,15 @@ class _EchoHandler(http.server.BaseHTTPRequestHandler):
     def _respond(self):
         type(self).seen_auth = self.headers.get("Authorization")
         type(self).seen_path = self.path
-        body = b'{"ok": true, "note": "no secret here"}'
+        if self.path.startswith("/reflect"):
+            body = ('{"reflected": %r}' % self.headers.get("Authorization")).encode()
+            reflected = self.headers.get("Authorization", "")
+        else:
+            body = b'{"ok": true, "note": "no secret here"}'
+            reflected = "none"
         self.send_response(200)
         self.send_header("Content-Type", "application/json")
+        self.send_header("X-Reflected", reflected)
         self.send_header("Content-Length", str(len(body)))
         self.end_headers()
         self.wfile.write(body)
@@ -184,3 +191,52 @@ def test_child_supplied_auth_header_cannot_shadow_injection(broker, vault, http_
               headers={"authorization": "Bearer attacker-controlled"},
               inject={"header": "Authorization", "format": "Bearer {value}"})
     assert _EchoHandler.seen_auth == f"Bearer {SECRET}"
+
+
+def test_reflecting_upstream_cannot_return_secret_to_child(broker, vault, http_server):
+    vault.add("api_key", SECRET, allowed_hosts=["127.0.0.1"])
+    broker.grant("api_key", "sandbox:t", max_band="L2")
+    result = broker.egress_request({
+        "url": f"http://{_host_port(http_server)}/reflect",
+        "ref": "api_key",
+        "inject": {"header": "Authorization", "format": "Bearer {value}"},
+    }, requester="sandbox:t")
+    assert _EchoHandler.seen_auth == f"Bearer {SECRET}"
+    assert SECRET not in result["body"]
+    assert SECRET not in str(result["headers"])
+    assert "[REDACTED:paladin-value]" in result["body"]
+
+
+def test_plain_http_to_non_loopback_is_denied_before_vault_access(broker):
+    with pytest.raises(EgressDeniedError, match="requires HTTPS"):
+        broker.egress_request({
+            "url": "http://example.com/private",
+            "ref": "does-not-exist",
+            "inject": {"header": "Authorization"},
+        }, requester="sandbox:t")
+    assert list(broker.audit.records()) == []
+
+
+@pytest.mark.parametrize("header", [
+    "Host", "Content-Length", "Transfer-Encoding", "Connection", "Upgrade",
+])
+def test_request_framing_headers_are_rejected(broker, header):
+    with pytest.raises(EgressDeniedError, match="controlled by Paladin"):
+        broker._safe_headers({header: "attacker-controlled"})
+
+
+def test_header_control_characters_are_rejected(broker):
+    with pytest.raises(EgressDeniedError, match="control characters"):
+        broker._safe_headers({"X-Test": "ok\r\nX-Injected: yes"})
+
+
+@pytest.mark.parametrize("url", [
+    "https://user:password@example.com/x",
+    "https://example.com/x#secret-fragment",
+])
+def test_userinfo_and_fragments_are_rejected_before_vault_access(broker, url):
+    with pytest.raises(EgressDeniedError):
+        broker.egress_request({
+            "url": url, "ref": "does-not-exist",
+            "inject": {"header": "Authorization"},
+        }, requester="sandbox:t")
