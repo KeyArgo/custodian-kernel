@@ -82,3 +82,27 @@ New pre-gate breadth dispatch (4 workers, all pushed):
 - **Hermes bridge** (`integrations/hermes/**`): one governed invoke() surface (adapters → kernel → Paladin egress → post-scan), SessionCapsule for context-loss re-anchoring, session-policy YAML for granular tool/file/host/spend control, soul compiler, introspection meta-skills, NemoClaw governed egress.
 - Docs: PALADIN.md, ADAPTERS.md, HERMES-BRIDGE.md, SECURITY-HARDENING.md, positioning/cyberware-head-to-head.md.
 - _2026-07-14 update: the Hermes bridge was promoted to a top-level suite named **Talaria** (`integrations/hermes/**` → `talaria/**`, HERMES-BRIDGE.md → TALARIA.md, test_hermes_bridge → test_talaria) and gained a unified `talaria` CLI (vault/adapters/session/init). Broker remains `paladin` pending its final name._
+- _2026-07-14 update: the Hermes bridge was promoted to a top-level suite named **Talaria** (`integrations/hermes/**` → `talaria/**`, HERMES-BRIDGE.md → TALARIA.md, test_hermes_bridge → test_talaria) and gained a unified `talaria` CLI (vault/adapters/session/init). Broker remains `warden` pending its final name._
+
+## Naming finalized + dashboard (2026-07-15)
+Broker name finalized: **Custodian Paladin** (package `paladin/`, CLI `paladin`,
+`paladin://` refs). Full rename executed from `warden/` (which had briefly been
+`caduceus/` on `feat/rename` before reverting) — package dir, imports, env vars
+(`WARDEN_*` → `PALADIN_*`), on-disk vault filename, CLI entry point, docs, tests.
+The on-disk vault magic-byte tag deliberately stays `WARDEN1` (format
+compatibility with vaults already encrypted under the old name — see
+`paladin/crypto.py`'s comment). Live vault at `~/.warden` migrated to
+`~/.paladin` and verified (list + real decrypt/inject) before the old directory
+was removed. `pyproject.toml` gained a `[talaria]` extra that self-references
+`custodian-kernel[paladin]` — the correct dependency direction (talaria needs
+paladin; paladin needs nothing).
+
+New: `talaria dashboard` — a local, token-gated Flask UI (`talaria/dashboard.py`)
+for the denial log, vault entries (metadata only), and policy toggles, replacing
+the CLI-only workflow a first-time user found hard to follow. New:
+`tests/test_architecture_boundaries.py` — AST-parses every file in `custodian/`
+and `paladin/` and fails the suite if either imports the other or `talaria`,
+enforcing (not just documenting) that talaria is the only integration layer.
+Docs: PALADIN.md (standalone note + hardening), ADAPTERS.md (new "Package
+boundaries" section), TALARIA.md (dashboard quickstart). Full suite: 1628
+passed.

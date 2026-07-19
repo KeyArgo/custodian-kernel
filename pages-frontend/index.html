@@ -4,18 +4,18 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Custodian — Kernel-Enforced Authority for AI Agents</title>
-<meta name="description" content="Give your AI agent a company card with Custodian. Under the limit it spends autonomously. Over the limit it calls you first. If a customer lies to get a refund, the kernel catches it — enforced at the OS level, not promised in a prompt.">
+<meta name="description" content="Custodian is a kernel that sits outside your AI agent and decides what it can actually do — every dollar it spends, credential it uses (Paladin), claim it makes, and tool it runs. Enforced at the OS level, not promised in a prompt.">
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 <link rel="apple-touch-icon" href="/favicon.svg">
 <meta property="og:title" content="Custodian — Kernel-Enforced Authority for AI Agents">
-<meta property="og:description" content="Give your AI agent a company card. Under the limit it spends autonomously. Over the limit it calls you. Lies get caught. OS-level enforcement, not a prompt.">
+<meta property="og:description" content="A kernel outside the agent that decides what it does with money, credentials, truth, and tools. The model proposes; the kernel decides. OS-level enforcement, not a prompt.">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://getcustodian.xyz">
 <meta property="og:site_name" content="Custodian">
 <meta property="og:image" content="https://getcustodian.xyz/og-image.png">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Custodian — Kernel-Enforced Authority for AI Agents">
-<meta name="twitter:description" content="Give your AI agent a company card. Under the limit it spends autonomously. Over the limit it calls you. Lies get caught. OS-level enforcement, not a prompt.">
+<meta name="twitter:description" content="A kernel outside the agent that decides what it does with money, credentials, truth, and tools. The model proposes; the kernel decides. OS-level enforcement, not a prompt.">
 <meta name="twitter:image" content="https://getcustodian.xyz/og-image.png">
 <link rel="canonical" href="https://getcustodian.xyz">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -83,7 +83,76 @@
   @media(max-width:820px){.nav-links a:not(.btn){display:none}}
 
   /* ---------- hero ---------- */
-  .hero{padding:96px 0 60px; text-align:center; position:relative}
+  .hero{padding:72px 0 56px; text-align:center; position:relative; overflow:hidden}
+
+  /* ── Hero split layout (restored solar-system kernel-ring visual) ── */
+  #star-field{position:absolute; inset:0; pointer-events:none; z-index:0}
+  .hero-split{display:grid; grid-template-columns:54% 1fr; gap:56px; align-items:start;
+    position:relative; z-index:1; text-align:left}
+  .hero-left{text-align:left}
+  .hero-left .eyebrow{justify-content:flex-start}
+  .hero-left h1{text-align:left}
+  .hero-left .lede{text-align:left; margin-left:0; margin-right:0; max-width:560px}
+  .hero-left .card-metaphor{margin-left:0; justify-content:flex-start}
+  .hero-left .cc-enforced{margin-left:0}
+  .hero-left .hero-cta{justify-content:flex-start}
+  .hero-left .specs{display:inline-flex}
+  .hero-right{display:flex; flex-direction:column; gap:16px; align-items:stretch; padding-top:6px}
+  .ring-wrap{position:relative; width:100%; max-width:420px; margin:0 auto}
+  @keyframes ring-pulse{0%,100%{stroke-opacity:1}50%{stroke-opacity:0.45}}
+  @keyframes core-pulse{0%,100%{opacity:1}50%{opacity:0.55}}
+  .award-badge{display:inline-flex; align-items:center; gap:8px; font-family:'JetBrains Mono',monospace;
+    font-size:0.72em; letter-spacing:0.07em; color:#ffd764; margin-bottom:16px;
+    background:linear-gradient(135deg,rgba(255,193,7,0.16),rgba(255,176,0,0.05));
+    border:1px solid rgba(255,193,7,0.5); border-radius:100px; padding:7px 15px;
+    box-shadow:0 0 24px -6px rgba(255,193,7,0.45)}
+  @media(max-width:860px){
+    .hero-split{grid-template-columns:1fr; gap:40px; text-align:center}
+    .hero-left{text-align:center}
+    .hero-left .eyebrow, .hero-left .award-badge, .hero-left .card-metaphor,
+    .hero-left .cc-enforced, .hero-left .hero-cta{justify-content:center}
+    .hero-left h1, .hero-left .lede{text-align:center}
+    .hero-left .lede{margin-left:auto; margin-right:auto}
+    .hero-right{order:-1; max-width:400px; margin:0 auto}
+  }
+
+  /* ── hero verify-kit terminal (live) ── */
+  .hero-terminal{background:#0a0a0a; border:1px solid #222; border-radius:12px; overflow:hidden;
+    font-family:'JetBrains Mono',monospace; font-size:0.72em; text-align:left; width:100%; max-width:420px; margin:0 auto}
+  .ht-bar{display:flex; align-items:center; gap:7px; padding:8px 13px; background:#111; border-bottom:1px solid #1e1e1e}
+  .ht-dot{width:11px; height:11px; border-radius:50%; display:inline-block}
+  .ht-title{color:#5a5a5a; font-size:0.92em; margin-left:5px}
+  .ht-body{padding:12px 15px; line-height:1.75; white-space:pre-wrap; color:#9aa0ad; height:176px; overflow:hidden; margin:0}
+  .ht-body .ok{color:var(--green)} .ht-body .amb{color:var(--amber2)} .ht-body .red{color:var(--red)} .ht-body .cmd{color:var(--amber)}
+
+  /* ── capabilities band ── */
+  .cap-grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(275px,1fr)); gap:18px; margin-top:44px}
+  .cap-card{background:var(--panel); border:1px solid var(--line); border-radius:16px; padding:26px 24px;
+    transition:transform .25s, border-color .25s, box-shadow .25s}
+  .cap-card:hover{transform:translateY(-4px); border-color:var(--line2); box-shadow:var(--shadow)}
+  .cap-ic{font-size:1.5em; margin-bottom:13px; display:block}
+  .cap-card .kicker{font-family:'JetBrains Mono',monospace; font-size:0.63em; letter-spacing:0.13em;
+    text-transform:uppercase; color:var(--dim); margin-bottom:9px}
+  .cap-card h3{font-size:1.15em; font-weight:600; margin-bottom:9px}
+  .cap-card p{color:var(--muted); font-size:0.92em; line-height:1.6}
+  .cap-card .mono{font-family:'JetBrains Mono',monospace; font-size:0.76em; color:var(--amber2); margin-top:12px; display:block}
+  .cap-card.flag{border-color:rgba(255,176,0,0.35); background:linear-gradient(180deg,rgba(255,176,0,0.05),rgba(255,255,255,0.02))}
+  .cap-new{display:inline-block; font-family:'JetBrains Mono',monospace; font-size:0.58em; letter-spacing:0.1em;
+    color:#06070b; background:var(--amber); border-radius:5px; padding:2px 7px; margin-left:7px; vertical-align:middle; font-weight:700}
+
+  /* ── paladin section ── */
+  .pal-split{display:grid; grid-template-columns:1fr 1fr; gap:44px; align-items:center; margin-top:40px}
+  @media(max-width:820px){.pal-split{grid-template-columns:1fr; gap:30px}}
+  .pal-flow{background:#0a0a0a; border:1px solid #222; border-radius:14px; padding:20px 22px;
+    font-family:'JetBrains Mono',monospace; font-size:0.8em}
+  .pal-step{display:flex; align-items:center; gap:12px; padding:7px 0; color:var(--muted)}
+  .pal-num{width:22px; height:22px; border-radius:6px; background:rgba(255,176,0,0.12);
+    border:1px solid rgba(255,176,0,0.35); color:var(--amber2); display:flex; align-items:center;
+    justify-content:center; font-size:0.82em; flex-shrink:0}
+  .pal-step b{color:var(--text); font-weight:600}
+  .pal-list{list-style:none; padding:0; margin:20px 0 0}
+  .pal-list li{padding:8px 0 8px 26px; position:relative; color:var(--muted); line-height:1.55; font-size:0.97em}
+  .pal-list li::before{content:'✓'; position:absolute; left:0; color:var(--green); font-weight:700}
   .eyebrow{display:inline-flex; align-items:center; gap:9px; font-family:'JetBrains Mono',monospace;
     font-size:0.74em; letter-spacing:0.14em; text-transform:uppercase; color:var(--amber2);
     border:1px solid rgba(255,176,0,0.3); background:rgba(255,176,0,0.06);
@@ -314,11 +383,11 @@
       <span class="nm">CUSTO<b>DIAN</b></span>
     </a>
     <div class="nav-links">
+      <a href="#governs">What it governs</a>
+      <a href="/paladin">Paladin</a>
+      <a href="/guardrails">Guardrails</a>
+      <a href="/lie-catch">Lie-Catch</a>
       <a href="#how">How it works</a>
-      <a href="#proof">Live proof</a>
-      <a href="#compare">Compare</a>
-      <a href="#video">Demo</a>
-      <a href="/triage">Lie-Catch</a>
       <a href="/docs">Docs</a>
       <a class="btn btn-primary" href="/console">Launch live console →</a>
     </div>
@@ -327,12 +396,73 @@
 
 <!-- HERO -->
 <header class="hero">
+  <canvas id="star-field"></canvas>
   <div class="wrap">
-    <div class="eyebrow"><span class="pulse"></span> NVIDIA · Nous Research · Stripe · Hackathon 2026</div>
-    <h1>Give your AI a company card.<br><span class="grad">With a kernel that actually enforces it.</span></h1>
-    <p class="lede">A new employee gets a company card with a spending limit. They can buy what they need — but can't approve their own expense reports, and can't lie about a receipt once it's in the ledger. <b>Custodian is that card, that limit, and that ledger — for AI agents.</b> Enforced at the OS level, not promised in a prompt.</p>
+    <div class="hero-split">
+      <div class="hero-left">
+        <div class="award-badge">🥇 First Place — Hermes Agent Accelerated Business Hackathon</div>
+        <div class="eyebrow"><span class="pulse"></span> NVIDIA · Nous Research · Stripe · Hackathon 2026</div>
+        <h1>Give your agent money, keys, and tools —<br><span class="grad">a kernel decides what it does with them.</span></h1>
+        <p class="lede">An AI agent does what you ask — and what it's tricked into, and what it hallucinates. Custodian is a kernel that sits <b>outside the agent</b> and enforces what actually happens: every dollar it spends, every credential it uses, every claim it makes, every tool it runs — checked against real limits and real records, at the OS level, not promised in a prompt.</p>
+      </div>
+      <div class="hero-right">
+        <!-- kernel authority ring — L0→L4 bands orbiting the kernel core -->
+        <div class="ring-wrap">
+          <svg viewBox="0 0 400 400" width="100%" height="auto" aria-hidden="true" style="overflow:visible">
+            <defs>
+              <filter id="gl-amber" x="-50%" y="-50%" width="200%" height="200%">
+                <feGaussianBlur stdDeviation="5" result="b"/>
+                <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+              </filter>
+              <filter id="gl-green" x="-50%" y="-50%" width="200%" height="200%">
+                <feGaussianBlur stdDeviation="3" result="b"/>
+                <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+              </filter>
+              <radialGradient id="bg-glow" cx="50%" cy="50%" r="50%">
+                <stop offset="0%" stop-color="rgba(255,176,0,0.07)"/>
+                <stop offset="100%" stop-color="transparent"/>
+              </radialGradient>
+            </defs>
+            <circle cx="200" cy="200" r="190" fill="url(#bg-glow)"/>
+            <circle cx="200" cy="200" r="178" fill="none" stroke="#2a2d3a" stroke-width="1.5" stroke-dasharray="6 5"/>
+            <text x="200" y="22" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9" fill="#3d4055" letter-spacing="1.5">L4 · HUMAN REQUIRED · UNLIMITED</text>
+            <circle cx="200" cy="200" r="148" fill="none" stroke="#ff5c5c" stroke-width="1.5" stroke-opacity="0.3" stroke-dasharray="5 4"/>
+            <text x="200" y="50" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9" fill="#ff5c5c" fill-opacity="0.55" letter-spacing="1">L3 · ALWAYS ESCALATES</text>
+            <circle cx="200" cy="200" r="115" fill="none" stroke="#ffb000" stroke-width="2.5" filter="url(#gl-amber)" style="animation:ring-pulse 3.5s ease-in-out infinite"/>
+            <text x="200" y="82" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9.5" fill="#ffcf57" font-weight="700" letter-spacing="1.5">L2 · AUTONOMOUS UP TO CAP ▶ ACTIVE</text>
+            <circle cx="200" cy="200" r="80" fill="none" stroke="#2ee6a6" stroke-width="1.5" stroke-opacity="0.55" filter="url(#gl-green)"/>
+            <text x="200" y="120" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9" fill="#2ee6a6" fill-opacity="0.7" letter-spacing="1">L1 · FREE / TRIVIAL SIDE-EFFECTS</text>
+            <circle cx="200" cy="200" r="50" fill="none" stroke="#2ee6a6" stroke-width="1.5" stroke-opacity="0.8"/>
+            <text x="200" y="150" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9" fill="#2ee6a6" letter-spacing="1">L0 · READ-ONLY</text>
+            <circle cx="200" cy="200" r="22" fill="rgba(255,176,0,0.08)" stroke="#ffb000" stroke-width="1.5"/>
+            <circle cx="200" cy="200" r="22" fill="none" stroke="#ffcf57" stroke-width="1" stroke-opacity="0.4" style="animation:ring-pulse 2s ease-in-out infinite 0.5s"/>
+            <circle cx="200" cy="200" r="10" fill="rgba(255,176,0,0.25)" style="animation:core-pulse 2s ease-in-out infinite"/>
+            <circle cx="200" cy="200" r="5" fill="#ffb000"/>
+            <text x="200" y="205" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#ffcf57" font-weight="800" letter-spacing="2">KERNEL</text>
+            <g>
+              <animateTransform attributeName="transform" type="rotate" from="0 200 200" to="360 200 200" dur="7s" repeatCount="indefinite"/>
+              <circle cx="315" cy="200" r="7" fill="#ffb000" filter="url(#gl-amber)"/>
+              <text x="324" y="204" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#ffcf57" font-weight="700">REQ</text>
+            </g>
+            <text x="200" y="240" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" fill="#2ee6a6" fill-opacity="0.45" letter-spacing="1">VERIFIED · ALLOW</text>
+          </svg>
+        </div>
+        <!-- live verify_kit terminal: the ring shows the authority model, this proves it -->
+        <div class="hero-terminal">
+          <div class="ht-bar">
+            <span class="ht-dot" style="background:#ff5f57"></span>
+            <span class="ht-dot" style="background:#febc2e"></span>
+            <span class="ht-dot" style="background:#28c840"></span>
+            <span class="ht-title">verify_kit.py — self-verifying proof</span>
+          </div>
+          <pre id="ht-body" class="ht-body"></pre>
+        </div>
+      </div>
+    </div><!-- /hero-split -->
 
-    <!-- employee + company card visual -->
+
+    <!-- money: shown as the flagship example of a broader authority model -->
+    <div style="text-align:center; font-family:'JetBrains Mono',monospace; font-size:0.66em; letter-spacing:0.14em; color:var(--dim); margin-top:6px">ONE OF FOUR DOMAINS · START WITH MONEY ↓</div>
     <div class="card-metaphor">
       <div class="cc cc-employee">
         <div class="chip"></div>
@@ -354,7 +484,7 @@
         </div>
       </div>
     </div>
-    <div class="cc-enforced">LIMITS ENFORCED BELOW THE AGENT · OS-LEVEL · NOT A PROMPT · NOT A PROMISE</div>
+    <div class="cc-enforced">EVERY DECISION ENFORCED BELOW THE AGENT · OS-LEVEL · NOT A PROMPT · NOT A PROMISE</div>
 
     <!-- kernel ticker — live status badge + message -->
     <div class="kernel-ticker" style="margin-top:18px;display:flex;align-items:center;justify-content:center;gap:12px;font-family:var(--mono);font-size:0.78em">
@@ -412,6 +542,57 @@
     </div>
   </div>
 </header>
+<script>
+/* hero particle starfield — restored with the split-layout kernel-ring hero */
+(function(){
+  var c=document.getElementById('star-field');
+  if(!c)return;
+  var hero=c.parentElement;
+  function resize(){c.width=hero.offsetWidth||window.innerWidth;c.height=hero.offsetHeight||700}
+  resize();
+  window.addEventListener('resize',resize);
+  var ctx=c.getContext('2d'), N=100, stars=[];
+  for(var i=0;i<N;i++){stars.push({x:Math.random()*c.width,y:Math.random()*c.height,r:Math.random()*1.1+0.2,o:Math.random()*0.45+0.05,d:Math.random()*0.18+0.04,dir:Math.random()>0.5?1:-1});}
+  function draw(){
+    ctx.clearRect(0,0,c.width,c.height);
+    for(var i=0;i<N;i++){
+      var s=stars[i];
+      s.o+=s.d*s.dir;
+      if(s.o>0.55||s.o<0.04)s.dir*=-1;
+      ctx.beginPath();ctx.arc(s.x,s.y,s.r,0,6.283);
+      ctx.fillStyle=(i%8===0)?'rgba(255,176,0,'+s.o+')':'rgba(200,210,255,'+s.o+')';
+      ctx.fill();
+    }
+    requestAnimationFrame(draw);
+  }
+  draw();
+})();
+/* hero verify_kit terminal — streams the 5-phase proof line by line, then loops */
+(function(){
+  var body=document.getElementById('ht-body'); if(!body)return;
+  var lines=[
+    ['$ python3 verify_kit.py','cmd'],
+    ['[1/5] re-introduce self-approval bug … caught ✓','ok'],
+    ['[2/5] kernel test suite … 1,640 passed ✓','ok'],
+    ['[3/5] planted-lie refund … CONTRADICTED ✓','red'],
+    ['[4/5] Stripe PaymentIntent pi_3Tth… verified ✓','ok'],
+    ['[5/5] kill switch … engaged → ALL DENIED ✓','amb'],
+    ['kernel: active · band L2 · receipts signed','ok'],
+  ];
+  function render(n){
+    var out='';
+    for(var k=0;k<n;k++){ out+='<span class="'+lines[k][1]+'">'+lines[k][0]+'</span>\n'; }
+    body.innerHTML=out+'<span style="color:#ffb000">▍</span>';
+  }
+  var i=0;
+  function step(){
+    i++;
+    if(i>lines.length){ setTimeout(function(){ i=0; render(0); setTimeout(step,700); },2800); return; }
+    render(i); setTimeout(step,600);
+  }
+  render(0); setTimeout(step,500);
+})();
+</script>
 
 <!-- TRUST -->
 <div class="trust">
@@ -429,7 +610,7 @@
   <div class="wrap">
     <div class="reveal">
       <div class="sec-eyebrow">Why Custodian is different</div>
-      <h2>Everyone gives the agent a wallet.<br>We give it a kernel.</h2>
+      <h2>Everyone hands the agent the keys.<br>We put a kernel in between.</h2>
       <p class="sec-sub">Spend caps and approval flows are commodities now. The hard problem isn't limiting a number — it's that the agent can be wrong, or can lie, and that it shouldn't be <em>trusted</em> to route money through an approved path in the first place.</p>
     </div>
     <div class="wedge">
@@ -442,6 +623,91 @@
         <div class="tag">◉ Custodian</div>
         <h3>A constrained kernel</h3>
         <p>The control lives in <b>Landlock + kernel egress policy</b>. The agent literally <b>cannot open a socket</b> to a payment endpoint the OS hasn't allowed. A deterministic verifier checks every fact the agent asserts against ground truth, so it can't lie its way to a payout. Non-custodial, rail-agnostic, self-hosted.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- WHAT CUSTODIAN GOVERNS -->
+<section id="governs">
+  <div class="wrap">
+    <div class="reveal">
+      <div class="sec-eyebrow">The full surface</div>
+      <h2>The kernel for everything an agent touches</h2>
+      <p class="sec-sub">Spend is where it started — but the moment an agent has real-world power, it needs a decider that lives <em>outside</em> it. Money, credentials, truth, tools: Custodian governs all four the same way — the model proposes, the kernel decides, the receipt proves.</p>
+    </div>
+    <div class="cap-grid">
+      <div class="cap-card reveal">
+        <span class="cap-ic">💳</span>
+        <div class="kicker">Money</div>
+        <h3>Spend it can't lie past</h3>
+        <p>Authority bands, per-action caps, daily envelopes, no-self-dealing, and human escalation over the line — enforced below the agent, over your own Stripe. Non-custodial; we never hold funds.</p>
+        <span class="mono">band L2 · cap $250 · over ▸ SMS</span>
+        <a href="/console" style="display:inline-block;margin-top:14px;font-size:0.82em;color:var(--amber2)">See it spend live →</a>
+      </div>
+      <div class="cap-card flag reveal">
+        <span class="cap-ic">🔐</span>
+        <div class="kicker">Credentials <span class="cap-new">NEW · PALADIN</span></div>
+        <h3>The agent never holds the key</h3>
+        <p>Paladin hands the agent a reference, never the secret. With sandboxed egress the credential never enters the tool process at all — Paladin makes the authenticated call itself.</p>
+        <span class="mono">paladin://stripe_sk → egress-only</span>
+        <a href="/paladin" style="display:inline-block;margin-top:14px;font-size:0.82em;color:var(--amber2)">Explore Paladin →</a>
+      </div>
+      <div class="cap-card reveal">
+        <span class="cap-ic">🔎</span>
+        <div class="kicker">Truth</div>
+        <h3>Lie-catch, with zero AI</h3>
+        <p>The kernel pulls every factual claim from a request and checks it against the real record. A lie gets ✗ CONTRADICTED — and the AI's verdict is overridden. The fact-check needs no model at all.</p>
+        <span class="mono">claim ✗ CONTRADICTED · override</span>
+        <a href="/lie-catch" style="display:inline-block;margin-top:14px;font-size:0.82em;color:var(--amber2)">How Lie-Catch works →</a>
+      </div>
+      <div class="cap-card reveal">
+        <span class="cap-ic">🛡</span>
+        <div class="kicker">Tools</div>
+        <h3>Guardrails it can't talk around</h3>
+        <p>Pluggable, hash-pinned adapters catch prompt injection, PII, secret leaks, forbidden paths, and out-of-scope tool calls on every action — enforced even when a local model forgets the rule.</p>
+        <span class="mono">11 built-in guards · ship your own</span>
+        <a href="/guardrails" style="display:inline-block;margin-top:14px;font-size:0.82em;color:var(--amber2)">All 11 guardrails →</a>
+      </div>
+      <div class="cap-card reveal">
+        <span class="cap-ic">⛔</span>
+        <div class="kicker">Enforcement</div>
+        <h3>A kill switch and a receipt</h3>
+        <p>An operator-only kill switch denies everything, with no override the agent can reach. Every allow and deny emits a tamper-evident, HMAC-signed receipt and an OCSF audit event any SIEM can read.</p>
+        <span class="mono">kill ▸ ALL DENIED · receipts signed</span>
+        <a href="/console" style="display:inline-block;margin-top:14px;font-size:0.82em;color:var(--amber2)">Watch the live audit →</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- PALADIN -->
+<section id="paladin" style="padding:70px 0; background:linear-gradient(180deg,rgba(255,176,0,0.03),transparent 80%)">
+  <div class="wrap">
+    <div class="reveal">
+      <div class="sec-eyebrow">New · Paladin credential broker</div>
+      <h2>Hand the agent a reference. Keep the key.</h2>
+      <p class="sec-sub">Every other agent stack eventually puts the real API key in the process the model is driving. Paladin never does. The agent holds <code style="color:var(--amber2)">paladin://stripe_sk</code> — safe to log, safe in context — and the secret resolves only at egress, into a sandboxed call the agent can't read.</p>
+    </div>
+    <div class="pal-split">
+      <div class="pal-flow reveal">
+        <div class="pal-step"><span class="pal-num">1</span> agent asks for <b>paladin://stripe_sk</b></div>
+        <div class="pal-step"><span class="pal-num">2</span> broker checks the <b>grant</b> — deny by default</div>
+        <div class="pal-step"><span class="pal-num">3</span> secret injected at <b>egress only</b></div>
+        <div class="pal-step"><span class="pal-num">4</span> sandboxed call — agent <b>never sees the value</b></div>
+        <div class="pal-step"><span class="pal-num">5</span> every resolve is <b>hash-chain audited</b></div>
+      </div>
+      <div class="reveal">
+        <ul class="pal-list">
+          <li>AES-256-GCM vault — names, values, and grants all inside the ciphertext</li>
+          <li>Sandboxed egress: bwrap-isolated, no network but the broker socket — the key never enters the tool process</li>
+          <li>Deny-by-default grants, scoped by host / method / path, band-ceilinged and expirable</li>
+          <li>Hash-chained, HMAC-signed audit log — editing or truncating it breaks the chain</li>
+          <li>Standalone: <code style="color:var(--amber2)">pip install custodian-kernel[paladin]</code> — works with zero AI framework installed</li>
+        </ul>
+        <div style="margin-top:22px">
+          <a class="btn btn-primary" href="/paladin">Explore Paladin →</a>
+        </div>
       </div>
     </div>
   </div>
@@ -718,8 +984,8 @@
 <div class="final">
   <div class="wrap">
     <div class="final-card reveal">
-      <h2>Hand your agent a wallet. Keep the keys.</h2>
-      <p>Money is just the first module. The same kernel governs any consequential action an AI agent can take — provisioning, payroll, data egress, infrastructure.</p>
+      <h2>Give your agent real power. Keep the kernel.</h2>
+      <p>Money is just one module. The same kernel governs every consequential thing an agent does — the credentials it uses (Paladin), the claims it makes, the tools it runs, the data it can move, the infrastructure it touches.</p>
       <div class="hero-cta" style="margin-bottom:0">
         <a class="btn btn-primary" href="/operator" target="_blank" rel="noopener">▶ Run the demo yourself</a>
         <a class="btn btn-ghost" href="/console">Open the live console →</a>

@@ -280,9 +280,16 @@ def cmd_import(args) -> int:
 def cmd_grant(args) -> int:
     broker = _broker(args)
     g = broker.grant(args.pattern, args.to, max_band=args.max_band,
-                     ttl_seconds=args.ttl, note=args.note or "")
+                     ttl_seconds=args.ttl, note=args.note or "",
+                     allowed_hosts=args.host, methods=args.method,
+                     path_prefix=args.path_prefix or "")
     exp = f", expires in {int(args.ttl)}s" if args.ttl else ""
-    print(f"granted {g.ref_pattern!r} → {g.requester} (≤{g.max_band}{exp})")
+    scope = ""
+    if args.host or args.method or args.path_prefix:
+        scope = (f" [hosts:{','.join(args.host) if args.host else '*'}"
+                 f" methods:{','.join(args.method) if args.method else '*'}"
+                 f" path:{args.path_prefix or '*'}]")
+    print(f"granted {g.ref_pattern!r} → {g.requester} (≤{g.max_band}{exp}){scope}")
     return 0
 
 
@@ -308,6 +315,8 @@ def cmd_grants(args) -> int:
 
 def cmd_exec(args) -> int:
     broker = _broker(args)
+    if args.sandbox:
+        return _cmd_exec_sandboxed(args, broker)
     refs = {}
     for spec in args.with_refs or []:
         # "stripe_sk" (use configured env var) or "stripe_sk=STRIPE_KEY"
@@ -317,6 +326,46 @@ def cmd_exec(args) -> int:
     proc = broker.spawn(args.cmd, refs, requester=CLI_REQUESTER, band="L0",
                         profile=args.profile, capture_output=False)
     return proc.returncode
+
+
+def _cmd_exec_sandboxed(args, broker) -> int:
+    """Network-isolated egress mode: the child never gets a secret in its
+    env. It reaches the outside world only through the Paladin gateway,
+    using paladin.egress_client. --with names the refs it may use."""
+    from paladin.sandbox import spawn_sandboxed
+    from paladin.errors import SandboxUnavailableError
+    allow_refs = set()
+    for spec in args.with_refs or []:
+        allow_refs.add(SecretRef.parse(spec.partition("=")[0]).name)
+    try:
+        proc = spawn_sandboxed(
+            args.cmd, broker, requester=args.as_requester, band=args.band,
+            allow_refs=allow_refs or None, capture_output=False,
+            allow_unsandboxed=args.allow_unsandboxed,
+        )
+    except SandboxUnavailableError as e:
+        print(f"paladin: {e}", file=sys.stderr)
+        return 1
+    return proc.returncode
+
+
+def cmd_doctor(args) -> int:
+    """Report whether the hardened, network-isolated egress sandbox is
+    available here — so operators know when the strong 'credential never
+    enters the process' guarantee applies vs. when Paladin will fail
+    closed."""
+    from paladin.sandbox import bwrap_path, sandbox_available
+    bw = bwrap_path()
+    ok = sandbox_available()
+    print(f"bwrap:              {bw or '(not found)'}")
+    print(f"sandbox available:  {'yes' if ok else 'no'}")
+    if ok:
+        print("→ `paladin exec --sandbox` gives a network-isolated child that "
+              "reaches nothing but the Paladin egress gateway.")
+    else:
+        print("→ sandboxed egress will FAIL CLOSED (install bubblewrap and "
+              "enable unprivileged user namespaces to use --sandbox).")
+    return 0 if ok else 1
 
 
 def cmd_audit(args) -> int:
@@ -552,6 +601,12 @@ def build_parser() -> argparse.ArgumentParser:
     sp.add_argument("--max-band", default="L2", choices=["L0", "L1", "L2", "L3", "L4"])
     sp.add_argument("--ttl", type=float, default=None, help="grant lifetime in seconds")
     sp.add_argument("--note", default=None)
+    sp.add_argument("--host", action="append",
+                    help="restrict sandboxed egress to this hostname (repeatable)")
+    sp.add_argument("--method", action="append",
+                    help="restrict sandboxed egress to this HTTP method (repeatable)")
+    sp.add_argument("--path-prefix", default=None,
+                    help="restrict sandboxed egress to URLs whose path starts with this")
     sp.set_defaults(fn=cmd_grant)
 
     sp = sub.add_parser("revoke", help="remove grants for (pattern, requester)")
@@ -564,8 +619,19 @@ def build_parser() -> argparse.ArgumentParser:
 
     sp = sub.add_parser("exec", help="run a command with secrets injected into its env")
     sp.add_argument("--with", dest="with_refs", action="append", metavar="NAME[=ENV_VAR]",
-                    help="inject one secret (repeatable)")
+                    help="inject one secret (repeatable). With --sandbox, names a ref "
+                         "the child may use via the egress gateway (never injected)")
     sp.add_argument("--profile", default=None, help="inject a whole profile")
+    sp.add_argument("--sandbox", action="store_true",
+                    help="network-isolate the child: no secret in its env, reaches "
+                         "the outside only through the Paladin egress gateway")
+    sp.add_argument("--as", dest="as_requester", default=CLI_REQUESTER,
+                    help="requester identity for grant checks (default user:cli)")
+    sp.add_argument("--band", default="L0", choices=["L0", "L1", "L2", "L3", "L4"],
+                    help="authority band for sandboxed egress resolution")
+    sp.add_argument("--allow-unsandboxed", action="store_true",
+                    help="with --sandbox: if isolation is unavailable, run anyway "
+                         "(secrets still stay out of the child env) instead of failing")
     sp.add_argument("cmd", nargs=argparse.REMAINDER,
                     help="command to run (prefix with --)")
     sp.set_defaults(fn=cmd_exec)
@@ -597,6 +663,8 @@ def build_parser() -> argparse.ArgumentParser:
                     help="replace an existing vault (it is saved to "
                          "<vault>.pre-restore first — nothing is ever lost)")
     sp.set_defaults(fn=cmd_restore)
+    sp = sub.add_parser("doctor", help="report whether sandboxed egress is available here")
+    sp.set_defaults(fn=cmd_doctor)
 
     return p
 

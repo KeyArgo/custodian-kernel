@@ -116,6 +116,19 @@ def load_policy(path: Optional[Path] = None) -> dict:
     return doc if isinstance(doc, dict) else {}
 
 
+def save_policy(policy: dict, path: Optional[Path] = None) -> None:
+    """Write a policy dict back to policy.yaml (e.g. from the dashboard).
+
+    This replaces the whole file, so hand-written comments in an edited
+    policy.yaml are lost on the first save through this path — a normal
+    tradeoff for a GUI-editable config file, but worth being explicit
+    about rather than surprising someone the next time they open it in
+    an editor."""
+    path = Path(path) if path else default_policy_path()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(yaml.safe_dump(policy, sort_keys=False, default_flow_style=False))
+
+
 def build_pipeline(policy: dict, denial_observer=None, vault=None) -> AdapterPipeline:
     """Compile a policy dict into a ready AdapterPipeline.
 

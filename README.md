@@ -189,6 +189,7 @@ Safety properties, on purpose:
 - [Security](docs/SECURITY.md) — threat model, self-approval fix, verification model
 - [Security Hardening](docs/SECURITY-HARDENING.md) — credential/adapter/bridge scan and findings
 - [Paladin](docs/PALADIN.md) — the credential broker (the agent never sees the value), with bulk import from .env/Bitwarden/1Password (`paladin import`)
+- [Paladin](docs/PALADIN.md) — the credential broker (the agent never sees the value)
 - [Guard Adapters](docs/ADAPTERS.md) — money/security/privacy/guardrail hooks around every action
 - [Talaria](docs/TALARIA.md) — the Hermes Agent + NemoClaw integration suite (governed invoke surface, context-loss re-anchoring)
 - [Verification](docs/VERIFICATION.md) — how to check every claim yourself

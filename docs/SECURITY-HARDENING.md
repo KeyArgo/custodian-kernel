@@ -78,6 +78,49 @@ grows until it provably contains the last full line, and `detail` is
 capped at 512 chars so records stay bounded and value-free. Covered by
 `test_paladin.py::test_audit_*`.
 
+### F4 — plaintext secret in the tool process's environment (fixed: sandboxed egress)
+
+The original egress path (`Broker.spawn`) injected resolved secrets into
+a child process's **environment** (`subprocess.run(env=...)`). That keeps
+the value out of the *proposing agent*, but any code running in the child
+— including a prompt-injected tool payload — can read its own
+`os.environ` / `/proc/self/environ` and exfiltrate it. Every downstream
+control (grants, audit, leak-sentinel) is moot once the child holds the
+value. Cyberware has the same class of exposure: its README documents
+execution reading secrets from `*_FILE` references in the exec
+environment.
+
+Fixed with **sandboxed egress** (`paladin/egress.py`, `paladin/sandbox.py`,
+`paladin/egress_client.py`): the child runs under `bwrap --unshare-all`
+(no network, fresh namespaces) with the vault directory and keyfile dir
+tmpfs-masked and a **rebuilt, minimal environment** (so it cannot inherit
+`PALADIN_PASSPHRASE`/`PALADIN_KEYFILE` either). Its only path out is a
+read-only-bound Unix socket to an in-process gateway. The child sends an
+*unauthenticated* request descriptor; `Broker.egress_request` resolves the
+ref (grant-gated + audited), enforces the entry's `allowed_hosts` ceiling
+**and** the grant's host/method/path scope (both must pass — the grant
+narrows, never widens), attaches the credential, makes the call, and
+returns `{status, headers, body}` with the value stripped. **The
+credential never enters the child** — verified by
+`test_paladin_sandbox.py` (secret absent from the child's env and
+`/proc/self/environ`; direct network unreachable; vault files masked).
+Fail-closed: if bwrap/userns is unavailable the runner raises rather than
+silently falling back to env injection. Scope is HTTP(S)-shaped secrets;
+`spawn` env-injection remains for non-Linux and non-request protocols,
+with the strong claim gated on the sandbox actually being active.
+
+### F5 — audit hash chain not thread-safe under concurrent egress (fixed)
+
+The egress gateway serves a thread per connection, making it the first
+concurrent caller of `AuditLog.append`. Two threads could read the same
+tail MAC and append records with the same `prev`, forking the hash chain
+(reproduced with 8 threads → `verify()` fails). Fixed by serializing the
+read-tail-then-write critical section under a `threading.Lock`
+(`paladin/audit.py`); regression covered by
+`test_paladin_egress.py::test_concurrent_egress_keeps_audit_chain_intact`.
+This guards in-process concurrency; cross-process racing remains the
+same separate concern as the vault's save lock.
+
 ## Design decisions that raise the security bar
 
 ### The agent never holds a credential — even transitively
@@ -92,6 +135,18 @@ process that proposes the action never has the value in its address
 space, never receives it in a tool result (the secret-leak guard redacts
 any that come back), and cannot enumerate the vault except as value-free
 metadata.
+agent runs. Paladin goes further along two rungs. The baseline: the
+secret is **encrypted at rest** (AES-256-GCM, scrypt) and materializes
+**only inside the skill subprocess's environment**, built by the broker
+at egress — the proposing agent never has the value in its address space,
+never receives it in a tool result (the secret-leak guard redacts any
+that come back), and cannot enumerate the vault except as value-free
+metadata. The hardened rung (**sandboxed egress**, F4): the value never
+enters the *tool* process either — Paladin holds it and originates the
+authenticated call itself, while the tool runs network-isolated with only
+a socket to the broker. That is a strictly stronger credential-
+confinement claim than either "keep it in the substrate" or "read it from
+a `*_FILE` ref."
 
 ### Deny-by-default, band-ceilinged, expirable grants
 
@@ -131,6 +186,15 @@ enforcement never depends on the reminder landing.
 
 - Paladin's zeroization is best-effort (CPython may copy bytes); the
   vault key and resolved values live briefly in RAM during egress.
+- Sandboxed egress confines the *credential*, not the *data*: a tool
+  authorized to call an API can still misuse the response it legitimately
+  receives. And if an API echoes the secret in its own response body, the
+  child sees it on the way back — the leak-sentinel *detects* that, it
+  does not *prevent* it. The strong "credential never enters the process"
+  guarantee holds only where the sandbox is active (Linux + unprivileged
+  user namespaces) and, for host confinement, where the entry's
+  `allowed_hosts` is set — an unrestricted secret can still be sent to any
+  host the grant permits.
 - The audit chain proves records weren't altered or reordered, but tail
   truncation is only detectable against an external anchor (e.g.
   periodically publishing the tail MAC). This is the same limitation as

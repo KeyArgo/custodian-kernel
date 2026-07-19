@@ -176,6 +176,29 @@ def cmd_log(args) -> int:
     return 0
 
 
+def cmd_dashboard(args) -> int:
+    from talaria.dashboard import run_dashboard
+    from talaria.denial_log import DenialLog
+    from paladin.vault import Vault
+
+    vault = None
+    try:
+        vault = Vault.open_from_env(interactive=True)
+    except Exception as e:
+        print(f"talaria: dashboard starting without an open vault "
+              f"({type(e).__name__}: {e}) — the Vault section will show "
+              f"an error, everything else still works", file=sys.stderr)
+
+    denial_log = None
+    try:
+        denial_log = DenialLog()
+    except Exception as e:
+        print(f"talaria: denial log unavailable: {e}", file=sys.stderr)
+
+    run_dashboard(host=args.host, port=args.port, vault=vault, denial_log=denial_log)
+    return 0
+
+
 def _adapter_category(adapter_name: str) -> str:
     try:
         from custodian.adapters.registry import AdapterRegistry
@@ -344,6 +367,15 @@ def build_parser() -> argparse.ArgumentParser:
                     choices=["install", "status"],
                     help="install the plugin + starter policy + vault, or show status")
     sp.set_defaults(func=cmd_hermes)
+
+    sp = sub.add_parser(
+        "dashboard",
+        help="Local web UI: denial log, vault entries, and policy toggles in one place",
+    )
+    sp.add_argument("--host", default="127.0.0.1",
+                    help="bind address (default 127.0.0.1 — not exposed off this machine)")
+    sp.add_argument("--port", type=int, default=8765)
+    sp.set_defaults(func=cmd_dashboard)
 
     return p
 

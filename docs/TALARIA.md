@@ -38,6 +38,24 @@ talaria log --csv      # export
 talaria hermes status  # what's active
 ```
 
+### Or skip the CLI — `talaria dashboard`
+
+```bash
+pip install "custodian-kernel[talaria]"   # pulls in Flask for this
+talaria dashboard
+```
+
+Opens a local web page (`http://127.0.0.1:8765`, printed with a
+per-launch token — nothing is exposed off the machine) showing the
+denial timeline, vault entries (metadata only — values are never sent
+to the browser), and the current policy with the genuinely-togglable
+guards as switches. Saving from the dashboard rewrites `policy.yaml`
+directly (comments in a hand-edited file won't survive a save through
+here — a normal GUI-editable-config tradeoff). The kernel-grade guards
+(self-protection, prompt-injection, secret-leak) are shown as always-on
+and are not exposed as switches, because they aren't actually
+togglable — see below.
+
 ### The rules live in one file — `~/.talaria/policy.yaml`
 
 ```yaml

@@ -29,12 +29,12 @@ real advantages worth matching over time.
 | Tamper-evident ledger / provenance | ✅ | ✅ (hash-chained Paladin audit; kernel receipts) |
 | Deterministic pre-execution scanning | ✅ (oversight regex) | ✅ (guard-adapter pipeline) |
 | Skill model with self-tests | ✅ (perks) | ✅ (SKILL.md + registry, 100+ governed) |
-| Sandbox execution | ✅ (bubblewrap/gVisor) | ✅ (NemoClaw executor + governed egress) |
-| ~1,200+ tests, CI-gated | ✅ | ✅ (1,524 passing) |
+| Sandbox execution | ✅ (bubblewrap/gVisor) | ✅ (NemoClaw executor + bwrap network-isolated egress) |
+| ~1,200+ tests, CI-gated | ✅ | ✅ (1,640 passing) |
 
 ## Where Custodian goes further — and is more secure
 
-### 1. Secrets are encrypted and the agent never holds them
+### 1. Secrets are encrypted, and the credential never enters the tool process
 
 Cyberware is *value-free*: secrets never cross the control plane, but
 they still live in the execution substrate — i.e. wherever the agent
@@ -46,6 +46,28 @@ space, can't enumerate the vault beyond value-free metadata, and any
 secret that comes *back* in tool output is hash-matched and redacted
 before the model sees it. This is a strictly stronger credential posture
 than "keep it in the substrate."
+they still live in the execution substrate — its README documents
+execution reading them from `*_FILE` references in the exec environment.
+**Custodian + Paladin encrypts secrets at rest** (AES-256-GCM, scrypt) and
+materializes them under a deny-by-default, band-ceilinged, expirable
+grant. The proposing agent never has the value in its address space, can't
+enumerate the vault beyond value-free metadata, and any secret that comes
+*back* in tool output is hash-matched and redacted before the model sees
+it.
+
+The hardened path goes one rung further than *anything Cyberware
+documents*: **sandboxed egress** (`paladin exec --sandbox`) runs the tool
+under `bwrap --unshare-all` with no network except a Unix socket to the
+broker, the vault masked, and a rebuilt environment. The tool sends an
+unauthenticated request descriptor; Paladin attaches the credential
+host-side and returns only the response. So the key is not in a `*_FILE`,
+not in an env var, not in the tool's memory at all — and the tool can't
+reach any host the grant didn't scope, because it can't reach the network
+directly. This is verified, not asserted: `test_paladin_sandbox.py`
+confirms the secret is absent from the child's env and
+`/proc/self/environ` and that direct network egress is unreachable. Honest
+scope: HTTP(S)-shaped secrets, Linux + unprivileged user namespaces, and
+fail-closed when that isn't available.
 
 ### 2. The agent cannot modify what governs it
 
@@ -91,8 +113,10 @@ and never holds funds. Fewer trust assumptions, no platform lock-in.
 
 ## The one-line summary
 
-Cyberware keeps secrets *out of the control plane*. Custodian keeps
-secrets *out of the agent entirely, encrypted*, stops the agent from
-editing its own governor, and keeps enforcing when a local model forgets
-the rules — while staying non-custodial and modular down to each check.
-On security, that's a wider moat.
+Cyberware keeps secrets *out of the control plane* (but in the execution
+substrate, read from `*_FILE` refs). Custodian keeps the credential *out
+of the tool process entirely* — encrypted at rest, materialized only
+host-side behind a network-isolated sandbox — stops the agent from editing
+its own governor, and keeps enforcing when a local model forgets the rules,
+while staying non-custodial and modular down to each check. On security,
+that's a wider moat.

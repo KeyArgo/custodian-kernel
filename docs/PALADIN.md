@@ -4,6 +4,17 @@ Paladin is a **separate package** from the Custodian kernel. Custodian
 decides whether an *action* is allowed; Paladin decides whether a
 *credential* may be materialized for that action — and materializes it so
 the agent process never observes the value.
+Paladin is a **separate, standalone package** from the Custodian kernel
+— zero imports from `custodian/` or `talaria/`, in either direction
+(enforced by `tests/test_architecture_boundaries.py`, not just
+documented). Custodian decides whether an *action* is allowed; Paladin
+decides whether a *credential* may be materialized for that action —
+and materializes it so the agent process never observes the value.
+`pip install custodian-kernel[paladin]` and you have a working vault
+with zero AI-agent framework installed — Custodian's built-in adapters
+recognize the `paladin://` URI convention by regex, never by importing
+this package (see `docs/ADAPTERS.md`'s "Package boundaries" section for
+exactly how that works).
 
 Think password manager + `.env` manager for agents, where the agent gets
 a *reference*, never the secret.
@@ -140,6 +151,81 @@ proc = broker.spawn(
     requester="skill:stripe-spend", band="L2",
 )
 ```
+
+## Hardening
+
+- **Key derivation:** scrypt, `N=2**17` (~128MB memory cost, well under
+  a second) — bumped from an earlier `2**15` ("interactive-grade," fine
+  for a login screen, too weak for a vault meant to resist offline
+  brute-force of a stolen file indefinitely). KDF params are stored
+  per-vault in the header, so existing vaults keep working with
+  whatever `N` they were created with until `rotate-master` runs.
+- **In-memory cleanup:** `Vault` is a context manager —
+  `with Vault.open(...) as v:` zeroes the master key (stored as a
+  `bytearray` specifically so this is possible) and drops entry
+  references on exit, shrinking the window plaintext sits in RAM. Not
+  a hard guarantee — Python strings are immutable, so a decrypted
+  `Entry.value` can only be dereferenced, not zeroed in place — but
+  strictly better than relying on GC timing alone.
+- **Concurrent writers:** `save()` holds an exclusive `flock` on a
+  sibling `.lock` file for the duration of the write, so two `paladin`
+  CLI invocations racing serialize instead of one silently clobbering
+  the other's write. This protects the write itself, not the full
+  open→modify→save lifecycle across two processes.
+
+## Sandboxed egress — the credential never enters the tool process
+
+The `exec` flow above injects secrets into a child's **environment**. That
+keeps them out of the *agent*, but the child itself can read its own
+`os.environ` — so a prompt-injected tool payload could exfiltrate the
+value. `paladin exec --sandbox` closes that gap:
+
+```bash
+paladin exec --sandbox --as sandbox:demo --band L1 --with stripe_sk -- python3 tool.py
+```
+
+The child runs under `bwrap --unshare-all` — **no network at all**, fresh
+namespaces, the vault directory and keyfile masked to empty, and a rebuilt
+minimal environment (it can't even inherit your `PALADIN_PASSPHRASE`). Its
+only path out is a Unix socket to an in-process Paladin gateway. Inside the
+tool you make authenticated calls without ever holding the key:
+
+```python
+from paladin.egress_client import Session
+
+s = Session()  # reads the gateway socket + token from the sandbox env
+r = s.post(
+    "https://api.stripe.com/v1/refunds",
+    ref="stripe_sk",
+    inject={"header": "Authorization", "format": "Bearer {value}"},
+    body="charge=ch_123&amount=500",
+)
+print(r["status"], r["body"])   # the key was never in this process
+```
+
+Paladin resolves the ref host-side (grant-gated + audited), attaches the
+credential, makes the call, and hands back only `{status, headers, body}`.
+Scope the grant so a leaked descriptor is still useless:
+
+```bash
+paladin grant 'stripe*' --to sandbox:demo --max-band L2 \
+    --host api.stripe.com --method POST --path-prefix /v1/refunds
+```
+
+`--host`/`--method`/`--path-prefix` **narrow** what a resolved secret may
+do; they never widen the entry's own `allowed_hosts` ceiling (a request
+must satisfy both). `paladin doctor` reports whether the sandbox is
+available here — and if it isn't, `--sandbox` **fails closed** rather than
+silently falling back to plaintext-env injection.
+
+**Honest scope.** This covers HTTP(S) request-shaped secrets; SSH keys and
+DB creds still use `exec` env-injection until per-protocol brokers exist.
+It confines the *credential*, not the *data* a call returns — and if an API
+echoes the secret in its response, the child sees it coming back (the
+secret-leak guard detects that; it doesn't prevent it). The strong "never
+in the process" guarantee holds where the sandbox is active (Linux +
+unprivileged user namespaces) and, for host confinement, where
+`allowed_hosts` is set. See `docs/SECURITY-HARDENING.md` finding F4.
 
 ## Optional: signed receipts
 

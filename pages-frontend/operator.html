@@ -365,6 +365,19 @@
             <button class="btn-copy" id="copy-pi-btn">📋 Copy PaymentIntent ID for Step 7</button>
         </div>
         <div class="out" id="step1-out"></div>
+        <div id="step1-budget-warn" style="display:none;margin-top:10px;padding:10px 12px;border:1px solid #ffb020;border-radius:8px;background:rgba(255,176,32,0.08);color:#ffb020;font-size:0.9em;line-height:1.5;">
+            <b>⚠ Step 1 escalated instead of executing — so Step 7 can't auto-fill.</b><br>
+            This spend was supposed to clear autonomously, but the demo session's
+            spend budget is exhausted from previous runs, so it hit the session cap
+            and escalated instead of creating a PaymentIntent. Step 7's refund input
+            auto-fills from that PaymentIntent, so it stays empty.<br>
+            <b>Fix:</b> open <b>Admin reset</b> at the bottom of this page, enter the
+            operator password, reset the session, then re-run Step 1 — it will execute
+            and Step 7 will fill.
+            <div style="margin-top:8px;">
+                <button class="btn-copy show" id="step1-jump-reset">↻ Reset session &amp; retry Step 1</button>
+            </div>
+        </div>
     </div>
 
     <div class="step">
@@ -716,7 +729,9 @@ document.getElementById('step1-btn').addEventListener('click', async () => {
     if (!data.error) nemoNarrate(1);
     const text = data.error || [data.stdout, data.stderr].filter(Boolean).join('\n');
     const pi = extractPI(text);
+    const budgetWarn = document.getElementById('step1-budget-warn');
     if (pi) {
+        if (budgetWarn) budgetWarn.style.display = 'none';
         spendPI = pi;
         document.getElementById('refund-pi').value = pi;
         const copyBtn = document.getElementById('copy-pi-btn');
@@ -727,6 +742,12 @@ document.getElementById('step1-btn').addEventListener('click', async () => {
                 setTimeout(() => copyBtn.textContent = '📋 Copy PaymentIntent ID for Step 7', 2000);
             });
         };
+    } else if (budgetWarn && /ESCALATION REQUIRED|remaining session budget|cap exceeded|escalation_required/i.test(text)) {
+        // Step 1 is meant to execute autonomously. If it escalated, the demo
+        // session's spend budget is exhausted (accumulated across prior runs),
+        // so no PaymentIntent was created and Step 7 has nothing to auto-fill.
+        // Surface the actionable fix instead of failing silently.
+        budgetWarn.style.display = 'block';
     }
 });
 
@@ -1068,6 +1089,54 @@ document.addEventListener('DOMContentLoaded', () => {
         tog.textContent = open ? '▸ Admin reset' : '▾ Admin reset';
     });
 
+    // Durability: after the first successful password reset we stash a
+    // short-lived operator token (NOT the password) so later recoveries are
+    // one-click. The demo session's spend budget runs out between runs and
+    // this is the undo that keeps it from silently breaking.
+    const TOKEN_KEY = 'op-reset-token';
+    const getTok = () => { try { return sessionStorage.getItem(TOKEN_KEY) || ''; } catch { return ''; } };
+    const setTok = t => { try { if (t) sessionStorage.setItem(TOKEN_KEY, t); } catch {} };
+
+    async function retryStep1AfterReset() {
+        const warn = document.getElementById('step1-budget-warn');
+        if (warn) warn.style.display = 'none';
+        const s1 = document.getElementById('step1-btn');
+        if (s1) s1.click();  // re-run the autonomous spend so Step 7 fills from its PI
+    }
+
+    // One-click reset using the stored token (no password prompt). True on success.
+    async function tokenReset() {
+        const tok = getTok();
+        if (!tok) return false;
+        try {
+            const r = await fetch(API + '/reset', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-Operator-Token': tok },
+                body: '{}',
+            });
+            const d = await r.json();
+            return !!d.ok;
+        } catch { return false; }
+    }
+
+    // Step 1's budget-exhaustion warning: self-heal in one click if we already
+    // hold a token; otherwise open the password reset panel (the first reset
+    // captures a token so every later recovery is one-click).
+    const jumpReset = document.getElementById('step1-jump-reset');
+    if (jumpReset) jumpReset.addEventListener('click', async () => {
+        jumpReset.disabled = true;
+        const label = jumpReset.textContent;
+        jumpReset.textContent = 'Resetting…';
+        const ok = await tokenReset();
+        jumpReset.disabled = false;
+        jumpReset.textContent = label;
+        if (ok) { await retryStep1AfterReset(); return; }
+        const body = document.getElementById('reset-body');
+        const tog = document.getElementById('reset-toggle');
+        if (body && body.style.display !== 'block') tog.click();  // expand
+        tog.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    });
+
     document.getElementById('reset-btn').addEventListener('click', async () => {
         const pw = document.getElementById('reset-pw').value;
         if (!pw) { document.getElementById('reset-out').textContent = 'Enter the operator password first.'; return; }
@@ -1083,6 +1152,19 @@ document.addEventListener('DOMContentLoaded', () => {
                 document.getElementById('reset-out').style.color = '#2ee6a6';
                 document.getElementById('reset-out').textContent = '✓ Reset complete:\n' + (d.steps || []).join('\n');
                 document.getElementById('reset-pw').value = '';
+                // Capture a token so future recoveries are one-click (durability).
+                try {
+                    const lr = await fetch(API + '/login', {
+                        method: 'POST', headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ password: pw }),
+                    });
+                    const ld = await lr.json();
+                    if (ld.token) setTok(ld.token);
+                } catch {}
+                // If we came here from the Step-1 budget warning, re-run Step 1
+                // so Step 7 fills without the operator having to remember to.
+                const warn = document.getElementById('step1-budget-warn');
+                if (warn && warn.style.display === 'block') await retryStep1AfterReset();
             } else {
                 document.getElementById('reset-out').style.color = '#ff5c5c';
                 document.getElementById('reset-out').textContent = '✗ ' + (d.error || 'Failed');

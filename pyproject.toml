@@ -47,8 +47,19 @@ dev = [
     "pytest-cov",
     "flask",
 ]
+# paladin is standalone -- it has zero imports from talaria or any
+# integration package, and never will (see docs/TALARIA.md's "brand
+# neutral" note). Integration packages depend on paladin, not the
+# other way around, so their extras pull paladin in via a self-reference
+# rather than duplicating "cryptography>=42.0" in each one. talaria is
+# the first; a future Claude/Codex integration package follows the same
+# pattern: its own extra just lists "custodian-kernel[paladin]".
 paladin = [
     "cryptography>=42.0",
+]
+talaria = [
+    "custodian-kernel[paladin]",
+    "flask>=3.0",
 ]
 
 [project.scripts]

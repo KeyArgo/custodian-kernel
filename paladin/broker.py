@@ -20,18 +20,33 @@ The rules it enforces:
 from __future__ import annotations
 
 import hashlib
+import http.client
 import os
+import re
+import ssl
 import subprocess
 from pathlib import Path
 from typing import Mapping, Optional, Sequence
+from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 from paladin.audit import AuditLog
-from paladin.errors import GrantDeniedError, UnknownRefError
+from paladin.errors import EgressDeniedError, GrantDeniedError, UnknownRefError
 from paladin.grants import GrantPolicy
 from paladin.refs import SecretRef
 from paladin.vault import Vault
 
 AUDIT_FILENAME = "audit.jsonl"
+
+# Bounds for the sandboxed-egress path. A hostile child cannot make Paladin
+# stream unbounded data or hang forever on a slow-loris upstream.
+MAX_RESPONSE_BYTES = 8 * 1024 * 1024
+DEFAULT_EGRESS_TIMEOUT = 30.0
+_HTTP_METHODS = frozenset(
+    {"GET", "HEAD", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"}
+)
+# RFC 7230 header field-name token — used to reject any child-supplied or
+# inject header name that could smuggle CRLF / control chars into the request.
+_HEADER_NAME_RE = re.compile(r"^[!#$%&'*+.^_`|~0-9A-Za-z-]+$")
 
 
 class LeakSentinel:
@@ -135,12 +150,182 @@ class Broker:
             capture_output=capture_output, text=True, shell=False,
         )
 
+    # -- sandboxed egress (the credential never enters the child) -------------
+
+    def egress_request(self, descriptor: Mapping, requester: str, band: str = "L0",
+                       allow_refs: Optional[set] = None,
+                       timeout: float = DEFAULT_EGRESS_TIMEOUT) -> dict:
+        """Perform ONE authenticated outbound HTTP(S) call for a sandboxed
+        child, injecting a vault secret the child never sees.
+
+        The child sends an *unauthenticated* ``descriptor`` naming a ref and
+        how to inject it; this method resolves that ref (grant-gated +
+        audited), enforces the entry's ``allowed_hosts`` ceiling AND the
+        grant's egress scope (both must pass — the grant narrows, never
+        widens), attaches the credential, makes the call, and returns the
+        response with the credential stripped. The plaintext value lives only
+        in a local variable here — it never crosses back to the child, which
+        gets only ``{status, headers, body}``.
+
+        ``requester`` and ``band`` are set by the trusted caller (the gateway
+        that owns this run), NEVER read from the descriptor — a child cannot
+        choose its own identity or escalate its band. ``allow_refs``, when
+        given, is a per-run allow-list that further restricts which ref names
+        this child may name, intersected with whatever its grants permit.
+        """
+        # -- parse + shape-check the untrusted descriptor (no secrets yet) ----
+        if not isinstance(descriptor, Mapping) or "ref" not in descriptor:
+            raise EgressDeniedError("egress descriptor must name a 'ref'")
+        ref = SecretRef.parse(str(descriptor["ref"]))
+        method = str(descriptor.get("method", "GET")).upper()
+        if method not in _HTTP_METHODS:
+            raise EgressDeniedError(f"unsupported method {method!r}")
+        parts = urlsplit(str(descriptor.get("url", "")))
+        if parts.scheme not in ("http", "https") or not parts.hostname:
+            raise EgressDeniedError("url must be an absolute http(s) URL with a host")
+        host = parts.hostname
+        path = parts.path or "/"
+
+        # -- per-run allow-list (cheapest deny, before any vault access) ------
+        if allow_refs is not None and ref.name not in allow_refs:
+            self.audit.append("deny", ref.name, requester, band,
+                              "ref outside per-run allow-list")
+            raise EgressDeniedError(f"ref {ref.name!r} not permitted for this run")
+
+        # -- grant gate (deny-by-default) -------------------------------------
+        try:
+            grant = self.grants.check(ref.name, requester, band)
+        except GrantDeniedError:
+            self.audit.append("deny", ref.name, requester, band, "no matching grant")
+            raise
+
+        # -- host ceiling (entry) then egress scope (grant) — deny BEFORE we
+        #    ever materialize the plaintext value ------------------------------
+        try:
+            allowed_hosts = self.vault.meta(ref.name).get("allowed_hosts") or []
+        except UnknownRefError:
+            self.audit.append("deny", ref.name, requester, band, "unknown ref")
+            raise
+        if allowed_hosts and host not in allowed_hosts:
+            self.audit.append("deny", ref.name, requester, band,
+                              f"host {host} not in entry allowed_hosts")
+            raise EgressDeniedError(
+                f"host {host!r} is not in the allowed_hosts for {ref.name!r}"
+            )
+        if not grant.scope_allows(host, method, path):
+            self.audit.append("deny", ref.name, requester, band,
+                              f"grant scope forbids {method} {host}{path}")
+            raise EgressDeniedError(
+                f"grant does not permit {method} to {host}{path}"
+            )
+
+        # -- everything checked: resolve and inject ---------------------------
+        value = self.vault._resolve_value(ref.name)
+        self.leak_sentinel.register(value)
+        try:
+            headers = self._safe_headers(descriptor.get("headers"))
+            headers, final_url = self._apply_injection(
+                headers, parts, descriptor.get("inject"), value)
+            body = descriptor.get("body")
+            result = self._perform(method, final_url, headers, body, timeout)
+        finally:
+            value = None  # drop the plaintext reference promptly
+        self.audit.append("egress", ref.name, requester, band,
+                          f"{host} {method} {path} -> {result['status']}")
+        return result
+
+    def _safe_headers(self, raw) -> dict:
+        """Validate child-supplied headers. Rejects non-token names and drops
+        Host (set from the URL by http.client — a child-supplied Host could
+        desync SNI from the routed connection)."""
+        headers: dict[str, str] = {}
+        if raw is None:
+            return headers
+        if not isinstance(raw, Mapping):
+            raise EgressDeniedError("headers must be a mapping")
+        for name, val in raw.items():
+            name = str(name)
+            if not _HEADER_NAME_RE.match(name):
+                raise EgressDeniedError(f"invalid header name {name!r}")
+            if name.lower() == "host":
+                continue
+            headers[name] = str(val)
+        return headers
+
+    def _apply_injection(self, headers: dict, parts, inject, value: str):
+        """Attach the credential per the child's inject spec. Returns
+        (headers, final_url). The child names WHERE the secret goes, never
+        the value itself."""
+        if not isinstance(inject, Mapping):
+            raise EgressDeniedError("egress descriptor must carry an 'inject' spec")
+        url = urlunsplit(parts)
+        if "header" in inject:
+            name = str(inject["header"])
+            fmt = str(inject.get("format", "{value}"))
+            if not _HEADER_NAME_RE.match(name):
+                raise EgressDeniedError(f"invalid inject header name {name!r}")
+            if fmt.count("{value}") != 1:
+                raise EgressDeniedError("inject format must contain {value} exactly once")
+            # Drop any client-supplied header of the same name (any case) so it
+            # cannot pre-seed or shadow the injected credential header.
+            headers = {k: v for k, v in headers.items() if k.lower() != name.lower()}
+            headers[name] = fmt.replace("{value}", value)
+            return headers, url
+        if "query" in inject:
+            param = str(inject["query"])
+            q = parse_qsl(parts.query, keep_blank_values=True)
+            q.append((param, value))
+            url = urlunsplit((parts.scheme, parts.netloc, parts.path,
+                              urlencode(q), parts.fragment))
+            return headers, url
+        raise EgressDeniedError("inject must specify 'header' or 'query'")
+
+    def _perform(self, method: str, url: str, headers: dict, body,
+                 timeout: float) -> dict:
+        """Make the outbound call with stdlib http.client (no new dep) and
+        return a bounded {status, headers, body}."""
+        parts = urlsplit(url)
+        path_q = parts.path or "/"
+        if parts.query:
+            path_q += "?" + parts.query
+        body_bytes = body.encode("utf-8") if isinstance(body, str) else body
+        if parts.scheme == "https":
+            conn = http.client.HTTPSConnection(
+                parts.hostname, parts.port, timeout=timeout,
+                context=ssl.create_default_context())
+        else:
+            conn = http.client.HTTPConnection(
+                parts.hostname, parts.port, timeout=timeout)
+        try:
+            conn.request(method, path_q, body=body_bytes, headers=headers)
+            resp = conn.getresponse()
+            raw = resp.read(MAX_RESPONSE_BYTES + 1)
+            truncated = len(raw) > MAX_RESPONSE_BYTES
+            raw = raw[:MAX_RESPONSE_BYTES]
+            return {
+                "status": resp.status,
+                "headers": {k: v for k, v in resp.getheaders()},
+                "body": raw.decode("utf-8", "replace"),
+                "truncated": truncated,
+            }
+        finally:
+            conn.close()
+
     # -- passthrough management (CLI convenience, all audited) ----------------
 
     def grant(self, ref_pattern: str, requester: str, max_band: str = "L2",
-              ttl_seconds: Optional[float] = None, note: str = ""):
-        g = self.grants.grant(ref_pattern, requester, max_band, ttl_seconds, note)
-        self.audit.append("grant", ref_pattern, requester, max_band, note)
+              ttl_seconds: Optional[float] = None, note: str = "",
+              allowed_hosts: Optional[list] = None,
+              methods: Optional[list] = None, path_prefix: str = ""):
+        g = self.grants.grant(ref_pattern, requester, max_band, ttl_seconds, note,
+                              allowed_hosts=allowed_hosts, methods=methods,
+                              path_prefix=path_prefix)
+        scope = ""
+        if allowed_hosts or methods or path_prefix:
+            scope = (f" scope=hosts:{','.join(allowed_hosts or []) or '*'}"
+                     f"/methods:{','.join(methods or []) or '*'}"
+                     f"/path:{path_prefix or '*'}")
+        self.audit.append("grant", ref_pattern, requester, max_band, note + scope)
         return g
 
     def revoke(self, ref_pattern: str, requester: str) -> int:
