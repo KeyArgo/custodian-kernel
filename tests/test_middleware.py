@@ -1,4 +1,5 @@
 """Tests for CustodianMiddleware (ASGI)."""
+import asyncio
 import json
 import pytest
 from custodian.middleware import CustodianMiddleware
@@ -145,3 +146,44 @@ async def test_register_path_returns_self():
     app = CustodianMiddleware(stub_app)
     result = app.register_path("/charge", band="L2", cap=10.00)
     assert result is app
+
+
+# ── Path-normalization regression (written as plain sync tests using
+# asyncio.run so they run even in an environment without pytest-asyncio
+# installed, unlike every @pytest.mark.asyncio test above). ──────────────
+
+def test_path_variants_cannot_bypass_a_governed_route():
+    """A byte-for-byte-only match against scope["path"] let a request
+    differing only by a trailing slash, a doubled leading slash, case, or
+    a decoded %20 reach the downstream app completely ungoverned -- no
+    band/cap/kill-switch check, no audit trail. Reproduced: a $999,999
+    request to a route registered L4 (always-escalates) sailed through as
+    an ordinary 200 via /charge/, //charge, /CHARGE, or /charge%20 (which
+    the ASGI server decodes to a literal trailing space before this
+    middleware ever sees scope["path"]). Found in review."""
+    app = CustodianMiddleware(stub_app)
+    app.register_path("/charge", band="L4", cap=10.00)  # L4: always requires approval
+    body = json.dumps({"amount": 999999.00}).encode()
+
+    for variant in ("/charge", "/charge/", "//charge", "/CHARGE", "/charge ", " /charge"):
+        send_fn, messages = collect_send()
+        asyncio.run(app(make_scope(variant), make_receive(body), send_fn))
+        assert messages[0]["status"] == 402, (variant, messages[0])
+
+    # A genuinely different, unregistered route must still pass through.
+    send_fn, messages = collect_send()
+    asyncio.run(app(make_scope("/unrelated-route"), make_receive(body), send_fn))
+    assert messages[0]["status"] == 200
+
+
+def test_value_free_plan_missing_fields_reports_only_actually_missing_fields():
+    """Operator precedence in the old list comprehension made
+    `not (f == "skill" and skill)` true for every f != "skill", so "perk"
+    and "var_keys" were always reported as missing once the gate fired --
+    even when both were actually present. Found in review."""
+    app = CustodianMiddleware(stub_app)
+    body = json.dumps({"perk": "p1", "var_keys": ["a"]}).encode()  # only skill absent
+    send_fn, messages = collect_send()
+    asyncio.run(app(make_scope("/__custodian__/plan"), make_receive(body), send_fn))
+    payload = json.loads(messages[1]["body"])
+    assert payload["missing"] == ["skill"]

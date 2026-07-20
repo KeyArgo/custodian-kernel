@@ -32,6 +32,45 @@ def test_sub_session_same_band_allowed():
     assert r.ok
 
 
+def test_step_gate_denies_when_upstream_step_did_not_succeed():
+    """sub_session(step=...) used to be permanently dead code: the gate's
+    own `_step is not None` guard could never fire because sub_session()
+    never passed `step` through, and `_parents_audit` was never populated
+    by anything. A chained multi-step session enforced zero ordering."""
+    with CustodianSession(band="L2", cap=1.00) as parent:
+        upstream = parent.request(amount=100.00, description="step-01")  # escalates, cap=1.00
+        assert upstream.verdict == "escalation_required"
+
+        child = parent.sub_session(band="L1", step="step-02")
+        r = child.request(amount=0.50, description="step-02")
+
+    assert r.verdict == "denied"
+    assert "upstream step" in r.reason
+    assert upstream.audit_id in r.reason
+
+
+def test_step_gate_allows_when_upstream_step_succeeded():
+    with CustodianSession(band="L2", cap=50.00) as parent:
+        upstream = parent.request(amount=5.00, description="step-01")
+        assert upstream.verdict == "autonomous"
+
+        child = parent.sub_session(band="L1", step="step-02")
+        r = child.request(amount=0.50, description="step-02")
+
+    assert r.ok
+
+
+def test_step_gate_ignores_parent_results_created_after_sub_session():
+    """The gate only checks results the parent already had *at sub_session()
+    time* -- a parent request made afterward isn't retroactively required."""
+    with CustodianSession(band="L2", cap=50.00) as parent:
+        child = parent.sub_session(band="L1", step="step-02")
+        parent.request(amount=100.00, description="unrelated later escalation")
+        r = child.request(amount=0.50, description="step-02")
+
+    assert r.ok
+
+
 def test_session_log_format():
     with CustodianSession(band="L2", cap=50.00) as session:
         session.request(amount=5.00, description="charge A")

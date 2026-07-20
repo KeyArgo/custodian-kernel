@@ -89,10 +89,29 @@ _RATE_LIMIT_MAX_REQUESTS = 30
 _request_log: dict[str, deque] = defaultdict(deque)
 
 
+def _client_ip() -> str:
+    """Return the rate-limit key for the current request.
+
+    `CF-Connecting-IP` is client-supplied input -- trusting it
+    unconditionally let a client rotate the header value on every request
+    to get a fresh rate-limit bucket each time, defeating the limiter
+    entirely regardless of whether Cloudflare (or anything else) actually
+    sits in front of this process. Only honor it when the operator has
+    explicitly confirmed, via TRUSTED_PROXY_HEADER=CF-Connecting-IP, that a
+    trusted proxy terminates every path to this process and overwrites any
+    client-supplied header of the same name; otherwise fall back to
+    request.remote_addr, the actual TCP peer, which a client cannot forge.
+    Found in review.
+    """
+    if os.environ.get('TRUSTED_PROXY_HEADER') == 'CF-Connecting-IP':
+        return request.headers.get('CF-Connecting-IP') or request.remote_addr or 'unknown'
+    return request.remote_addr or 'unknown'
+
+
 def rate_limited(f):
     @wraps(f)
     def wrapper(*args, **kwargs):
-        ip = request.headers.get('CF-Connecting-IP', request.remote_addr) or 'unknown'
+        ip = _client_ip()
         now = time.time()
         log = _request_log[ip]
         while log and now - log[0] > _RATE_LIMIT_WINDOW_SECONDS:

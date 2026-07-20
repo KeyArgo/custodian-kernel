@@ -150,11 +150,15 @@ def test_drift_denial_is_audited(tmp_path, isolated_home):
 def test_deleting_the_snapshot_does_not_silently_re_bless(tmp_path, isolated_home):
     """Documents the residual risk honestly.
 
-    Deleting the snapshot DOES return the function to first-run state — that is
-    inherent to a snapshot-on-first-use design. The mitigation is that the
-    snapshot now lives under ~/.custodian, which kernel-self-protection denies
-    the agent from writing; it is not that deletion is detected. If this
-    assertion ever needs to change, the design changed.
+    Deleting the snapshot DOES return the function to first-run state — that
+    is inherent to a snapshot-on-first-use design. ~/.custodian raises the
+    bar over the old /tmp default (not every process has reason to write
+    there), but kernel_self_protection.py's protection only covers writes
+    made through CustodianTool.invoke()'s adapter pipeline -- @govern is a
+    standalone decorator with no pipeline of its own, so this is NOT an
+    enforced guarantee against a determined in-process deletion, only a
+    real-but-partial mitigation. If this assertion ever needs to change,
+    the design changed.
     """
     sd = tmp_path / "tamper"
 
@@ -165,3 +169,21 @@ def test_deleting_the_snapshot_does_not_silently_re_bless(tmp_path, isolated_hom
     charge(amount=1.00)
     (sd / f"{_tamper_key(charge)}.bk.sha").unlink()
     assert charge(amount=1.00).verdict == "autonomous"
+
+
+def test_truncated_snapshot_is_treated_as_drift_not_a_match(tmp_path, isolated_home):
+    """`if stored and stored != source_sha` treated an empty/zero-byte
+    snapshot as falsy and fell through to "matches" -- a truncated (not
+    deleted) snapshot file silently passed as if verified, unlike the
+    deletion case above which at least re-snapshots honestly. A corrupted
+    or truncated snapshot must fail closed the same as a mismatched one.
+    Found in review."""
+    sd = tmp_path / "tamper"
+
+    @govern(band="L2", cap=50.00, state_dir=str(sd))
+    def charge(amount: float) -> dict:
+        return {"ok": True}
+
+    charge(amount=1.00)
+    (sd / f"{_tamper_key(charge)}.bk.sha").write_text("")  # truncate, do not delete
+    assert charge(amount=1.00).verdict == "denied"

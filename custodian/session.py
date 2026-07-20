@@ -121,12 +121,28 @@ class CustodianSession:
         self._results.append(r)
         return r
 
-    def sub_session(self, band: str, cap: Optional[float] = None) -> "CustodianSession":
-        """Create a child session with a lower (or equal) band ceiling."""
-        return CustodianSession(band=band, cap=cap if cap is not None else self.cap,
-                                daily_envelope=self.daily_envelope,
-                                policy_path=self.policy_path, state_dir=self.state_dir,
-                                parent=self)
+    def sub_session(self, band: str, cap: Optional[float] = None,
+                    step: Optional[str] = None) -> "CustodianSession":
+        """Create a child session with a lower (or equal) band ceiling.
+
+        `step`, if given, enables the upstream step-ordering gate: the
+        child's first request() call refuses to proceed unless every one
+        of the parent's results *as of this sub_session() call* was
+        autonomous. This constructor path used to be the only way to make
+        a sub-session, and it never passed `step` to the child -- so
+        request()'s `if self._step is not None` gate could never fire --
+        and never populated `_parents_audit` either, so even a
+        manually-constructed CustodianSession(step=...) had zero parent
+        results to check. The gate was permanently dead code: a chained
+        multi-step session enforced no ordering at all. Found in review.
+        """
+        child = CustodianSession(band=band, cap=cap if cap is not None else self.cap,
+                                 daily_envelope=self.daily_envelope,
+                                 policy_path=self.policy_path, state_dir=self.state_dir,
+                                 parent=self, step=step)
+        if step is not None:
+            child._parents_audit = [r.audit_id for r in self._results]
+        return child
 
     def log(self) -> str:
         lines = [f"CustodianSession {self.session_id} — "

@@ -30,20 +30,54 @@ def _default_tamper_dir() -> str:
     """Where tamper snapshots live when the caller names no state_dir.
 
     NOT /tmp, which is what this used to default to. /tmp is world-writable
-    (mode 1777 on POSIX) and is not on kernel-self-protection's protected list,
-    so the agent this check exists to catch could simply delete its own
-    snapshot: `rm /tmp/charge.bk.sha`, edit the source, and the next run finds
-    no stored hash, takes the "first run" branch, and re-snapshots the tampered
-    source as legitimate. A tamper check whose state the tampering party can
-    erase is not a check.
+    (mode 1777 on POSIX), so the agent this check exists to catch could
+    simply delete its own snapshot: `rm /tmp/charge.bk.sha`, edit the
+    source, and the next run finds no stored hash, takes the "first run"
+    branch, and re-snapshots the tampered source as legitimate. A tamper
+    check whose state the tampering party can erase is not a check.
 
-    ~/.custodian IS on the protected list, so a write there is denied to the
-    agent by the same adapter that guards the policy and the kill switch.
+    ~/.custodian is on kernel_self_protection.py's protected list, but that
+    adapter only runs inside custodian/tools/registry.py's CustodianTool.invoke()
+    pipeline. @govern is a standalone decorator with no adapter pipeline of
+    its own -- any in-process code, including the code being governed, can
+    still delete or truncate this snapshot directly with zero interference
+    from this module. Using ~/.custodian raises the bar over /tmp (not
+    every process has reason to write there) but is not itself a guarantee;
+    treat this as tamper-evident, not tamper-proof, same disclosed limits
+    as custodian/universal_ledger.py's hash chain.
     """
     return os.environ.get(
         "CUSTODIAN_STATE_DIR",
         os.path.join(os.path.expanduser("~"), ".custodian", "tamper"),
     )
+
+
+def _extract_amount(fn: Callable, args: tuple, kwargs: dict, cost_usd: float) -> float:
+    """Return the real value of the parameter named ``amount``, however it
+    was actually passed (keyword or positional).
+
+    Used to scan `args` for "the first nonzero, non-bool int/float" when
+    `amount` wasn't in kwargs -- for a positional call whose signature has
+    another numeric parameter before `amount` (an id, a quantity, a count),
+    it gated on that decoy value instead of the real spend. Reproduced:
+    `@govern(cap=10.00) def transfer(account_id, amount): ...` called as
+    `transfer(7, 999999.99)` was gated on `account_id=7` and sailed through
+    autonomously with a real amount of $999,999.99 under a $10 cap. Found
+    in review. Binding args/kwargs to the function's real signature and
+    reading the parameter actually named `amount` closes this regardless
+    of call style; a callable with no `amount` parameter (a fixed-cost
+    action) falls back to the declared cost_usd rather than guessing.
+    """
+    value = kwargs.get("amount")
+    if value is None:
+        try:
+            bound = inspect.signature(fn).bind_partial(*args, **kwargs)
+            value = bound.arguments.get("amount")
+        except (TypeError, ValueError):
+            value = None
+    if value is None or isinstance(value, bool) or not isinstance(value, (int, float)):
+        return float(cost_usd)
+    return float(value)
 
 
 def _tamper_key(func: Callable) -> str:
@@ -82,8 +116,13 @@ def _tamper_check(
 
     try:
         stored = open(bk_path, "r").read().strip()
-        if stored and stored != source_sha:
-            return source_sha, "drift"  # tamper detected
+        # An empty (zero-byte or whitespace-only) snapshot is corrupt or
+        # truncated, not "no snapshot yet" -- `if stored and ...` treated it
+        # as falsy and fell through to "matches", silently accepting any
+        # source as legitimate. A truncated snapshot must fail closed the
+        # same as a mismatched one. Found in review.
+        if stored != source_sha:
+            return source_sha, "drift"  # tamper detected (includes truncation)
         return source_sha, "ok"
     except FileNotFoundError:
         # First run: write the snapshot.
@@ -179,17 +218,7 @@ def govern(
 
         @functools.wraps(fn)
         def wrapper(*args, **kwargs) -> GovernedResult:
-            # Extract amount from kwargs first, then first numeric positional arg
-            amount = float(kwargs.get("amount", cost_usd))
-            if amount == 0.0 and args:
-                for arg in args:
-                    # Negative positional amounts are refunds/credits and must
-                    # be governed by magnitude. bool is an int subclass but is
-                    # never a meaningful monetary amount.
-                    if (isinstance(arg, (int, float))
-                            and not isinstance(arg, bool) and arg != 0):
-                        amount = float(arg)
-                        break
+            amount = _extract_amount(fn, args, kwargs, cost_usd)
 
             # Tamper check: source file must not have changed since first run
             # (agent editing source between policy check and execution)

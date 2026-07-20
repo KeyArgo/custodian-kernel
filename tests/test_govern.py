@@ -161,3 +161,41 @@ def test_corrupt_existing_authority_state_escalates_fail_closed(tmp_path):
     result = charge(amount=1.00)
     assert result.verdict == "escalation_required"
     assert result.value is None
+
+
+def test_positional_call_gates_on_the_real_amount_not_a_leading_decoy_arg():
+    """The old fallback scanned `args` for "the first nonzero, non-bool
+    int/float" when `amount` wasn't in kwargs -- for a positional call
+    whose signature has another numeric parameter before `amount` (an id,
+    a quantity, a count), it gated on that decoy value instead of the real
+    spend. Reproduced: transfer(7, 999999.99) under cap=10.00 was gated on
+    account_id=7 and sailed through autonomously with a real amount of
+    $999,999.99. Found in review."""
+    @govern(band="L2", cap=10.00, raise_on_escalation=False)
+    def transfer(account_id, amount) -> dict:
+        return {"transferred": amount}
+
+    result = transfer(7, 999999.99)
+    assert result.verdict == "escalation_required"
+    assert result.amount == 999999.99
+    assert result.value is None
+
+
+def test_keyword_call_with_leading_positional_still_gates_correctly():
+    @govern(band="L2", cap=10.00, raise_on_escalation=False)
+    def transfer(account_id, amount) -> dict:
+        return {"transferred": amount}
+
+    result = transfer(7, amount=5.00)
+    assert result.ok
+    assert result.amount == 5.00
+
+
+def test_no_amount_parameter_falls_back_to_declared_cost():
+    @govern(band="L2", cap=10.00, cost_usd=3.00)
+    def fixed_cost_action(customer_id) -> dict:
+        return {"customer_id": customer_id}
+
+    result = fixed_cost_action("cus_123")
+    assert result.ok
+    assert result.amount == 3.00

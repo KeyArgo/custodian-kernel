@@ -43,9 +43,25 @@ class CustodianMiddleware:
         self._governed_paths: dict = {}
         self._value_free_paths: list = []  # auto-route: /__custodian__/plan etc.
 
+    @staticmethod
+    def _normalize_path(path: str) -> str:
+        """Normalize a request path before matching it against registered
+        governed routes.
+
+        A byte-for-byte-only match against scope["path"] let a request
+        differing only by a trailing slash, a doubled leading slash, or
+        case reach the downstream application completely ungoverned --
+        no band/cap/kill-switch check, no audit trail at all. Reproduced:
+        a route registered as /charge (L4, always-escalates) let a
+        $999,999 request through as an ordinary 200 via /charge/,
+        //charge, or /CHARGE. Found in review.
+        """
+        segments = [s for s in (path or "").strip().split("/") if s]
+        return ("/" + "/".join(segments)).lower()
+
     def register_path(self, path: str, band: str = "L2", cap: float = 10.00):
         """Register a route as governed. Returns self for chaining."""
-        self._governed_paths[path] = {"band": band, "cap": cap}
+        self._governed_paths[self._normalize_path(path)] = {"band": band, "cap": cap}
         return self
 
     async def __call__(self, scope, receive, send):
@@ -53,7 +69,7 @@ class CustodianMiddleware:
             await self.app(scope, receive, send)
             return
 
-        path = scope.get("path", "")
+        path = self._normalize_path(scope.get("path", ""))
 
         # Value-free plan endpoint: /__custodian__/plan
         if path == "/__custodian__/plan":
@@ -185,10 +201,13 @@ class CustodianMiddleware:
             return {
                 "error": "missing-fields",
                 "status": 400,
-                "missing": [f for f in ("skill", "perk", "var_keys")
-                            if not (f == "skill" and skill)
-                                or (f == "perk" and perk)
-                                or (f == "var_keys" and var_keys_raw)],
+                # Operator precedence in the old list comprehension made
+                # `not (f == "skill" and skill)` true for every f != "skill",
+                # so "perk" and "var_keys" were reported as missing even when
+                # both were present. Found in review.
+                "missing": [f for f, v in
+                            (("skill", skill), ("perk", perk), ("var_keys", var_keys_raw))
+                            if not v],
             }
 
         if (not isinstance(var_keys_raw, list)

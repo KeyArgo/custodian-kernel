@@ -1,5 +1,8 @@
 """Tests for the EventBus."""
-from custodian.bus import EventBus
+import logging
+from pathlib import Path
+
+from custodian.bus import EventBus, _default_audit_handler
 
 
 def test_basic_emit_and_receive():
@@ -64,6 +67,22 @@ def test_emit_none_payload():
 
     bus.emit("ev")
     assert received == [None]
+
+
+def test_default_audit_handler_logs_a_warning_on_write_failure(tmp_path, monkeypatch, caplog):
+    """A bare `except Exception: pass` around the sole persistence path for
+    kernel_denied/escalation_required events meant a write failure (full
+    disk, permissions change) made one of these vanish from the audit
+    trail with no trace anywhere -- no stderr, no log, nothing. Reproduced
+    by occupying ~/.custodian with a plain file so mkdir(parents=True)
+    fails inside the handler."""
+    monkeypatch.setattr(Path, "home", lambda: tmp_path)
+    (tmp_path / ".custodian").write_text("not a directory")
+
+    with caplog.at_level(logging.WARNING, logger="custodian.bus"):
+        _default_audit_handler("kernel_denied", {"reason": "kill switch engaged"})
+
+    assert any("kernel_denied" in r.message for r in caplog.records)
 
 
 def test_module_level_on_emit():
