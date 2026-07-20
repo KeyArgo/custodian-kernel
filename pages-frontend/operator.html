@@ -364,7 +364,7 @@
     <div class="step">
         <h2>Step 0 — Real revenue in (no cap)</h2>
         <p>Earning isn't gated — only spend is. No band, no approval needed. This is intentional asymmetric design: receiving money carries none of the risk that spending it does.</p>
-        <button id="step0-btn">Run: earn $1,200.00 (support contract payment)</button>
+        <button id="step0-btn">Start fresh demo + earn $1,200.00</button>
         <div class="out" id="step0-out"></div>
     </div>
 
@@ -382,9 +382,9 @@
             spend budget is exhausted from previous runs, so it hit the session cap
             and escalated instead of creating a PaymentIntent. Step 7's refund input
             auto-fills from that PaymentIntent, so it stays empty.<br>
-            <b>Fix:</b> open <b>Admin reset</b> at the bottom of this page, enter the
-            operator password, reset the session, then re-run Step 1 — it will execute
-            and Step 7 will fill.
+            <b>Fix:</b> restart at Step 0, which opens a clean authenticated demo
+            session automatically, then re-run Step 1. Step 7 will fill from the new
+            PaymentIntent.
             <div style="margin-top:8px;">
                 <button class="btn-copy show" id="step1-jump-reset">↻ Reset session &amp; retry Step 1</button>
             </div>
@@ -759,7 +759,24 @@ async function nemoNarrate(stepIdx) {
 }
 
 document.getElementById('step0-btn').addEventListener('click', async () => {
+    const btn = document.getElementById('step0-btn');
+    if (btn.disabled) return;
+    btn.disabled = true;
+    // Step 0 is the explicit beginning of a demo run. The authority ledger is
+    // intentionally persistent, so without this reset yesterday's test spend
+    // can make today's supposedly autonomous Step 1 escalate. Keep reset in
+    // the demo orchestrator—not /earn or the kernel—so normal integrations
+    // never acquire surprising state-destroying semantics.
+    const reset = await call('/reset', {});
+    if (!reset.ok) {
+        renderOut('step0-out', reset.error ? reset : {
+            error: 'Could not start a clean demo session. Sign in again and retry Step 0.'
+        });
+        btn.disabled = false;
+        return;
+    }
     const data = await call('/earn', { amount: '1200.00', description: 'Demo: support contract renewal -- customer payment received' });
+    btn.disabled = false;
     renderOut('step0-out', data);
     if (siteTour && !data.error) siteTour.markOperatorStep(0, { completed: true });
     if (!data.error) opRailMark(0);

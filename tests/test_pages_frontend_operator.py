@@ -70,6 +70,18 @@ def test_operator_actions_use_short_lived_login_token():
     assert "the API is public" not in html
 
 
+def test_step_zero_starts_a_clean_demo_before_earning():
+    """Persistent spend from an earlier run must not break autonomous Step 1."""
+    html = read_operator()
+    handler_start = html.index("document.getElementById('step0-btn').addEventListener")
+    handler_end = html.index("document.getElementById('step1-btn').addEventListener")
+    handler = html[handler_start:handler_end]
+    assert "call('/reset', {})" in handler
+    assert "call('/earn'" in handler
+    assert handler.index("call('/reset', {})") < handler.index("call('/earn'")
+    assert "if (!reset.ok)" in handler
+
+
 def test_treasury_panel_present():
     """The Treasury panel must show real money in / out / net P&L (HermesCo parity)."""
     html = read_operator()
