@@ -38,7 +38,17 @@ _PATTERNS: list[tuple[re.Pattern, str]] = [
     (re.compile(r"\bAIza[0-9A-Za-z_-]{35}\b"), "google-api-key"),
 ]
 
-_TOKEN_SPLIT = re.compile(r"[\s\"'`,;=(){}\[\]<>/\\]+")
+_TOKEN_SPLIT = re.compile(r"[\s\"'`,;=(){}\[\]<>/\\.?&:]+")
+# '.', '?', '&', ':' added: sentence punctuation ("the credential X. please
+# retry") and URL query separators ("?key=X&y=1") merged the actual secret
+# into a token that matched neither the paladin tripwire's exact-value hash
+# nor (once diluted by the extra low-information characters) the
+# high-entropy fallback threshold -- so a secret sitting next to any of
+# these characters produced zero findings. Deliberately NOT splitting on
+# '-', '_', '+': those are legitimate interior characters for token shapes
+# this guard already recognizes (sk-..., gh[pousr]_..., xox[baprs]-...,
+# base64's '+'), so splitting on them would fragment real tokens instead
+# of isolating them. Found in review.
 
 # A ref is a zero-value pointer, so its name is exempt from the high-entropy
 # check — a long secret name is not a leaked secret. Matched against the RAW

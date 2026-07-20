@@ -62,10 +62,9 @@ def test_kernel_self_protection_follows_links_into_protected_dirs(tmp_path):
     one resolved to its own path string and matched nothing. Writes to
     kill_switch / authority.json / adapters.yaml all went through.
 
-    It was the only path guard not following links -- PathFence and ScopeFence
-    already route through _paths.resolve, whose docstring says a symlink fix
-    must apply to "every guard at once". This is the adapter whose entire job
-    is stopping the agent from editing what governs it.
+    PathFence already routed through _paths.resolve at the time this was
+    fixed. This is the adapter whose entire job is stopping the agent from
+    editing what governs it.
     """
     protected = tmp_path / "kernel_home"
     protected.mkdir()
@@ -79,6 +78,34 @@ def test_kernel_self_protection_follows_links_into_protected_dirs(tmp_path):
     assert not allowed(g, "file-write", {"path": str(link / "kill_switch"), "content": "x"}), \
         "a link into a protected dir must be denied"
     assert not allowed(g, "file-write", {"path": str(link / "authority.json")})
+
+
+def test_scope_fence_follows_links_out_of_the_workspace(tmp_path):
+    """ScopeFence resolved with os.path.normpath only, despite its own
+    module docstring's claim of "symlink-free traversal" -- normpath does
+    NOT follow links, so a link planted inside an allowed workspace but
+    pointing outside it (ln -s ~/.ssh /tmp/task/evil) resolved to a path
+    string still under the workspace prefix. Reading /tmp/task/evil/id_rsa
+    -- a real secret file entirely outside the task's scope -- was
+    allowed. Found in review: this is the exact bypass shape the sibling
+    KernelSelfProtection test above already covers for a different
+    adapter; ScopeFence had never actually been checked for it despite a
+    comment elsewhere claiming it was already safe.
+    """
+    workspace = tmp_path / "task"
+    workspace.mkdir()
+    outside = tmp_path / "secrets"
+    outside.mkdir()
+    (outside / "id_rsa").write_text("not-a-real-key")
+    link = workspace / "evil"
+    _link_dir(link, outside)
+
+    g = ScopeFence({"path_prefixes": [str(workspace)]})
+
+    assert allowed(g, "read_file", {"path": str(workspace / "notes.txt")}), \
+        "control: a real path inside the workspace must be allowed"
+    assert not allowed(g, "read_file", {"path": str(link / "id_rsa")}), \
+        "a link inside the workspace pointing outside it must be denied"
 
 
 # -- container-valued arguments -----------------------------------------------

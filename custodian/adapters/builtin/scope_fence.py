@@ -35,7 +35,7 @@ import re
 from urllib.parse import urlparse
 
 from custodian.adapters.base import ActionContext, Adapter, Verdict
-from custodian.adapters.builtin._paths import path_values
+from custodian.adapters.builtin._paths import path_values, resolve, under_prefix
 
 # The path-arg hint lives in _paths.PATH_ARG_HINT (reached via path_values) so
 # all three fences agree on what counts as a path argument. This module used to
@@ -101,11 +101,16 @@ class ScopeFence(Adapter):
             # which is exactly the "shape of input that silently skips the
             # check" this comment warns against.
             for value in path_values(ctx.args):
-                resolved = os.path.normpath(os.path.join("/", value)
-                                            if not os.path.isabs(value) else value)
-                if self.path_prefixes and not any(
-                        resolved == p or resolved.startswith(p + os.sep)
-                        for p in self.path_prefixes):
+                # Was os.path.normpath-only, contradicting this module's own
+                # docstring claim of "symlink-free traversal": a symlink
+                # planted inside an allowed workspace and pointing outside
+                # it (ln -s ~/.ssh /tmp/work/evil) normalized to a path
+                # string still under the workspace prefix, so reading
+                # /tmp/work/evil/id_rsa was allowed. _paths.resolve() is the
+                # shared, symlink-following helper PathFence already uses
+                # for exactly this reason. Found in review, reproduced live.
+                resolved = resolve(value)
+                if self.path_prefixes and not under_prefix(resolved, self.path_prefixes):
                     return Verdict.deny(
                         self.name,
                         f"path {value!r} (resolves to {resolved!r}) is outside the "
