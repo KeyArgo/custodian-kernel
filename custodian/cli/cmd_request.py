@@ -12,6 +12,17 @@ from custodian.policy.evaluator import decide
 from custodian.policy.loader import load_policy
 from custodian.storage.sqlite import SqliteStorage
 from custodian.types import AuditEntry, AuthorityState, PendingApproval, SpendRequest, Verdict
+from custodian.universal_ledger import LedgerEvent, UniversalLedger
+
+
+def _ledger_write(ledger: UniversalLedger, **kw) -> None:
+    """Never let a ledger write failure block the CLI -- same resilience
+    posture the existing storage.append_audit_entry() calls already have
+    in this file. The ledger is additive tonight, not yet the only record."""
+    try:
+        ledger.append(LedgerEvent(**kw))
+    except Exception as e:
+        print(f"warning: failed to write ledger event: {e}", file=sys.stderr)
 
 
 def _twilio_backend(state_dir: Path) -> TwilioVerifyBackend:
@@ -106,6 +117,23 @@ def run(args) -> None:
     request = SpendRequest(amount=args.amount, description=args.description)
     decision = decide(request, state, policy, skill=args.skill, context=context)
 
+    ledger = UniversalLedger(state_dir / "ledger.db")
+    correlation_id = uuid.uuid4().hex
+    verdict_name = decision.verdict.value.lower()
+    _ledger_write(
+        ledger, correlation_id=correlation_id, requester="cli:request",
+        provider="custodian", action=args.skill or "cli-request",
+        lifecycle_event="proposed", amount=args.amount, currency="USD",
+        metadata={"description": args.description[:200]},
+    )
+    _ledger_write(
+        ledger, correlation_id=correlation_id, requester="cli:request",
+        provider="custodian", action=args.skill or "cli-request",
+        lifecycle_event="decided", verdict=verdict_name,
+        band=decision.band.value, amount=args.amount, currency="USD",
+        metadata={"reason": decision.reason[:200]},
+    )
+
     if decision.verdict == Verdict.AUTONOMOUS:
         print(f"Verdict: AUTONOMOUS")
         print(f"Reason: {decision.reason}")
@@ -124,6 +152,12 @@ def run(args) -> None:
             print(f"Request-ID: {request_id}  (confirm with: custodian confirm {request_id})")
         except Exception as e:
             print(f"warning: failed to write audit entry: {e}", file=sys.stderr)
+        _ledger_write(
+            ledger, correlation_id=correlation_id, requester="cli:request",
+            provider="custodian", action=args.skill or "cli-request",
+            lifecycle_event="executed", verdict=verdict_name, band=decision.band.value,
+            amount=args.amount, currency="USD", external_id=request_id,
+        )
 
         if state_persisted:
             try:
@@ -170,7 +204,10 @@ def run(args) -> None:
         band_cfg = policy.bands.get(decision.band)
         backend_name = band_cfg.approval_backend if band_cfg else None
 
-        pending = PendingApproval(amount=args.amount, description=args.description, reason=decision.reason)
+        pending = PendingApproval(
+            amount=args.amount, description=args.description, reason=decision.reason,
+            correlation_id=correlation_id,
+        )
         try:
             storage.set_pending_approval(pending)
             print("Pending approval saved.")
@@ -185,6 +222,12 @@ def run(args) -> None:
             ))
         except Exception as e:
             print(f"warning: failed to write audit entry: {e}", file=sys.stderr)
+        _ledger_write(
+            ledger, correlation_id=correlation_id, requester="cli:request",
+            provider="custodian", action=args.skill or "cli-request",
+            lifecycle_event="escalated", verdict=verdict_name, band=decision.band.value,
+            amount=args.amount, currency="USD",
+        )
 
         if backend_name == "twilio_verify":
             try:

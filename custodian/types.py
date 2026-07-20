@@ -7,6 +7,7 @@ the package (Day 4-5) doesn't require translating between two shapes.
 from __future__ import annotations
 
 import time
+import uuid
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import Optional
@@ -152,6 +153,13 @@ class PendingApproval:
     description: str
     reason: str
     created_at: float = field(default_factory=time.time)
+    # Lets `custodian approve`/`custodian deny` -- separate later CLI
+    # invocations -- continue the SAME ledger correlation chain the
+    # original `custodian request` escalation started, instead of each
+    # writing disconnected fragments. Defaults fresh so an old record
+    # from before this field existed still gets *a* chain, just not
+    # joined to its own `proposed`/`decided`/`escalated` history.
+    correlation_id: str = field(default_factory=lambda: uuid.uuid4().hex)
 
     def is_expired(self, ttl_seconds: int = 600) -> bool:
         return (time.time() - self.created_at) > ttl_seconds
@@ -163,6 +171,7 @@ class PendingApproval:
             description=d["description"],
             reason=d.get("reason", ""),
             created_at=float(d.get("created_at", time.time())),
+            correlation_id=d.get("correlation_id") or uuid.uuid4().hex,
         )
 
     def to_dict(self) -> dict:

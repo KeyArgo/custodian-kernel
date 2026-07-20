@@ -8,6 +8,7 @@ from custodian.backends.twilio_verify import TwilioVerifyBackend
 from custodian.exceptions import BackendConfigurationError
 from custodian.storage.sqlite import SqliteStorage
 from custodian.types import AuditEntry, Band
+from custodian.universal_ledger import LedgerEvent, UniversalLedger
 
 
 def _twilio_backend(state_dir: Path) -> TwilioVerifyBackend:
@@ -83,6 +84,16 @@ def run(args) -> None:
         storage.append_audit_entry(entry)
     except Exception as e:
         print(f"warning: failed to write audit entry: {e}", file=sys.stderr)
+
+    try:
+        UniversalLedger(state_dir / "ledger.db").append(LedgerEvent(
+            correlation_id=pending.correlation_id, requester="cli:approve",
+            provider="custodian", action="cli-request", lifecycle_event="approved",
+            verdict="escalation_required", band=actual_band.value,
+            approver=args.approved_by, amount=pending.amount, currency="USD",
+        ))
+    except Exception as e:
+        print(f"warning: failed to write ledger event: {e}", file=sys.stderr)
 
     # An operator-approved escalation consumes the session budget the same as
     # an autonomous spend -- otherwise approvals are invisible to the cap.

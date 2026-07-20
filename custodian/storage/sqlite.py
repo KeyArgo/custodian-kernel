@@ -54,7 +54,8 @@ CREATE TABLE IF NOT EXISTS pending_approval (
     amount      REAL    NOT NULL,
     description TEXT    NOT NULL,
     reason      TEXT    NOT NULL DEFAULT '',
-    created_at  REAL    NOT NULL
+    created_at  REAL    NOT NULL,
+    correlation_id TEXT
 );
 
 CREATE TABLE IF NOT EXISTS kill_switch (
@@ -75,6 +76,13 @@ class SqliteStorage(StorageBackend):
             conn = sqlite3.connect(str(path))
             conn.execute("PRAGMA journal_mode=WAL;")
             conn.executescript(_SCHEMA_SQL)
+            # CREATE TABLE IF NOT EXISTS is a no-op against an
+            # already-existing database from before correlation_id existed
+            # -- add the column explicitly for upgrades, not just fresh
+            # installs.
+            cols = {r[1] for r in conn.execute("PRAGMA table_info(pending_approval)")}
+            if "correlation_id" not in cols:
+                conn.execute("ALTER TABLE pending_approval ADD COLUMN correlation_id TEXT")
             conn.commit()
             conn.close()
         except sqlite3.Error as e:
@@ -184,10 +192,10 @@ class SqliteStorage(StorageBackend):
             conn = self._connect()
             conn.execute(
                 "INSERT OR REPLACE INTO pending_approval "
-                "(id, amount, description, reason, created_at) "
-                "VALUES (1, ?, ?, ?, ?)",
+                "(id, amount, description, reason, created_at, correlation_id) "
+                "VALUES (1, ?, ?, ?, ?, ?)",
                 (approval.amount, approval.description,
-                 approval.reason, approval.created_at),
+                 approval.reason, approval.created_at, approval.correlation_id),
             )
             conn.commit()
             conn.close()

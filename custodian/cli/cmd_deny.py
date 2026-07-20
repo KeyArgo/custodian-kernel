@@ -5,6 +5,7 @@ from pathlib import Path
 
 from custodian.storage.sqlite import SqliteStorage
 from custodian.types import AuditEntry, Band
+from custodian.universal_ledger import LedgerEvent, UniversalLedger
 
 
 def run(args) -> None:
@@ -25,6 +26,7 @@ def run(args) -> None:
     amount = pending.amount
     description = pending.description
     reason = pending.reason
+    correlation_id = pending.correlation_id
 
     storage.clear_pending_approval()
 
@@ -40,5 +42,15 @@ def run(args) -> None:
         storage.append_audit_entry(entry)
     except Exception as e:
         print(f"warning: failed to write audit entry: {e}", file=sys.stderr)
+
+    try:
+        UniversalLedger(state_dir / "ledger.db").append(LedgerEvent(
+            correlation_id=correlation_id, requester="cli:deny",
+            provider="custodian", action="cli-request", lifecycle_event="denied",
+            verdict="escalation_required", band=Band.L2.value,
+            approver=args.denied_by, amount=amount, currency="USD",
+        ))
+    except Exception as e:
+        print(f"warning: failed to write ledger event: {e}", file=sys.stderr)
 
     print(f"Denied: ${amount:.2f} for '{description}' by {args.denied_by}")
