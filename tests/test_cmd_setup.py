@@ -62,9 +62,11 @@ class TestInstall:
     def test_with_talaria_installs_the_talaria_package(self, no_pip_calls, capsys):
         rc = main(["setup", "--with", "talaria"])
         assert rc == 0
-        assert any("custodian-talaria" in " ".join(c) for c in no_pip_calls)
+        assert any("custodian-talaria[dashboard]>=0.1.0,<0.2" in c for c in no_pip_calls)
+        assert any(c[-2:] == ["hermes", "install"] for c in no_pip_calls)
+        assert any(c[-3:] == ["doctor", "--profile", "hermes"] for c in no_pip_calls)
         out = capsys.readouterr().out
-        assert "talaria hermes install" in out
+        assert "talaria dashboard" in out
 
     def test_with_paladin_alone_makes_no_pip_call(self, no_pip_calls, capsys):
         """paladin ships inside custodian-kernel's base install already."""
@@ -77,6 +79,12 @@ class TestInstall:
         rc = main(["setup", "--profile", "hermes"])
         assert rc == 0
         assert any("custodian-talaria" in " ".join(c) for c in no_pip_calls)
+
+    def test_skip_configure_only_installs_package(self, no_pip_calls):
+        rc = main(["setup", "--profile", "hermes", "--skip-configure"])
+        assert rc == 0
+        assert len(no_pip_calls) == 1
+        assert no_pip_calls[0][1:4] == ["-m", "pip", "install"]
 
     def test_profile_minimal_installs_nothing(self, no_pip_calls, capsys):
         rc = main(["setup", "--profile", "minimal"])
@@ -103,3 +111,67 @@ class TestValidation:
         rc = main(["setup", "--profile", "nonexistent-profile"])
         assert rc == 1
         assert "unknown profile" in capsys.readouterr().out
+
+
+class TestDoctor:
+    def test_base_install_is_ready_without_optional_talaria(self, monkeypatch, capsys):
+        real_find_spec = __import__("importlib").util.find_spec
+        monkeypatch.setattr(
+            "custodian.cli.cmd_doctor.importlib.util.find_spec",
+            lambda name: None if name == "talaria" else real_find_spec(name),
+        )
+        rc = main(["doctor"])
+        assert rc == 0
+        assert "Ready" in capsys.readouterr().out
+
+    def test_hermes_profile_requires_talaria(self, monkeypatch, capsys):
+        real_find_spec = __import__("importlib").util.find_spec
+        monkeypatch.setattr(
+            "custodian.cli.cmd_doctor.importlib.util.find_spec",
+            lambda name: None if name == "talaria" else real_find_spec(name),
+        )
+        rc = main(["doctor", "--profile", "hermes"])
+        assert rc == 1
+        assert "Talaria is not installed" in capsys.readouterr().out
+
+    def test_hermes_profile_checks_plugin_and_policy(self, monkeypatch, tmp_path, capsys):
+        real_find_spec = __import__("importlib").util.find_spec
+        monkeypatch.setattr(
+            "custodian.cli.cmd_doctor.importlib.util.find_spec",
+            lambda name: object() if name == "talaria" else real_find_spec(name),
+        )
+        monkeypatch.setenv("HERMES_HOME", str(tmp_path / "hermes"))
+        monkeypatch.setenv("TALARIA_HOME", str(tmp_path / "talaria"))
+        (tmp_path / "hermes" / "plugins" / "talaria-guard").mkdir(parents=True)
+        (tmp_path / "hermes" / "plugins" / "talaria-guard" / "plugin.yaml").write_text("name: guard\n")
+        (tmp_path / "talaria").mkdir()
+        (tmp_path / "talaria" / "policy.yaml").write_text("{}\n")
+        rc = main(["doctor", "--profile", "hermes"])
+        assert rc == 0
+        assert "Ready" in capsys.readouterr().out
+
+    def test_hermes_profile_requires_enabled_plugin_when_cli_exists(
+        self, monkeypatch, tmp_path, capsys
+    ):
+        real_find_spec = __import__("importlib").util.find_spec
+        monkeypatch.setattr(
+            "custodian.cli.cmd_doctor.importlib.util.find_spec",
+            lambda name: object() if name == "talaria" else real_find_spec(name),
+        )
+        monkeypatch.setattr(
+            "custodian.cli.cmd_doctor.shutil.which",
+            lambda name: "/usr/bin/hermes" if name == "hermes" else None,
+        )
+        monkeypatch.setattr(
+            "custodian.cli.cmd_doctor.subprocess.run",
+            lambda *a, **kw: subprocess.CompletedProcess(a[0], 0, "not enabled user 0.1 talaria-guard\n", ""),
+        )
+        monkeypatch.setenv("HERMES_HOME", str(tmp_path / "hermes"))
+        monkeypatch.setenv("TALARIA_HOME", str(tmp_path / "talaria"))
+        (tmp_path / "hermes" / "plugins" / "talaria-guard").mkdir(parents=True)
+        (tmp_path / "hermes" / "plugins" / "talaria-guard" / "plugin.yaml").write_text("name: guard\n")
+        (tmp_path / "talaria").mkdir()
+        (tmp_path / "talaria" / "policy.yaml").write_text("{}\n")
+        rc = main(["doctor", "--profile", "hermes"])
+        assert rc == 1
+        assert "not enabled" in capsys.readouterr().out

@@ -30,7 +30,7 @@ _COMPONENTS = {
     },
     "talaria": {
         "description": "Hermes Agent + NemoClaw integration — guard plugin, vault, dashboard",
-        "pip_spec": "custodian-talaria",
+        "pip_spec": "custodian-talaria[dashboard]>=0.1.0,<0.2",
     },
 }
 
@@ -65,6 +65,14 @@ def _resolve_components(args) -> list[str]:
                 raise SystemExit(1)
             names.add(name)
     return sorted(names)
+
+
+def _run_checked(command: list[str], label: str) -> None:
+    print(f"\n$ {' '.join(command)}")
+    result = subprocess.run(command)
+    if result.returncode != 0:
+        print(f"error: {label} failed (exit {result.returncode})")
+        raise SystemExit(1)
 
 
 def run(args) -> None:
@@ -102,15 +110,28 @@ def run(args) -> None:
         pip_spec = _COMPONENTS[name]["pip_spec"]
         if not pip_spec:
             continue
-        print(f"\n$ pip install {pip_spec}")
-        result = subprocess.run([sys.executable, "-m", "pip", "install", pip_spec])
-        if result.returncode != 0:
-            print(f"error: pip install {pip_spec} failed (exit {result.returncode})")
-            raise SystemExit(1)
+        _run_checked(
+            [sys.executable, "-m", "pip", "install", pip_spec],
+            f"pip install {pip_spec}",
+        )
+
+    if "talaria" in components and not args.skip_configure:
+        _run_checked(
+            [sys.executable, "-m", "talaria.cli", "hermes", "install"],
+            "Talaria configuration",
+        )
+        if shutil.which("hermes"):
+            _run_checked(
+                ["hermes", "plugins", "enable", "talaria-guard"],
+                "Hermes plugin enablement",
+            )
+        _run_checked(
+            [sys.executable, "-m", "custodian.cli.main", "doctor", "--profile", "hermes"],
+            "post-install health check",
+        )
 
     print("\nDone. Next steps:")
-    if "talaria" in components:
-        print("  talaria hermes install          # installs the guard plugin + starter policy + vault")
-        print("  hermes plugins enable talaria-guard")
     print("  custodian init                   # if you haven't already — scaffolds policy.yaml + state")
-    print("  custodian status                 # confirm the kernel is initialized")
+    print("  custodian doctor --profile hermes # verify the complete integration")
+    if "talaria" in components:
+        print("  talaria dashboard                # open the local operator interface")

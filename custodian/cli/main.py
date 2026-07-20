@@ -119,7 +119,7 @@ from custodian.cli import cmd_status_enhanced, cmd_poison_tests, cmd_beancount, 
 from custodian.cli import cmd_demo_receipt, cmd_generate_report
 from custodian.cli import cmd_adapters
 from custodian.cli import cmd_backup
-from custodian.cli import cmd_setup
+from custodian.cli import cmd_setup, cmd_doctor
 from custodian.cli._version import LazyVersionAction
 from custodian.config import CustodianConfig
 
@@ -255,7 +255,21 @@ def main(argv: list[str] | None = None) -> int:
         help="Install a named bundle of components (choices: hermes, minimal)",
     )
     p.add_argument("--dry-run", action="store_true", help="Show what would be installed, do nothing")
+    p.add_argument(
+        "--skip-configure", action="store_true",
+        help="Install packages only; do not install or enable the Hermes plugin",
+    )
     p.set_defaults(func=cmd_setup.run)
+
+    p = sub.add_parser(
+        "doctor",
+        help="Check that Custodian and optional integrations are ready to use",
+    )
+    p.add_argument(
+        "--profile", choices=["hermes"], default=None,
+        help="Require every component for this integration profile",
+    )
+    p.set_defaults(func=cmd_doctor.run)
 
     # ── init ──────────────────────────────────────────────────────────────────
     p = sub.add_parser(

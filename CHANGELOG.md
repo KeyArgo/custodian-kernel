@@ -18,6 +18,11 @@ the components you ask for (`--with talaria`, `--profile hermes`). Fails
 closed by design: with no arguments it only detects and reports, never
 installs anything without an explicit ask.
 
+The explicit Hermes profile completes the job: it installs a compatible
+Talaria version with the dashboard extra, installs its plugin and starter
+policy, creates the local vault if needed, and enables the plugin when Hermes
+is present. `custodian doctor --profile hermes` verifies the resulting setup.
+
 ### Talaria split into its own package
 
 The Hermes Agent + NemoClaw integration suite, previously developed

@@ -32,14 +32,15 @@ or agent framework — see `tests/test_architecture_boundaries.py`.
 ```bash
 pip install custodian-kernel
 custodian setup              # detects a local Hermes Agent, tells you what to add
-custodian setup --profile hermes   # or go straight to it: installs talaria too
+custodian setup --profile hermes   # installs + configures Talaria and its dashboard
+custodian doctor --profile hermes  # verifies the complete installation
 ```
 
-`custodian setup` is the one command most people install through — it
-orchestrates `pip install` for the components you actually want (`paladin`
-ships in the base install already; `talaria` is its own package) instead of
-asking you to learn multiple package names up front. Prefer to wire it up
-yourself instead? Plain extras work exactly as before:
+`custodian setup` is the one command most people use after installation. The
+Hermes profile installs the compatible Talaria release with its local
+dashboard, installs the guard plugin and starter policy, creates the Paladin
+vault if needed, and enables the plugin when Hermes is available. Prefer to
+wire it up yourself instead? Plain extras work exactly as before:
 `pip install custodian-kernel[paladin]` and `pip install custodian-talaria`.
 
 **Verify in 60 seconds, no credentials, no cloning:**
