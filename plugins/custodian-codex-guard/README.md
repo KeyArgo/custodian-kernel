@@ -20,10 +20,12 @@ python -m venv .venv
 . .venv/bin/activate
 # Windows PowerShell: .venv\Scripts\Activate.ps1
 python -m pip install -e .
-codex mcp add custodian-codex-guard -- custodian-codex-guard-mcp
+custodian-codex doctor
+codex plugin marketplace add .
+codex plugin add custodian-codex-guard@custodian-build-week
 ```
 
-The plugin manifest is at
+Start a new Codex thread after installation so it loads the plugin. The plugin manifest is at
 `plugins/custodian-codex-guard/.codex-plugin/plugin.json`. Its skill is at
 `plugins/custodian-codex-guard/skills/govern-codex/SKILL.md`; install/import
 that plugin in Codex to make the pre-action workflow automatic in conversation.
@@ -42,8 +44,15 @@ escalation, a valid receipt chain, and rejection after receipt tampering.
 
 ## Enforcement contract
 
-`guard_action` only returns `autonomous`, `escalation_required`, or `denied`.
-An escalation is never permission to execute. The caller must enforce the
-result and must fail closed if Guard is unavailable. Arguments are inspected
-but never persisted; receipts contain the tool name and decision metadata, not
-commands, file contents, prompts, or secret values.
+`guard_action` returns `autonomous`, `escalation_required`, `approved`, or
+`denied`. An escalation is never permission. The model can create a pending
+request but cannot approve it; the operator runs `custodian-codex approve ID`
+outside the model tool boundary. Approval binds the exact tool, effective risk
+class, arguments, resolved workspace, requester, and policy version; it expires
+and can be consumed once. Arguments are inspected but never persisted;
+receipts contain decision metadata, not commands, file contents, prompts, or
+secret values.
+
+This is an application-layer guard for actions routed through the plugin. It
+complements Codex sandboxing and approvals; it does not claim to intercept an
+unintegrated runner or replace operating-system isolation.

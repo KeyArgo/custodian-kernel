@@ -7,6 +7,7 @@ import sys
 from pathlib import Path
 from typing import Any
 
+from .approvals import ApprovalError, ApprovalStore, action_digest
 from .guard import ActionKind, evaluate_action
 from .receipts import ReceiptChain
 
@@ -34,7 +35,7 @@ TOOLS = [
         "inputSchema": {
             "type": "object",
             "additionalProperties": False,
-            "required": ["tool", "action_kind", "arguments", "workspace"],
+            "required": ["tool", "action_kind", "arguments", "workspace", "requester"],
             "properties": {
                 "tool": {"type": "string", "minLength": 1},
                 "action_kind": {"type": "string", "enum": [k.value for k in ActionKind]},
@@ -42,6 +43,9 @@ TOOLS = [
                 "workspace": {"type": "string", "minLength": 1},
                 "intent": {"type": "string"},
                 "session_id": {"type": "string"},
+                "requester": {"type": "string", "minLength": 1},
+                "policy_version": {"type": "string"},
+                "approval_id": {"type": "string"},
             },
         },
     },
@@ -77,6 +81,35 @@ def handle(method: str, params: dict[str, Any]) -> dict[str, Any] | None:
                     workspace=args.get("workspace", ""),
                     intent=args.get("intent", ""),
                 ).to_dict()
+                if decision["verdict"] == "escalation_required":
+                    requester = args["requester"]
+                    digest = action_digest(
+                        tool=args["tool"],
+                        action_kind=decision["action_kind"],
+                        arguments=args["arguments"],
+                        workspace=args["workspace"],
+                        requester=requester,
+                        policy_version=args.get("policy_version", "default"),
+                    )
+                    store = ApprovalStore(_state_dir())
+                    approval_id = args.get("approval_id")
+                    if approval_id:
+                        store.consume(approval_id, digest=digest, requester=requester)
+                        decision.update(
+                            verdict="approved",
+                            reason="exact action approved once by the human operator",
+                            approval_id=approval_id,
+                        )
+                    else:
+                        pending = store.request(digest=digest, requester=requester)
+                        decision.update(
+                            approval_id=pending.approval_id,
+                            approval_expires_at=pending.expires_at,
+                            next_step=(
+                                "Ask the operator to run: custodian-codex approve "
+                                f"{pending.approval_id}"
+                            ),
+                        )
                 receipt = chain.append(
                     decision,
                     tool=args.get("tool", ""),
@@ -87,6 +120,12 @@ def handle(method: str, params: dict[str, Any]) -> dict[str, Any] | None:
                     "chain_mac": receipt["mac"],
                 }
                 return _text_result(decision)
+            except ApprovalError as exc:
+                return _text_result({
+                    "verdict": "denied",
+                    "reason": str(exc),
+                    "enforcement_required": True,
+                }, is_error=True)
             except Exception as exc:
                 # Tool errors fail closed and avoid returning argument values.
                 return _text_result({

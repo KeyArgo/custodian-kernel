@@ -147,6 +147,58 @@ def test_mcp_lists_guard_tools():
     ]
 
 
+def test_mcp_escalation_requires_out_of_band_exact_approval(tmp_path, monkeypatch):
+    monkeypatch.setenv("CUSTODIAN_CODEX_GUARD_STATE_DIR", str(tmp_path / "state"))
+    args = {
+        "tool": "shell-exec",
+        "action_kind": "production",
+        "arguments": {"command": "deploy --environment staging"},
+        "workspace": str(tmp_path),
+        "requester": "codex:test-session",
+    }
+    pending = handle("tools/call", {"name": "guard_action", "arguments": args})
+    decision = pending["structuredContent"]
+    assert decision["verdict"] == "escalation_required"
+    approval_id = decision["approval_id"]
+    ApprovalStore(tmp_path / "state").approve(approval_id, approved_by="operator")
+
+    approved = handle("tools/call", {
+        "name": "guard_action",
+        "arguments": {**args, "approval_id": approval_id},
+    })["structuredContent"]
+    assert approved["verdict"] == "approved"
+
+    replay = handle("tools/call", {
+        "name": "guard_action",
+        "arguments": {**args, "approval_id": approval_id},
+    })["structuredContent"]
+    assert replay["verdict"] == "denied"
+
+
+def test_mcp_approval_rejects_changed_arguments(tmp_path, monkeypatch):
+    monkeypatch.setenv("CUSTODIAN_CODEX_GUARD_STATE_DIR", str(tmp_path / "state"))
+    args = {
+        "tool": "shell-exec",
+        "action_kind": "production",
+        "arguments": {"command": "deploy --environment staging"},
+        "workspace": str(tmp_path),
+        "requester": "codex:test-session",
+    }
+    decision = handle("tools/call", {
+        "name": "guard_action", "arguments": args,
+    })["structuredContent"]
+    ApprovalStore(tmp_path / "state").approve(
+        decision["approval_id"], approved_by="operator",
+    )
+    changed = {**args, "arguments": {"command": "deploy --environment production"},
+               "approval_id": decision["approval_id"]}
+    result = handle("tools/call", {
+        "name": "guard_action", "arguments": changed,
+    })["structuredContent"]
+    assert result["verdict"] == "denied"
+    assert "changed" in result["reason"]
+
+
 def approval_digest(tmp_path, **overrides):
     values = {
         "tool": "shell-exec",
