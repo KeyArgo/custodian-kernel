@@ -9,6 +9,29 @@ support, backup/restore, and bulk credential onboarding — and carries a round
 of money/security hardening with a regression test for every fix (each verified
 to fail against the pre-fix code).
 
+### `custodian setup` — one-command installer
+
+Most users shouldn't need to know `custodian-kernel`, `paladin`, and
+`custodian-talaria` are three different PyPI names. `custodian setup`
+detects a local Hermes Agent install and orchestrates `pip install` for
+the components you ask for (`--with talaria`, `--profile hermes`). Fails
+closed by design: with no arguments it only detects and reports, never
+installs anything without an explicit ask.
+
+The explicit Hermes profile completes the job: it installs a compatible
+Talaria version with the dashboard extra, installs its plugin and starter
+policy, creates the local vault if needed, and enables the plugin when Hermes
+is present. `custodian doctor --profile hermes` verifies the resulting setup.
+
+### Talaria split into its own package
+
+The Hermes Agent + NemoClaw integration suite, previously developed
+alongside the kernel and shipped bundled in this distribution, is now its
+own repo and PyPI package: [`custodian-talaria`](https://github.com/inovinlabs/talaria),
+depending on `custodian-kernel[paladin]` through a normal version pin
+instead of being force-versioned in lockstep with the kernel. `paladin`
+stays in this distribution — it has no Hermes-specific code.
+
 ### Credential broker (`paladin`)
 
 - Encrypted vault (AES-256-GCM, scrypt), deny-by-default grants, hash-chained

@@ -31,15 +31,42 @@ def test_keypair_roundtrip():
 def test_signed_receipt_verifies():
     priv, pub = generate_keypair()
     signed = sign_receipt(_receipt(), priv)
-    assert verify_signed(signed)
     assert verify_signed(signed, expected_public_key_hex=pub)
 
 
 def test_tampering_a_signed_field_fails():
-    priv, _ = generate_keypair()
+    priv, pub = generate_keypair()
     signed = sign_receipt(_receipt(), priv)
     signed["receipt"]["amount"] = 999.0  # break the fingerprint
-    assert verify_signed(signed) is False
+    assert verify_signed(signed, expected_public_key_hex=pub) is False
+
+
+def test_expected_public_key_hex_is_required():
+    """verify_signed used to default expected_public_key_hex to None, which
+    skipped the one check that makes this an authenticity guarantee rather
+    than an internal-consistency check: an attacker who fabricates a
+    receipt, signs it with their own throwaway key, and embeds that key in
+    the envelope passed verification, because "verify against whatever key
+    claims to have signed it" proves nothing. Now required -- there is no
+    legitimate call that doesn't know which key it trusts. Found in
+    review."""
+    priv, _ = generate_keypair()
+    signed = sign_receipt(_receipt(), priv)
+    with pytest.raises(TypeError):
+        verify_signed(signed)
+
+
+def test_forged_receipt_with_its_own_embedded_key_is_rejected():
+    """The exact bypass: attacker signs a fabricated receipt with their own
+    key and the envelope self-reports that key as legitimate. Verification
+    against the kernel's real public key -- the only call this function
+    now allows -- must reject it."""
+    kernel_priv, kernel_pub = generate_keypair()
+    attacker_priv, attacker_pub = generate_keypair()
+    fraud = _receipt(amount=1_000_000.0)
+    forged = sign_receipt(fraud, attacker_priv)  # envelope's public_key == attacker_pub
+    assert forged["public_key"] == attacker_pub
+    assert verify_signed(forged, expected_public_key_hex=kernel_pub) is False
 
 
 def test_forgery_with_attacker_key_is_rejected():

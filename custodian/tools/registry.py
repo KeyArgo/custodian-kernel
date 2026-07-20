@@ -187,11 +187,19 @@ class CustodianTool:
         }
         return labels.get(self.band, self.band)
 
-    def _kernel_decide(self) -> Optional[dict]:
+    def _kernel_decide(self, amount: Optional[float] = None) -> Optional[dict]:
         """Consult the kernel policy engine for L2+ tools.
 
-        Returns a dict with keys: verdict, reason, band.
-        Any loading/evaluation error returns escalation_required (fail closed).
+        `amount` is the real requested spend for this call — the caller's
+        `kwargs.get("amount", self.cost_usd)`, same precedence already used
+        by spend_sentinel.py/context_anchor.py. This used to always build
+        the SpendRequest from `self.cost_usd` (the SKILL.md-declared static
+        default, 0.0 for any tool whose real cost is per-call — the normal
+        shape for a spend tool) and never looked at the caller's actual
+        amount at all, so the L2/L3/L4 band-cap gate always decided against
+        $0 regardless of what was really requested. Verified live: a
+        $999,999.99 call to a fresh L2 tool sailed through as autonomous
+        with a $2.00 default per-action cap. Found in review.
         """
         try:
             from custodian.policy import load_policy
@@ -225,7 +233,7 @@ class CustodianTool:
             policy = load_policy(policy_path)
 
             request = SpendRequest(
-                amount=self.cost_usd,
+                amount=self.cost_usd if amount is None else amount,
                 description=f"tool:{self.name}",
             )
             decision = decide(request, state, policy, skill=self.name, killed=killed)
@@ -274,7 +282,11 @@ class CustodianTool:
         # Kernel gate for spending bands
         decision = None
         if self.band in ("L2", "L3", "L4"):
-            decision = self._kernel_decide()
+            try:
+                real_amount = float(kwargs.get("amount", self.cost_usd) or 0)
+            except (TypeError, ValueError):
+                real_amount = self.cost_usd
+            decision = self._kernel_decide(real_amount)
             if decision is not None and decision["verdict"] != "autonomous":
                 payload = {
                     "tool": self.name,

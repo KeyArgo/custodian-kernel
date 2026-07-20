@@ -76,3 +76,48 @@ class PromptInjectionGuard(Adapter):
                     )
 
         return Verdict.allow(self.name)
+
+    def post_action(self, ctx: ActionContext) -> Verdict:
+        """Scan tool OUTPUT for injection payloads, not just arguments.
+
+        This adapter's own docstring names the threat model — "web pages,
+        emails, ticket bodies, file contents" — which is exactly the shape
+        of content that arrives via a tool's *output* (fetch a page, read
+        a ticket), not something the agent puts in its own call arguments.
+        Only pre_action existed, so the classic indirect-injection case
+        (a fetched web page's body containing "ignore all previous
+        instructions") went completely unscanned. Mirrors
+        secret_leak_guard.py's post_action shape: redact the matched span
+        rather than discard the whole output, since most of a fetched
+        page/ticket is legitimate content the model still needs. Found in
+        review.
+        """
+        if not ctx.output:
+            return Verdict.allow(self.name)
+
+        redacted = ctx.output
+        found: set[str] = set()
+        for pattern, _hard, label in _RULES:
+            def _mark(m: re.Match, label: str = label) -> str:
+                found.add(label)
+                return f"[BLOCKED:{label}]"
+            redacted = pattern.sub(_mark, redacted)
+
+        for blob in _B64_BLOB.findall(ctx.output)[:5]:
+            try:
+                decoded = base64.b64decode(blob, validate=True).decode("utf-8", "ignore")
+            except Exception:
+                continue
+            for pattern, _hard, label in _RULES:
+                if pattern.search(decoded):
+                    redacted = redacted.replace(blob, f"[BLOCKED:{label} (base64)]")
+                    found.add(f"{label} (base64)")
+                    break
+
+        if not found:
+            return Verdict.allow(self.name)
+        ctx.output = redacted
+        return Verdict.transform(
+            self.name,
+            f"blocked {len(found)} injection signature(s) in output ({', '.join(sorted(found))})",
+        )

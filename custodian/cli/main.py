@@ -23,6 +23,9 @@ _WELCOME = """
     3.  See what happened
           custodian status
 
+  Using Hermes Agent? Add Talaria (secrets/file/tool guardrails for it):
+          custodian setup --profile hermes
+
   Want a friendly, step-by-step walkthrough?   Type:   custodian guide
   Want the full list of commands?              Type:   custodian help
 """
@@ -116,6 +119,7 @@ from custodian.cli import cmd_status_enhanced, cmd_poison_tests, cmd_beancount, 
 from custodian.cli import cmd_demo_receipt, cmd_generate_report
 from custodian.cli import cmd_adapters
 from custodian.cli import cmd_backup
+from custodian.cli import cmd_setup, cmd_doctor
 from custodian.cli._version import LazyVersionAction
 from custodian.config import CustodianConfig
 
@@ -230,6 +234,42 @@ def main(argv: list[str] | None = None) -> int:
 
     p = sub.add_parser("menu", help="Interactive menu — no syntax to memorize")
     p.set_defaults(func=lambda args: _run_menu())
+
+    # ── setup ─────────────────────────────────────────────────────────────────
+    p = sub.add_parser(
+        "setup",
+        help="Install the components you need (paladin/talaria) in one step",
+        description=(
+            "Detects a local Hermes Agent install and orchestrates `pip install` "
+            "for the components you want, so you don't need to learn multiple "
+            "package names. Bare `custodian setup` only detects and reports — "
+            "pass --with or --profile to actually install something."
+        ),
+    )
+    p.add_argument(
+        "--with", dest="with_", metavar="COMPONENTS", default=None,
+        help="Comma-separated components to install, e.g. --with talaria",
+    )
+    p.add_argument(
+        "--profile", default=None,
+        help="Install a named bundle of components (choices: hermes, minimal)",
+    )
+    p.add_argument("--dry-run", action="store_true", help="Show what would be installed, do nothing")
+    p.add_argument(
+        "--skip-configure", action="store_true",
+        help="Install packages only; do not install or enable the Hermes plugin",
+    )
+    p.set_defaults(func=cmd_setup.run)
+
+    p = sub.add_parser(
+        "doctor",
+        help="Check that Custodian and optional integrations are ready to use",
+    )
+    p.add_argument(
+        "--profile", choices=["hermes"], default=None,
+        help="Require every component for this integration profile",
+    )
+    p.set_defaults(func=cmd_doctor.run)
 
     # ── init ──────────────────────────────────────────────────────────────────
     p = sub.add_parser(

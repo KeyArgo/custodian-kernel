@@ -28,7 +28,7 @@ import ssl
 import subprocess
 from pathlib import Path
 from typing import Mapping, Optional, Sequence
-from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
+from urllib.parse import parse_qsl, quote_plus, urlencode, urlsplit, urlunsplit
 
 from paladin.audit import AuditLog
 from paladin.errors import EgressDeniedError, GrantDeniedError, UnknownRefError
@@ -315,14 +315,29 @@ class Broker:
 
     @staticmethod
     def _redact_response(result: dict, value: str) -> dict:
-        """Ensure a reflecting upstream cannot return a credential to a child."""
+        """Ensure a reflecting upstream cannot return a credential to a child.
+
+        Also redacts the query-encoded form of ``value``: query injection
+        (``_apply_injection``'s "query" branch) sends the value through
+        ``urlencode()``, which percent-encodes via ``quote_plus`` -- so a
+        secret containing ``+``, ``/``, or ``=`` (the base64 alphabet, a
+        common shape for API keys) never appears on the wire in its raw
+        form at all. Matching only the raw value here left a reflecting
+        upstream (e.g. an "invalid api_key=..." error echoing the request)
+        free to hand the credential straight back in its encoded --
+        trivially reversible -- form. Found in review, reproduced: a
+        value containing '+' survived this redaction unchanged.
+        """
         if not value:
             return result
         marker = "[REDACTED:paladin-value]"
+        encoded = quote_plus(value)
         cleaned = dict(result)
-        cleaned["body"] = str(cleaned.get("body", "")).replace(value, marker)
+        cleaned["body"] = (
+            str(cleaned.get("body", "")).replace(value, marker).replace(encoded, marker)
+        )
         cleaned["headers"] = {
-            str(key): str(header_value).replace(value, marker)
+            str(key): str(header_value).replace(value, marker).replace(encoded, marker)
             for key, header_value in (cleaned.get("headers") or {}).items()
         }
         return cleaned

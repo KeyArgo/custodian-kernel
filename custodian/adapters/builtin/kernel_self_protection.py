@@ -33,7 +33,7 @@ import re
 from custodian.adapters.base import ActionContext, Adapter, Verdict
 from custodian.adapters.builtin._paths import path_values, resolve as _resolve
 
-_WRITE_SKILLS = {"file-write", "file-delete", "file-move", "shell-exec"}
+_WRITE_SKILLS = {"file-write", "file-delete", "file-move", "shell-exec", "docker-exec"}
 _WRITE_HINT = re.compile(r"(write|delete|remove|move|append|edit|patch|chmod|chown)", re.I)
 # A unified-diff target marker. patch/edit_file carry the real target path
 # INSIDE the diff body, under a key ("diff", "patch") that no path-arg hint
@@ -139,8 +139,15 @@ class KernelSelfProtection(Adapter):
                     if self._is_protected(target):
                         return self._deny(target)
 
-        # shell-exec: any protected path co-occurring with a write operator.
-        if ctx.skill == "shell-exec":
+        # shell-exec / docker-exec: any protected path co-occurring with a
+        # write operator. docker-exec ("Run a command inside a running
+        # Docker container", a real registered L2 tool) was missing from
+        # _WRITE_SKILLS and never matched _WRITE_HINT ("exec"/"docker"
+        # aren't in it), so this adapter never even looked at its command
+        # -- a container with ~/.custodian or ~/.paladin bind-mounted got
+        # zero protection, structurally the same risk shell-exec already
+        # covers. Found in review.
+        if ctx.skill in ("shell-exec", "docker-exec"):
             command = str(ctx.args.get("command", ctx.args.get("cmd", "")))
             if _SHELL_WRITE.search(command):
                 for token in re.split(r"[\s;|&]+", command):
