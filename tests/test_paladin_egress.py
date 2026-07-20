@@ -48,7 +48,14 @@ class _EchoHandler(http.server.BaseHTTPRequestHandler):
     def _respond(self):
         type(self).seen_auth = self.headers.get("Authorization")
         type(self).seen_path = self.path
-        if self.path.startswith("/reflect"):
+        if self.path.startswith("/reflect-query"):
+            # Mimics a real REST API's error message echoing back the
+            # request it couldn't handle (e.g. "invalid api_key=...") --
+            # the query string, not a header, is what carries an
+            # injected credential for query-mode inject.
+            body = ('{"reflected_path": %r}' % self.path).encode()
+            reflected = self.path
+        elif self.path.startswith("/reflect"):
             body = ('{"reflected": %r}' % self.headers.get("Authorization")).encode()
             reflected = self.headers.get("Authorization", "")
         else:
@@ -204,6 +211,28 @@ def test_reflecting_upstream_cannot_return_secret_to_child(broker, vault, http_s
     assert _EchoHandler.seen_auth == f"Bearer {SECRET}"
     assert SECRET not in result["body"]
     assert SECRET not in str(result["headers"])
+    assert "[REDACTED:paladin-value]" in result["body"]
+
+
+def test_reflecting_upstream_cannot_return_query_injected_secret(broker, vault, http_server):
+    """Query injection sends the value through urlencode() (quote_plus),
+    which percent-encodes '+', '/', '=' -- the base64 alphabet, a common
+    shape for API keys. _redact_response used to search only for the raw
+    value, so a secret containing any of those characters reached the
+    child unredacted in its percent-encoded (trivially reversible) form
+    whenever an upstream reflected the request. Found in review."""
+    secret = "sk_test/AbC+123="
+    vault.add("api_key", secret, allowed_hosts=["127.0.0.1"])
+    broker.grant("api_key", "sandbox:t", max_band="L2")
+    result = broker.egress_request({
+        "url": f"http://{_host_port(http_server)}/reflect-query",
+        "ref": "api_key",
+        "inject": {"query": "api_key"},
+    }, requester="sandbox:t")
+    assert secret not in result["body"]
+    assert secret not in str(result["headers"])
+    from urllib.parse import quote_plus
+    assert quote_plus(secret) not in result["body"]
     assert "[REDACTED:paladin-value]" in result["body"]
 
 
