@@ -163,6 +163,22 @@ def _strip_thinking(text: str) -> str:
     text = re.sub(r'<thinking>.*?</thinking>', '', text, flags=re.DOTALL)
     text = text.strip()
 
+    # v9 (live leak 2026-07-19): an otherwise valid answer was followed by a
+    # second planning pass and then hundreds of literal ``<unk>`` tokens plus
+    # random multilingual subword fragments.  ``<unk>`` is a tokenizer/model
+    # failure marker, never visitor-facing prose.  Treat the first contaminated
+    # line as a hard corruption boundary.  A complete answer on earlier lines
+    # is safe to preserve; if corruption begins before one exists, fail closed
+    # to the frontend's explicit empty-response fallback.
+    unknown = re.search(r'<unk>', text, flags=re.IGNORECASE)
+    if unknown:
+        contaminated_line = text.rfind('\n', 0, unknown.start()) + 1
+        prefix = text[:contaminated_line].rstrip()
+        if prefix and re.search(r'[.!?]["\')\]]?$', prefix):
+            text = prefix
+        else:
+            return ''
+
     # v7 (live leak 2026-07-04): a whole new failure shape -- a genuine,
     # clean answer immediately followed, ON THE SAME LINE (no newline), by
     # the model self-verifying its own word count. Strategy 1 below filters

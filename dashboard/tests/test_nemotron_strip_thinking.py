@@ -137,6 +137,24 @@ So produce maybe 2 sentences?"""
     assert _strip_thinking(leaked) == ""
 
 
+def test_strip_thinking_truncates_live_unknown_token_flood_after_clean_answer():
+    """A tokenizer collapse after a complete reply must not reach visitors."""
+    from api.nemotron_chat import _strip_thinking
+    leaked = (
+        "This is the live Operator Panel, where every action is governed and audited.\n"
+        "We need to produce" + "<unk>" * 40
+        + "DashBugtoolsBV random multilingual tokenizer fragments"
+    )
+    assert _strip_thinking(leaked) == (
+        "This is the live Operator Panel, where every action is governed and audited."
+    )
+
+
+def test_strip_thinking_rejects_unknown_token_flood_without_complete_answer():
+    from api.nemotron_chat import _strip_thinking
+    assert _strip_thinking("We need to produce<unk><unk>corrupt") == ""
+
+
 def test_strip_thinking_handles_multiline_constraint_then_real_answer():
     """Regression: when the preamble spans multiple lines (one
     constraint line, one blank line, one more constraint line, then
