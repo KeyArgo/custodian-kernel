@@ -47,6 +47,18 @@ class TestDetectionOnly:
         assert "Hermes Agent detected: yes" in out
         assert "custodian setup --profile hermes" in out
 
+    def test_detects_hermes_via_hermes_home_env_var(self, monkeypatch, tmp_path, no_pip_calls, capsys):
+        """`doctor` already honored HERMES_HOME; `setup`'s own detection used
+        to hardcode ~/.hermes, so the two commands disagreed about whether
+        Hermes was installed on the same machine."""
+        hermes_home = tmp_path / "custom-hermes-home"
+        hermes_home.mkdir()
+        monkeypatch.setenv("HERMES_HOME", str(hermes_home))
+        rc = main(["setup"])
+        assert rc == 0
+        out = capsys.readouterr().out
+        assert "Hermes Agent detected: yes" in out
+
 
 class TestDryRun:
     def test_dry_run_reports_without_installing(self, no_pip_calls, capsys):
@@ -67,6 +79,19 @@ class TestInstall:
         assert any(c[-3:] == ["doctor", "--profile", "hermes"] for c in no_pip_calls)
         out = capsys.readouterr().out
         assert "talaria dashboard" in out
+
+    def test_with_talaria_enables_hermes_plugin_without_prompting(self, monkeypatch, no_pip_calls, capsys):
+        """talaria-guard only uses pre_tool_call/transform_tool_result hooks
+        and never needs Hermes' separate built-in-tool-override permission --
+        `hermes plugins enable` asks about that permission interactively
+        unless told not to, which would otherwise make a "one-command"
+        installer stop on an unrelated Y/N prompt in a real terminal."""
+        monkeypatch.setattr("custodian.cli.cmd_setup.shutil.which", lambda name: "/usr/bin/hermes" if name == "hermes" else None)
+        rc = main(["setup", "--with", "talaria"])
+        assert rc == 0
+        enable_calls = [c for c in no_pip_calls if c[:2] == ["hermes", "plugins"]]
+        assert len(enable_calls) == 1
+        assert enable_calls[0] == ["hermes", "plugins", "enable", "talaria-guard", "--no-allow-tool-override"]
 
     def test_with_paladin_alone_makes_no_pip_call(self, no_pip_calls, capsys):
         """paladin ships inside custodian-kernel's base install already."""
@@ -150,6 +175,40 @@ class TestDoctor:
         assert rc == 0
         assert "Ready" in capsys.readouterr().out
 
+    def test_hermes_plugin_check_resolves_active_hermes_profile(
+        self, monkeypatch, tmp_path, capsys
+    ):
+        """Hermes stores plugins per named profile
+        (~/.hermes/profiles/<name>/plugins/), not directly under
+        ~/.hermes/plugins/ -- a real dev machine with an active "dev"
+        profile had its correctly-installed, enabled plugin reported as
+        missing because this check only looked at the bare default path."""
+        real_find_spec = __import__("importlib").util.find_spec
+        monkeypatch.setattr(
+            "custodian.cli.cmd_doctor.importlib.util.find_spec",
+            lambda name: object() if name == "talaria" else real_find_spec(name),
+        )
+        monkeypatch.setattr("custodian.cli.cmd_doctor.shutil.which", lambda name: None)
+        hermes_home = tmp_path / ".hermes"
+        (hermes_home / "active_profile").parent.mkdir(parents=True)
+        (hermes_home / "active_profile").write_text("dev\n")
+        profile_dir = hermes_home / "profiles" / "dev"
+        (profile_dir / "plugins" / "talaria-guard").mkdir(parents=True)
+        (profile_dir / "plugins" / "talaria-guard" / "plugin.yaml").write_text("name: guard\n")
+        monkeypatch.setenv("HERMES_HOME", "")
+        monkeypatch.delenv("HERMES_HOME", raising=False)
+        monkeypatch.setattr("custodian.cli.cmd_doctor.Path.home", lambda: tmp_path)
+        monkeypatch.setenv("TALARIA_HOME", str(tmp_path / "talaria"))
+        (tmp_path / "talaria").mkdir()
+        (tmp_path / "talaria" / "policy.yaml").write_text("{}\n")
+
+        rc = main(["doctor", "--profile", "hermes"])
+        out = capsys.readouterr().out
+        assert "Hermes plugin is missing" not in out
+        assert str(profile_dir) in out
+        assert rc == 0
+        assert "Ready" in out
+
     def test_hermes_profile_requires_enabled_plugin_when_cli_exists(
         self, monkeypatch, tmp_path, capsys
     ):
@@ -175,3 +234,35 @@ class TestDoctor:
         rc = main(["doctor", "--profile", "hermes"])
         assert rc == 1
         assert "not enabled" in capsys.readouterr().out
+
+    def test_hermes_plugin_list_failure_is_reported_distinctly(
+        self, monkeypatch, tmp_path, capsys
+    ):
+        """A broken/erroring `hermes` CLI must not be reported as 'installed
+        but not enabled' -- that message previously covered both cases, which
+        sends a troubleshooter chasing the wrong problem."""
+        real_find_spec = __import__("importlib").util.find_spec
+        monkeypatch.setattr(
+            "custodian.cli.cmd_doctor.importlib.util.find_spec",
+            lambda name: object() if name == "talaria" else real_find_spec(name),
+        )
+        monkeypatch.setattr(
+            "custodian.cli.cmd_doctor.shutil.which",
+            lambda name: "/usr/bin/hermes" if name == "hermes" else None,
+        )
+        monkeypatch.setattr(
+            "custodian.cli.cmd_doctor.subprocess.run",
+            lambda *a, **kw: subprocess.CompletedProcess(a[0], 2, "", "config corrupted"),
+        )
+        monkeypatch.setenv("HERMES_HOME", str(tmp_path / "hermes"))
+        monkeypatch.setenv("TALARIA_HOME", str(tmp_path / "talaria"))
+        (tmp_path / "hermes" / "plugins" / "talaria-guard").mkdir(parents=True)
+        (tmp_path / "hermes" / "plugins" / "talaria-guard" / "plugin.yaml").write_text("name: guard\n")
+        (tmp_path / "talaria").mkdir()
+        (tmp_path / "talaria" / "policy.yaml").write_text("{}\n")
+        rc = main(["doctor", "--profile", "hermes"])
+        assert rc == 1
+        out = capsys.readouterr().out
+        assert "hermes plugins list" in out
+        assert "config corrupted" in out
+        assert "installed but not enabled" not in out

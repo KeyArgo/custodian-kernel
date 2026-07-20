@@ -21,6 +21,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+from custodian.cli.cmd_doctor import _hermes_home
+
 # pip_spec is None for components already bundled in custodian-kernel's own
 # base install -- nothing to pip install, `setup` just confirms it's there.
 _COMPONENTS = {
@@ -41,9 +43,14 @@ _PROFILES = {
 
 
 def _detect_hermes() -> bool:
+    # Shares custodian.cli.cmd_doctor's HERMES_HOME-aware home resolution --
+    # this used to hardcode ~/.hermes here while cmd_doctor checked
+    # HERMES_HOME, so a user with a non-default Hermes location got told
+    # "not detected" by `setup` and "detected" by `doctor` for the same
+    # install.
     if shutil.which("hermes"):
         return True
-    return (Path.home() / ".hermes").exists()
+    return _hermes_home().exists()
 
 
 def _resolve_components(args) -> list[str]:
@@ -121,8 +128,15 @@ def run(args) -> None:
             "Talaria configuration",
         )
         if shutil.which("hermes"):
+            # talaria-guard only declares pre_tool_call/transform_tool_result
+            # hooks -- it never needs the separate "replace a built-in tool"
+            # permission -- but `hermes plugins enable` asks about that
+            # permission interactively unless told not to. Without
+            # --no-allow-tool-override, a one-command installer run from a
+            # real terminal stops on a Y/N prompt about a permission this
+            # plugin will never use.
             _run_checked(
-                ["hermes", "plugins", "enable", "talaria-guard"],
+                ["hermes", "plugins", "enable", "talaria-guard", "--no-allow-tool-override"],
                 "Hermes plugin enablement",
             )
         _run_checked(
@@ -135,3 +149,6 @@ def run(args) -> None:
     print("  custodian doctor --profile hermes # verify the complete integration")
     if "talaria" in components:
         print("  talaria dashboard                # open the local operator interface")
+        if hermes_detected:
+            print("\nIf a Hermes Agent session is already running, restart it —")
+            print("the plugin only takes effect on the next session, not the current one.")

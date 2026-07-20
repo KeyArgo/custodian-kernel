@@ -17,8 +17,36 @@ def _distribution_version(name: str) -> str | None:
 
 
 def _hermes_home() -> Path:
+    """Resolve the active Hermes profile dir (where plugins actually live).
+
+    Prefers HERMES_HOME, then the active-profile layout, then the plain
+    default. Deliberately duplicated from talaria.cli._hermes_home() rather
+    than imported: custodian-kernel must never depend on talaria (see
+    tests/test_architecture_boundaries.py) -- this command has to run, and
+    report "Talaria is not installed" correctly, even when talaria isn't
+    installed at all. Keep the two in sync by hand if either changes.
+
+    Hermes supports multiple named profiles, each with its own plugin
+    directory (~/.hermes/profiles/<name>/plugins/, not ~/.hermes/plugins/
+    directly) -- checking only the bare default falsely reports an
+    installed, enabled plugin as missing on any profile-based install.
+    """
     configured = os.environ.get("HERMES_HOME")
-    return Path(configured).expanduser() if configured else Path.home() / ".hermes"
+    if configured:
+        return Path(configured).expanduser()
+    base = Path.home() / ".hermes"
+    active = base / "active_profile"
+    if active.exists():
+        name = active.read_text().strip()
+        # A profile name is a single path segment, never a path itself --
+        # see talaria.cli._hermes_home()'s matching comment for why this
+        # guards against active_profile contents redirecting outside
+        # ~/.hermes entirely.
+        if name and os.sep not in name and "/" not in name and name not in ("..", "."):
+            candidate = base / "profiles" / name
+            if candidate.is_dir():
+                return candidate
+    return base
 
 
 def run(args) -> int:
@@ -80,15 +108,22 @@ def run(args) -> int:
                 capture_output=True,
                 text=True,
             )
-            enabled = check.returncode == 0 and any(
-                line.split()[-1:] == ["talaria-guard"] and line.split()[:1] == ["enabled"]
-                for line in check.stdout.splitlines()
-            )
-            if enabled:
-                print("✓ Hermes plugin is enabled")
-            else:
-                failures.append("Hermes plugin is installed but not enabled")
+            if check.returncode != 0:
+                failures.append(
+                    f"`hermes plugins list` failed (exit {check.returncode}): "
+                    f"{check.stderr.strip() or 'no output'}"
+                )
                 print(f"✗ {failures[-1]}")
+            else:
+                enabled = any(
+                    line.split()[-1:] == ["talaria-guard"] and line.split()[:1] == ["enabled"]
+                    for line in check.stdout.splitlines()
+                )
+                if enabled:
+                    print("✓ Hermes plugin is enabled")
+                else:
+                    failures.append("Hermes plugin is installed but not enabled")
+                    print(f"✗ {failures[-1]}")
 
     if failures:
         print("\nNot ready:")
