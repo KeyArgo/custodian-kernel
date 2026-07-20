@@ -185,6 +185,49 @@ class TestRequest:
         assert pending is not None
         assert pending.amount == 45.00
 
+    def test_second_escalation_does_not_overwrite_outstanding_pending(self, state_dir, tmp_policy_file, capsys):
+        """pending_approval is a single-row table, and the Twilio SMS
+        challenge carries no reference to which request it's for -- a
+        second escalation landing before the first is resolved used to
+        silently overwrite it, so an operator's original code would end
+        up approving a completely different (and possibly much larger)
+        charge than the one they were told about. Found in review."""
+        rc1 = main([
+            "request", "--amount", "5.00", "--description", "small legit request",
+            "--state-dir", str(state_dir), "--policy", str(tmp_policy_file),
+        ])
+        assert rc1 == 0
+        capsys.readouterr()
+
+        rc2 = main([
+            "request", "--amount", "99999.00", "--description", "drain the account",
+            "--state-dir", str(state_dir), "--policy", str(tmp_policy_file),
+        ])
+        assert rc2 == 1
+        err = capsys.readouterr().err
+        assert "already outstanding" in err
+        assert "5.00" in err
+
+        storage = SqliteStorage(state_dir / "custodian.db")
+        pending = storage.get_pending_approval()
+        assert pending is not None
+        assert pending.amount == 5.00  # the original request, untouched
+        assert pending.description == "small legit request"
+
+    def test_new_escalation_allowed_after_expired_pending(self, state_dir, tmp_policy_file, capsys):
+        storage = SqliteStorage(state_dir / "custodian.db")
+        storage.set_pending_approval(PendingApproval(
+            amount=5.00, description="stale request", reason="test", created_at=0.0,
+        ))
+        rc = main([
+            "request", "--amount", "10.00", "--description", "fresh request",
+            "--state-dir", str(state_dir), "--policy", str(tmp_policy_file),
+        ])
+        assert rc == 0
+        assert "Verdict: ESCALATION_REQUIRED" in capsys.readouterr().out
+        pending = storage.get_pending_approval()
+        assert pending.amount == 10.00
+
     def test_kill_switch_denies_regardless_of_amount(self, state_dir, tmp_policy_file, capsys):
         storage = SqliteStorage(state_dir / "custodian.db")
         storage.set_kill_switch(KillSwitchState(killed=True, reason="demo", by="Operator"))

@@ -140,6 +140,33 @@ def run(args) -> None:
         print(f"Reason: {decision.reason}")
         print(f"Band: {decision.band.value}")
 
+        # pending_approval is a single-row table (INSERT OR REPLACE), and the
+        # Twilio Verify SMS challenge below carries no reference to which
+        # request it's for (a standard "your code is: XXXXXX" template) --
+        # so a second escalation landing before the first is resolved used
+        # to silently overwrite it. An operator who received a code for a
+        # small request, got distracted, and later typed it in had no way
+        # to tell -- from the SMS alone -- that `custodian approve` would
+        # actually charge whatever the SECOND, unrelated request asked for.
+        # Reproduced: escalate $5 "small legit request", then escalate
+        # $99999 "drain the account" before approving -- the operator's
+        # original code approved the $99999 charge. Found in review. Fail
+        # closed instead: refuse a new escalation while one is still
+        # outstanding, rather than silently discarding it.
+        existing = storage.get_pending_approval()
+        if existing is not None:
+            ttl = int(os.environ.get("CUSTODIAN_PENDING_TTL_SECONDS", "600"))
+            if not existing.is_expired(ttl_seconds=ttl):
+                print(
+                    f"error: a pending approval is already outstanding "
+                    f"(${existing.amount:.2f} for {existing.description!r}) — "
+                    f"resolve it first with 'custodian approve <CODE>' or "
+                    f"'custodian deny' before requesting another escalation",
+                    file=sys.stderr,
+                )
+                raise SystemExit(1)
+            storage.clear_pending_approval()  # stale; safe to replace
+
         band_cfg = policy.bands.get(decision.band)
         backend_name = band_cfg.approval_backend if band_cfg else None
 
