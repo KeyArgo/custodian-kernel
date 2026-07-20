@@ -10,7 +10,7 @@ Custodian is that kernel. The model proposes. The kernel decides. The verifier p
 
 - `custodian` is the provider-neutral governance kernel.
 - `paladin` is the provider-neutral credential vault and egress broker.
-- [`talaria`](https://github.com/KeyArgo/talaria) is the Hermes Agent +
+- [`talaria`](https://github.com/inovinlabs/talaria) is the Hermes Agent +
   NemoClaw integration layer — its own repo and PyPI package
   (`custodian-talaria`), depending on this kernel through a normal version
   pin (`custodian-kernel[paladin]>=0.4.0,<0.5`) rather than shipping in the
@@ -236,7 +236,7 @@ Safety properties, on purpose:
 - [Paladin](docs/PALADIN.md) — the credential broker (the agent never sees the value), with bulk import from .env/Bitwarden/1Password (`paladin import`)
 - [Paladin](docs/PALADIN.md) — the credential broker (the agent never sees the value)
 - [Guard Adapters](docs/ADAPTERS.md) — money/security/privacy/guardrail hooks around every action
-- [Talaria](https://github.com/KeyArgo/talaria) — the Hermes Agent + NemoClaw integration suite (governed invoke surface, context-loss re-anchoring); own repo/package, see [docs/TALARIA.md](docs/TALARIA.md) for the pointer
+- [Talaria](https://github.com/inovinlabs/talaria) — the Hermes Agent + NemoClaw integration suite (governed invoke surface, context-loss re-anchoring); own repo/package, see [docs/TALARIA.md](docs/TALARIA.md) for the pointer
 - [Verification](docs/VERIFICATION.md) — how to check every claim yourself
 - [Getting Started](docs/GETTING_STARTED.md) — 10-minute walkthrough
 

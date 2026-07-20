@@ -53,7 +53,7 @@ dev = [
 # depend on paladin, not the other way around, so their own pyproject
 # just lists a normal version-pinned dependency, e.g.
 # "custodian-kernel[paladin]>=0.4.0,<0.5" -- see
-# https://github.com/KeyArgo/talaria. A future Claude/Codex integration
+# https://github.com/inovinlabs/talaria. A future Claude/Codex integration
 # package follows the same pattern as its own separate repo/package.
 paladin = [
     "cryptography>=42.0",

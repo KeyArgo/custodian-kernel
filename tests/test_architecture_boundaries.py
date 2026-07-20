@@ -3,7 +3,7 @@
 custodian/ is the brand-neutral kernel + adapter framework. paladin/ is
 the brand-neutral credential broker. Neither knows the other exists at
 the code level. Integration layers (talaria, for Hermes -- now its own
-package/repo at github.com/KeyArgo/talaria, depending on this one) are
+package/repo at github.com/inovinlabs/talaria, depending on this one) are
 the only place allowed to import both, because integrating them for a
 specific agent is that layer's entire job. A future Claude/Codex
 integration package would follow the same pattern.

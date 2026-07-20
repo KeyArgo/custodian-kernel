@@ -4,7 +4,7 @@ Orchestrates `pip install` for the components you actually want instead of
 asking a new user to learn multiple package names. `paladin` ships inside
 `custodian-kernel`'s base install already (see pyproject.toml's dependency
 comment); `talaria` is its own package with its own release cadence — see
-https://github.com/KeyArgo/talaria — so this is the thing that actually
+https://github.com/inovinlabs/talaria — so this is the thing that actually
 runs `pip install custodian-talaria` on request.
 
 Deliberately does nothing with zero explicit signal from the caller: bare

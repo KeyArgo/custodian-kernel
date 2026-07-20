@@ -3,7 +3,7 @@
 The Hermes Agent + NemoClaw integration suite (formerly `talaria/` in this
 repo) now lives in its own repository and PyPI package:
 
-- Repo: https://github.com/KeyArgo/talaria
+- Repo: https://github.com/inovinlabs/talaria
 - Package: `pip install custodian-talaria`
 
 It depends on this kernel through a normal version pin

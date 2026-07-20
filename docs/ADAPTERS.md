@@ -18,7 +18,7 @@ paladin/    (credential broker)           ←──┘  imports both. Nothing he
   is a standalone credential vault — usable with zero AI-agent
   framework installed at all (`pip install custodian-kernel[paladin]`
   and you have `paladin init`/`add`/`exec`, nothing else required).
-- **[`talaria`](https://github.com/KeyArgo/talaria) is the only package
+- **[`talaria`](https://github.com/inovinlabs/talaria) is the only package
   that imports both** — and it lives in its own repo now, depending on
   this one via `custodian-kernel[paladin]>=0.4.0,<0.5`. Wiring a specific
   broker to a specific kernel's adapters for a specific agent (Hermes) is
