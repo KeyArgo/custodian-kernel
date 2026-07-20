@@ -43,6 +43,31 @@ vault if needed, and enables the plugin when Hermes is available. Prefer to
 wire it up yourself instead? Plain extras work exactly as before:
 `pip install custodian-kernel[paladin]` and `pip install custodian-talaria`.
 
+### Custodian Guard for Codex (Build Week)
+
+The `feat/codex-guard` work adds a Codex-native capability firewall without
+hardcoding Custodian to Codex or to this project's website. A repo-local plugin
+routes proposed coding actions through a dependency-free MCP boundary. Safe
+workspace reads, tests, and edits may proceed; secrets, off-scope paths,
+destructive commands, network access, production changes, money movement, and
+governance changes deny or require a human. Decisions produce value-free HMAC
+hash-chained receipts.
+
+This extension was built collaboratively with Codex using GPT-5.6 during the
+OpenAI Build Week window. Codex inspected the existing adapter architecture,
+implemented the typed action bridge and MCP server, adversarially tested false
+risk labels and path handling, and produced the deterministic judge demo. The
+dated branch history and session submitted through `/feedback` distinguish the
+new work from the pre-existing 0.4.0 kernel.
+
+```bash
+python scripts/codex-guard-demo.py
+pytest -q tests/test_codex_guard.py
+```
+
+See [the Codex Guard judge guide](docs/CODEX_GUARD.md) and the
+[plugin README](plugins/custodian-codex-guard/README.md).
+
 **Verify in 60 seconds, no credentials, no cloning:**
 
 ```bash

@@ -1,0 +1,64 @@
+# Custodian Guard for Codex — Build Week handoff
+
+## What is new after July 13, 2026
+
+The existing Custodian kernel, Paladin vault, and guard-adapter framework are
+the foundation. The Build Week work is a new Codex-native enforcement surface:
+
+- a repo-local Codex plugin and governance skill;
+- a dependency-free MCP server exposing `guard_action` and `verify_receipts`;
+- a typed coding-action risk model independent of the model's own label;
+- fail-closed composition of workspace, secret, prompt-injection, and
+  kernel-self-protection guards;
+- value-free HMAC hash-chained decision receipts;
+- a deterministic judge demo and adversarial regression suite.
+
+The dated Git history on `feat/codex-guard` distinguishes this work from the
+pre-existing 0.4.0 code.
+
+## Threat model
+
+Guard assumes the model may be mistaken, prompt-injected, context-starved, or
+actively attempting to understate risk. It therefore does not trust the
+caller's action label. Known tool and command shapes independently raise the
+minimum risk class. Unknown classes deny; guard crashes deny; raw credential
+material denies; paths outside the declared workspace deny; changes to policy,
+vault, audit, or guard surfaces deny.
+
+The current plugin governs actions routed through its MCP decision boundary.
+It does not claim to replace the host operating system sandbox or intercept a
+separate, unintegrated tool runner. Codex's own sandbox and approval controls
+remain defense in depth.
+
+## Three-minute video outline
+
+1. **0:00–0:20 — Problem.** Coding agents can move faster than permission
+   systems: one injected instruction can read a token, push code, or deploy.
+2. **0:20–0:40 — Architecture.** Codex proposes an action; Custodian evaluates
+   it outside model context; only an autonomous verdict proceeds; all decisions
+   produce value-free receipts.
+3. **0:40–1:35 — Live demo.** Run `python scripts/codex-guard-demo.py`. Point
+   out safe test/edit, `.env` denial, and `rm`/deploy claimed as reads but
+   independently escalated.
+4. **1:35–2:05 — Evidence.** Show `verify_receipts`, the tamper rejection, and
+   `pytest -q tests/test_codex_guard.py`.
+5. **2:05–2:35 — Codex collaboration.** Show the Build Week branch/session and
+   explain that Codex implemented the MCP boundary, attacked the classifier,
+   found relative-workspace resolution behavior, and added regression tests.
+6. **2:35–2:55 — Impact.** Any developer or MSP can apply the same boundary to
+   their own workspace and policies; nothing is hardcoded to our website.
+
+Record at 1080p with terminal text enlarged. Use one continuous take where
+possible, add spoken audio, keep it under three minutes, upload publicly to
+YouTube, and verify playback in a logged-out browser.
+
+## Submission checklist
+
+- Confirm the session used GPT-5.6 and save the Codex Session ID for `/feedback`.
+- Include a concise account of how Codex was used in the public README.
+- Run the deterministic demo on a clean Linux environment and Windows.
+- Run the full repository suite and plugin validator.
+- Make the repository public, or share the private repository with the two
+  official judging accounts listed in the rules.
+- Add the public YouTube URL with audio and keep the video under three minutes.
+- Submit before July 21, 2026 at 5:00 PM PDT.

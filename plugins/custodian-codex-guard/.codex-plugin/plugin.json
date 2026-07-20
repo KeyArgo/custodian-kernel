@@ -1,0 +1,26 @@
+{
+  "name": "custodian-codex-guard",
+  "version": "0.1.0",
+  "description": "A capability firewall for Codex actions, backed by Custodian policy and tamper-evident receipts.",
+  "author": {
+    "name": "InovinLabs",
+    "email": "hello@inovinlabs.com",
+    "url": "https://getcustodian.xyz"
+  },
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Custodian Codex Guard",
+    "shortDescription": "Govern risky coding-agent actions before they execute.",
+    "longDescription": "Custodian Guard gives Codex an external, fail-closed decision boundary for files, secrets, networks, production, money, and policy—with value-free HMAC-chained receipts.",
+    "developerName": "InovinLabs",
+    "category": "Developer Tools",
+    "capabilities": ["Security", "Governance", "Audit"],
+    "websiteURL": "https://getcustodian.xyz",
+    "defaultPrompt": [
+      "Show how Custodian governs this repository.",
+      "Evaluate my next risky action before running it.",
+      "Verify the Codex Guard receipt chain."
+    ]
+  },
+  "mcpServers": "./.mcp.json"
+}
