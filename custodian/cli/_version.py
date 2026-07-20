@@ -1,4 +1,5 @@
-"""Shared --version support for all three CLIs (custodian, paladin, talaria).
+"""Shared --version support for the custodian and paladin CLIs (and,
+imported externally, the standalone talaria package's CLI too).
 
 A plain `version=f"...{_pkg_version()}"` string is evaluated the moment
 `add_argument()` runs — i.e. on every single invocation of the CLI, not

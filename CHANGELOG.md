@@ -9,6 +9,15 @@ support, backup/restore, and bulk credential onboarding — and carries a round
 of money/security hardening with a regression test for every fix (each verified
 to fail against the pre-fix code).
 
+### Talaria split into its own package
+
+The Hermes Agent + NemoClaw integration suite, previously developed
+alongside the kernel and shipped bundled in this distribution, is now its
+own repo and PyPI package: [`custodian-talaria`](https://github.com/KeyArgo/talaria),
+depending on `custodian-kernel[paladin]` through a normal version pin
+instead of being force-versioned in lockstep with the kernel. `paladin`
+stays in this distribution — it has no Hermes-specific code.
+
 ### Credential broker (`paladin`)
 
 - Encrypted vault (AES-256-GCM, scrypt), deny-by-default grants, hash-chained

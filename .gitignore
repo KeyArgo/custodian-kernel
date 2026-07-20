@@ -27,6 +27,7 @@ video-build/" is .wav"
 # delivery/ contains runtime Stripe PaymentIntent IDs — not source
 delivery/
 .venv-dev/
+.venv-release/
 
 *.egg-info/
 

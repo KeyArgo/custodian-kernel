@@ -2,10 +2,11 @@
 
 custodian/ is the brand-neutral kernel + adapter framework. paladin/ is
 the brand-neutral credential broker. Neither knows the other exists at
-the code level -- talaria/ is the only package allowed to import both,
-because integrating them for a specific agent (Hermes) is its entire
-job. A future Claude/Codex integration package would sit at the same
-layer as talaria, never inside custodian or paladin.
+the code level. Integration layers (talaria, for Hermes -- now its own
+package/repo at github.com/KeyArgo/talaria, depending on this one) are
+the only place allowed to import both, because integrating them for a
+specific agent is that layer's entire job. A future Claude/Codex
+integration package would follow the same pattern.
 
 This is enforced here, not just documented, because "brand-neutral" is
 a promise every adapter docstring in custodian/adapters/builtin/ makes
@@ -73,19 +74,3 @@ def test_paladin_never_imports_custodian_or_talaria():
         "that would make the credential broker depend on an integration "
         "layer or the kernel:\n" + "\n".join(violations)
     )
-
-
-def test_talaria_is_the_only_integration_layer():
-    # Not a violation to check for -- a sanity check that talaria/ really
-    # does depend on both, so the two tests above aren't vacuously true
-    # because nothing imports anything.
-    imports_custodian = False
-    imports_paladin = False
-    for py_file in (REPO_ROOT / "talaria").rglob("*.py"):
-        if "__pycache__" in py_file.parts:
-            continue
-        names = _imported_top_level_packages(py_file)
-        imports_custodian = imports_custodian or "custodian" in names
-        imports_paladin = imports_paladin or "paladin" in names
-    assert imports_custodian, "expected at least one talaria/ file to import custodian"
-    assert imports_paladin, "expected at least one talaria/ file to import paladin"

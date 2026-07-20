@@ -2,32 +2,34 @@
 
 ## Package boundaries — why "the adapter," not an import
 
-Three packages ship in this repo, and the dependency arrow only ever
-points one way:
+Two packages ship in this repo, and the dependency arrow only ever points
+one way — nothing here imports an integration layer:
 
 ```
 custodian/  (kernel + adapter framework)  ←──┐
-                                              │  talaria/ imports both.
-paladin/    (credential broker)           ←──┘  Nothing imports talaria.
+                                              │  talaria (separate repo/package)
+paladin/    (credential broker)           ←──┘  imports both. Nothing here imports it.
 ```
 
-- **`custodian/` never imports `paladin/` or `talaria/`.** The kernel
+- **`custodian/` never imports `paladin/` or `talaria`.** The kernel
   and the built-in adapters are brand-neutral: they know nothing about
   Hermes, and nothing about the broker's Python API.
-- **`paladin/` never imports `custodian/` or `talaria/`.** The broker
+- **`paladin/` never imports `custodian/` or `talaria`.** The broker
   is a standalone credential vault — usable with zero AI-agent
   framework installed at all (`pip install custodian-kernel[paladin]`
   and you have `paladin init`/`add`/`exec`, nothing else required).
-- **`talaria/` is the only package that imports both.** Wiring a
-  specific broker to a specific kernel's adapters for a specific agent
-  (Hermes) is talaria's entire job. A future Claude/Codex integration
-  package would sit at this same layer — never inside `custodian/` or
+- **[`talaria`](https://github.com/KeyArgo/talaria) is the only package
+  that imports both** — and it lives in its own repo now, depending on
+  this one via `custodian-kernel[paladin]>=0.4.0,<0.5`. Wiring a specific
+  broker to a specific kernel's adapters for a specific agent (Hermes) is
+  talaria's entire job. A future Claude/Codex integration package would
+  sit at this same layer — its own repo, never inside `custodian/` or
   `paladin/` — importing both the same way talaria does.
 
 This isn't just a convention — `tests/test_architecture_boundaries.py`
 parses every file in `custodian/` and `paladin/` with `ast` and fails
-the suite if either one ever imports the other or `talaria`. Run it
-directly any time you want to re-check the boundary yourself:
+the suite if either one ever imports the other or an integration package.
+Run it directly any time you want to re-check the boundary yourself:
 
 ```bash
 pytest tests/test_architecture_boundaries.py -v

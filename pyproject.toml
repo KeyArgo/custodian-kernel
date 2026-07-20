@@ -13,11 +13,10 @@ keywords = ["ai", "agent", "authority", "spend", "kernel", "enforcement"]
 dependencies = [
     "pyyaml",
     "requests",
-    # Required by the paladin credential vault (scrypt + AES-256-GCM) and the
-    # talaria `vault` subcommands, both of which ship console scripts. Kept in
-    # base deps (not an optional extra) so `pip install custodian-kernel` gives
-    # a working `paladin`/`talaria` instead of a command that raises
-    # CryptoUnavailableError on first real use.
+    # Required by the paladin credential vault (scrypt + AES-256-GCM), which
+    # ships a console script. Kept in base deps (not an optional extra) so
+    # `pip install custodian-kernel` gives a working `paladin` instead of a
+    # command that raises CryptoUnavailableError on first real use.
     "cryptography>=42.0",
     # zoneinfo reads the OS tz database, which Windows does not have at all and
     # slim container images (including our own python:3.13-slim base) do not
@@ -48,19 +47,16 @@ dev = [
     "pytest-cov",
     "flask",
 ]
-# paladin is standalone -- it has zero imports from talaria or any
-# integration package, and never will (see docs/TALARIA.md's "brand
-# neutral" note). Integration packages depend on paladin, not the
-# other way around, so their extras pull paladin in via a self-reference
-# rather than duplicating "cryptography>=42.0" in each one. talaria is
-# the first; a future Claude/Codex integration package follows the same
-# pattern: its own extra just lists "custodian-kernel[paladin]".
+# paladin is standalone -- it has zero imports from any integration
+# package, and never will (see docs/TALARIA.md's "brand neutral" note,
+# now pointing at the standalone talaria repo). Integration packages
+# depend on paladin, not the other way around, so their own pyproject
+# just lists a normal version-pinned dependency, e.g.
+# "custodian-kernel[paladin]>=0.4.0,<0.5" -- see
+# https://github.com/KeyArgo/talaria. A future Claude/Codex integration
+# package follows the same pattern as its own separate repo/package.
 paladin = [
     "cryptography>=42.0",
-]
-talaria = [
-    "custodian-kernel[paladin]",
-    "flask>=3.0",
 ]
 
 [project.scripts]
@@ -68,18 +64,16 @@ custodian = "custodian.cli.main:main"
 custodian-verify = "custodian.verify_kit:main"
 paladin = "paladin.cli:main"
 paladin-import = "paladin.cli:main_import"
-talaria = "talaria.cli:main"
 
 [build-system]
 requires = ["setuptools>=64"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]
-include = ["custodian*", "paladin*", "talaria*"]
+include = ["custodian*", "paladin*"]
 
 [tool.setuptools.package-data]
 "custodian" = ["bundled_skills/**/*", "bundled_skills/**", "packs/**/corpus/*.json", "packs/**/*.yaml", "packs/**/*.json", "policy/presets/*.yaml"]
-"talaria" = ["hermes_plugin/plugin.yaml", "hermes_plugin/*.py"]
 
 [tool.pytest.ini_options]
 addopts = "-m 'not network'"
