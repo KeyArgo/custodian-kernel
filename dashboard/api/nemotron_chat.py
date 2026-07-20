@@ -333,10 +333,34 @@ def _strip_thinking(text: str) -> str:
             r'^\s*Make sure\b', r'^\s*Keep (?:it )?(?:under|below|within)\b',
             r'^\s*Use plain language\b', r'^\s*No raw field names\b',
             r'^\s*So (?:produce|write|answer|respond)\b',
+            # v10 (live leak 2026-07-19, second capture same day): a
+            # different shape from v6.2's directive-per-line preamble --
+            # here the model drafts CANDIDATE sentences under a "Sentences:"
+            # label (already caught by the <20-char short-line fallback),
+            # then a colon-style stage direction ("Then: <what to say>",
+            # distinct from v6.2's "Then tell/mention/include/add" which
+            # requires a specific verb), then re-quotes each draft sentence
+            # while tallying its own word count out loud.
+            r'^\s*Then:\s', r'^\s*Then end with chips?\b', r'^\s*Then chips?:',
+            r"^\s*Let's count\b", r"^\s*Let's produce\b",
+            r'^\s*Total words\b',
+            # A numbered-list line ("1. I'm Nemotron...") is never a valid
+            # final reply for this app -- the system prompt explicitly
+            # forbids bullet/numbered breakdowns, so this shape can only be
+            # the model drafting candidate sentences to itself.
+            r'^\s*\d+\.\s+\S',
         )
         for pat in META_PATTERNS:
             if re.match(pat, p):
                 return True
+
+        # A quoted draft sentence immediately self-tallied with a trailing
+        # word count ("...disposition." (maybe 14 words)) is the model
+        # counting its own draft, not a line meant for the visitor -- real
+        # replies never annotate themselves this way. Covers both "(~14
+        # words)" and "(maybe 14 words)" phrasings seen live.
+        if re.search(r'\(\s*(?:maybe\s*)?~?\d+\s*words?\)\s*$', s):
+            return True
 
         if len(s) < 20:
             # Evaluate explicit planning signatures above before accepting a

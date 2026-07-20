@@ -26,6 +26,7 @@
   --green:  #2ee6a6;
   --red:    #ff5c5c;
   --nvidia: #76b900;
+  --violet: #8b7bff;
   --mono:   'JetBrains Mono', 'Fira Code', monospace;
   /* docs-specific aliases kept for existing styles */
   --blue:   #5db0ff;
@@ -124,6 +125,8 @@ h1,h2,h3,h4{font-weight:700;letter-spacing:-0.01em;color:var(--text)}
 .callout-blue .callout-label{color:var(--blue);font-weight:700;margin-bottom:4px;font-size:0.82em;letter-spacing:0.06em}
 .callout-red{background:rgba(255,77,77,0.06);border:1px solid rgba(255,77,77,0.2)}
 .callout-red .callout-label{color:var(--red);font-weight:700;margin-bottom:4px;font-size:0.82em;letter-spacing:0.06em}
+.callout-violet{background:rgba(139,123,255,0.06);border:1px solid rgba(139,123,255,0.2)}
+.callout-violet .callout-label{color:var(--violet);font-weight:700;margin-bottom:4px;font-size:0.82em;letter-spacing:0.06em}
 .callout p{margin:0;color:var(--muted)}
 
 /* outcome table */
@@ -191,11 +194,14 @@ h1,h2,h3,h4{font-weight:700;letter-spacing:-0.01em;color:var(--text)}
     </svg>
     <span>CUSTODIAN</span>
   </a>
-  <div class="k-links">
+    <div class="k-links">
     <a href="/">Home</a>
     <a href="/console">Console</a>
     <a href="/operator">Operator</a>
     <a href="/triage">Triage</a>
+    <a href="/lie-catch">Lie-Catch</a>
+    <a href="/guardrails">Guardrails</a>
+    <a href="/paladin">Paladin</a>
     <a href="/tools">Tools</a>
     <a href="/docs" class="active">Docs</a>
   </div>
@@ -207,16 +213,6 @@ h1,h2,h3,h4{font-weight:700;letter-spacing:-0.01em;color:var(--text)}
 
 <!-- LAYOUT -->
 <div class="layout">
-  <div id="docs-guide-card" style="background:rgba(139,123,255,0.04);border:1px solid rgba(139,123,255,0.2);border-radius:14px;padding:24px;margin-bottom:28px">
-  <div style="font-size:0.8em;font-weight:700;color:var(--violet);margin-bottom:12px;letter-spacing:0.04em;text-transform:uppercase">Judge's Guide</div>
-  <p style="color:var(--muted);font-size:0.92em;line-height:1.7;margin-bottom:12px">
-    The Custodian kernel documentation covers the authority bands, policy evaluation rules, and the NemoClaw sandbox architecture. Use this page to verify that the documentation accurately reflects the running system's decision logic.
-  </p>
-  <div style="display:flex;gap:8px;flex-wrap:wrap">
-    <button id="docs-guide-copy" style="all:unset;cursor:pointer;background:rgba(139,123,255,0.1);border:1px solid rgba(139,123,255,0.3);color:var(--violet);font-size:0.82em;padding:7px 16px;border-radius:8px;font-family:var(--mono);font-weight:600">Copy test instructions</button>
-  </div>
-</div>
-  
 
   <!-- SIDEBAR -->
   <aside class="sidebar" id="sidebar">
@@ -234,6 +230,8 @@ h1,h2,h3,h4{font-weight:700;letter-spacing:-0.01em;color:var(--text)}
       <a href="#kill-switch" class="sb-link">Kill switch</a>
       <a href="#human-approval" class="sb-link">Human approval (SMS)</a>
       <a href="#earning-vs-spending" class="sb-link">Earning vs spending</a>
+      <a href="#guardrails" class="sb-link">Guardrails (adapters)</a>
+      <a href="#paladin" class="sb-link">Paladin (credentials)</a>
     </div>
     <div class="sb-section">
       <div class="sb-heading">Reference</div>
@@ -245,6 +243,16 @@ h1,h2,h3,h4{font-weight:700;letter-spacing:-0.01em;color:var(--text)}
 
   <!-- CONTENT -->
   <main class="content">
+
+    <div id="docs-guide-card" style="background:rgba(139,123,255,0.04);border:1px solid rgba(139,123,255,0.2);border-radius:14px;padding:24px;margin-bottom:28px">
+      <div style="font-size:0.8em;font-weight:700;color:var(--violet);margin-bottom:12px;letter-spacing:0.04em;text-transform:uppercase">Judge's Guide</div>
+      <p style="color:var(--muted);font-size:0.92em;line-height:1.7;margin-bottom:12px">
+        The Custodian kernel documentation covers the authority bands, policy evaluation rules, and the NemoClaw sandbox architecture. Use this page to verify that the documentation accurately reflects the running system's decision logic.
+      </p>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button id="docs-guide-copy" style="all:unset;cursor:pointer;background:rgba(139,123,255,0.1);border:1px solid rgba(139,123,255,0.3);color:var(--violet);font-size:0.82em;padding:7px 16px;border-radius:8px;font-family:var(--mono);font-weight:600">Copy test instructions</button>
+      </div>
+    </div>
 
     <!-- OVERVIEW -->
     <section class="doc-section" id="overview">
@@ -418,7 +426,7 @@ class CapturedClient:                # testing / replay
         <p>The verifier cannot be socially engineered. It has no language model and cannot be prompted. A customer who writes a convincing lie may fool the AI — the verifier only compares text claims to database records. It doesn't "understand" the story at all.</p>
       </div>
 
-      <p>Try it on the <a href="/triage">Lie-Catch Demo</a> — write your own refund excuse and watch the AI vs kernel verdict split in real time.</p>
+      <p>Try it on the <a href="/triage">Triage Demo</a> — write your own refund excuse and watch the AI vs kernel verdict split in real time.</p>
     </section>
 
     <!-- AUTHORITY BANDS -->
@@ -497,6 +505,34 @@ class CapturedClient:                # testing / replay
       <p>The reasoning: receiving money carries none of the risk that spending it does. Gating earnings would add friction to every sale with no safety benefit — the danger Custodian is designed to address is an AI spending or moving money it shouldn't, not an AI accepting payment.</p>
 
       <p>The <code>net_pnl</code> figure on the live console shows real revenue in minus net spend — the actual economic position of the system after both directions are accounted for.</p>
+    </section>
+
+    <!-- GUARDRAILS -->
+    <section class="doc-section" id="guardrails">
+      <div class="section-eyebrow">Core concept</div>
+      <h2>Guardrails — adapters that catch what the model gets wrong</h2>
+      <p>The kernel's band/cap/kill-switch logic decides <strong>whether an action is allowed</strong>. Guard adapters are a separate, pluggable layer that decides whether an <em>allowed</em> action is actually sane — catching prompt injection, PII leaks, secret exposure, forbidden filesystem paths, and tool confabulation before they reach the outside world.</p>
+
+      <p>Every guard is hash-pinned code, not a config toggle: reviewed code is the code that runs, and the kernel-grade guards (self-protection, prompt injection, secret leak) stay enforced even if the agent forgets or a policy file gets misconfigured. Each guard returns one of four verdicts on every governed action.</p>
+
+      <div class="callout callout-amber">
+        <div class="callout-label">See it live</div>
+        <p>The full catalog of eleven guards, what each one catches, and how to write your own is on the <a href="/guardrails">Guardrails page</a>.</p>
+      </div>
+    </section>
+
+    <!-- PALADIN -->
+    <section class="doc-section" id="paladin">
+      <div class="section-eyebrow">Core concept</div>
+      <h2>Paladin — the agent never holds the key</h2>
+      <p>Paladin is Custodian's credential broker. Instead of handing an agent a real API key or password, it hands over a <code>paladin://</code> reference — the agent can use it to act, but never sees the underlying secret. With sandboxed egress enabled, the key never even enters the tool's process; Paladin resolves it out-of-band and injects it only into the outbound call.</p>
+
+      <p>Secrets live in an AES-256-GCM encrypted vault, grants are deny-by-default and scoped per requester/pattern, and every resolution is written to a hash-chained audit log — the same "never trust, always verify" posture the kernel applies to money, applied here to credentials.</p>
+
+      <div class="callout callout-violet">
+        <div class="callout-label">See it live</div>
+        <p>Full walkthrough of the vault, grants, and sandboxed egress model on the <a href="/paladin">Paladin page</a>.</p>
+      </div>
     </section>
 
     <!-- API -->
@@ -593,7 +629,7 @@ class CapturedClient:                # testing / replay
 
       <div class="faq-item">
         <button class="faq-q">What if the agent makes up a convincing story to get a bigger refund? <span class="faq-chevron">›</span></button>
-        <div class="faq-a"><p>The verifier catches it. The verifier is a deterministic engine — it doesn't read the story, it extracts claims and checks each one against the order record. A persuasive lie still produces a factual claim that either matches the database or doesn't. If it doesn't, the recommendation is overridden before it reaches the kernel. Try it on the <a href="/triage">Lie-Catch Demo</a>.</p></div>
+        <div class="faq-a"><p>The verifier catches it. The verifier is a deterministic engine — it doesn't read the story, it extracts claims and checks each one against the order record. A persuasive lie still produces a factual claim that either matches the database or doesn't. If it doesn't, the recommendation is overridden before it reaches the kernel. Try it on the <a href="/triage">Triage Demo</a>.</p></div>
       </div>
 
       <div class="faq-item">

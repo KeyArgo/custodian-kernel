@@ -674,14 +674,17 @@
         </svg>
         <span>CUSTODIAN</span>
       </a>
-      <div class="k-links">
-        <a href="/">Home</a>
-        <a href="/console" class="active">Console</a>
-        <a href="/operator">Operator</a>
-        <a href="/triage">Triage</a>
-        <a href="/tools">Tools</a>
-        <a href="/docs">Docs</a>
-      </div>
+        <div class="k-links">
+    <a href="/">Home</a>
+    <a href="/console" class="active">Console</a>
+    <a href="/operator">Operator</a>
+    <a href="/triage">Triage</a>
+    <a href="/lie-catch">Lie-Catch</a>
+    <a href="/guardrails">Guardrails</a>
+    <a href="/paladin">Paladin</a>
+    <a href="/tools">Tools</a>
+    <a href="/docs">Docs</a>
+  </div>
       <div class="k-status">
         <span class="k-dot"></span>
         <span>Kernel Live</span>
@@ -1920,7 +1923,7 @@ function nemotronRenderAnswer(rawText) {
                             "as a clickable link RIGHT IN THE BODY of your response. Mention the audit " +
                             "feed as secondary. End with 2-3 [[suggest:...]] chips.",
                         history: nemotronHistory.slice(-4),
-                        page: 'hermes'
+                        page: 'console'
                     }),
                 }).then(r => r.json()).then(data => {
                     thinkingMsg.remove();
@@ -1984,12 +1987,14 @@ function nemotronRenderAnswer(rawText) {
                 const res = await fetch('/api/v1/nemotron/ask', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ question, history: nemotronHistory.slice(-8), page: 'hermes' }),
+                    body: JSON.stringify({ question, history: nemotronHistory.slice(-8), page: 'console' }),
                 });
                 const data = await res.json();
                 thinkingMsg.remove();
                 if (data.error) {
                     nemotronAddMessage(`(couldn't get an answer: ${data.error})`, 'bot');
+                } else if (!data.answer || data.answer.trim() === '') {
+                    nemotronAddMessage("Nemotron returned an empty response — the model may be temporarily unavailable. Try again.", 'bot');
                 } else {
                     nemotronRenderAnswer(data.answer);
                     const clean = data.answer.replace(/\[\[(jump|entry|suggest):[^\]]*\]\]/g, '').trim();

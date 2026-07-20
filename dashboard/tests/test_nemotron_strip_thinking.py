@@ -137,6 +137,79 @@ So produce maybe 2 sentences?"""
     assert _strip_thinking(leaked) == ""
 
 
+def test_strip_thinking_drops_live_2026_07_19_second_capture():
+    """Second same-day capture: a different leak shape from the first
+    2026-07-19 test above. Here the model drafts candidate sentences under
+    a "Sentences:" label, numbers them ("1. I'm Nemotron... 2. This
+    dashboard..."), narrates a colon-style stage direction ("Then: <what
+    to say>"), then re-quotes each draft sentence while tallying its own
+    word count ("...disposition." (maybe 14 words)) instead of ever
+    emitting a clean final reply. The visitor saw this entire transcript.
+
+    Strategy 1 correctly finds no real paragraphs (every line is now
+    classified as meta) and falls back to Strategy 2, which extracts the
+    longest usable quoted draft -- landing on a clean, coherent line
+    rather than leaking any of the deliberation.
+    """
+    from api.nemotron_chat import _strip_thinking
+    leaked = (
+        'We need to respond with 2-3 sentences: who I am and what this '
+        'dashboard watches. Then tell them the most important thing is to '
+        'try the live demo themselves — include the operator panel as a '
+        'clickable link right in the body. Mention the audit feed as '
+        'secondary. End with 2-3  chips.\n'
+        '\n'
+        'We need to keep under 120 words. Let\'s craft ~70 words.\n'
+        '\n'
+        'Sentences:\n'
+        '\n'
+        '1. I\'m Nemotron 3 Super, the reasoning model that reads customer '
+        'messages and proposes a fair disposition. 2. This dashboard '
+        'watches the claim extraction, suggested actions, and the live '
+        'audit feed that records every enforcement decision.\n'
+        '\n'
+        'Then: The most important thing is to jump in and try the live '
+        'demo yourself — just click the operator panel to run the full '
+        'flow with real Stripe money and SMS codes. (audit feed is '
+        'secondary but still fun to watch.)\n'
+        '\n'
+        'Then end with chips: , , .\n'
+        '\n'
+        'Let\'s count words roughly.\n'
+        '\n'
+        '"I\'m Nemotron 3 Super, the reasoning model that reads customer '
+        'messages and proposes a fair disposition." (maybe 14 words)\n'
+        '"This dashboard watches the claim extraction, suggested actions, '
+        'and the live audit feed that records every enforcement decision." '
+        '(~18 words)\n'
+        '"The most important thing is to jump in and try the live demo '
+        'yourself — just click the operator panel to run the full flow '
+        'with real Stripe money and SMS codes." (~27 words)\n'
+        '"(audit feed is secondary but still fun to watch.)" (~6 words)\n'
+        '\n'
+        'Then chips: "  " (each chip counts as a token but not words? '
+        'We\'ll count as words maybe but okay.)\n'
+        '\n'
+        'Total words maybe ~70. Under 120.\n'
+        '\n'
+        'Let\'s produce\n'
+        'Explore next →\n'
+        '...\n'
+        '...\n'
+        'Try the demo'
+    )
+    result = _strip_thinking(leaked)
+    for leak_marker in (
+        'We need to', 'Sentences:', '1. I\'m Nemotron', 'Then:',
+        'Then end with chips', 'Let\'s count', 'Let\'s produce',
+        '(maybe 14 words)', '(~18 words)', '(~27 words)', '(~6 words)',
+        'Total words maybe', 'Explore next →',
+    ):
+        assert leak_marker not in result, (
+            f"leaked planning fragment {leak_marker!r} present in result: {result!r}"
+        )
+
+
 def test_strip_thinking_truncates_live_unknown_token_flood_after_clean_answer():
     """A tokenizer collapse after a complete reply must not reach visitors."""
     from api.nemotron_chat import _strip_thinking

@@ -4,7 +4,10 @@
  * /console         → console.html static asset (public live-console page)
  * /hermes          → redirects to /console (legacy link, kept for compatibility)
  * /operator        → operator.html static asset (judge demo panel)
- * /triage          → triage.html static asset (lie-catch demo; JS calls API directly)
+ * /triage          → triage.html static asset (refund triage walkthrough; JS calls API directly)
+ * /lie-catch       → lie-catch.html static asset (separate page: the verifier/lie-catch demo)
+ * /guardrails      → guardrails.html static asset (adapter catalog)
+ * /paladin         → paladin.html static asset (credential broker)
  * /api/v1/*        → Flask API endpoints (proxied to Flask backend)
  * everything else  → CF Pages static assets
  *
@@ -50,6 +53,72 @@ visitor, no raw field names, no JSON, no bullet breakdowns. Friendly, lightly se
 humor. Point first-time visitors at the Operator panel (the /operator page) where they can run the \
 full demo themselves with real Stripe money and real SMS approval codes.`;
 
+// Edge-side port of dashboard/api/nemotron_chat.py's _strip_thinking().
+// This fallback exists because the primary backend proxy is unreachable
+// often enough to need one (see comments above) -- but until this port
+// existed, that meant every leak-shape fix made to _strip_thinking() over
+// the life of this project (numbered self-talk, quoted drafts tallying
+// their own word count, un-tagged deliberation with no <think> markers)
+// applied ONLY on the primary path and never here, so this fallback kept
+// leaking the exact shapes already fixed on the other side. Not a
+// line-for-line port of every historical edge case in the Python version
+// -- just the mechanism that does the real work there (classify each line
+// as self-talk vs. real reply, keep only real lines, fall back to the
+// longest quoted draft, then to '') -- extended if a new leak shape shows
+// up here that the Python side doesn't also need.
+const NEMO_META_LINE_RE = new RegExp(
+  '^\\s*(?:' + [
+    'We need to', 'We must', 'We should', 'We can (?:say|mention|just)', 'We have data',
+    'We will', 'We are', 'Must', 'Do not', 'Should',
+    'Now (?:count|produce|craft|let|add|look)', "Let\\'s (?:craft|draft|do|count|produce)",
+    'First paragraph', 'Second paragraph', 'First line', 'First,\\s*glance',
+    'Let me', 'Now let me', 'Check word count', 'Count words', 'Count roughly', 'Word count',
+    'Add:', 'Note:', 'End:', 'But note', 'The question is', 'The instructions', 'According to the',
+    'Then (?:tell|mention|include|add|end with chips?)', 'Then:', 'Then chips?:',
+    'Mention', 'Include', 'Provide', 'End with', 'Make sure', 'Keep (?:it )?(?:under|below|within)',
+    'Use plain language', 'No raw field names', 'So (?:produce|write|answer|respond)',
+    'Total words', '\\d+\\.\\s+\\S',
+  ].join('|') + ')',
+);
+const NEMO_TALLY_SUFFIX_RE = /\(\s*(?:maybe\s*)?~?\d+\s*words?\)\s*$/i;
+
+function nemoIsMetaLine(rawLine) {
+  const s = rawLine.trim();
+  if (NEMO_META_LINE_RE.test(s)) return true;
+  if (NEMO_TALLY_SUFFIX_RE.test(s)) return true;
+  if (s.length < 20) {
+    // A short line that reads as a complete sentence survives; anything
+    // else this short (a label, a lead-in, a fragment) is treated as meta.
+    return !(s.length >= 3 && /^[A-Z].*[.!?]["')\]]?$/.test(s));
+  }
+  return false;
+}
+
+function nemoStripThinking(text) {
+  if (!text) return text;
+  text = text.replace(/<think>[\s\S]*?<\/think>/g, '')
+             .replace(/<thinking>[\s\S]*?<\/thinking>/g, '')
+             .trim();
+  if (!text) return text;
+
+  const lines = text.split('\n');
+  const real = lines.filter(l => !nemoIsMetaLine(l));
+  if (real.length) return real.join('\n').trim();
+
+  // No real lines survived -- fall back to the longest quoted draft that
+  // doesn't itself read as meta, same as the Python Strategy 2. Quoted
+  // candidates are always >=50 chars (the match requires it), so
+  // nemoIsMetaLine's short-line branch never applies here -- only the
+  // prefix/tally checks do.
+  const quoted = [...text.matchAll(/"([^"]{50,})"/g)]
+    .map(m => m[1].trim())
+    .sort((a, b) => b.length - a.length);
+  for (const candidate of quoted) {
+    if (!nemoIsMetaLine(candidate)) return candidate;
+  }
+  return '';
+}
+
 async function nemotronDirectFallback(bodyBuf, apiKey) {
   let question = '', history = [];
   try {
@@ -94,7 +163,7 @@ async function nemotronDirectFallback(bodyBuf, apiKey) {
     try {
       const d = await res.json();
       let answer = d.choices?.[0]?.message?.content || '';
-      answer = answer.replace(/<think>[\s\S]*?<\/think>/g, '').trim();
+      answer = nemoStripThinking(answer);
       if (!answer) continue;
       return new Response(JSON.stringify({ answer, degraded: true }), {
         status: 200,

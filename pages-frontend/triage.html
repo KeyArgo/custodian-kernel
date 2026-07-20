@@ -274,11 +274,14 @@
     </svg>
     <span>CUSTODIAN</span>
   </a>
-  <div class="k-links">
+    <div class="k-links">
     <a href="/">Home</a>
     <a href="/console">Console</a>
     <a href="/operator">Operator</a>
     <a href="/triage" class="active">Triage</a>
+    <a href="/lie-catch">Lie-Catch</a>
+    <a href="/guardrails">Guardrails</a>
+    <a href="/paladin">Paladin</a>
     <a href="/tools">Tools</a>
     <a href="/docs">Docs</a>
   </div>
@@ -289,7 +292,7 @@
 </nav>
 <div class="wrap">
   <header>
-    <h1>Lie-Catch: the AI reads it, the kernel checks if it's true</h1>
+    <h1>Refund Triage: the AI reads it, the kernel checks if it's true</h1>
     <p style="color:var(--dim);margin:4px 0 14px">Two phases, separated by design. The AI reasons. The kernel verifies. They can disagree — and when they do, the kernel wins.</p>
 
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:0 0 14px">
@@ -950,13 +953,13 @@ async function runCustom() {
 .tr-suggest-chip:hover{background:rgba(118,185,0,0.14);border-color:rgba(118,185,0,0.55);color:#c0ff88}
 </style>
 
-<button id="tr-nemo-bubble" title="Ask Nemotron about the lie-catch demo">🤖</button>
+<button id="tr-nemo-bubble" title="Ask Nemotron about the triage demo">🤖</button>
 <div id="tr-nemo-panel">
   <div class="tr-np-hdr">
     <span style="font-size:1.05em">🤖</span>
     <div>
       <div style="font-size:0.78em;font-weight:700;color:#76b900;letter-spacing:.04em">Nemotron 3 Super</div>
-      <div style="font-size:0.67em;color:#3a5a3a">intelligence layer · lie-catch guide</div>
+      <div style="font-size:0.67em;color:#3a5a3a">intelligence layer · triage guide</div>
     </div>
     <button id="tr-nemo-close" style="all:unset;cursor:pointer;color:#444;font-size:1.2em;margin-left:auto;padding:4px 6px">✕</button>
   </div>
@@ -1035,8 +1038,8 @@ function open(){
         opened=true;
         const thinking=addMsg('…','bot');
         const greet=history.length>0
-            ?'We were just talking on another page. I\'m now on the lie-catch demo. Introduce yourself in one sentence as the intelligence layer that reads requests — and tell the visitor in one sentence what this page specifically demonstrates about how the verifier catches lies.'
-            :'Greet in 2 sentences: you\'re Nemotron on the lie-catch demo page. This page shows what happens when the AI (you) gets fooled by a lying customer — and the deterministic verifier catches it anyway. End with one [[suggest:]] question to draw them in.';
+            ?'We were just talking on another page. I\'m now on the triage demo. Introduce yourself in one sentence as the intelligence layer that reads requests — and tell the visitor in one sentence what this page specifically demonstrates about how the verifier catches lies.'
+            :'Greet in 2 sentences: you\'re Nemotron on the triage demo page. This page shows what happens when the AI (you) gets fooled by a lying customer — and the deterministic verifier catches it anyway. End with one [[suggest:]] question to draw them in.';
         fetch('/api/v1/nemotron/ask',{method:'POST',headers:{'Content-Type':'application/json'},
             body:JSON.stringify({question:greet,history:history.slice(-4),page:'triage'})
         }).then(r=>r.json()).then(d=>{thinking.remove();renderAnswer(d.answer||"I'm Nemotron — try a lie above and ask me what the kernel found.");})
