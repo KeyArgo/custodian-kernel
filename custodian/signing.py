@@ -17,13 +17,13 @@ exactly as before (integrity only). Sign them when you need authenticity.
     from custodian.signing import generate_keypair, sign_receipt, verify_signed
     priv, pub = generate_keypair()
     signed = sign_receipt(receipt, priv)          # detached — receipt untouched
-    assert verify_signed(signed, pub)             # False if forged or re-keyed
+    assert verify_signed(signed, expected_public_key_hex=pub)  # False if forged or re-keyed
 
 Requires the ``cryptography`` package (a base dependency of custodian-kernel).
 """
 from __future__ import annotations
 
-from typing import Optional, Tuple
+from typing import Tuple
 
 try:
     from cryptography.exceptions import InvalidSignature
@@ -112,14 +112,24 @@ def sign_receipt(receipt, private_key_hex: str) -> dict:
     }
 
 
-def verify_signed(signed: dict, expected_public_key_hex: Optional[str] = None) -> bool:
+def verify_signed(signed: dict, expected_public_key_hex: str) -> bool:
     """Verify a signed envelope end to end.
 
     Checks (1) the receipt's own fingerprint is intact, (2) the signature is
-    valid for that fingerprint, and (3) — if ``expected_public_key_hex`` is
-    given — that the receipt was signed by exactly that key (so an attacker
-    cannot re-sign forged data with their own key and swap in their public
-    key). Returns False on any failure.
+    valid for that fingerprint, and (3) that the receipt was signed by
+    exactly ``expected_public_key_hex`` (so an attacker cannot re-sign
+    forged data with their own key and swap in their public key). Returns
+    False on any failure.
+
+    ``expected_public_key_hex`` is required, not optional. It used to
+    default to None, which skipped check (3) entirely: since the envelope
+    itself carries a "public_key" field, an attacker could fabricate a
+    receipt, sign it with a throwaway keypair, and embed that key in the
+    envelope -- verify_signed(forged) returned True, because "verify
+    against whatever key claims to have signed it" is not an authenticity
+    check at all, just an internal-consistency check. There is no
+    legitimate reason to call this without knowing which key you trust --
+    that is the entire point of a signature. Found in review.
     """
     _require_crypto()
     from custodian.receipt import GovernedReceipt
@@ -131,6 +141,6 @@ def verify_signed(signed: dict, expected_public_key_hex: Optional[str] = None) -
     if not receipt.verify():
         return False
     public_key = signed.get("public_key", "")
-    if expected_public_key_hex is not None and public_key != expected_public_key_hex:
+    if public_key != expected_public_key_hex:
         return False
     return verify_fingerprint(receipt.fingerprint, signed.get("signature", ""), public_key)
