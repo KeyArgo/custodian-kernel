@@ -104,10 +104,11 @@ def handle(method: str, params: dict[str, Any]) -> dict[str, Any] | None:
                         pending = store.request(digest=digest, requester=requester)
                         decision.update(
                             approval_id=pending.approval_id,
+                            action_digest=digest,
                             approval_expires_at=pending.expires_at,
                             next_step=(
                                 "Ask the operator to run: custodian-codex approve "
-                                f"{pending.approval_id}"
+                                f"{pending.approval_id} --digest {digest}"
                             ),
                         )
                 receipt = chain.append(
@@ -121,11 +122,20 @@ def handle(method: str, params: dict[str, Any]) -> dict[str, Any] | None:
                 }
                 return _text_result(decision)
             except ApprovalError as exc:
-                return _text_result({
+                denied = {
                     "verdict": "denied",
                     "reason": str(exc),
+                    "action_kind": str(args.get("action_kind", "unknown")),
+                    "band": "L4",
                     "enforcement_required": True,
-                }, is_error=True)
+                }
+                receipt = chain.append(
+                    denied,
+                    tool=args.get("tool", ""),
+                    session_id=args.get("session_id", "default"),
+                )
+                denied["receipt"] = {"timestamp": receipt["ts"], "chain_mac": receipt["mac"]}
+                return _text_result(denied, is_error=True)
             except Exception as exc:
                 # Tool errors fail closed and avoid returning argument values.
                 return _text_result({

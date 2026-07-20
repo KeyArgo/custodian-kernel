@@ -67,25 +67,66 @@ _TOOL_KINDS = {
     "delete_file": ActionKind.DESTRUCTIVE,
     "git-push": ActionKind.NETWORK,
     "deploy": ActionKind.PRODUCTION,
+    "remove-item": ActionKind.DESTRUCTIVE,
+    "invoke-webrequest": ActionKind.NETWORK,
+    "invoke-restmethod": ActionKind.NETWORK,
 }
 _SHELL_RULES = (
-    (re.compile(r"(?:^|[;&|]\s*)(?:rm|rmdir|shred|truncate)\b|git\s+(?:reset\s+--hard|clean\s+-f)", re.I), ActionKind.DESTRUCTIVE),
-    (re.compile(r"\b(?:kubectl|helm|terraform)\s+(?:apply|destroy)|\b(?:deploy|release)\b", re.I), ActionKind.PRODUCTION),
-    (re.compile(r"\bgit\s+push\b|\b(?:curl|wget|ssh|scp|rsync)\b", re.I), ActionKind.NETWORK),
+    (re.compile(
+        r"(?:^|[;&|]\s*)(?:sudo\s+)?(?:rm|rmdir|shred|truncate|del|erase|rd)\b"
+        r"|\b(?:remove-item|clear-content|format-volume)\b"
+        r"|\bgit\s+(?:reset\s+--hard|clean\s+-[a-z]*f)", re.I,
+    ), ActionKind.DESTRUCTIVE),
+    (re.compile(
+        r"\b(?:kubectl|helm|terraform)\s+(?:apply|destroy|upgrade|install)\b"
+        r"|\b(?:gcloud\s+run|az\s+deployment|aws\s+cloudformation)\b"
+        r"|\bdocker\s+push\b|\b(?:deploy|release)\b", re.I,
+    ), ActionKind.PRODUCTION),
+    (re.compile(
+        r"\bgit\s+push\b|\b(?:curl|wget|ssh|scp|rsync)\b"
+        r"|\b(?:invoke-webrequest|invoke-restmethod)\b|(?:^|\s)(?:iwr|irm)\s", re.I,
+    ), ActionKind.NETWORK),
     (re.compile(r"\b(?:paladin|vault)\b|paladin://|warden://", re.I), ActionKind.CREDENTIAL),
 )
+
+_SENSITIVE_WRITE_PATH = re.compile(
+    r"(?:^|[\\/])(?:\.github[\\/]workflows|\.gitlab-ci\.yml|Dockerfile|"
+    r"docker-compose(?:\.[^\\/]+)?\.ya?ml|pyproject\.toml|package\.json|"
+    r"requirements(?:\.[^\\/]+)?\.txt|\.codex|\.agents)(?:$|[\\/])",
+    re.I,
+)
+
+
+def _strings(value: Any):
+    if isinstance(value, str):
+        yield value
+    elif isinstance(value, dict):
+        for nested in value.values():
+            yield from _strings(nested)
+    elif isinstance(value, (list, tuple)):
+        for nested in value:
+            yield from _strings(nested)
 
 
 def _inferred_kind(tool: str, arguments: dict[str, Any]) -> ActionKind | None:
     normalized = tool.strip().lower()
+    mapped = None
     if normalized in _TOOL_KINDS:
-        return _TOOL_KINDS[normalized]
-    if normalized in {"shell", "bash", "terminal", "shell-exec", "exec_command"}:
+        mapped = _TOOL_KINDS[normalized]
+        if mapped in _ESCALATE:
+            return mapped
+    if normalized in {"shell", "bash", "terminal", "shell-exec", "exec", "exec_command"}:
         command = str(arguments.get("command", arguments.get("cmd", "")))
         for pattern, inferred in _SHELL_RULES:
             if pattern.search(command):
                 return inferred
-    return None
+    surfaces = tuple(_strings(arguments))
+    if any("paladin://" in value or "warden://" in value for value in surfaces):
+        return ActionKind.CREDENTIAL
+    if normalized in {"write_file", "file-write", "patch", "edit_file"}:
+        if any(_SENSITIVE_WRITE_PATH.search(value) for value in surfaces):
+            return ActionKind.GOVERNANCE
+    return mapped
 
 
 def _pipeline(workspace: str, forbidden_paths: list[str] | None) -> AdapterPipeline:

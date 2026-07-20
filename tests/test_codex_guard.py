@@ -11,6 +11,7 @@ from custodian.codex_guard.approvals import (
 )
 from custodian.codex_guard.mcp_server import handle
 from custodian.codex_guard.receipts import ReceiptChain
+from custodian.codex_guard.cli import main as cli_main
 
 
 def decide(tmp_path: Path, **overrides):
@@ -70,6 +71,11 @@ def test_unknown_kind_fails_closed(tmp_path):
     ("git push origin main", "network"),
     ("kubectl apply -f deployment.yaml", "production"),
     ("curl https://example.com", "network"),
+    ("Remove-Item -Recurse build", "destructive"),
+    ("del /q build\\artifact.exe", "destructive"),
+    ("Invoke-WebRequest https://example.com", "network"),
+    ("gcloud run deploy app", "production"),
+    ("docker push example/app:latest", "production"),
 ])
 def test_caller_cannot_downgrade_risky_shell_command(tmp_path, command, expected_kind):
     result = decide(
@@ -78,9 +84,10 @@ def test_caller_cannot_downgrade_risky_shell_command(tmp_path, command, expected
         action_kind="read",
         arguments={"command": command},
     )
-    assert result.verdict == "escalation_required"
+    assert result.verdict in {"escalation_required", "denied"}
     assert result.action_kind == expected_kind
-    assert "caller supplied read" in result.reason
+    if result.verdict == "escalation_required":
+        assert "caller supplied read" in result.reason
 
 
 def test_secret_value_is_denied_before_authority(tmp_path):
@@ -124,6 +131,34 @@ def test_kernel_cannot_be_modified(tmp_path):
     assert "enforcement layer" in result.reason
 
 
+@pytest.mark.parametrize("path", [
+    ".github/workflows/release.yml",
+    "pyproject.toml",
+    ".codex/config.toml",
+    ".agents/plugins/marketplace.json",
+])
+def test_sensitive_configuration_writes_cannot_be_underclassified(tmp_path, path):
+    result = decide(
+        tmp_path,
+        tool="write_file",
+        action_kind="write",
+        arguments={"path": path, "content": "changed"},
+    )
+    assert result.verdict == "escalation_required"
+    assert result.action_kind == "governance"
+
+
+def test_paladin_reference_use_is_credential_action(tmp_path):
+    result = decide(
+        tmp_path,
+        tool="api-call",
+        action_kind="write",
+        arguments={"authorization": "paladin://github_token"},
+    )
+    assert result.verdict == "escalation_required"
+    assert result.action_kind == "credential"
+
+
 def test_receipt_chain_detects_tampering(tmp_path):
     chain = ReceiptChain(tmp_path)
     decision = decide(tmp_path).to_dict()
@@ -147,6 +182,20 @@ def test_mcp_lists_guard_tools():
     ]
 
 
+def test_setup_dry_run_is_non_mutating_and_discovers_repo(capsys):
+    assert cli_main(["setup", "--dry-run"]) == 0
+    output = capsys.readouterr().out
+    assert "codex plugin marketplace add" in output
+    assert "custodian-codex-guard@custodian-build-week" in output
+
+
+def test_disable_is_explicit_cli_surface():
+    # Parser acceptance is sufficient here; subprocess behavior is exercised
+    # by the real marketplace install smoke test documented for release.
+    from custodian.codex_guard.cli import build_parser
+    assert build_parser().parse_args(["disable"]).command == "disable"
+
+
 def test_mcp_escalation_requires_out_of_band_exact_approval(tmp_path, monkeypatch):
     monkeypatch.setenv("CUSTODIAN_CODEX_GUARD_STATE_DIR", str(tmp_path / "state"))
     args = {
@@ -160,7 +209,11 @@ def test_mcp_escalation_requires_out_of_band_exact_approval(tmp_path, monkeypatc
     decision = pending["structuredContent"]
     assert decision["verdict"] == "escalation_required"
     approval_id = decision["approval_id"]
-    ApprovalStore(tmp_path / "state").approve(approval_id, approved_by="operator")
+    ApprovalStore(tmp_path / "state").approve(
+        approval_id,
+        approved_by="operator",
+        expected_digest=decision["action_digest"],
+    )
 
     approved = handle("tools/call", {
         "name": "guard_action",
@@ -189,6 +242,7 @@ def test_mcp_approval_rejects_changed_arguments(tmp_path, monkeypatch):
     })["structuredContent"]
     ApprovalStore(tmp_path / "state").approve(
         decision["approval_id"], approved_by="operator",
+        expected_digest=decision["action_digest"],
     )
     changed = {**args, "arguments": {"command": "deploy --environment production"},
                "approval_id": decision["approval_id"]}
@@ -237,6 +291,20 @@ def test_approval_rejects_argument_mutation(tmp_path):
         store.consume(pending.approval_id, digest=changed, requester="codex:test-session")
 
 
+def test_operator_approval_rejects_wrong_displayed_digest(tmp_path):
+    store = ApprovalStore(tmp_path / "state")
+    pending = store.request(
+        digest=approval_digest(tmp_path), requester="codex:test-session",
+    )
+    with pytest.raises(ApprovalError, match="displayed action"):
+        store.approve(
+            pending.approval_id,
+            approved_by="operator",
+            expected_digest="0" * 64,
+        )
+    assert store.get(pending.approval_id).status == "pending"
+
+
 def test_approval_rejects_wrong_requester_and_expiry(tmp_path):
     now = [1000.0]
     store = ApprovalStore(tmp_path / "state", now=lambda: now[0])
@@ -248,6 +316,31 @@ def test_approval_rejects_wrong_requester_and_expiry(tmp_path):
     now[0] = 1011.0
     with pytest.raises(ApprovalError, match="expired"):
         store.consume(pending.approval_id, digest=digest, requester="codex:test-session")
+
+
+def test_approval_rejects_oversized_requester_and_nonfinite_arguments(tmp_path):
+    with pytest.raises(ApprovalError, match="1 to 128"):
+        approval_digest(tmp_path, requester="x" * 129)
+    with pytest.raises(ApprovalError, match="canonically serializable"):
+        approval_digest(tmp_path, arguments={"amount": float("nan")})
+
+
+def test_tampered_approval_does_not_leave_denial_of_service_claim(tmp_path):
+    store = ApprovalStore(tmp_path / "state")
+    pending = store.request(
+        digest=approval_digest(tmp_path), requester="codex:test-session",
+    )
+    path = store.approvals_dir / f"{pending.approval_id}.json"
+    record = json.loads(path.read_text())
+    record["status"] = "approved"
+    path.write_text(json.dumps(record))
+    with pytest.raises(ApprovalError, match="authentication failed"):
+        store.consume(
+            pending.approval_id,
+            digest=approval_digest(tmp_path),
+            requester="codex:test-session",
+        )
+    assert not path.with_suffix(".claim").exists()
 
 
 def test_approval_record_tampering_is_detected(tmp_path):

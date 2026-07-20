@@ -30,6 +30,12 @@ def action_digest(
     policy_version: str = "default",
 ) -> str:
     """Return a stable digest binding every execution-relevant field."""
+    if not requester or len(requester) > 128:
+        raise ApprovalError("requester must contain 1 to 128 characters")
+    if not tool or len(tool) > 128:
+        raise ApprovalError("tool must contain 1 to 128 characters")
+    if not policy_version or len(policy_version) > 128:
+        raise ApprovalError("policy version must contain 1 to 128 characters")
     body = {
         "action_kind": action_kind,
         "arguments": arguments,
@@ -41,6 +47,7 @@ def action_digest(
     try:
         encoded = json.dumps(
             body, sort_keys=True, separators=(",", ":"), ensure_ascii=False,
+            allow_nan=False,
         ).encode("utf-8")
     except (TypeError, ValueError) as exc:
         raise ApprovalError("action arguments are not canonically serializable") from exc
@@ -134,16 +141,20 @@ class ApprovalStore:
         self._verify(record)
         return record
 
+    def get(self, approval_id: str) -> ApprovalRecord:
+        """Read one record only after authenticating it."""
+        return ApprovalRecord(**self._read(approval_id))
+
     def request(self, *, digest: str, requester: str, ttl_seconds: int = 300) -> ApprovalRecord:
         if len(digest) != 64 or any(c not in "0123456789abcdef" for c in digest):
             raise ApprovalError("invalid action digest")
-        if not requester or ttl_seconds < 1 or ttl_seconds > 3600:
+        if not requester or len(requester) > 128 or ttl_seconds < 1 or ttl_seconds > 3600:
             raise ApprovalError("requester and a TTL from 1 to 3600 seconds are required")
         now = self._now()
         record = ApprovalRecord(
             approval_id=str(uuid4()),
             action_digest=digest,
-            requester=requester[:128],
+            requester=requester,
             created_at=now,
             expires_at=now + ttl_seconds,
         )
@@ -151,7 +162,9 @@ class ApprovalStore:
         self._write(path, asdict(record))
         return ApprovalRecord(**self._read(record.approval_id))
 
-    def approve(self, approval_id: str, *, approved_by: str) -> ApprovalRecord:
+    def approve(
+        self, approval_id: str, *, approved_by: str, expected_digest: str | None = None,
+    ) -> ApprovalRecord:
         if not approved_by.strip():
             raise ApprovalError("operator identity is required")
         path = self._path(approval_id)
@@ -161,6 +174,10 @@ class ApprovalStore:
             raise ApprovalError("approval is not pending")
         if now > record["expires_at"]:
             raise ApprovalError("approval expired")
+        if expected_digest is not None and not hmac.compare_digest(
+            record["action_digest"], expected_digest,
+        ):
+            raise ApprovalError("approval digest does not match the displayed action")
         record.update(status="approved", approved_by=approved_by.strip()[:128], approved_at=now)
         self._write(path, record)
         return ApprovalRecord(**self._read(approval_id))
@@ -191,6 +208,10 @@ class ApprovalStore:
         except Exception:
             # A validation failure may be corrected before expiry. Successful
             # consumption leaves the claim marker as durable replay protection.
-            if self._read(approval_id).get("status") != "consumed":
+            try:
+                consumed = self._read(approval_id).get("status") == "consumed"
+            except ApprovalError:
+                consumed = False
+            if not consumed:
                 claim.unlink(missing_ok=True)
             raise

@@ -24,8 +24,9 @@ the call; use a `paladin://` reference. Treat the verdict mechanically:
 
 - `autonomous`: proceed with the exact evaluated action.
 - `escalation_required`: stop, show the returned approval ID, and ask the human
-  to run `custodian-codex approve ID`. Call `guard_action` again with that same
-  ID and the exact same action. The verdict itself is not approval.
+  to run the exact `custodian-codex approve ID --digest DIGEST` command returned
+  by Guard. Call `guard_action` again with that same ID and the exact same
+  action. The verdict itself is not approval.
 - `approved`: proceed once with the exact evaluated action. Any argument change
   requires a new request; never reuse an approval ID.
 - `denied`: do not execute. Explain the denial without exposing sensitive data.
