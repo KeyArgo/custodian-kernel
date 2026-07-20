@@ -82,13 +82,35 @@ class TestToolRegistry:
         script.write_text("raise AssertionError('must not execute')\n")
         tool = CustodianTool(name="danger", description="", band="L2",
                              configured=True, execute_script=script)
-        monkeypatch.setattr(tool, "_kernel_decide", lambda: {
+        monkeypatch.setattr(tool, "_kernel_decide", lambda amount=None: {
             "verdict": "escalation_required", "reason": "kernel unavailable",
             "band": "L2",
         })
         result = tool.invoke()
         assert result["ok"] is False
         assert result["verdict"] == "escalation_required"
+
+    def test_l2_tool_kernel_gate_checks_real_amount_not_static_cost(self, tmp_path, monkeypatch):
+        """_kernel_decide() used to build its SpendRequest from
+        self.cost_usd -- the SKILL.md-declared static default, 0.0 for any
+        tool whose real cost is per-call (the normal shape for a spend
+        tool) -- and never looked at the caller's actual `amount` kwarg at
+        all. The L2/L3/L4 band-cap gate always decided against $0
+        regardless of what was really requested. Verified live: a
+        $999,999.99 call sailed through as autonomous. Found in review."""
+        from custodian.tools.registry import CustodianTool
+        monkeypatch.setattr(Path, "home", lambda: tmp_path)  # no ~/.custodian state/policy
+        script = tmp_path / "execute.py"
+        script.write_text("import json; print(json.dumps({'ok': True}))\n")
+        tool = CustodianTool(name="big-spend", description="", band="L2",
+                             cost_usd=0.0, configured=True, execute_script=script)
+
+        small = tool.invoke(amount=1.00)
+        assert small["ok"] is True, small
+
+        huge = tool.invoke(amount=999_999.99)
+        assert huge["ok"] is False, huge
+        assert huge.get("kernel_escalation") is True
 
     def test_known_credential_is_redacted_from_tool_output(self, tmp_path):
         from custodian.tools.registry import CustodianTool
