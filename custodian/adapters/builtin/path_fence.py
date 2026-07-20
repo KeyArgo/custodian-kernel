@@ -88,6 +88,12 @@ class PathFence(Adapter):
 
     def __init__(self, config: dict | None = None) -> None:
         super().__init__(config)
+        # Optional caller working directory for resolving relative paths.
+        # Defaulting to process cwd preserves the existing public behavior;
+        # integrations such as Codex Guard set this explicitly because an MCP
+        # server's cwd need not be the workspace it is governing.
+        raw_base = self.config.get("base_path")
+        self.base_path = resolve(raw_base) if raw_base else None
         raw_forbidden = list(self.config.get("forbidden_paths", []))
         self._forbidden_paths_raw = list(raw_forbidden)  # literal, un-resolved
         self.forbidden_paths = [resolve(p) for p in raw_forbidden]
@@ -96,6 +102,11 @@ class PathFence(Adapter):
         self.allow_paths = [resolve(p) for p in allow] if allow else []
         self.read_tools = frozenset(self.config.get("read_tools", _DEFAULT_READ_TOOLS))
         self.write_tools = frozenset(self.config.get("write_tools", _DEFAULT_WRITE_TOOLS))
+
+    def _resolve_candidate(self, raw: str) -> str:
+        if self.base_path and not os.path.isabs(os.path.expanduser(raw)):
+            return resolve(os.path.join(self.base_path, raw))
+        return resolve(raw)
 
     # -- matching --------------------------------------------------------------
 
@@ -221,7 +232,7 @@ class PathFence(Adapter):
                 )
 
         for raw in self._candidate_paths(ctx):
-            reason = self._forbidden(resolve(raw))
+            reason = self._forbidden(self._resolve_candidate(raw))
             if reason:
                 return Verdict.deny(
                     self.name,
