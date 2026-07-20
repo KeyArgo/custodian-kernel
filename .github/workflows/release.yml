@@ -1,0 +1,84 @@
+name: Release
+
+# Fires only on a version tag (v0.4.0, v0.4.1, ...) — pushing to main or
+# opening a PR never triggers this, unlike ci.yml. Nothing here runs, and
+# no artifact is signed or published, until a maintainer actually pushes a
+# tag matching this pattern.
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  build-sign-release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write   # attach artifacts to the GitHub release
+      id-token: write   # keyless Sigstore/cosign signing via GitHub OIDC — no
+                        # long-lived signing key to store, rotate, or leak
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Build wheel and sdist
+        run: |
+          pip install build twine
+          python -m build
+          twine check dist/*
+
+      - name: Install the built wheel into a clean environment
+        # The SBOM must describe what a real `pip install custodian-kernel`
+        # user actually gets — installing the wheel (not `pip install -e .`)
+        # into a fresh venv is the only way to get that dependency closure
+        # exactly right, including any version resolution pip performs.
+        run: |
+          python -m venv /tmp/sbom-env
+          /tmp/sbom-env/bin/pip install dist/*.whl
+
+      - name: Generate CycloneDX SBOM
+        run: |
+          pip install cyclonedx-bom
+          cyclonedx-py environment /tmp/sbom-env \
+            --output-format json \
+            --output-file sbom.cyclonedx.json
+
+      - name: Install cosign
+        uses: sigstore/cosign-installer@v3
+
+      - name: Sign every release artifact (keyless, GitHub OIDC identity)
+        run: |
+          set -euo pipefail
+          for f in dist/*.whl dist/*.tar.gz sbom.cyclonedx.json; do
+            cosign sign-blob --yes "$f" \
+              --output-signature "$f.sig" \
+              --output-certificate "$f.pem"
+          done
+
+      - name: Verify every signature before publishing
+        # Catch a broken signing step here, in CI, rather than ship an
+        # artifact whose signature silently fails for every downstream user.
+        run: |
+          set -euo pipefail
+          for f in dist/*.whl dist/*.tar.gz sbom.cyclonedx.json; do
+            cosign verify-blob "$f" \
+              --signature "$f.sig" \
+              --certificate "$f.pem" \
+              --certificate-identity-regexp "https://github.com/${{ github.repository }}/.*" \
+              --certificate-oidc-issuer "https://token.actions.githubusercontent.com"
+          done
+
+      - name: Publish release with signed artifacts
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/*.whl
+            dist/*.tar.gz
+            dist/*.sig
+            dist/*.pem
+            sbom.cyclonedx.json
+            sbom.cyclonedx.json.sig
+            sbom.cyclonedx.json.pem
+          generate_release_notes: true

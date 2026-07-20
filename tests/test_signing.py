@@ -3,10 +3,13 @@ import pytest
 
 from custodian.receipt import GovernedReceipt
 from custodian.signing import (
+    KeyStatus,
+    SigningKeyRing,
     generate_keypair,
     public_key_for,
     sign_receipt,
     verify_signed,
+    verify_signed_with_keyring,
     verify_fingerprint,
     sign_fingerprint,
 )
@@ -99,3 +102,79 @@ def test_receipt_object_is_untouched_by_signing():
     fp_before = r.fingerprint
     sign_receipt(r, priv)
     assert r.fingerprint == fp_before  # detached signature, no mutation
+
+
+# ── SigningKeyRing — rotation-ready key management ─────────────────────────
+
+def test_adding_a_new_active_key_retires_the_previous_one():
+    priv1, pub1 = generate_keypair()
+    _, pub2 = generate_keypair()
+    ring = SigningKeyRing()
+    ring.add_key("k1", pub1)
+    ring.add_key("k2", pub2)
+    assert ring.entry_for_public_key(pub1).status == KeyStatus.RETIRED
+    assert ring.entry_for_public_key(pub2).status == KeyStatus.ACTIVE
+    assert ring.active_key_id() == "k2"
+
+
+def test_retired_key_still_verifies_old_receipts():
+    old_priv, old_pub = generate_keypair()
+    _, new_pub = generate_keypair()
+    ring = SigningKeyRing()
+    ring.add_key("old", old_pub)   # active when this receipt was signed
+    signed = sign_receipt(_receipt(), old_priv, key_id="old")
+    ring.add_key("new", new_pub)   # rotation: "old" is now retired
+
+    assert ring.entry_for_public_key(old_pub).status == KeyStatus.RETIRED
+    assert verify_signed_with_keyring(signed, ring) is True
+
+
+def test_revoked_key_fails_verification_even_for_a_previously_valid_receipt():
+    """Revoking is the lever retiring cannot express: "this key may be
+    compromised, stop trusting anything signed with it" -- even a receipt
+    that was legitimately signed while the key was active must now fail."""
+    priv, pub = generate_keypair()
+    ring = SigningKeyRing()
+    ring.add_key("compromised", pub)
+    signed = sign_receipt(_receipt(), priv, key_id="compromised")
+    assert verify_signed_with_keyring(signed, ring) is True  # valid before revocation
+
+    ring.revoke("compromised")
+    assert verify_signed_with_keyring(signed, ring) is False
+
+
+def test_unknown_key_is_rejected():
+    """A receipt signed with a key the ring has never heard of must fail --
+    same as an unrecognized key would against a single expected key."""
+    stranger_priv, _ = generate_keypair()
+    ring = SigningKeyRing()
+    _, known_pub = generate_keypair()
+    ring.add_key("known", known_pub)
+
+    signed = sign_receipt(_receipt(), stranger_priv, key_id="stranger")
+    assert verify_signed_with_keyring(signed, ring) is False
+
+
+def test_keyring_persists_and_reloads(tmp_path):
+    _, pub1 = generate_keypair()
+    _, pub2 = generate_keypair()
+    ring = SigningKeyRing()
+    ring.add_key("k1", pub1)
+    ring.add_key("k2", pub2)
+    ring.revoke("k1")
+
+    path = tmp_path / "keyring.json"
+    ring.save(path)
+    reloaded = SigningKeyRing.load(path)
+
+    assert reloaded.entry_for_public_key(pub1).status == KeyStatus.REVOKED
+    assert reloaded.entry_for_public_key(pub2).status == KeyStatus.ACTIVE
+    assert reloaded.active_key_id() == "k2"
+
+
+def test_duplicate_key_id_rejected():
+    ring = SigningKeyRing()
+    _, pub = generate_keypair()
+    ring.add_key("k1", pub)
+    with pytest.raises(ValueError):
+        ring.add_key("k1", pub)

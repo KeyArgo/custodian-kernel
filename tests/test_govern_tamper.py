@@ -171,6 +171,46 @@ def test_deleting_the_snapshot_does_not_silently_re_bless(tmp_path, isolated_hom
     assert charge(amount=1.00).verdict == "autonomous"
 
 
+def test_concurrent_first_run_does_not_produce_spurious_drift(tmp_path, isolated_home):
+    """The first-run snapshot used to be written with a direct
+    `open(bk_path, "w").write(...)` -- N threads calling govern() on the
+    SAME freshly-decorated function for the first time (a real shape: many
+    concurrent requests hitting a just-deployed process) raced to
+    truncate-then-write the same path, and a concurrent reader could
+    observe the file empty or partial mid-write. Fixing the truncated-
+    snapshot bug above (treating an empty read as "drift" instead of
+    silently "ok") turned that pre-existing race into visible spurious
+    tamper denials under concurrent first-run load -- reproduced at a
+    ~15-20% failure rate over 30 trials of 100 concurrent calls before
+    writing the snapshot via a temp file + os.replace(), 0% after. Found
+    in review (of the fix above, not the original code)."""
+    import threading
+
+    sd = tmp_path / "tamper"
+
+    @govern(band="L2", cap=50.00, state_dir=str(sd))
+    def charge(amount: float) -> dict:
+        return {"ok": True}
+
+    results = []
+    lock = threading.Lock()
+
+    def worker():
+        r = charge(amount=1.00)
+        with lock:
+            results.append(r)
+
+    threads = [threading.Thread(target=worker) for _ in range(50)]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join()
+
+    assert len(results) == 50
+    assert all(r.verdict == "autonomous" for r in results), \
+        [r.verdict for r in results if r.verdict != "autonomous"]
+
+
 def test_truncated_snapshot_is_treated_as_drift_not_a_match(tmp_path, isolated_home):
     """`if stored and stored != source_sha` treated an empty/zero-byte
     snapshot as falsy and fell through to "matches" -- a truncated (not

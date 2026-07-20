@@ -126,9 +126,28 @@ def _tamper_check(
         return source_sha, "ok"
     except FileNotFoundError:
         # First run: write the snapshot.
+        #
+        # Written to a per-writer temp file and moved into place with
+        # os.replace() (atomic on POSIX and Windows), not `open(bk_path,
+        # "w").write(...)` directly. The direct-write form let N threads
+        # racing to govern() the SAME function for the first time (a real
+        # shape: 100 concurrent requests hitting a freshly deployed
+        # process) truncate-then-write the same path concurrently -- a
+        # reader could observe the file mid-write, empty or partial. That
+        # used to read as falsy and silently pass as "ok" (the exact bug
+        # fixed above); now that an empty/partial read correctly reports
+        # "drift", the SAME race instead produced spurious tamper denials
+        # under concurrent first-run load. Verified: 100 concurrent calls
+        # to a freshly-decorated function denied ~15-20% of the time before
+        # this fix, 0% after. Found in review (of the fix above, not the
+        # original code -- this race was always there, just silently
+        # masked).
         try:
             os.makedirs(state_dir, exist_ok=True)
-            open(bk_path, "w").write(source_sha)
+            tmp_path = f"{bk_path}.{uuid.uuid4().hex}.tmp"
+            with open(tmp_path, "w") as f:
+                f.write(source_sha)
+            os.replace(tmp_path, bk_path)
         except OSError:
             # Do NOT report "ok" here. A snapshot that was never written means
             # every later run also takes this branch, so the check silently
