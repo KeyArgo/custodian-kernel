@@ -3,5 +3,5 @@
 set -e
 cd "$(dirname "$0")"
 env -u CF_API_TOKEN CLOUDFLARE_API_TOKEN="$CF_PAGES_TOKEN" \
-  /home/argo/.npm-global/bin/wrangler pages deploy pages-frontend \
+  wrangler pages deploy pages-frontend \
   --project-name rein-custodian --commit-dirty=true
