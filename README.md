@@ -27,6 +27,21 @@ direction is still enforced: integrations (like talaria) may depend on the
 kernel or broker; the kernel and broker never depend on a particular website
 or agent framework — see `tests/test_architecture_boundaries.py`.
 
+**Install:**
+
+```bash
+pip install custodian-kernel
+custodian setup              # detects a local Hermes Agent, tells you what to add
+custodian setup --profile hermes   # or go straight to it: installs talaria too
+```
+
+`custodian setup` is the one command most people install through — it
+orchestrates `pip install` for the components you actually want (`paladin`
+ships in the base install already; `talaria` is its own package) instead of
+asking you to learn multiple package names up front. Prefer to wire it up
+yourself instead? Plain extras work exactly as before:
+`pip install custodian-kernel[paladin]` and `pip install custodian-talaria`.
+
 **Verify in 60 seconds, no credentials, no cloning:**
 
 ```bash

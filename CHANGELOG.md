@@ -9,6 +9,15 @@ support, backup/restore, and bulk credential onboarding — and carries a round
 of money/security hardening with a regression test for every fix (each verified
 to fail against the pre-fix code).
 
+### `custodian setup` — one-command installer
+
+Most users shouldn't need to know `custodian-kernel`, `paladin`, and
+`custodian-talaria` are three different PyPI names. `custodian setup`
+detects a local Hermes Agent install and orchestrates `pip install` for
+the components you ask for (`--with talaria`, `--profile hermes`). Fails
+closed by design: with no arguments it only detects and reports, never
+installs anything without an explicit ask.
+
 ### Talaria split into its own package
 
 The Hermes Agent + NemoClaw integration suite, previously developed
