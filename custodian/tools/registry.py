@@ -164,6 +164,28 @@ def _is_configured(name: str, skill_meta_flag: bool,
     return all(source.get(v) for v in reqs)
 
 
+def _state_dir() -> Path:
+    """Resolve the Custodian state directory.
+
+    Honors CUSTODIAN_STATE_DIR like the rest of the kernel (policy/enforcer.py,
+    codex_guard/mcp_server.py) instead of hardcoding ~/.custodian -- this file
+    used to hardcode it in three places, silently diverging from a workspace
+    that set the env var.
+    """
+    configured = os.environ.get("CUSTODIAN_STATE_DIR")
+    return Path(configured).expanduser() if configured else Path.home() / ".custodian"
+
+
+def _ledger_write(ledger, **kw) -> None:
+    """Never let a ledger write failure block a tool call -- same resilience
+    posture as cmd_request.py's identical helper."""
+    try:
+        from custodian.universal_ledger import LedgerEvent
+        ledger.append(LedgerEvent(**kw))
+    except Exception as e:
+        print(f"warning: failed to write ledger event: {e}", file=sys.stderr)
+
+
 @dataclass
 class CustodianTool:
     name: str
@@ -207,7 +229,7 @@ class CustodianTool:
             from custodian.types import AuthorityState, Band, KillSwitchState, SpendRequest
 
             # Load or default authority state
-            state_path = Path.home() / ".custodian" / "authority.json"
+            state_path = _state_dir() / "authority.json"
             if state_path.exists():
                 state = AuthorityState.from_dict(json.loads(state_path.read_text()))
             else:
@@ -216,7 +238,7 @@ class CustodianTool:
                 )
 
             # Kill switch — fail closed on corruption (same policy as govern.py)
-            ks_path = Path.home() / ".custodian" / "kill_switch.json"
+            ks_path = _state_dir() / "kill_switch.json"
             killed = False
             if ks_path.exists():
                 try:
@@ -226,7 +248,7 @@ class CustodianTool:
                     killed = True  # corrupted kill switch file = treat as killed
 
             # Policy: workspace first, then default preset
-            policy_path = Path.home() / ".custodian" / "policy.yaml"
+            policy_path = _state_dir() / "policy.yaml"
             if not policy_path.exists():
                 here = Path(__file__).resolve().parent.parent
                 policy_path = here / "policy" / "presets" / "default.yaml"
@@ -252,7 +274,8 @@ class CustodianTool:
                 "band": self.band,
             }
 
-    def invoke(self, _env: Optional[dict] = None, **kwargs) -> dict:
+    def invoke(self, _env: Optional[dict] = None, requester: str = "tool-registry",
+               **kwargs) -> dict:
         """Run the skill's execute.py script with kwargs as --key value args.
 
         For L2/L3/L4 tools the kernel's decide() is called first. If it
@@ -263,9 +286,22 @@ class CustodianTool:
         skill's process, never the agent's). Without it, only runtime plumbing
         and the exact declared requirements for this tool are inherited.
 
+        `requester` identifies who's calling for the universal ledger (e.g.
+        talaria's HermesBridge passes ``session:<capsule.session_id>``);
+        callers that don't pass one are recorded under a generic label.
+
         Returns dict with at minimum {"ok": bool}.
         """
         from custodian import bus as _event_bus
+        from custodian.universal_ledger import UniversalLedger
+        import uuid as _uuid
+
+        ledger = UniversalLedger(_state_dir() / "ledger.db")
+        correlation_id = _uuid.uuid4().hex
+        try:
+            real_amount = float(kwargs.get("amount", self.cost_usd) or 0)
+        except (TypeError, ValueError):
+            real_amount = self.cost_usd
 
         if not _is_configured(self.name, self.configured, env=_env):
             return {
@@ -279,13 +315,15 @@ class CustodianTool:
                 "kwargs": kwargs,
             }
 
+        _ledger_write(
+            ledger, correlation_id=correlation_id, requester=requester,
+            provider="custodian", action=self.name, lifecycle_event="proposed",
+            band=self.band, amount=real_amount, currency="USD",
+        )
+
         # Kernel gate for spending bands
         decision = None
         if self.band in ("L2", "L3", "L4"):
-            try:
-                real_amount = float(kwargs.get("amount", self.cost_usd) or 0)
-            except (TypeError, ValueError):
-                real_amount = self.cost_usd
             decision = self._kernel_decide(real_amount)
             if decision is not None and decision["verdict"] != "autonomous":
                 payload = {
@@ -299,6 +337,12 @@ class CustodianTool:
                     _event_bus.emit("kernel_denied", payload)
                 else:
                     _event_bus.emit("escalation_required", payload)
+                _ledger_write(
+                    ledger, correlation_id=correlation_id, requester=requester,
+                    provider="custodian", action=self.name, lifecycle_event="decided",
+                    verdict=decision["verdict"], band=self.band, amount=real_amount,
+                    currency="USD", metadata={"reason": decision["reason"][:200]},
+                )
                 return {
                     "ok": False,
                     "kernel_escalation": True,
@@ -312,8 +356,21 @@ class CustodianTool:
                         f"(band {self.band}): {decision['reason']}"
                     ),
                 }
+            if decision is not None:
+                _ledger_write(
+                    ledger, correlation_id=correlation_id, requester=requester,
+                    provider="custodian", action=self.name, lifecycle_event="decided",
+                    verdict=decision["verdict"], band=self.band, amount=real_amount,
+                    currency="USD",
+                )
 
         if not self.execute_script or not self.execute_script.exists():
+            _ledger_write(
+                ledger, correlation_id=correlation_id, requester=requester,
+                provider="custodian", action=self.name, lifecycle_event="failed",
+                band=self.band, amount=real_amount, currency="USD",
+                metadata={"reason": "no execute script found"},
+            )
             return {
                 "ok": False,
                 "error": f"no execute script found for {self.name}",
@@ -358,10 +415,28 @@ class CustodianTool:
                 "ok": parsed.get("ok", False),
                 "result": parsed,
             })
+            _ledger_write(
+                ledger, correlation_id=correlation_id, requester=requester,
+                provider="custodian", action=self.name,
+                lifecycle_event="executed" if parsed.get("ok") else "failed",
+                band=self.band, amount=real_amount, currency="USD",
+            )
             return parsed
         except subprocess.TimeoutExpired:
+            _ledger_write(
+                ledger, correlation_id=correlation_id, requester=requester,
+                provider="custodian", action=self.name, lifecycle_event="failed",
+                band=self.band, amount=real_amount, currency="USD",
+                metadata={"reason": "timeout"},
+            )
             return {"ok": False, "error": "timeout", "tool": self.name}
         except Exception as e:
+            _ledger_write(
+                ledger, correlation_id=correlation_id, requester=requester,
+                provider="custodian", action=self.name, lifecycle_event="failed",
+                band=self.band, amount=real_amount, currency="USD",
+                metadata={"reason": str(e)[:200]},
+            )
             return {"ok": False, "error": str(e), "tool": self.name}
 
 
@@ -441,12 +516,14 @@ class ToolRegistry:
             "by_band": by_band,
         }
 
-    def run(self, name: str, _env: Optional[dict] = None, **kwargs) -> dict:
+    def run(self, name: str, _env: Optional[dict] = None,
+            requester: str = "tool-registry", **kwargs) -> dict:
         """Convenience: look up a tool by name and invoke it.
 
         Returns a structured error dict (never raises) when the tool is
         unknown so callers can branch on `ok` without try/except plumbing.
         `_env` is forwarded to CustodianTool.invoke (Paladin egress).
+        `requester` is forwarded to the universal ledger.
         """
         tool = self.get(name)
         if tool is None:
@@ -455,7 +532,7 @@ class ToolRegistry:
                 "error": f"tool not found: {name}",
                 "tool": name,
             }
-        return tool.invoke(_env=_env, **kwargs)
+        return tool.invoke(_env=_env, requester=requester, **kwargs)
 
 
 def default_registry() -> ToolRegistry:

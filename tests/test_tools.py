@@ -112,6 +112,83 @@ class TestToolRegistry:
         assert huge["ok"] is False, huge
         assert huge.get("kernel_escalation") is True
 
+    def test_invoke_writes_proposed_and_executed_ledger_events(self, tmp_path):
+        from custodian.tools.registry import CustodianTool, _state_dir
+        from custodian.universal_ledger import UniversalLedger
+
+        script = tmp_path / "execute.py"
+        script.write_text("import json; print(json.dumps({'ok': True}))\n")
+        tool = CustodianTool(name="ledgered-tool", description="", band="L0",
+                             configured=True, execute_script=script)
+
+        result = tool.invoke(requester="session:abc123")
+        assert result["ok"] is True
+
+        ledger = UniversalLedger(_state_dir() / "ledger.db")
+        events = ledger.by_provider("custodian")  # newest first
+        assert len(events) == 2
+        kinds = [e["lifecycle_event"] for e in reversed(events)]
+        assert kinds == ["proposed", "executed"]
+        assert all(e["requester"] == "session:abc123" for e in events)
+        assert all(e["action"] == "ledgered-tool" for e in events)
+        ledger.verify()  # raises on a broken chain
+
+    def test_invoke_writes_failed_ledger_event_on_missing_script(self, tmp_path):
+        from custodian.tools.registry import CustodianTool, _state_dir
+        from custodian.universal_ledger import UniversalLedger
+
+        tool = CustodianTool(name="scriptless", description="", band="L0",
+                             configured=True, execute_script=None)
+
+        result = tool.invoke()
+        assert result["ok"] is False
+
+        ledger = UniversalLedger(_state_dir() / "ledger.db")
+        events = ledger.by_provider("custodian")  # newest first
+        assert [e["lifecycle_event"] for e in reversed(events)] == ["proposed", "failed"]
+
+    def test_invoke_writes_escalated_ledger_event_for_l2_escalation(self, tmp_path, monkeypatch):
+        from custodian.tools.registry import CustodianTool, _state_dir
+        from custodian.universal_ledger import UniversalLedger
+
+        script = tmp_path / "execute.py"
+        script.write_text("raise AssertionError('must not execute')\n")
+        tool = CustodianTool(name="escalates", description="", band="L2",
+                             configured=True, execute_script=script)
+        monkeypatch.setattr(tool, "_kernel_decide", lambda amount=None: {
+            "verdict": "escalation_required", "reason": "kernel unavailable",
+            "band": "L2",
+        })
+
+        result = tool.invoke()
+        assert result["ok"] is False
+
+        ledger = UniversalLedger(_state_dir() / "ledger.db")
+        events = ledger.by_provider("custodian")  # newest first
+        assert [e["lifecycle_event"] for e in reversed(events)] == ["proposed", "decided"]
+        assert events[0]["verdict"] == "escalation_required"
+
+    def test_registry_run_forwards_requester_to_ledger(self, tmp_path):
+        from custodian.tools.registry import ToolRegistry, _state_dir
+        from custodian.universal_ledger import UniversalLedger
+
+        d = tmp_path / "skills" / "probe"
+        (d / "scripts").mkdir(parents=True)
+        (d / "SKILL.md").write_text(
+            "---\nname: probe\ndescription: probe\n"
+            "metadata:\n  custodian:\n    band: L0\n    configured: true\n---\n"
+        )
+        (d / "scripts" / "execute.py").write_text(
+            "import json; print(json.dumps({'ok': True}))\n"
+        )
+        result = ToolRegistry(tmp_path / "skills").run("probe", requester="session:xyz")
+        assert result["ok"] is True
+
+        ledger = UniversalLedger(_state_dir() / "ledger.db")
+        events = ledger.by_provider("custodian")
+        assert len(events) >= 1
+        assert all(e["requester"] == "session:xyz" for e in events)
+
     def test_known_credential_is_redacted_from_tool_output(self, tmp_path):
         from custodian.tools.registry import CustodianTool
         script = tmp_path / "execute.py"
