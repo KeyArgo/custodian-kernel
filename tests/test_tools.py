@@ -189,6 +189,38 @@ class TestToolRegistry:
         assert len(events) >= 1
         assert all(e["requester"] == "session:xyz" for e in events)
 
+    def test_invoke_refuses_to_run_unconfined_when_sandbox_unavailable(self, tmp_path, monkeypatch):
+        """Mandatory confinement: invoke() must fail closed rather than run
+        a governed script with full ambient filesystem access when no
+        sandbox can be built and no opt-out was given."""
+        import custodian.sandbox as sandbox_mod
+        from custodian.tools.registry import CustodianTool
+
+        monkeypatch.setattr(sandbox_mod, "sandbox_available", lambda: False)
+        monkeypatch.delenv("CUSTODIAN_ALLOW_UNSANDBOXED_TOOLS", raising=False)
+        script = tmp_path / "execute.py"
+        script.write_text("raise AssertionError('must not execute')\n")
+        tool = CustodianTool(name="needs-sandbox", description="", band="L0",
+                             configured=True, execute_script=script)
+
+        result = tool.invoke()
+        assert result["ok"] is False
+        assert "sandbox" in result["error"].lower()
+
+    def test_invoke_runs_unsandboxed_when_explicitly_opted_out(self, tmp_path, monkeypatch):
+        import custodian.sandbox as sandbox_mod
+        from custodian.tools.registry import CustodianTool
+
+        monkeypatch.setattr(sandbox_mod, "sandbox_available", lambda: False)
+        monkeypatch.setenv("CUSTODIAN_ALLOW_UNSANDBOXED_TOOLS", "1")
+        script = tmp_path / "execute.py"
+        script.write_text("import json; print(json.dumps({'ok': True}))\n")
+        tool = CustodianTool(name="opted-out", description="", band="L0",
+                             configured=True, execute_script=script)
+
+        result = tool.invoke()
+        assert result["ok"] is True
+
     def test_known_credential_is_redacted_from_tool_output(self, tmp_path):
         from custodian.tools.registry import CustodianTool
         script = tmp_path / "execute.py"

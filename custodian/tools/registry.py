@@ -393,10 +393,30 @@ class CustodianTool:
         cmd = [sys.executable, str(self.execute_script)]
         for k, v in kwargs.items():
             cmd += [f"--{k.replace('_', '-')}", str(v)]
+
+        from custodian.exceptions import ToolSandboxUnavailableError
+        from custodian.sandbox import require_sandboxed_argv
+        rw_dirs = [str(_state_dir())]
+        if self.skill_dir:
+            rw_dirs.append(str(self.skill_dir))
+        try:
+            argv = require_sandboxed_argv(
+                cmd, rw_dirs=rw_dirs,
+                allow_unsandboxed=os.environ.get("CUSTODIAN_ALLOW_UNSANDBOXED_TOOLS") == "1",
+            )
+        except ToolSandboxUnavailableError as e:
+            _ledger_write(
+                ledger, correlation_id=correlation_id, requester=requester,
+                provider="custodian", action=self.name, lifecycle_event="failed",
+                band=self.band, amount=real_amount, currency="USD",
+                metadata={"reason": "sandbox unavailable"},
+            )
+            return {"ok": False, "error": str(e), "tool": self.name}
+
         try:
             tool_env = _tool_environment(self.name, _env)
             result = subprocess.run(
-                cmd, capture_output=True, text=True, timeout=30,
+                argv, capture_output=True, text=True, timeout=30,
                 cwd=str(self.skill_dir) if self.skill_dir else None,
                 env=tool_env,
             )
