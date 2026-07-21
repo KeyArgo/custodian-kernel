@@ -360,11 +360,30 @@ def test_evaluate_guard_action_stamps_the_caller_supplied_harness(tmp_path, monk
     assert harnesses == {"codex", "opencode"}
 
 
-def test_list_receipts_defaults_to_the_callers_own_harness(tmp_path, monkeypatch):
+def test_list_receipts_denies_self_by_default(tmp_path, monkeypatch):
+    """No harness sees anything by default -- not even its own history. An
+    agent that can read its own denial reasons/tools/verdicts has an oracle
+    it can probe to learn the enforcement boundary and route around it."""
+    monkeypatch.setenv("CUSTODIAN_CODEX_GUARD_STATE_DIR", str(tmp_path / "state"))
+    evaluate_guard_action(_guard_args(tmp_path), harness="opencode")
+
+    result = list_receipts_for({}, harness="opencode")
+    assert "error" in result
+    assert "not granted" in result["error"]
+    assert "receipts" not in result
+
+
+def test_list_receipts_defaults_target_to_the_callers_own_harness_once_granted(tmp_path, monkeypatch):
+    """target_harness still defaults to the caller's own harness when
+    unspecified -- that default just isn't visible without an explicit
+    self-grant anymore."""
     monkeypatch.setenv("CUSTODIAN_CODEX_GUARD_STATE_DIR", str(tmp_path / "state"))
     evaluate_guard_action(_guard_args(tmp_path), harness="codex")
     evaluate_guard_action(_guard_args(tmp_path), harness="opencode")
     evaluate_guard_action(_guard_args(tmp_path), harness="opencode")
+
+    policy = LedgerAccessPolicy(tmp_path / "state" / "ledger-access-policy.json")
+    policy.add(LedgerGrant(harness="opencode", can_view=("opencode",)))
 
     result = list_receipts_for({}, harness="opencode")
     assert result["count"] == 2
@@ -394,11 +413,25 @@ def test_list_receipts_allows_cross_harness_with_an_explicit_grant(tmp_path, mon
     assert result["receipts"][0]["harness"] == "codex"
 
 
-def test_list_receipts_via_mcp_tools_call(tmp_path, monkeypatch):
-    """End-to-end through the real JSON-RPC handle() dispatch, same path
-    a live Codex session actually calls."""
+def test_list_receipts_via_mcp_tools_call_denied_by_default(tmp_path, monkeypatch):
+    """End-to-end through the real JSON-RPC handle() dispatch, same path a
+    live Codex session actually calls -- and by default it's a denial, even
+    for the caller's own history, until the operator grants visibility."""
     monkeypatch.setenv("CUSTODIAN_CODEX_GUARD_STATE_DIR", str(tmp_path / "state"))
     handle("tools/call", {"name": "guard_action", "arguments": _guard_args(tmp_path)})
+
+    result = handle("tools/call", {"name": "list_receipts", "arguments": {}})
+    body = result["structuredContent"]
+    assert result["isError"] is True
+    assert "not granted" in body["error"]
+
+
+def test_list_receipts_via_mcp_tools_call_with_explicit_self_grant(tmp_path, monkeypatch):
+    monkeypatch.setenv("CUSTODIAN_CODEX_GUARD_STATE_DIR", str(tmp_path / "state"))
+    handle("tools/call", {"name": "guard_action", "arguments": _guard_args(tmp_path)})
+
+    policy = LedgerAccessPolicy(tmp_path / "state" / "ledger-access-policy.json")
+    policy.add(LedgerGrant(harness="codex", can_view=("codex",)))
 
     result = handle("tools/call", {"name": "list_receipts", "arguments": {}})
     body = result["structuredContent"]
@@ -621,10 +654,13 @@ def test_approval_store_list_visible_scopes_by_harness(tmp_path):
     store.request(digest=approval_digest(tmp_path), requester="r3", harness="opencode")
 
     policy = LedgerAccessPolicy(tmp_path / "state" / "ledger-access-policy.json")
-    own_only = store.list_visible(policy, harness="codex", model="*")
-    assert len(own_only) == 1
-    assert own_only[0].requester == "r1"
+    nothing_visible = store.list_visible(policy, harness="codex", model="*")
+    assert nothing_visible == []
 
     policy.add(LedgerGrant(harness="codex", can_view=("opencode",)))
     with_grant = store.list_visible(policy, harness="codex", model="*")
-    assert {r.requester for r in with_grant} == {"r1", "r2", "r3"}
+    assert {r.requester for r in with_grant} == {"r2", "r3"}
+
+    policy.add(LedgerGrant(harness="codex", can_view=("codex",)))
+    with_self_grant_too = store.list_visible(policy, harness="codex", model="*")
+    assert {r.requester for r in with_self_grant_too} == {"r1", "r2", "r3"}

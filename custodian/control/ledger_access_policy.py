@@ -154,11 +154,19 @@ class LedgerAccessPolicy:
     # -- decision -----------------------------------------------------------
 
     def visible_harnesses(self, *, harness: str, model: str) -> frozenset[str] | str:
-        """Return the harness identities `harness`+`model` may view (always
-        including its own), or the literal ALL_HARNESSES if granted
-        unrestricted visibility. Malformed policy fails closed to self-only,
-        never to "see everything"."""
-        visible = {harness}
+        """Return the harness identities `harness`+`model` may view, or the
+        literal ALL_HARNESSES if granted unrestricted visibility.
+
+        No harness sees anything by default -- not even its own history.
+        The agent being governed is exactly the party a hard-denial log
+        exists to constrain; letting it read its own reasons/tools/verdicts
+        turns the ledger into an oracle it can probe to learn the exact
+        enforcement boundary and route around it. Visibility, including a
+        harness viewing its own past decisions, is only ever something the
+        operator grants explicitly via `custodian console`'s `[G]` key --
+        never a starting default. Malformed policy fails closed to nothing
+        visible, same direction as every other fail-closed default here."""
+        visible = set()
         try:
             grants = self.list()
         except ValueError:

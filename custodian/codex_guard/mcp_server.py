@@ -60,11 +60,12 @@ TOOLS = [
     {
         "name": "list_receipts",
         "description": (
-            "List recent Codex Guard decision receipts. Defaults to your own "
-            "harness's receipts; a different target_harness is only returned "
-            "if the operator has explicitly granted this harness visibility "
-            "into it (see `custodian console`'s ledger-access grants). "
-            "Value-free: no arguments, prompts, or secret values, ever."
+            "List recent Codex Guard decision receipts. No harness sees any "
+            "receipts by default, including its own -- the operator must "
+            "explicitly grant this harness visibility into a target_harness "
+            "(see `custodian console`'s ledger-access grants) before this "
+            "returns anything. Value-free: no arguments, prompts, or secret "
+            "values, ever."
         ),
         "inputSchema": {
             "type": "object",
@@ -173,12 +174,12 @@ def evaluate_guard_action(args: dict[str, Any], *, harness: str = "codex") -> di
 
 def list_receipts_for(args: dict[str, Any], *, harness: str = "codex") -> dict[str, Any]:
     """List recent receipts visible to `harness`. `target_harness` in args
-    defaults to the caller's own harness; requesting another harness's
-    receipts without an explicit ledger_access_policy grant is a clear
-    denial, not a silent empty list -- this mirrors how the rest of this
-    module surfaces policy denials (see guard.py's reason strings) rather
-    than letting an ungranted caller wonder if the target harness simply
-    has no history.
+    defaults to the caller's own harness, but no harness -- including its
+    own -- is visible without an explicit ledger_access_policy grant; an
+    ungranted request is a clear denial, not a silent empty list -- this
+    mirrors how the rest of this module surfaces policy denials (see
+    guard.py's reason strings) rather than letting an ungranted caller
+    wonder if the target harness simply has no history.
     """
     if not harness or len(harness) > 64:
         raise ValueError("invalid harness identity")

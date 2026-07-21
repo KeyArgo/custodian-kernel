@@ -11,14 +11,21 @@ the foundation. The Build Week work is a new Codex-native enforcement surface:
 - a repo-local Codex plugin and governance skill;
 - a dependency-free MCP server exposing `guard_action`, `verify_receipts`,
   and `list_receipts`;
-- per-harness ledger isolation: every receipt and approval is stamped with
-  the harness that produced it (server-side, never a model-supplied value),
-  and `list_receipts` defaults to a harness's own history only — seeing
-  another adapter's (e.g. Codex reading OpenCode's) requires an explicit
-  operator-granted `LedgerAccessPolicy` rule, managed from `custodian
+- the ledger is kernel-internal, not agent-facing: every receipt and approval
+  is stamped with the harness that produced it (server-side, never a
+  model-supplied value), and no harness sees any receipts by default —
+  not even its own. The agent being governed is exactly the party a denial
+  log exists to constrain; letting it read its own reasons/tools/verdicts
+  would turn the ledger into an oracle it could probe to learn the
+  enforcement boundary and route around it. Visibility (a harness's own
+  history, another adapter's, or both) is only ever something the operator
+  grants explicitly via a `LedgerAccessPolicy` rule, managed from `custodian
   console`'s `[G]` key. Not physically separate storage (one shared,
   hash-chained receipt log, matching this module's existing tamper-evidence
-  design) — isolation is enforced at the query boundary;
+  design) — isolation is enforced at the query boundary. The write path is
+  fully kernel-mediated too: no MCP tool ever exposes a raw append/delete —
+  `guard_action` is the only writer, and it appends only what the kernel's
+  own decision logic computes, never arbitrary model-supplied content;
 - action-bound, expiring, single-use human approvals that the model cannot grant;
 - a typed coding-action risk model independent of the model's own label;
 - fail-closed composition of workspace, secret, prompt-injection, and

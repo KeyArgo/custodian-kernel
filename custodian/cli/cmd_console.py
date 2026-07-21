@@ -181,7 +181,7 @@ def _draw(state_dir: Path, message: str) -> tuple[ApprovalStore, CapabilityStore
     modes = ", ".join(f"{c} {m}" for m, c in sorted(mode_counts.items()))
     print(f"  {_DIM}Policy: {active_rules} active rule(s) — {modes if modes else 'all ask (default)'}{_RESET}")
     print(f"  {_DIM}Filesystem scopes: {len(fs_rules)}{_RESET}")
-    print(f"  {_DIM}Ledger access grants: {len(ledger_grants)} (every harness sees only its own receipts by default){_RESET}")
+    print(f"  {_DIM}Ledger access grants: {len(ledger_grants)} (no harness sees any receipts by default, not even its own){_RESET}")
     print(f"  {_YELLOW}[A]{_RESET} approve once    {_YELLOW}[D]{_RESET} deny    {_YELLOW}[I]{_RESET} ignore 5m    {_YELLOW}[L]{_RESET} lease (1h/25 uses)")
     print(f"  {_YELLOW}[F]{_RESET} filesystem scope    {_YELLOW}[G]{_RESET} ledger grant    {_YELLOW}[R]{_RESET} rules    {_YELLOW}[K]{_RESET} global stop    {_YELLOW}[Q]{_RESET} quit")
     print(f"  {_DIM}Approve-once: single-use — the next matching action consumes it.{_RESET}")
@@ -239,8 +239,8 @@ def run(args) -> int:
                     message = f"Not saved: {exc}"
             elif key == "g":
                 print(_CLEAR, end="")
-                print("Ledger access grant — every harness sees only its own receipts by default.")
-                print("This grants ONE harness visibility into another's ledger/receipt history.")
+                print("Ledger access grant — no harness sees any receipts by default, not even its own.")
+                print("This grants ONE harness visibility into a ledger/receipt history — its own, another's, or both.")
                 harness = input("Grant visibility TO harness [codex]: ").strip() or "codex"
                 model = input("Trusted model id [all]: ").strip() or "*"
                 can_view = tuple(

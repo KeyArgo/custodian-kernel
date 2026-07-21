@@ -4,6 +4,21 @@ All notable changes to custodian-kernel are recorded here. Dates are UTC.
 
 ## [0.4.0] — unreleased
 
+### Ledger visibility now defaults to nothing, not self
+
+`LedgerAccessPolicy.visible_harnesses()` used to always include the calling
+harness (`visible = {harness}`), so `list_receipts` returned a harness's own
+decision history -- reasons, tools, verdicts -- with zero configuration. The
+agent being governed is exactly the party a denial log exists to constrain;
+self-visibility handed it an oracle to probe the enforcement boundary and
+route around it. No harness now sees any receipts by default, including its
+own; the operator grants visibility explicitly, self included, the same way
+cross-harness grants already worked. `verify_receipts` (chain-integrity
+proof only -- `{valid, count}`, no reasons/tools/verdicts) is unaffected;
+it carries no oracle value. The write path was already fully kernel-
+mediated (`guard_action` is the only caller of `chain.append()`, and only
+with kernel-computed content) -- this closes the matching read-side gap.
+
 ### Per-harness ledger isolation
 
 Every receipt and approval is now stamped with the harness that produced it

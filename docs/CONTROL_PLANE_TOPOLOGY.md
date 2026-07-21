@@ -96,11 +96,14 @@ interception.
 - **Universal ledger:** durable normalized lifecycle evidence, not business
   logic and never raw secrets/prompts/file contents. Every event/receipt is
   stamped with its originating harness (server-side, never model-supplied).
-  An adapter sees only its own harness's records by default; visibility into
-  another adapter's requires an explicit operator grant
+  No adapter sees any records by default, not even its own — the agent being
+  governed is exactly the party a denial log exists to constrain, and
+  self-visibility would turn the ledger into an oracle it could probe to
+  learn the enforcement boundary. Visibility, including an adapter's own
+  history, is only ever an explicit operator grant
   (`custodian/control/ledger_access_policy.py`, editable via `custodian
   console`'s `[G]` key). The operator's own view stays unscoped across every
-  adapter — the isolation boundary is agent-to-agent, not operator-to-agent.
+  adapter — the isolation boundary is agent-to-adapter, not operator-to-agent.
 - **Operator service:** authenticated approvals, denials, configuration,
   adapter health and emergency recovery.
 - **Console:** TUI first; an optional local web GUI uses the same service API.
