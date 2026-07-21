@@ -53,6 +53,72 @@ stays in this distribution — it has no Hermes-specific code.
     exports, password-manager exports in Downloads/Desktop) and the exact
     command to import each.
 
+### Universal ledger
+
+- **A single, hash-chained, cross-process-safe audit ledger** (`custodian/universal_ledger.py`)
+  now records every governed action's full lifecycle — `proposed` → `decided`
+  → `escalated`/`approved`/`denied` → `executed`/`failed` — with a
+  SHA-256 hash chain (tamper-*evident*, not tamper-*proof*; the limits of
+  that claim are disclosed in the module itself) and an origin-bound
+  genesis instead of a fixed literal. Wired into the real governed-tool
+  execution path (`CustodianTool.invoke()`, not just the `custodian
+  request`/`approve`/`deny` CLI flow), the inference router, and the kill
+  switch/confirm CLI commands, which previously wrote only to the legacy
+  JSONL audit log with no hash-chained record at all.
+- Sanitizes every field at write time: bounded lengths, a `paladin://` ref
+  format check, and a secret-shape scan reusing `secret_leak_guard`'s
+  patterns — a caller cannot accidentally write a raw credential into the
+  audit trail.
+
+### Sandboxed, delegated tool execution
+
+- **Every governed skill script now runs inside a filesystem/exec-confined
+  sandbox by default** (`custodian/sandbox.py`, real `bwrap` — fresh
+  PID/UTS/IPC/cgroup namespaces, the filesystem re-mounted read-only except
+  the tool's own state and skill directories, `~/.ssh`/`~/.aws`/`~/.gnupg`/
+  `~/.paladin` masked to an empty tmpfs). Fails closed — refuses to run a
+  governed script at all — if bwrap or unprivileged user namespaces aren't
+  available, unless explicitly opted out via `CUSTODIAN_ALLOW_UNSANDBOXED_TOOLS=1`.
+  Deliberately does not isolate the network (most bundled skills need real
+  API access); a per-tool destination allowlist (`custodian/egress_proxy.py`,
+  opt-in via `allowed_hosts` in a skill's `SKILL.md`) closes the common case
+  of a compromised skill's own SDK exfiltrating to an unintended host, short
+  of full network isolation (deferred to its own 0.6.0 branch).
+- **Delegated execution** (`custodian/executor/`, opt-in via
+  `CUSTODIAN_EXECUTOR_SOCKET`): a separate OS process re-derives every
+  kernel decision independently from its own copy of policy/authority
+  state, and is the only code path that actually executes a governed
+  script — the calling agent process can only propose an action over a
+  Unix socket and holds no execution code of its own. Escalated actions
+  mint a signed, digest-bound, single-use capability (HMAC-sealed, atomic
+  consumption) that a human approves (`custodian executor approve`);
+  re-sending the identical request then consumes it and executes, exactly
+  once. `custodian/tools/registry.py`'s kernel-decision logic (previously
+  duplicated per call path) is now the one shared `custodian/policy/gate.py`
+  implementation behind the tool registry, the delegated executor, and the
+  inference router.
+- **`custodian/inference/router.py`'s LLM calls are now kernel-governed.**
+  Previously bypassed the kernel entirely — no kill-switch check, no spend
+  cap, no audit trail, unlike every registered tool. Now gates on the
+  worst-case cost (`max_tokens` fully consumed) before any network call,
+  reconciling the ledger down to the real token count afterward; an
+  escalation fails closed (no interactive human-in-the-loop path exists in
+  a chat/report-generation context).
+
+### Supply chain
+
+- Release artifacts (wheel, sdist, SBOM) are signed with keyless Sigstore/
+  cosign signing via GitHub OIDC on every version-tagged release — no
+  long-lived signing key to generate, store, rotate, or leak — with
+  signature verification built into the release workflow itself.
+  CycloneDX SBOM generated from the actual installed wheel's dependency
+  closure, not the dev checkout.
+- The kernel's own Ed25519 receipt-signing key can now rotate
+  (`custodian.signing.SigningKeyRing`): retire an old key without
+  invalidating receipts it already signed, or revoke one outright if it
+  may be compromised — the single hardcoded-key model had no answer for
+  either.
+
 ### Money path
 
 - **Concurrent spends no longer lose money or blow the session cap.** Spends
@@ -72,6 +138,41 @@ stays in this distribution — it has no Hermes-specific code.
 
 ### Security
 
+- **The tool registry's band-cap gate now checks the real requested amount,
+  not a static declared default.** Was always built from the SKILL.md's
+  static `cost_usd` (0.0 for most spend tools) regardless of what a caller
+  actually asked for — verified live, a \$999,999.99 call to a fresh L2 tool
+  sailed through as autonomous under a \$2.00 default cap.
+- **`CustodianMiddleware`'s governed-route matching now normalizes the
+  request path before comparison.** An exact-string-only match let a
+  request differing only by a trailing slash, a doubled leading slash,
+  case, or a decoded `%20` reach the downstream application completely
+  ungoverned — a route configured to always require human approval let a
+  \$999,999 request through as an ordinary 200.
+- **`@govern`'s amount detection now binds to the real parameter named
+  `amount`,** not "the first nonzero, non-bool number in the positional
+  args" — a decorated function with another numeric parameter before
+  `amount` (an id, a quantity) was gated on that decoy value instead of
+  the real spend.
+- **The Stripe webhook endpoint now rejects replays.** Signature
+  verification was already correct, but the same valid, captured
+  `(payload, signature)` pair could be resent any number of times and was
+  credited every time — now bounded by a timestamp-tolerance check plus
+  de-duplication by the event's own Stripe id.
+- **`paladin.backup.restore_backup()`'s pre-restore safety copy no longer
+  clobbers a prior one.** Two ordinary, consecutive restores used to
+  silently overwrite the first restore's saved "current vault" with the
+  second's, contradicting the module's own documented invariant.
+- A dashboard debug-log endpoint no longer follows a pre-planted symlink
+  at its fixed `/tmp` path (a clobber/read primitive on a shared host), and
+  its previously-unbounded fields are now length-capped like their
+  siblings.
+- Roughly 40 further bugs, each with a live reproduction and a regression
+  test that fails against the pre-fix code, found via repeated rounds of
+  adversarial review across the kernel, `paladin`, the guard adapters, the
+  escalation/approval boundary, the ASGI middleware, and the dashboard —
+  see the git history for the full list; too many to enumerate here
+  individually.
 - **Kernel and middleware inputs fail closed.** Non-finite monetary values,
   malformed or oversized governed request bodies, explicitly missing policies,
   and corrupted authority state can no longer fall through to permissive
