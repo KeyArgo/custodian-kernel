@@ -72,19 +72,43 @@ def test_custom_is_rate_limited(client):
     assert 429 in statuses
 
 
-def test_nim_key_file_is_written_with_restrictive_permissions(tmp_path, monkeypatch):
-    """Regression: Path.write_text() left the key file at default
-    (typically 0644, world-readable) permissions briefly. Verified by
-    calling the actual write logic in isolation against a temp path."""
+def _write_nim_key_file(path, value):
+    """Mirrors the exact write sequence in _execute_provision()."""
     import os
-    import api.triage as triage
-
-    fake_path = tmp_path / "nvidia_nim_key.env"
-    fd = os.open(fake_path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    if os.name != "nt":
+        os.fchmod(fd, 0o600)
     with os.fdopen(fd, "w") as f:
-        f.write("NVIDIA_API_KEY=sk-test-12345\n")
+        f.write(f"NVIDIA_API_KEY={value}\n")
+
+
+def test_nim_key_file_is_written_with_restrictive_permissions(tmp_path):
+    """Regression: Path.write_text() left the key file at default
+    (typically 0644, world-readable) permissions briefly."""
+    fake_path = tmp_path / "nvidia_nim_key.env"
+    _write_nim_key_file(fake_path, "sk-test-12345")
     mode = fake_path.stat().st_mode & 0o777
     assert mode == 0o600, f"key file must be 0600, was {oct(mode)}"
+
+
+@pytest.mark.skipif(__import__("os").name == "nt", reason="posix permission semantics")
+def test_nim_key_file_is_re_locked_down_even_if_a_stale_file_already_exists(tmp_path):
+    """Regression found by adversarial re-verification: os.open's mode
+    argument only applies when O_CREAT actually creates a NEW inode -- a
+    stale file left over from a prior hard-killed run (SIGKILL/OOM bypass
+    the surrounding finally: unlink()) with looser permissions kept those
+    looser permissions even after the "fixed" write. os.fchmod() after
+    opening closes this regardless of whether the file was just created or
+    already existed."""
+    fake_path = tmp_path / "nvidia_nim_key.env"
+    fake_path.write_text("stale content from a prior crashed run\n")
+    fake_path.chmod(0o644)
+    assert fake_path.stat().st_mode & 0o777 == 0o644, "sanity check: the stale file starts loose"
+
+    _write_nim_key_file(fake_path, "sk-test-12345")
+
+    mode = fake_path.stat().st_mode & 0o777
+    assert mode == 0o600, f"key file must be re-locked to 0600 even over a stale file, was {oct(mode)}"
 
 
 @pytest.mark.parametrize("case_id", [
@@ -104,6 +128,28 @@ def test_load_case_still_loads_a_real_case():
     corpus_dir = Path(__file__).resolve().parents[2] / "custodian" / "packs" / "refunds" / "corpus"
     real_case_id = next(corpus_dir.glob("*.json")).stem
     assert triage._load_case(corpus_dir, real_case_id) is not None
+
+
+@pytest.mark.parametrize("case_id", [
+    "foo\x00bar",
+    "x" * 5000,
+])
+def test_load_case_fails_closed_on_a_malformed_case_id_instead_of_500(case_id):
+    """Regression found by adversarial re-verification: a null byte or an
+    oversized case_id made Path.resolve() itself raise (ValueError/OSError)
+    instead of just failing to match a file -- an uncaught 500 instead of
+    the intended fail-closed 404. Same bug class this same commit already
+    fixed in fence_config() elsewhere in the codebase."""
+    import api.triage as triage
+    corpus_dir = Path(__file__).resolve().parents[2] / "custodian" / "packs" / "refunds" / "corpus"
+    assert triage._load_case(corpus_dir, case_id) is None
+
+
+def test_run_endpoint_does_not_500_on_a_null_byte_case_id(client):
+    """End-to-end: the same malformed case_id reaching the actual route
+    must produce a clean 404, not a raw 500 error page."""
+    resp = client.get("/api/v1/triage/run", query_string={"case_id": "foo\x00bar"})
+    assert resp.status_code == 404
 
 
 @pytest.mark.parametrize("bad_amount", ["nan", "inf", "-inf", "Infinity"])

@@ -143,15 +143,16 @@ class ReceiptChain:
             for index, record in enumerate(records):
                 if record.get("prev") != prev:
                     raise ValueError(f"receipt {index}: broken previous-record link")
-                # "harness" is only included if the record actually has the
-                # key -- a record written before this field existed had no
-                # "harness" key in the body its mac was computed over, so
-                # reconstructing with a default value here would recompute a
-                # DIFFERENT canonical encoding than the one originally sealed
-                # and falsely fail verification for every pre-existing receipt.
-                body_keys = ("ts", "event", "harness", "tool", "session_id",
-                             "verdict", "action_kind", "band", "reason")
-                body = {k: record[k] for k in body_keys if k in record}
+                # Every key except prev/mac, not a hardcoded allowlist -- a
+                # fixed key list meant any field OUTSIDE it (an extra key
+                # appended by anyone with mere filesystem write access, no
+                # HMAC key needed, or any future field added to a receipt)
+                # rode along completely unauthenticated while verify() still
+                # reported the chain valid. Naturally still handles a record
+                # written before "harness" existed correctly (it just won't
+                # have that key, so it's excluded the same way it always
+                # was), without needing a special-cased key list.
+                body = {k: v for k, v in record.items() if k not in ("prev", "mac")}
                 expected = hmac.new(
                     key, prev.encode() + self._canonical(body), hashlib.sha256,
                 ).hexdigest()

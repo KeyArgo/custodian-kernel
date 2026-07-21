@@ -87,6 +87,29 @@ def test_malformed_policy_file_fails_closed_to_self_only(tmp_path):
     assert not policy.can_view(harness="codex", model="*", target_harness="opencode")
 
 
+def test_valid_json_but_malformed_grant_entry_fails_closed_to_self_only(tmp_path):
+    """Regression found by adversarial re-verification: a grant entry that's
+    syntactically valid JSON but doesn't match LedgerGrant's constructor
+    (missing the required "harness" field here) raised an uncaught
+    TypeError, not the ValueError every caller actually catches -- a single
+    corrupted entry broke cross-harness visibility checking for EVERY
+    harness (a reliability/DoS regression), not just failing closed for the
+    one malformed grant, violating this module's own stated guarantee."""
+    path = tmp_path / "ledger-access-policy.json"
+    path.write_text('[{"can_view": ["opencode"]}]')  # missing required "harness" key
+    policy = LedgerAccessPolicy(path)
+    assert policy.can_view(harness="codex", model="*", target_harness="codex")
+    assert not policy.can_view(harness="codex", model="*", target_harness="opencode")
+
+
+def test_grant_entry_with_unexpected_extra_key_fails_closed_not_crashes(tmp_path):
+    path = tmp_path / "ledger-access-policy.json"
+    path.write_text('[{"harness": "codex", "can_view": ["opencode"], "unexpected_field": 1}]')
+    policy = LedgerAccessPolicy(path)
+    assert policy.can_view(harness="codex", model="*", target_harness="codex")
+    assert not policy.can_view(harness="codex", model="*", target_harness="opencode")
+
+
 def test_visible_harnesses_always_includes_self(tmp_path):
     policy = _policy(tmp_path)
     visible = policy.visible_harnesses(harness="codex", model="*")

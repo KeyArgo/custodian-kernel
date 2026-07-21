@@ -273,6 +273,29 @@ def test_receipt_chain_detects_tampering(tmp_path):
         chain.verify()
 
 
+def test_verify_detects_an_unauthenticated_field_injected_into_a_receipt(tmp_path):
+    """Regression found by adversarial re-verification: verify()'s HMAC
+    body reconstruction used a hardcoded 9-key allowlist -- any key OUTSIDE
+    that list rode along completely unauthenticated (no HMAC key needed to
+    add it) while verify() still reported the chain valid. Confirmed this
+    specifically does NOT let an attacker hide/forge the harness field
+    itself (harness was already in the old allowlist), but it's a real gap
+    in the receipt chain's general tamper-evidence claim -- any current or
+    future field outside the fixed list was unauthenticated."""
+    chain = ReceiptChain(tmp_path)
+    decision = decide(tmp_path).to_dict()
+    chain.append(decision, tool="read_file", session_id="test", harness="codex")
+    assert chain.verify() == 1
+
+    records = chain.path.read_text().splitlines()
+    tampered = json.loads(records[0])
+    tampered["injected_unauthenticated_field"] = "attacker-controlled value"
+    records[0] = json.dumps(tampered)
+    chain.path.write_text("\n".join(records) + "\n")
+    with pytest.raises(ValueError, match="HMAC mismatch"):
+        chain.verify()
+
+
 def test_verify_accepts_pre_harness_field_receipts_written_by_hand(tmp_path):
     """Regression: verify()'s body reconstruction used to hardcode a fixed
     set of keys that didn't include "harness". Adding harness to append()

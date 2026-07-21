@@ -80,12 +80,26 @@ class LedgerAccessPolicy:
             raise ValueError("ledger access policy is malformed; access denied")
         if not isinstance(data, list):
             raise ValueError("ledger access policy must be a list")
-        grants = [
-            LedgerGrant(**{**item, "can_view": tuple(item.get("can_view", ()))})
-            for item in data
-        ]
-        for grant in grants:
-            grant.validate()
+        try:
+            grants = [
+                LedgerGrant(**{**item, "can_view": tuple(item.get("can_view", ()))})
+                for item in data
+            ]
+            for grant in grants:
+                grant.validate()
+        except TypeError as exc:
+            # A grant entry that's syntactically valid JSON but doesn't
+            # match LedgerGrant's constructor (missing the required
+            # "harness" field, an unexpected/renamed key from hand-editing
+            # or a future schema change) raised an uncaught TypeError here,
+            # not the ValueError every caller (visible_harnesses(),
+            # cmd_console.py's _draw()) actually catches -- breaking this
+            # module's own "fails closed to self-only, never to 'see
+            # everything'" guarantee for every harness, not just a
+            # malicious one. A single corrupted entry took down
+            # cross-harness visibility checking entirely instead of
+            # degrading to self-only as documented.
+            raise ValueError(f"ledger access policy is malformed; access denied ({exc})")
         return grants
 
     def _write_under_lock(self, fd: int, grants: list[LedgerGrant]) -> None:

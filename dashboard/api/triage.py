@@ -245,10 +245,16 @@ def _execute_provision(case_id: str, data: dict, amount: float) -> dict:
             # umask-derived permissions (typically 0644 -- world-readable) --
             # a live API key briefly sat world-readable on a host this
             # project's own docs describe as shared with other real
-            # services. os.open with an explicit 0o600 mode never exposes a
-            # wider-permission window, and O_TRUNC handles a leftover file
-            # from a prior crashed run the same way write_text's overwrite did.
+            # services. os.open's mode argument only applies when O_CREAT
+            # actually creates a new inode -- if a stale file from a prior
+            # hard-killed run (SIGKILL/OOM bypass the surrounding finally:
+            # unlink()) already exists with looser permissions, os.open
+            # silently reuses them. os.chmod() after opening closes that
+            # gap regardless of whether the file was just created or already
+            # existed.
             fd = os.open(_NIM_KEY_PATH, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+            if os.name != "nt":
+                os.fchmod(fd, 0o600)
             with os.fdopen(fd, "w") as f:
                 f.write(f"NVIDIA_API_KEY={nvidia_key}\n")
             try:
@@ -296,12 +302,19 @@ def _load_case(corpus_dir: Path, case_id: str) -> dict:
     # disclosure of any reachable *.json file that happens to parse.
     if "/" in case_id or "\\" in case_id or ".." in case_id:
         return None
-    path = (corpus_dir / f"{case_id}.json").resolve()
-    if not path.is_relative_to(corpus_dir.resolve()):
+    try:
+        # A null byte or an oversized case_id makes realpath/resolve()
+        # itself raise (ValueError/OSError) instead of just failing to
+        # match a file -- caught here so a malformed case_id fails closed
+        # to "no such case" (404) rather than an uncaught 500.
+        path = (corpus_dir / f"{case_id}.json").resolve()
+        if not path.is_relative_to(corpus_dir.resolve()):
+            return None
+        if not path.exists():
+            return None
+        return json.loads(path.read_text())
+    except (ValueError, OSError):
         return None
-    if not path.exists():
-        return None
-    return json.loads(path.read_text())
 
 
 def _case_input(data: dict) -> dict:
