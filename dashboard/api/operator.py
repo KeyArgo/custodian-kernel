@@ -356,12 +356,29 @@ def _sms_allowed(ip: str) -> bool:
     return True
 
 
+def _client_ip() -> str:
+    """X-Forwarded-For is client-supplied input -- trusting it
+    unconditionally lets a client rotate the header value per request to
+    get a fresh SMS rate-limit bucket every time (each real forward costs
+    real money via Twilio). Only honored when the operator has explicitly
+    confirmed, via TRUSTED_PROXY_HEADER=X-Forwarded-For, that a trusted
+    proxy terminates every path to this process and overwrites any
+    client-supplied header of the same name; otherwise falls back to
+    request.remote_addr, which the client cannot forge. Same fix applied
+    to nemotron_chat.py/playground.py/stripe_webhook.py this session."""
+    if os.environ.get('TRUSTED_PROXY_HEADER') == 'X-Forwarded-For':
+        forwarded = request.headers.get('X-Forwarded-For', '')
+        if forwarded:
+            return forwarded.split(',')[0].strip()
+    return request.remote_addr or 'unknown'
+
+
 @bp.route('/forward_code', methods=['POST'])
 @require_operator
 def forward_code():
     """Forward the pending SMS code to a visitor-supplied phone number via Twilio."""
     import urllib.request, urllib.parse, base64
-    ip = request.headers.get('X-Forwarded-For', request.remote_addr or '').split(',')[0].strip()
+    ip = _client_ip()
     if not _sms_allowed(ip):
         return jsonify({'ok': False, 'error': f'Rate limit: max {_SMS_LIMIT} SMS per 10 minutes per IP'}), 429
     data = request.get_json(force=True, silent=True) or {}
