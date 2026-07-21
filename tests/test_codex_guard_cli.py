@@ -360,3 +360,121 @@ class TestEdgeCases:
             result = _ensure_mcp_json(mcp)
         assert result is True
         assert mcp.exists()
+
+
+# ------------------------------------------------------------------
+# codex-guard receipts CLI
+# ------------------------------------------------------------------
+
+from custodian.codex_guard.receipts import ReceiptChain
+from custodian.cli.cmd_codex_guard import run as receipts_run
+
+
+def _populate_receipts(state_dir: Path, count: int = 3) -> list[dict]:
+    chain = ReceiptChain(state_dir)
+    records = []
+    for i in range(count):
+        rec = chain.append(
+            {
+                "verdict": "autonomous" if i % 2 == 0 else "denied",
+                "action_kind": "write",
+                "band": "L1",
+                "reason": f"test receipt {i + 1}",
+            },
+            tool="test",
+            session_id="test_ses",
+        )
+        records.append(rec)
+    return records
+
+
+class TestReceiptsCli:
+    def test_missing_file(self, tmp_path, capsys):
+        class Args:
+            state_dir = str(tmp_path)
+            limit = 50
+            verify = False
+        receipts_run(Args())
+        out = capsys.readouterr().out
+        assert "No codex-guard receipts found." in out
+
+    def test_happy_path(self, tmp_path, capsys):
+        _populate_receipts(tmp_path, 3)
+        class Args:
+            state_dir = str(tmp_path)
+            limit = 50
+            verify = False
+        receipts_run(Args())
+        out = capsys.readouterr().out
+        assert "Total: 3 receipts" in out
+        assert "autonomous=" in out
+        assert "denied=" in out
+        assert out.count("\n") >= 4  # header + 3 rows + summary
+
+    def test_limit_one(self, tmp_path, capsys):
+        _populate_receipts(tmp_path, 3)
+        class Args:
+            state_dir = str(tmp_path)
+            limit = 1
+            verify = False
+        receipts_run(Args())
+        out = capsys.readouterr().out
+        assert "test receipt 3" in out
+        assert "test receipt 2" not in out
+        assert "test receipt 1" not in out
+        assert "Total: 1 receipts" in out
+
+    def test_verify_ok(self, tmp_path, capsys):
+        _populate_receipts(tmp_path, 3)
+        class Args:
+            state_dir = str(tmp_path)
+            limit = 50
+            verify = True
+        receipts_run(Args())
+        out = capsys.readouterr().out
+        assert "chain OK (3 receipts)" in out
+
+    def test_verify_broken(self, tmp_path):
+        _populate_receipts(tmp_path, 3)
+        # Tamper with the second record's verdict
+        path = tmp_path / "codex-guard-receipts.jsonl"
+        lines = path.read_text().splitlines()
+        import json as _json
+        data = _json.loads(lines[1])
+        data["verdict"] = "tampered"
+        lines[1] = _json.dumps(data, sort_keys=True, separators=(",", ":"))
+        path.write_text("\n".join(lines) + "\n")
+        class Args:
+            state_dir = str(tmp_path)
+            limit = 50
+            verify = True
+        with pytest.raises(SystemExit) as exc:
+            receipts_run(Args())
+        assert exc.value.code == 2
+
+    def test_malformed_line(self, tmp_path, capsys):
+        _populate_receipts(tmp_path, 2)
+        path = tmp_path / "codex-guard-receipts.jsonl"
+        # Append a malformed line in the middle
+        lines = path.read_text().splitlines()
+        lines.insert(1, "not valid json")
+        path.write_text("\n".join(lines) + "\n")
+        class Args:
+            state_dir = str(tmp_path)
+            limit = 50
+            verify = False
+        receipts_run(Args())
+        out, err = capsys.readouterr()
+        assert "warning: skipping malformed line" in err
+        assert "Total: 2 receipts" in out
+
+    def test_no_color_when_redirected(self, tmp_path, capsys):
+        _populate_receipts(tmp_path, 1)
+        class Args:
+            state_dir = str(tmp_path)
+            limit = 50
+            verify = False
+        # capsys captures stdout (non-TTY)
+        receipts_run(Args())
+        out = capsys.readouterr().out
+        assert "\x1b[" not in out

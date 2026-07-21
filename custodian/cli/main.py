@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import difflib
 import sys
+from pathlib import Path
 
 
 _WELCOME = """
@@ -122,6 +123,7 @@ from custodian.cli import cmd_backup
 from custodian.cli import cmd_setup, cmd_doctor
 from custodian.cli import cmd_executor
 from custodian.cli import cmd_console
+from custodian.cli import cmd_codex_guard
 from custodian.cli._version import LazyVersionAction
 from custodian.config import CustodianConfig
 
@@ -503,6 +505,30 @@ def main(argv: list[str] | None = None) -> int:
     # ── executor (delegated execution) ────────────────────────────────────────
     cmd_executor.register(sub)
     cmd_console.register(sub, str(env_defaults.state_dir))
+
+    # ── codex-guard ───────────────────────────────────────────────────────────
+    cg_parser = sub.add_parser(
+        "codex-guard",
+        help="Codex Guard receipt chain and diagnostics",
+        description="Inspect the HMAC hash-chained audit log of Codex Guard decisions.",
+    )
+    cg_sub = cg_parser.add_subparsers(dest="codex_guard_command", required=True)
+
+    cg_rec = cg_sub.add_parser(
+        "receipts",
+        help="Print the codex-guard receipt chain",
+        description="Pretty-print the JSONL receipt chain for Codex Guard decisions.",
+    )
+    _add_state_dir(cg_rec, str(Path.home() / ".custodian"))
+    cg_rec.add_argument(
+        "--limit", type=int, default=50,
+        help="Max receipts to show (default: 50; 0 or negative means all)",
+    )
+    cg_rec.add_argument(
+        "--verify", action="store_true",
+        help="Run chain verification before printing",
+    )
+    cg_rec.set_defaults(func=cmd_codex_guard.run)
 
     # ── demo ──────────────────────────────────────────────────────────────────
     demo_parser = sub.add_parser(
