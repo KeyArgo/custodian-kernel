@@ -65,9 +65,11 @@ a written reason. The deterministic rules keep final control
 over what is prohibited. GPT-5.6 explains; the rules decide.
 
 Codex also attacked its own classifier: it generated adversarial
-cases (an action that looks safe but isn't, like a delete command
-labeled as a read), confirmed the kernel caught them, and shipped
-the tests so regressions get caught.
+cases (actions whose declared type understates their actual risk —
+reads that traverse symlinks, writes to sensitive paths, grant
+requests that look autonomous but aren't) and confirmed the kernel
+caught them, then shipped the regression tests so future
+classifier regressions get caught at the gate.
 
 ## What the receipt ledger proves
 
@@ -114,12 +116,22 @@ VIDEO URL
 ================================================================
 CODEX SESSION IDS
 ================================================================
-Primary (this session, 7+ hours of Build Week + submission prep):
-019f837d-00f7-7d42-9680-253ca459297d
-
-Parent session (Jul 19 13:40 → Jul 21, 14.4 MB of full work,
-3 days of Build Week):
+Primary Build Week session (3 days, Jul 19 → Jul 21, 14.1 MB,
+6,552 events — where the codex-guard implementation,
+tests, and adversarial review happened):
 019f7be5-611b-7321-abaf-134e780276b7
+
+Same-session continuation (Jul 21 15:25, 52 KB, 28 events —
+final verification and demo recording):
+019f8692-3f8b-7602-a06f-caa5cecdfb19
+
+Same-session continuation (Jul 21 15:29, 55 KB, 31 events —
+Devpost form prep and YouTube walkthrough):
+019f8695-ad00-7b90-8597-fc7bdfeeff7e
+
+(For reviewers: the Build Week work lives in the 14.1 MB
+session. The two 30-second sessions are the final-form
+verification and form-write passes from the last hour.)
 
 ================================================================
 INSTALL
@@ -170,9 +182,11 @@ the self-approval regression, the gate fail-closed path, and
 bypass attempts.
 
 Codex also attacked the classifier. It generated adversarial
-cases — actions that look safe but aren't, like a delete
-command labeled as a read — and confirmed the kernel catches
-them. The demo in the video is one of those cases.
+cases — actions whose declared type understates their actual
+risk (reads that traverse symlinks, writes to sensitive paths,
+grant requests that look autonomous but aren't) — confirmed
+the kernel catches them, and shipped the regression tests.
+The demo in the video is one of those cases.
 
 GPT-5.6 powered the contextual risk analysis. Every proposal
 gets a written reason. The deterministic rules (path fence,
