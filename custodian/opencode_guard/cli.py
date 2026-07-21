@@ -65,12 +65,23 @@ def cmd_doctor(_: argparse.Namespace) -> int:
     return 0
 
 
+def _is_pure_flag(token: str) -> bool:
+    """Match --pure regardless of case or a "=value"/":value" suffix.
+
+    A plain `"--pure" in forwarded` exact-string check let `--pure=true` or
+    `--PURE` slip straight past this refusal -- the wrapper would launch
+    OpenCode with plugins disabled exactly as if the token had been allowed.
+    """
+    head = token.split("=", 1)[0].split(":", 1)[0]
+    return head.lower() == "--pure"
+
+
 def cmd_launch(args: argparse.Namespace) -> int:
     if not shutil.which("opencode"):
         print("opencode is not installed or not on PATH", file=sys.stderr)
         return 127
     forwarded = list(args.arguments)
-    if "--pure" in forwarded:
+    if any(_is_pure_flag(token) for token in forwarded):
         print("refusing --pure: it disables the Custodian enforcement plugin", file=sys.stderr)
         return 2
     if cmd_doctor(argparse.Namespace()) != 0:
@@ -95,12 +106,26 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
+_KNOWN_SUBCOMMANDS = {"setup", "doctor", "evaluate"}
+
+
 def main(argv: list[str] | None = None) -> int:
-    args, unknown = build_parser().parse_known_args(argv)
-    if getattr(args, "command", None) is None:
-        args.arguments = unknown
-    elif unknown:
-        build_parser().error("unrecognized arguments: " + " ".join(unknown))
+    raw = list(sys.argv[1:] if argv is None else argv)
+    # Only dispatch through argparse's subparsers when the first token is
+    # actually one of ours. Previously EVERY invocation went through
+    # build_parser().parse_known_args(argv) unconditionally -- argparse's
+    # subparser action hard-crashes (SystemExit before this function ever
+    # sees it) on any first token that isn't a registered subparser name.
+    # That includes the real OpenCode subcommands this launcher exists to
+    # forward ("run", "chat", ...): `custodian-opencode run --auto ...`
+    # crashed with "invalid choice: 'run'" instead of launching anything,
+    # making the governed launcher unusable for its primary documented use.
+    if raw and raw[0] in _KNOWN_SUBCOMMANDS:
+        args, unknown = build_parser().parse_known_args(raw)
+        if unknown:
+            build_parser().error("unrecognized arguments: " + " ".join(unknown))
+        return args.func(args)
+    args = argparse.Namespace(func=cmd_launch, arguments=raw)
     return args.func(args)
 
 

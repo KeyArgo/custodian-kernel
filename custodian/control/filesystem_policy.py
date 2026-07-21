@@ -74,14 +74,24 @@ class FilesystemRule:
 class FilesystemPolicy:
     def __init__(self, path: Path) -> None:
         self.path = Path(path)
+        # A lock bound to the DATA file's own fd stops being valid the
+        # instant that file gets atomically replaced (os.replace() swaps
+        # the directory entry to a new inode; flock()/LockFileEx() bind to
+        # the open file description, not the pathname -- any holder of the
+        # old, now-orphaned fd is no longer serialized against a fresh
+        # opener of the new one). A separate, never-replaced lock file
+        # (same pattern as codex_guard/approvals.py and control/policy.py)
+        # keeps the SAME inode locked across every writer regardless of how
+        # many times the data file itself gets swapped out from under it.
+        self.lock_path = self.path.parent / (self.path.name + ".lock")
 
     # -- locked read / write primitives ---------------------------------------
 
-    def _read_under_lock(self, fd: int) -> list[FilesystemRule]:
-        size = os.lseek(fd, 0, os.SEEK_END)
-        os.lseek(fd, 0, os.SEEK_SET)
-        raw = os.read(fd, size) if size > 0 else b""
-        raw_text = raw.decode("utf-8")
+    def _read_data_file(self) -> list[FilesystemRule]:
+        try:
+            raw_text = self.path.read_text(encoding="utf-8")
+        except FileNotFoundError:
+            return []
         if not raw_text.strip():
             return []
         try:
@@ -102,63 +112,51 @@ class FilesystemPolicy:
             rule.validate()
         return rules
 
-    def _write_under_lock(self, fd: int, rules: list[FilesystemRule]) -> None:
+    def _write_data_file(self, rules: list[FilesystemRule]) -> None:
         for rule in rules:
             rule.validate()
-        os.lseek(fd, 0, os.SEEK_SET)
-        os.ftruncate(fd, 0)
-        data = json.dumps([asdict(r) for r in rules], sort_keys=True, indent=2).encode("utf-8")
-        os.write(fd, data)
-        os.fsync(fd)
-
-    def _read_modify_write(self, mutator):
-        self.path.parent.mkdir(parents=True, exist_ok=True)
-        fd = os.open(self.path, os.O_RDWR | os.O_CREAT, 0o600)
-        try:
-            _lock_fd(fd)
-            rules = self._read_under_lock(fd)
-            mutator(rules)
-            self._write_under_lock(fd, rules)
-        finally:
-            _unlock_fd(fd)
-            os.close(fd)
-
-    # -- public API -----------------------------------------------------------
-
-    def list(self) -> list[FilesystemRule]:
-        try:
-            fd = os.open(self.path, os.O_RDONLY)
-        except FileNotFoundError:
-            return []
-        try:
-            _lock_fd(fd)
-            return self._read_under_lock(fd)
-        finally:
-            _unlock_fd(fd)
-            os.close(fd)
-
-    def _save(self, rules: list[FilesystemRule]) -> None:
-        self.path.parent.mkdir(parents=True, exist_ok=True)
+        # Write-to-temp + os.replace instead of truncating the live file in
+        # place. A crash between truncate and write left a 0-byte file, and
+        # a 0-byte file is treated as "valid, no rules" (see
+        # _read_data_file's empty-string branch), not as malformed --
+        # silently reverting every scoped rule (including a deny-root for
+        # something like ~/.ssh) to whatever permissive default the caller
+        # passes, instead of failing closed.
         tmp = self.path.with_suffix(f".{uuid4().hex}.tmp")
         tmp_fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
         try:
             with os.fdopen(tmp_fd, "w", encoding="utf-8") as stream:
-                json.dump([asdict(rule) for rule in rules], stream, sort_keys=True, indent=2)
+                json.dump([asdict(r) for r in rules], stream, sort_keys=True, indent=2)
                 stream.flush()
                 os.fsync(stream.fileno())
-            main_fd = os.open(self.path, os.O_RDONLY | os.O_CREAT, 0o600)
-            try:
-                _lock_fd(main_fd)
-                os.replace(tmp, self.path)
-                os.fsync(main_fd)
-            finally:
-                _unlock_fd(main_fd)
-                os.close(main_fd)
+            os.replace(tmp, self.path)
         finally:
             try:
                 tmp.unlink(missing_ok=True)
             except OSError:
                 pass
+
+    def _with_lock(self, body):
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+        lock_fd = os.open(self.lock_path, os.O_RDWR | os.O_CREAT, 0o600)
+        try:
+            _lock_fd(lock_fd)
+            return body()
+        finally:
+            _unlock_fd(lock_fd)
+            os.close(lock_fd)
+
+    def _read_modify_write(self, mutator):
+        def _body():
+            rules = self._read_data_file()
+            mutator(rules)
+            self._write_data_file(rules)
+        self._with_lock(_body)
+
+    # -- public API -----------------------------------------------------------
+
+    def list(self) -> list[FilesystemRule]:
+        return self._with_lock(self._read_data_file)
 
     def add(self, rule: FilesystemRule) -> None:
         rule.validate()
@@ -184,8 +182,31 @@ class FilesystemPolicy:
 
     def fence_config(self, *, harness: str, model: str, access: str,
                      inherited_allow: list[str], inherited_deny: list[str]) -> dict:
+        # The whole body is covered, not just self.effective(...) -- a
+        # malformed stored root (e.g. an embedded null byte) doesn't raise
+        # until _canonical_roots()/canonicalize() actually resolve it, which
+        # used to happen OUTSIDE this try/except and crash uncaught instead
+        # of returning the documented deny-all fence below. A well-formed
+        # policy file containing just one bad value violated this method's
+        # own stated fail-closed contract.
         try:
             rule = self.effective(harness=harness, model=model, access=access)
+            if rule is None:
+                return {
+                    "allow_paths": [canonicalize(p) for p in inherited_allow],
+                    "forbidden_paths": [canonicalize(p) for p in inherited_deny],
+                    "source": "harness-default",
+                    "enforcement": "routed",
+                }
+            canonical_allow, canonical_deny = rule._canonical_roots()
+            all_forbidden = [canonicalize(p) for p in inherited_deny]
+            all_forbidden.extend(canonical_deny)
+            return {
+                "allow_paths": list(canonical_allow),
+                "forbidden_paths": all_forbidden,
+                "source": rule.rule_id,
+                "enforcement": rule.enforcement,
+            }
         except ValueError:
             return {
                 "allow_paths": [],
@@ -193,19 +214,3 @@ class FilesystemPolicy:
                 "source": "malformed-policy",
                 "enforcement": "routed",
             }
-        if rule is None:
-            return {
-                "allow_paths": [canonicalize(p) for p in inherited_allow],
-                "forbidden_paths": [canonicalize(p) for p in inherited_deny],
-                "source": "harness-default",
-                "enforcement": "routed",
-            }
-        canonical_allow, canonical_deny = rule._canonical_roots()
-        all_forbidden = [canonicalize(p) for p in inherited_deny]
-        all_forbidden.extend(canonical_deny)
-        return {
-            "allow_paths": list(canonical_allow),
-            "forbidden_paths": all_forbidden,
-            "source": rule.rule_id,
-            "enforcement": rule.enforcement,
-        }

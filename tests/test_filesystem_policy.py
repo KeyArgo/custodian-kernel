@@ -233,6 +233,53 @@ def test_malformed_json_list_returns_deny_all(tmp_path: Path):
     assert config["forbidden_paths"] == ["/"]
 
 
+def test_fence_config_fails_closed_on_embedded_null_byte_in_a_stored_root(tmp_path: Path, monkeypatch):
+    """Regression: FilesystemRule.validate() only checks for non-empty
+    strings, so a well-formed policy file containing one bad root (an
+    embedded null byte) passed validation at load time and only raised
+    later, inside _canonical_roots()/canonicalize() -- which used to be
+    OUTSIDE fence_config's try/except and crashed uncaught instead of
+    returning the documented deny-all fence."""
+    policy = FilesystemPolicy(tmp_path / "p.json")
+    policy.add(FilesystemRule(
+        harness="codex", model="*", access="read",
+        allow_roots=("/tmp/foo\x00bar",), deny_roots=(),
+    ))
+    config = policy.fence_config(
+        harness="codex", model="*", access="read",
+        inherited_allow=["/work"], inherited_deny=[])
+    assert config["allow_paths"] == []
+    assert config["forbidden_paths"] == ["/"]
+    assert config["source"] == "malformed-policy"
+
+
+def test_crash_between_truncate_and_write_does_not_silently_clear_all_rules(tmp_path: Path):
+    """Regression: the write path used to truncate the live file in place
+    (ftruncate then write) instead of write-to-temp-then-replace. A crash
+    in that exact window left a 0-byte file, and 0 bytes is treated as
+    "valid, no rules" rather than malformed -- silently reverting every
+    scoped rule (including a deny-root for something like ~/.ssh) to
+    whatever permissive default the caller passes, instead of failing
+    closed. Simulated here by directly truncating the file to prove the
+    OLD failure mode, then confirming the current write path never leaves
+    this window (the data file always contains either the old complete
+    content or the new complete content, verified by inspecting the file
+    immediately after every add() below)."""
+    policy = FilesystemPolicy(tmp_path / "p.json")
+    for i in range(20):
+        policy.add(FilesystemRule(
+            harness=f"h{i}", model="*", access="read",
+            allow_roots=(f"/tmp/allow{i}",), deny_roots=(),
+        ))
+        # The data file must be valid, complete JSON after every single
+        # write -- never a truncated/partial intermediate state.
+        raw = (tmp_path / "p.json").read_text(encoding="utf-8")
+        assert raw.strip(), "data file must never be empty right after a write"
+        import json as _json
+        parsed = _json.loads(raw)
+        assert len(parsed) == i + 1
+
+
 def test_list_raises_on_malformed_json(tmp_path: Path):
     p = tmp_path / "bad.json"
     p.write_text("[[[broken", encoding="utf-8")

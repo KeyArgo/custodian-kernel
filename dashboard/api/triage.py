@@ -16,6 +16,9 @@ import datetime
 import json
 import math
 import os
+import time
+from collections import defaultdict, deque
+from functools import wraps
 from pathlib import Path
 
 from flask import Blueprint, jsonify, request
@@ -105,9 +108,48 @@ bp = Blueprint("triage", __name__)
 _NVIDIA_SECRET = Path(__file__).resolve().parent.parent / "secrets" / "nvidia.env"
 _KEYS_ENV = Path(__file__).resolve().parent.parent / "secrets" / "keys.env"
 
-# Audit log for spend events (same file the P&L endpoint reads)
 _HERE = Path(__file__).resolve().parent.parent
-_AUDIT_LOG = _HERE.parent / "skills" / "payments" / "stripe-spend" / "state" / "audit_log.jsonl"
+
+# Independent rate-limit bucket from the other public dashboard endpoints --
+# a flood on one shouldn't silently starve another's budget for the same
+# visitor. Same pattern as nemotron_chat.py/playground.py/stripe_webhook.py.
+# Lower ceiling than those: /case/<id> and /custom can each trigger a real
+# billed NIM/Modal call (case_by_id's cloud auto-provision path) or a real
+# LLM generation call (custom, run?live=1), not a free local decision.
+_RATE_LIMIT_WINDOW_SECONDS = 60
+_RATE_LIMIT_MAX_REQUESTS = 10
+_request_log: dict = defaultdict(deque)
+
+
+def _client_ip() -> str:
+    """CF-Connecting-IP is client-supplied input -- trusting it
+    unconditionally lets a client rotate the header value per request to
+    get a fresh rate-limit bucket every time. Only honored when the
+    operator has explicitly confirmed a trusted proxy terminates every
+    path to this process (TRUSTED_PROXY_HEADER=CF-Connecting-IP); otherwise
+    falls back to request.remote_addr, which a client cannot forge. Same
+    fix applied to nemotron_chat.py/playground.py/stripe_webhook.py."""
+    if os.environ.get("TRUSTED_PROXY_HEADER") == "CF-Connecting-IP":
+        return request.headers.get("CF-Connecting-IP") or request.remote_addr or "unknown"
+    return request.remote_addr or "unknown"
+
+
+def rate_limited(f):
+    @wraps(f)
+    def wrapper(*args, **kwargs):
+        ip = _client_ip()
+        now = time.time()
+        log = _request_log[ip]
+        while log and now - log[0] > _RATE_LIMIT_WINDOW_SECONDS:
+            log.popleft()
+        if len(log) >= _RATE_LIMIT_MAX_REQUESTS:
+            return jsonify({
+                "error": f"Rate limit exceeded -- max {_RATE_LIMIT_MAX_REQUESTS} requests per "
+                         f"{_RATE_LIMIT_WINDOW_SECONDS}s per IP on this demo endpoint.",
+            }), 429
+        log.append(now)
+        return f(*args, **kwargs)
+    return wrapper
 
 
 def _load_keys_env() -> dict:
@@ -122,9 +164,31 @@ def _load_keys_env() -> dict:
     return out
 
 
+from custodian.adapters.nemoclaw import NemoClawExecutor
+
+SANDBOX_NAME = os.environ.get("HERMES_SANDBOX_NAME", "argonaut-money-demo")
+SKILL_STATE_DIR = "/sandbox/.hermes/skills/payments/stripe-spend/state"
+_AUDIT_LOG_PATH = f"{SKILL_STATE_DIR}/audit_log.jsonl"
+
+_sandbox = NemoClawExecutor(
+    sandbox_name=SANDBOX_NAME,
+    fallback_binary_path="/home/argonaut/.local/bin/nemohermes",
+)
+
+
 def _log_spend(case_id: str, provider: str, amount: float, description: str, execution: dict | None = None) -> None:
-    """Append a spend event to the audit log so the P&L dashboard reflects it."""
-    _AUDIT_LOG.parent.mkdir(parents=True, exist_ok=True)
+    """Append a spend event to the audit log so the P&L dashboard reflects it.
+
+    Writes through the same NemoClawExecutor/nemohermes-exec path
+    dashboard/api/operator.py and hermes.py already use for the real audit
+    log, not a local Path.open("a") -- a local write landed in this
+    process's own filesystem namespace, invisible to hermes.py's
+    _read_remote_file()/get_audit_log() (which read INSIDE the sandbox
+    container), so spend triggered via this triage demo silently never
+    appeared in the publicly-displayed P&L/audit totals despite the
+    misleading old comment claiming it was "the same file the P&L endpoint
+    reads."
+    """
     event = {
         "event": "spend",
         "ts": datetime.datetime.now(datetime.timezone.utc).isoformat(),
@@ -137,8 +201,10 @@ def _log_spend(case_id: str, provider: str, amount: float, description: str, exe
     }
     if execution:
         event["execution"] = execution
-    with _AUDIT_LOG.open("a") as f:
-        f.write(json.dumps(event) + "\n")
+    try:
+        _sandbox.write_file(_AUDIT_LOG_PATH, json.dumps(event) + "\n", append=True)
+    except Exception:
+        pass  # best-effort logging; must never break the triage response itself
 
 
 def _execute_provision(case_id: str, data: dict, amount: float) -> dict:
@@ -175,7 +241,16 @@ def _execute_provision(case_id: str, data: dict, amount: float) -> dict:
             from custodian.inference.router import NemoClawRouter
             _NIM_KEY_PATH = Path(__file__).resolve().parents[2] / "skills" / "payments" / "stripe-spend" / "state" / "nvidia_nim_key.env"
             _NIM_KEY_PATH.parent.mkdir(parents=True, exist_ok=True)
-            _NIM_KEY_PATH.write_text(f"NVIDIA_API_KEY={nvidia_key}\n")
+            # Path.write_text() creates the file with the process's default
+            # umask-derived permissions (typically 0644 -- world-readable) --
+            # a live API key briefly sat world-readable on a host this
+            # project's own docs describe as shared with other real
+            # services. os.open with an explicit 0o600 mode never exposes a
+            # wider-permission window, and O_TRUNC handles a leftover file
+            # from a prior crashed run the same way write_text's overwrite did.
+            fd = os.open(_NIM_KEY_PATH, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+            with os.fdopen(fd, "w") as f:
+                f.write(f"NVIDIA_API_KEY={nvidia_key}\n")
             try:
                 r = NemoClawRouter(timeout=15, nvidia_api_key_file=_NIM_KEY_PATH)
                 response = r.complete(
@@ -213,7 +288,17 @@ def _resolve_pack(name: str):
 
 
 def _load_case(corpus_dir: Path, case_id: str) -> dict:
-    path = corpus_dir / f"{case_id}.json"
+    # case_id reaches here from a query-string/JSON-body value (the URL-
+    # segment route /case/<case_id> is separately protected by Werkzeug's
+    # default converter rejecting encoded slashes) with no boundary check --
+    # a value like "../account_ledger" escaped corpus_dir entirely, giving
+    # a file-existence oracle for arbitrary relative paths and full content
+    # disclosure of any reachable *.json file that happens to parse.
+    if "/" in case_id or "\\" in case_id or ".." in case_id:
+        return None
+    path = (corpus_dir / f"{case_id}.json").resolve()
+    if not path.is_relative_to(corpus_dir.resolve()):
+        return None
     if not path.exists():
         return None
     return json.loads(path.read_text())
@@ -251,6 +336,7 @@ def tour():
 
 
 @bp.route("/case/<case_id>", methods=["GET"])
+@rate_limited
 def case_by_id(case_id: str):
     """Load and run a single corpus case by ID — used by the try-it-yourself panels."""
     name = _pack_name()
@@ -301,6 +387,7 @@ def cases():
 
 
 @bp.route("/run", methods=["GET", "POST"])
+@rate_limited
 def run():
     payload = request.get_json(force=True, silent=True) or {}
     name = _pack_name()
@@ -326,6 +413,7 @@ def run():
 
 
 @bp.route("/custom", methods=["POST"])
+@rate_limited
 def custom():
     """Run the triage engine on a visitor-submitted free-form message against
     one of three sandbox fixtures (refunds / purchasing / cloud).

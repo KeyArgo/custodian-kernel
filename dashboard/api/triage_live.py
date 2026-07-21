@@ -12,6 +12,7 @@ Two routes:
 from __future__ import annotations
 
 import json
+import math
 import sys
 from pathlib import Path
 
@@ -80,6 +81,13 @@ def live():
         amount = float(payload.get("amount") or 0) or None
     except (TypeError, ValueError):
         return jsonify({"error": "amount must be a number"}), 400
+    # float("nan")/float("inf") both parse successfully and are truthy (NaN
+    # is truthy in Python), so they weren't caught by the `or None` above --
+    # they flowed straight into envelope_dict["amount"] and were serialized
+    # as literal NaN/Infinity tokens, which is not valid JSON per RFC 8259
+    # and throws in any strict client (e.g. browser fetch().json()).
+    if amount is not None and not math.isfinite(amount):
+        return jsonify({"error": "amount must be a finite number"}), 400
 
     # Look up matching fixture; fall back to default demo case.
     corpus = _load_corpus()

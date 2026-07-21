@@ -117,3 +117,59 @@ def test_launcher_rejects_pure_even_when_installed(tmp_path, monkeypatch, capsys
     assert cli.main(["setup"]) == 0
     assert cli.main(["--pure"]) == 2
     assert "disables" in capsys.readouterr().err
+
+
+@pytest.mark.parametrize("token", ["--pure=true", "--PURE", "--Pure:1"])
+def test_launcher_rejects_pure_lookalikes(tmp_path, monkeypatch, capsys, token):
+    """Regression: a plain `"--pure" in forwarded` exact-string check let
+    --pure=true / --PURE slip straight past this refusal."""
+    monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path))
+    monkeypatch.setattr(cli.shutil, "which", lambda _: "/usr/bin/opencode")
+    assert cli.main(["setup"]) == 0
+    assert cli.main([token]) == 2
+    assert "disables" in capsys.readouterr().err
+
+
+def test_launcher_forwards_a_real_opencode_subcommand(tmp_path, monkeypatch):
+    """Regression: argparse's subparsers only recognized {setup, doctor,
+    evaluate} -- any other first token (a real OpenCode subcommand like
+    "run" or "chat") crashed with SystemExit("invalid choice: ...") instead
+    of being forwarded, making the governed launcher unusable for its
+    primary documented use case."""
+    monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path))
+    monkeypatch.setattr(cli.shutil, "which", lambda _: "/usr/bin/opencode")
+    assert cli.main(["setup"]) == 0
+    captured = {}
+
+    def _fake_call(argv, env=None):
+        captured["argv"] = argv
+        return 0
+
+    monkeypatch.setattr(cli.subprocess, "call", _fake_call)
+    assert cli.main(["run", "--auto", "fix", "this"]) == 0
+    assert captured["argv"] == ["opencode", "run", "--auto", "fix", "this"]
+
+
+def test_launcher_still_forwards_a_bare_flag_with_no_subcommand(tmp_path, monkeypatch):
+    monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path))
+    monkeypatch.setattr(cli.shutil, "which", lambda _: "/usr/bin/opencode")
+    assert cli.main(["setup"]) == 0
+    captured = {}
+
+    def _fake_call(argv, env=None):
+        captured["argv"] = argv
+        return 0
+
+    monkeypatch.setattr(cli.subprocess, "call", _fake_call)
+    assert cli.main([]) == 0
+    assert captured["argv"] == ["opencode"]
+
+
+def test_setup_and_doctor_still_dispatch_correctly_after_the_fix(tmp_path, monkeypatch, capsys):
+    """The known-subcommand fast path must not break setup/doctor/evaluate
+    themselves."""
+    monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path))
+    monkeypatch.setattr(cli.shutil, "which", lambda _: "/usr/bin/opencode")
+    assert cli.main(["setup", "--dry-run"]) == 0
+    assert "would install" in capsys.readouterr().out
+    assert cli.main(["doctor"]) == 1  # not actually installed yet (dry-run)
