@@ -167,7 +167,17 @@ stays in this distribution — it has no Hermes-specific code.
   at its fixed `/tmp` path (a clobber/read primitive on a shared host), and
   its previously-unbounded fields are now length-capped like their
   siblings.
-- Roughly 40 further bugs, each with a live reproduction and a regression
+- **The DGX Spark remote-enforcement node (`spark-enforcement/enforce_server.py`)
+  was completely broken** — its policy loader called two methods that don't
+  exist on `Policy`, so every `/decide` call crashed (the crash happened to
+  read as "node unreachable" to the caller's own fallback logic, masking it
+  rather than fixing it). Restoring it surfaced a second, latent bug: an
+  unauthenticated caller could forge `SpendRequest`'s opt-in revenue/cost/
+  agent-id fields to defeat a margin or self-dealing gate this node's local
+  policy configures, since nothing on the wire independently verifies them.
+  The node now refuses to decide at all when its policy configures a gate
+  it can't verify, instead of trusting attacker-suppliable input.
+- Roughly 45 further bugs, each with a live reproduction and a regression
   test that fails against the pre-fix code, found via repeated rounds of
   adversarial review across the kernel, `paladin`, the guard adapters, the
   escalation/approval boundary, the ASGI middleware, and the dashboard —
