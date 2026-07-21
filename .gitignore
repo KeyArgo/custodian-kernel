@@ -81,3 +81,8 @@ id_ed25519
 # runtime state that can hold amounts / ids
 skills/**/state/
 custodian/bundled_skills/**/state/
+
+# Unrelated-competition planning docs kept physically alongside this repo
+# for convenience, deliberately never tracked here -- a different
+# submission (XPRIZE) with its own deadline, not Custodian/Build-Week work.
+docs/xprize/
