@@ -1,13 +1,16 @@
-# Custodian 0.5.0 — Codex Hackathon Release Plan
+# Custodian 0.4.0 — Codex Hackathon Release Plan
 
 Status: release contract, not yet released
-Owner worktree: `/mnt/homes/Development/custodian-dev-codex`, branch `feat/0.5.0-codex`
+Owner worktree: `/home/dev/custodian-dev`, branch `feat/0.5.0-codex` (the
+branch name predates this decision to release everything as Custodian 0.4.0
+rather than a separate 0.5.0 line -- kept as-is since it's already pushed
+and referenced elsewhere; the release itself is 0.4.0)
 Submission: OpenAI Build Week, Developer Tools
 Deadline: July 21, 2026 at 5:00 PM Pacific
 
 ## Release thesis
 
-Custodian 0.5.0 is the first release in which a coding agent is treated as an
+Custodian 0.4.0 is the first release in which a coding agent is treated as an
 untrusted proposer rather than its own authority. The hackathon product is
 **Custodian for Codex**:
 
@@ -123,11 +126,11 @@ The public release is split into focused, sanitized repositories and packages:
 
 | Release | Public repository | Distribution | Responsibility |
 |---|---|---|---|
-| 0.5.0 | `KeyArgo/custodian-kernel` | `custodian-kernel` | Provider-neutral action contract, policy, approval binding, ledger, adapters, Paladin module |
-| 0.5.0 | `KeyArgo/custodian-codex` | `custodian-codex` | Codex plugin, hook/MCP bridge, installer, policy translator, demo and judge experience |
+| 0.4.0 | `KeyArgo/custodian-kernel` | `custodian-kernel` | Provider-neutral action contract, policy, approval binding, ledger, adapters, Paladin module |
+| 0.4.0 | `KeyArgo/custodian-codex` | `custodian-codex` | Codex plugin, hook/MCP bridge, installer, policy translator, demo and judge experience |
 | 0.1.x | `KeyArgo/talaria` | `custodian-talaria` | Hermes/NemoClaw integration; compatible consumer of the kernel, not part of the Codex entry |
 
-Paladin remains bundled with `custodian-kernel` in 0.5.0 for compatibility and
+Paladin remains bundled with `custodian-kernel` in 0.4.0 for compatibility and
 one-command installation, but retains a strict module boundary. A future
 distribution split must not be mixed into the hackathon deadline.
 
@@ -337,7 +340,7 @@ another credential strategy.
 12. Installation failure cannot silently leave a user believing protection is
     active. `doctor` distinguishes installed, registered, enabled, and proven.
 
-## Scope required for 0.5.0
+## Scope required for 0.4.0
 
 ### P0 — must ship for the hackathon
 
@@ -495,7 +498,7 @@ would reduce hackathon design and implementation quality.
 
 ## Release acceptance criteria
 
-0.5.0 is releasable only when all are true:
+0.4.0 is releasable only when all are true:
 
 - P0 behavior is implemented and reviewed.
 - Focused and full suites have zero unexpected failures.
@@ -575,7 +578,7 @@ The submission should emphasize four differentiators:
 
 ## Post-submission continuation
 
-After submission, keep 0.5.0 stable and build 0.5.x in this order:
+After submission, keep 0.4.0 stable and build 0.5.x in this order:
 
 1. signed Capability Packs;
 2. unified durable ledger and signed checkpoints;

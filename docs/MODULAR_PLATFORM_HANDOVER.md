@@ -1,5 +1,13 @@
 # Handover: Custodian modular platform, universal ledger, and installer
 
+**Historical note:** this doc's assignment (item 1 below, the universal
+ledger) was completed directly on `main`/`feat/0.5.0-codex`, not on the
+separate `feat/0.5.0-modular-platform` worktree/branch described below --
+that branch was never created. "0.5.0" as a separate release name is also
+no longer the plan: everything, including this ledger work, ships together
+as Custodian 0.4.0. Kept for historical record of the original assignment,
+not as a current instruction.
+
 You are working alongside another Codex session that owns the OpenAI Build Week
 entry on branch `feat/codex-guard`. Do not edit, commit, rebase, merge, or switch
 that branch. Do not modify `custodian/codex_guard/`,
@@ -9,9 +17,9 @@ that branch. Do not modify `custodian/codex_guard/`,
 Do not tag, publish, or create a GitHub release. Custodian 0.4.0 is still a
 release candidate and requires explicit owner approval before release.
 
-## Your assignment
+## Your assignment (historical -- see note above)
 
-Prepare the 0.5.0 modular-platform foundation:
+Prepare the 0.4.0 modular-platform foundation:
 
 1. Specify and implement a provider-neutral Custodian action ledger.
 2. Specify a modular installation/update system that presents one friendly

@@ -96,7 +96,7 @@ scrolling source files.
 
 ### 2:05–2:25 — Built with Codex
 
-Show the dated `feat/0.5.0-codex` history and the `/feedback` session ID.
+Show the dated Git history on this branch and the `/feedback` session ID.
 State concretely that Codex designed and attacked the MCP boundary, found the
 fresh-clone demo import failure, expanded PowerShell coverage, and added the
 action-bound approval ceremony and regression tests.
@@ -130,9 +130,9 @@ or secret value.
 
 The Codex-native plugin, MCP boundary, coding-action classifier, approval
 protocol, receipt chain, operator CLI, adversarial suite, installer, recovery
-path, and judge demo were built on `feat/0.5.0-codex` with Codex GPT-5.6. The
-pre-existing Custodian kernel supplied the general adapter foundation; dated
-history identifies the new Build Week work.
+path, and judge demo were built on this branch with Codex GPT-5.6, released
+as part of Custodian 0.4.0. The pre-existing Custodian kernel supplied the
+general adapter foundation; dated history identifies the new Build Week work.
 
 ### Honest boundary
 

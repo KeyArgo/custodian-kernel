@@ -1,4 +1,11 @@
-# Custodian Codex 0.5.0 — restart handover
+# Custodian Codex — restart handover
+<!-- Historical note: this was originally written while "Custodian 0.5.0"
+     was still the planned separate release name for the Codex Build Week
+     work. That decision changed -- everything ships together as Custodian
+     0.4.0 instead. The branch name feat/0.5.0-codex predates this and was
+     left as-is since it's already pushed; only the release/version
+     references below were corrected. -->
+
 
 Last updated: 2026-07-20 (America/Denver)
 
@@ -224,8 +231,9 @@ Before submitting:
 ### 4. Build final artifacts only if time remains
 
 The Devpost judge path can use the source checkout and editable install. Do not
-delay the submission video or `/feedback` merely to publish 0.5.0 to PyPI.
-Claude's 0.4.0 release work remains separate.
+delay the submission video or `/feedback` merely to publish 0.4.0 to PyPI.
+This work ships together with the rest of Custodian 0.4.0, not as a
+separate release.
 
 ## Remaining risks and claim discipline
 
@@ -246,7 +254,7 @@ Claude's 0.4.0 release work remains separate.
 ## What most improves the chance of winning
 
 Do not expand to Claude, Hermes, Antigravity, MSP multi-tenancy, or a broad
-0.5.0 feature set before submission. Those are product-roadmap items. The
+future feature set before submission. Those are product-roadmap items. The
 highest-leverage remaining proof is:
 
 1. one clean install;
@@ -265,7 +273,7 @@ authority.”**
 - `docs/BUILD_WEEK_SUBMISSION_PLAYBOOK.md` — exact entry copy, judge path, and
   timed video script.
 - `docs/CODEX_GUARD.md` — threat model and Build Week handoff.
-- `docs/RELEASE_PLAN_0.5.0_CODEX.md` — full strategic and technical plan.
+- `docs/RELEASE_PLAN_0.4.0_CODEX.md` — full strategic and technical plan.
 - `plugins/custodian-codex-guard/README.md` — plugin installation and contract.
 - `tests/test_codex_guard.py` — focused adversarial regression suite.
 
