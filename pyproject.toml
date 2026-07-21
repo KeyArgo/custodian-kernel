@@ -35,18 +35,23 @@ dev = [
 caduceus = [
     "cryptography>=42.0",
 ]
+paladin = [
+    "cryptography>=42.0",
+]
 
 [project.scripts]
 custodian = "custodian.cli.main:main"
 custodian-verify = "custodian.verify_kit:main"
 caduceus = "caduceus.cli:main"
+paladin = "paladin.cli:main"
+paladin-import = "paladin.cli:main_import"
 
 [build-system]
 requires = ["setuptools>=64"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]
-include = ["custodian*", "caduceus*"]
+include = ["custodian*", "caduceus*", "paladin*"]
 
 [tool.setuptools.package-data]
 "custodian" = ["bundled_skills/**/*", "bundled_skills/**", "packs/**/corpus/*.json", "packs/**/*.yaml", "packs/**/*.json"]
