@@ -73,6 +73,10 @@ _TOOL_KINDS = {
 }
 _SHELL_RULES = (
     (re.compile(
+        r"\bcustodian-codex\s+(?:approve|disable|setup)\b"
+        r"|\bcustodian\.codex_guard\.cli\s+(?:approve|disable|setup)\b", re.I,
+    ), ActionKind.GOVERNANCE),
+    (re.compile(
         r"(?:^|[;&|]\s*)(?:sudo\s+)?(?:rm|rmdir|shred|truncate|del|erase|rd)\b"
         r"|\b(?:remove-item|clear-content|format-volume)\b"
         r"|\bgit\s+(?:reset\s+--hard|clean\s+-[a-z]*f)", re.I,

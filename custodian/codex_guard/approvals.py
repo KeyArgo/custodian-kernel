@@ -11,6 +11,7 @@ import hmac
 import json
 import os
 from pathlib import Path
+import stat
 import time
 from typing import Any
 from uuid import uuid4
@@ -18,6 +19,19 @@ from uuid import uuid4
 
 class ApprovalError(ValueError):
     """An approval is missing, invalid, expired, changed, or already used."""
+
+
+def _private_dir(path: Path) -> None:
+    """Create a private state directory and reject symlink redirection."""
+    try:
+        mode = path.lstat().st_mode
+    except FileNotFoundError:
+        path.mkdir(parents=True, mode=0o700, exist_ok=True)
+        mode = path.lstat().st_mode
+    if stat.S_ISLNK(mode) or not stat.S_ISDIR(mode):
+        raise ApprovalError("approval state path must be a real directory")
+    if os.name != "nt":
+        path.chmod(0o700)
 
 
 def action_digest(
@@ -78,7 +92,7 @@ class ApprovalStore:
         self._now = now
 
     def _key(self) -> bytes:
-        self.state_dir.mkdir(parents=True, exist_ok=True)
+        _private_dir(self.state_dir)
         if not self.key_path.exists():
             try:
                 fd = os.open(self.key_path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
@@ -117,7 +131,8 @@ class ApprovalStore:
         return self.approvals_dir / f"{approval_id}.json"
 
     def _write(self, path: Path, record: dict[str, Any]) -> None:
-        self.approvals_dir.mkdir(parents=True, exist_ok=True)
+        _private_dir(self.state_dir)
+        _private_dir(self.approvals_dir)
         tmp = path.with_suffix(f".{uuid4().hex}.tmp")
         fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
         try:
@@ -185,7 +200,8 @@ class ApprovalStore:
     def consume(self, approval_id: str, *, digest: str, requester: str) -> ApprovalRecord:
         path = self._path(approval_id)
         claim = path.with_suffix(".claim")
-        self.approvals_dir.mkdir(parents=True, exist_ok=True)
+        _private_dir(self.state_dir)
+        _private_dir(self.approvals_dir)
         try:
             claim_fd = os.open(claim, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
         except FileExistsError as exc:

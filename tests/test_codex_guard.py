@@ -1,4 +1,5 @@
 import json
+import os
 from pathlib import Path
 
 import pytest
@@ -76,6 +77,7 @@ def test_unknown_kind_fails_closed(tmp_path):
     ("Invoke-WebRequest https://example.com", "network"),
     ("gcloud run deploy app", "production"),
     ("docker push example/app:latest", "production"),
+    ("custodian-codex approve latest", "governance"),
 ])
 def test_caller_cannot_downgrade_risky_shell_command(tmp_path, command, expected_kind):
     result = decide(
@@ -187,6 +189,42 @@ def test_setup_dry_run_is_non_mutating_and_discovers_repo(capsys):
     output = capsys.readouterr().out
     assert "codex plugin marketplace add" in output
     assert "custodian-codex-guard@custodian-build-week" in output
+
+
+def test_state_directories_are_private(tmp_path):
+    state = tmp_path / "state"
+    store = ApprovalStore(state)
+    store.request(digest=approval_digest(tmp_path), requester="codex:test")
+    chain = ReceiptChain(state)
+    chain.append(decide(tmp_path).to_dict(), tool="read_file", session_id="test")
+    if os.name != "nt":
+        assert state.stat().st_mode & 0o777 == 0o700
+        assert store.approvals_dir.stat().st_mode & 0o777 == 0o700
+
+
+def test_state_symlink_is_rejected(tmp_path):
+    target = tmp_path / "target"
+    target.mkdir()
+    state = tmp_path / "state"
+    state.symlink_to(target, target_is_directory=True)
+    with pytest.raises(ApprovalError, match="real directory"):
+        ApprovalStore(state).request(
+            digest=approval_digest(tmp_path), requester="codex:test",
+        )
+    with pytest.raises(ValueError, match="real directory"):
+        ReceiptChain(state).verify()
+
+
+def test_approve_latest_requires_interactive_operator_terminal(
+    tmp_path, monkeypatch, capsys,
+):
+    monkeypatch.setenv("CUSTODIAN_CODEX_GUARD_STATE_DIR", str(tmp_path / "state"))
+    store = ApprovalStore(tmp_path / "state")
+    pending = store.request(digest=approval_digest(tmp_path), requester="codex:test")
+    monkeypatch.setattr("sys.stdin.isatty", lambda: False)
+    assert cli_main(["approve", "latest", "--operator", "human"]) == 1
+    assert store.get(pending.approval_id).status == "pending"
+    assert "interactive operator terminal" in capsys.readouterr().err
 
 
 def test_disable_is_explicit_cli_surface():

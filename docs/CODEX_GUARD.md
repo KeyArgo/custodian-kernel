@@ -34,6 +34,19 @@ It does not claim to replace the host operating system sandbox or intercept a
 separate, unintegrated tool runner. Codex's own sandbox and approval controls
 remain defense in depth.
 
+Approval is intentionally an operator-terminal operation. For a friendly path,
+run `custodian-codex approve latest`; it shows the requester, full bound digest,
+and human-readable time remaining, then requires interactive confirmation. The
+long `--digest` form remains available when the operator wants to compare the
+value shown by Guard independently. Approval never executes the action: it only
+authorizes that exact digest for one subsequent consumption.
+
+Receipt and approval state directories are private on POSIX, symlink state
+roots are rejected, and receipt appends are serialized across MCP processes on
+Windows and POSIX. HMAC chaining detects modification by processes that do not
+possess the local signing key; it is not a substitute for OS account isolation
+against an attacker who controls both the receipt file and its key.
+
 ## Three-minute video outline
 
 1. **0:00–0:20 — Problem.** Coding agents can move faster than permission

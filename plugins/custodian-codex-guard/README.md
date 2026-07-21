@@ -52,7 +52,11 @@ escalation, a valid receipt chain, and rejection after receipt tampering.
 `denied`. An escalation is never permission. The model can create a pending
 request but cannot approve it; the operator runs the returned
 `custodian-codex approve ID --digest DIGEST` outside the model tool boundary.
-The digest must match the record Guard authenticated. Approval binds the exact tool, effective risk
+For the simplest operator flow, run `custodian-codex approve latest` in a
+separate interactive terminal; Guard shows the requester, digest, and remaining
+time before asking for confirmation. Use `--digest` when independently comparing
+the full value printed by Codex. The digest must match the record Guard
+authenticated. Approval binds the exact tool, effective risk
 class, arguments, resolved workspace, requester, and policy version; it expires
 and can be consumed once. Arguments are inspected but never persisted;
 receipts contain decision metadata, not commands, file contents, prompts, or
