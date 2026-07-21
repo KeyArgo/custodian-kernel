@@ -15,7 +15,7 @@ try:
     if a.summary: patch["summary"] = a.summary
     if a.start: patch["start"] = {"dateTime": a.start, "timeZone": "UTC"}
     if a.end: patch["end"] = {"dateTime": a.end, "timeZone": "UTC"}
-    url = f"https://www.googleapis.com/calendar/v3/calendars/{urllib.parse.quote(a.calendar_id)}/events/{a.event_id}"
+    url = f"https://www.googleapis.com/calendar/v3/calendars/{urllib.parse.quote(a.calendar_id)}/events/{urllib.parse.quote(a.event_id, safe='')}"
     req = urllib.request.Request(url, data=json.dumps(patch).encode(), method="PATCH",
         headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"})
     with urllib.request.urlopen(req, timeout=10) as r:

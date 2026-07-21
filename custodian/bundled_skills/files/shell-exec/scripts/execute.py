@@ -1,7 +1,12 @@
 #!/usr/bin/env python3
-import argparse, json, shlex, subprocess
+import argparse, json, os, shlex, subprocess
 # Read-only allowlist only — no destructive filesystem ops
-ALLOWLIST = {"ls","cat","echo","pwd","date","python3","git","curl","wget","jq","find","grep","wc","head","tail","sort","uniq","env","which","df","du","ps","id","hostname"}
+# NOTE: python3 (and any other general-purpose interpreter) deliberately does
+# NOT belong here. Unlike git/curl/find/wget, there is no safe restricted
+# subset of "run arbitrary code" reachable by denying a few flags -- allowing
+# it at L2 with no argument restriction is unrestricted code execution at a
+# low-friction trust level.
+ALLOWLIST = {"ls","cat","echo","pwd","date","git","curl","wget","jq","find","grep","wc","head","tail","sort","uniq","env","which","df","du","ps","id","hostname"}
 
 # The allowlist above only vets the binary name — every argument after it was
 # passed straight through, so an otherwise-"safe" binary could still be used

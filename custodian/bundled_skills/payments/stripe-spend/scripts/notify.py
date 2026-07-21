@@ -27,20 +27,51 @@ import requests  # noqa: E402
 SECRET_FILE = Path("/sandbox/.hermes/secrets/twilio.env")
 PENDING_FILE = SKILL_DIR / "state" / "pending_approval.json"
 PENDING_CODE_FILE = SKILL_DIR / "state" / "pending_code.json"
-OPERATOR_PHONE = os.environ.get("HERMES_OPERATOR_PHONE", "+17196487887")
 CODE_TTL = 600
 
 
+class PendingEscalationExistsError(Exception):
+    """Raised by write_pending() when an unexpired escalation is already
+    on file. PENDING_FILE and PENDING_CODE_FILE are a single shared path
+    per sandbox, not scoped per visitor/session — on a public demo with
+    concurrent traffic, a second write_pending() call would otherwise
+    silently overwrite the first escalation's record and code. Whoever
+    is holding the first SMS code would then have it stop matching
+    anything, or a stray unlink from the second flow could delete the
+    file entirely — surfacing to them as approve.py's plain "No pending
+    escalation found", with no indication a second request came in.
+    Refusing to clobber turns that into an honest, immediate error at
+    the point the second request is made instead."""
+
+
 def _atomic_write(path: Path, content: str) -> None:
-    """Atomic write: temp file + rename on same fs."""
+    """Atomic write: temp file + rename on same fs. Matters here for the
+    same reason write_pending() now refuses to clobber a live pending
+    escalation — a torn/partial write from a non-atomic write_text(),
+    raced by a concurrent read from approve.py, could itself surface as
+    a phantom 'no pending escalation' or a corrupt-JSON read.
+
+    fsync's fd must come from the SAME file object the whole way through
+    (via a `with` block) — a previous version called
+    `os.fsync(tmp_path.open("rb").fileno())`, whose anonymous file object
+    has no reference held once .fileno() returns, so CPython's refcounting
+    GC could close it immediately and hand fsync an already-closed fd
+    (reproducible: OSError: [Errno 9] Bad file descriptor)."""
     dir_path = path.parent
     dir_path.mkdir(parents=True, exist_ok=True)
     tmp_name = str(path) + f".tmp.{os.getpid()}.{random.randint(100000, 999999)}"
     tmp_path = Path(tmp_name)
     try:
-        tmp_path.write_text(content)
-        os.fsync(tmp_path.open("rb").fileno())
-        os.rename(str(tmp_path), str(path))
+        with open(tmp_path, "w") as f:
+            f.write(content)
+            f.flush()
+            os.fsync(f.fileno())
+        # os.replace, not os.rename: POSIX rename(2) silently replaces an
+        # existing target, but on Windows os.rename raises FileExistsError
+        # (WinError 183) -- so rewriting a pending-escalation file that already
+        # existed failed there while passing on Linux. os.replace is the
+        # portable form and is atomic on both.
+        os.replace(str(tmp_path), str(path))
     except Exception:
         try:
             tmp_path.unlink(missing_ok=True)
@@ -58,7 +89,22 @@ def _load_secrets():
     return vals
 
 
+def _existing_pending_is_live() -> bool:
+    if not PENDING_FILE.exists():
+        return False
+    try:
+        record = json.loads(PENDING_FILE.read_text())
+    except (json.JSONDecodeError, OSError):
+        return False  # unreadable/corrupt — treat as not blocking, not as live
+    return time.time() - record.get("created_at", 0) <= CODE_TTL
+
+
 def write_pending(amount, description, reason, kind="spend", payment_intent_id=None):
+    if _existing_pending_is_live():
+        raise PendingEscalationExistsError(
+            "an escalation is already pending and unexpired — resolve it with "
+            "approve.py (or wait for it to expire) before requesting another"
+        )
     _atomic_write(PENDING_FILE, json.dumps({
         "amount": amount, "description": description, "reason": reason,
         "created_at": time.time(), "kind": kind, "payment_intent_id": payment_intent_id,
@@ -70,6 +116,12 @@ def send_approval_code(amount: float, description: str) -> bool:
     sid = secrets_map["TWILIO_ACCOUNT_SID"]
     token = secrets_map["TWILIO_AUTH_TOKEN"]
     from_number = secrets_map["TWILIO_FROM_NUMBER"]
+    # Loaded from the same git-ignored secrets file as the Twilio credentials
+    # above -- never a source-code default. A real phone number was
+    # previously hardcoded here as a fallback default and got deployed to
+    # the live sandbox outside of git; moving it into the secrets file is
+    # what keeps it out of anything that gets committed or distributed.
+    operator_phone = secrets_map["HERMES_OPERATOR_PHONE"]
 
     code = f"{secrets.randbelow(1000000):06d}"
 
@@ -86,7 +138,7 @@ def send_approval_code(amount: float, description: str) -> bool:
     r = requests.post(
         f"https://api.twilio.com/2010-04-01/Accounts/{sid}/Messages.json",
         auth=(sid, token),
-        data={"To": OPERATOR_PHONE, "From": from_number, "Body": body},
+        data={"To": operator_phone, "From": from_number, "Body": body},
         timeout=10,
     )
     r.raise_for_status()

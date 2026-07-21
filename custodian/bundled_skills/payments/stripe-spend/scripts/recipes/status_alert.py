@@ -1,6 +1,6 @@
 """Recipe: real SMS status alert via Twilio.
 
-This is the actual fulfillment of "monitoring for argobox.com" — when status
+This is the actual fulfillment of "monitoring for example.com" — when status
 changes, the agent spends real money sending a real SMS, not a free
 self-hosted substitute. No free alternative exists for this; that's the point.
 """

@@ -45,7 +45,9 @@ def _kernel_gate_email() -> bool:
             decision = _evaluate(req, _EMAIL_BAND, 2.00, str(policy), td)
         return decision.verdict.value == "autonomous"
     except Exception:
-        return True
+        # A broken/missing governance decision must never authorize a side
+        # effect merely to keep a demo moving.
+        return False
 
 
 def _build_html(customer: str, pi_id: str, summary: str, files: dict) -> str:
@@ -70,7 +72,7 @@ def _build_html(customer: str, pi_id: str, summary: str, files: dict) -> str:
   <hr style="border:1px solid rgba(255,255,255,0.08);margin:20px 0">
   <p style="color:#6b7280;font-size:0.85em">
     Verify your receipt: <code>receipt.verify() → True</code><br>
-    getcustodian.xyz · The model proposes. The kernel decides.
+    The model proposes. The kernel decides.
   </p>
 </div>
 """
@@ -82,11 +84,12 @@ def send_report(
     pi_id: str,
     out_dir: Path,
     receipt: dict,
-    from_email: str = "Custodian <custodian@getcustodian.xyz>",
+    from_email: Optional[str] = None,
 ) -> bool:
     """Send the governance package to the customer. Returns True on success."""
     key = _resend_key()
-    if not key:
+    from_email = from_email or os.environ.get("CUSTODIAN_REPORT_FROM")
+    if not key or not from_email:
         return False
 
     # Attach the 4 files
@@ -156,6 +159,11 @@ def run_email_step(
     key = _resend_key()
     if not key:
         print(f"  \033[1;33mRESEND_API_KEY not configured — email skipped\033[0m")
+        print()
+        return False
+    if not os.environ.get("CUSTODIAN_REPORT_FROM"):
+        print(f"  \033[1;33mCUSTODIAN_REPORT_FROM not configured — email skipped\033[0m")
+        print("  Set it to a sender verified by your own Resend account.")
         print()
         return False
 

@@ -11,6 +11,7 @@ testable, reusable object instead of print statements and an exit code.
 from __future__ import annotations
 
 import logging
+import math
 from typing import Optional
 
 from custodian.policy.schema import Policy
@@ -44,6 +45,22 @@ def decide(
             reason="kill switch is engaged -- all requests denied until an operator releases it",
             band=policy.default_band,
         )
+
+    # IEEE-754 non-finite values defeat ordinary comparisons: ``nan > cap``
+    # and ``abs(nan) > cap`` are both False.  Without this guard a JSON NaN or
+    # an in-process float("nan") reached the autonomous return path.  Infinity
+    # is invalid input as well; reject both before policy routing.
+    try:
+        finite_amount = math.isfinite(float(request.amount))
+    except (TypeError, ValueError, OverflowError):
+        finite_amount = False
+    if not finite_amount:
+        return Decision(
+            verdict=Verdict.DENIED,
+            request=request,
+            reason="request amount must be a finite number -- denied fail-closed",
+            band=policy.default_band,
+        )
     band = policy.band_for(skill, context, request.amount)
     band_cfg = policy.bands.get(band)
 
@@ -70,7 +87,11 @@ def decide(
             if effective_band != band:
                 band_cfg = policy.bands.get(effective_band) or band_cfg
         except Exception as e:
-            log.warning("autorank check failed, continuing: %s", e)
+            # Safe to continue here, unlike the money gates below: autorank only
+            # ever DOWNGRADES the band as a convenience. Skipping it keeps the
+            # original (higher, stricter) band, so a failure is fail-closed by
+            # construction -- it can never widen authority.
+            log.warning("autorank check failed, keeping original band: %s", e)
 
     # --- Opt-in check: 24-hour daily envelope ---
     if band_cfg.daily_envelope is not None and ledger_storage is not None:
@@ -87,7 +108,17 @@ def decide(
                     band=effective_band,
                 )
         except Exception as e:
-            log.warning("envelope check failed, continuing: %s", e)
+            # Fail CLOSED. A money gate that cannot be evaluated must put a
+            # human in the loop, not vanish -- the previous `continue` let the
+            # request fall through to the normal band/cap logic and potentially
+            # run autonomously with the envelope never checked.
+            log.warning("envelope check errored, escalating (fail-closed): %s", e)
+            return Decision(
+                verdict=Verdict.ESCALATION_REQUIRED,
+                request=request,
+                reason=f"daily_envelope check could not be evaluated ({e}) -- escalating",
+                band=effective_band,
+            )
 
     # --- Opt-in check: margin gate ---
     # Only runs if the request has revenue and cost fields AND the policy
@@ -113,7 +144,13 @@ def decide(
                     band=effective_band,
                 )
         except Exception as e:
-            log.warning("margin check failed, continuing: %s", e)
+            log.warning("margin check errored, escalating (fail-closed): %s", e)
+            return Decision(
+                verdict=Verdict.ESCALATION_REQUIRED,
+                request=request,
+                reason=f"margin check could not be evaluated ({e}) -- escalating",
+                band=effective_band,
+            )
 
     # --- Opt-in check: self-dealing detector ---
     if policy.policies is not None and policy.policies.no_self_dealing:
@@ -129,10 +166,22 @@ def decide(
                     band=effective_band,
                 )
         except Exception as e:
-            log.warning("self_dealing check failed, continuing: %s", e)
+            log.warning("self_dealing check errored, escalating (fail-closed): %s", e)
+            return Decision(
+                verdict=Verdict.ESCALATION_REQUIRED,
+                request=request,
+                reason=f"self_dealing check could not be evaluated ({e}) -- escalating",
+                band=effective_band,
+            )
 
-    over_band_cap = band_cfg.max_spend is not None and request.amount > band_cfg.max_spend
-    over_session_cap = request.amount > state.remaining_session_budget()
+    # Caps compare the magnitude of the amount: a negative amount is an
+    # outbound credit (refund), and a -$500 refund moves as much money as a
+    # +$500 charge. Comparing the signed value let any negative amount pass
+    # every cap (-500 > cap is always False) -- an agent could issue unbounded
+    # refunds autonomously.
+    magnitude = abs(request.amount)
+    over_band_cap = band_cfg.max_spend is not None and magnitude > band_cfg.max_spend
+    over_session_cap = magnitude > state.remaining_session_budget()
 
     if band_cfg.requires_approval or over_band_cap or over_session_cap:
         reasons = []

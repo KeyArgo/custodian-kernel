@@ -88,10 +88,33 @@ def main():
         if over_cap:
             reason.append(f"${args.amount:.2f} exceeds per-action cap ${cap:.2f}")
         if over_session:
-            reason.append(f"${args.amount:.2f} exceeds remaining session budget ${session_remaining:.2f}")
+            # Display floored at $0 — spent_this_session can (correctly)
+            # exceed session_cap after enough unreset demo runs, but
+            # printing the raw negative ("-$2755.00 remaining") reads as
+            # a broken number to a demo visitor rather than "none left".
+            # over_session itself still uses the real signed value above,
+            # so a deeply negative gap keeps escalating correctly either way.
+            reason.append(f"${args.amount:.2f} exceeds remaining session budget "
+                          f"${max(session_remaining, 0):.2f}")
         reason_str = "; ".join(reason)
 
-        notify.write_pending(args.amount, args.description, reason_str)
+        try:
+            notify.write_pending(args.amount, args.description, reason_str)
+        except notify.PendingEscalationExistsError as e:
+            # A different, still-live escalation is already on file — most
+            # likely a concurrent demo visitor. Refuse cleanly instead of
+            # silently overwriting their pending code (which would make
+            # THEIR subsequent approve.py fail with a confusing "No pending
+            # escalation found", for a code that really was valid a moment
+            # ago).
+            _core.append_log({
+                "event": "denied", "amount": args.amount, "description": args.description,
+                "band": state["band"], "reason": f"another escalation is already pending: {e}",
+            })
+            print(f"[authority] DENIED — {e}")
+            print("[authority] Only one escalation can be pending at a time. Wait for the "
+                  "current one to be approved or to expire, then retry.")
+            sys.exit(2)
         notify.send_approval_code(args.amount, args.description)
 
         _core.append_log({

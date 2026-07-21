@@ -7,6 +7,7 @@ the package (Day 4-5) doesn't require translating between two shapes.
 from __future__ import annotations
 
 import time
+import uuid
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import Optional
@@ -85,6 +86,10 @@ _SECRET_SENTINELS = (
     "sshkey", "ssh-key", "private_key", "privatekey",
     "private-key", "access_key", "accesskey", "access-key",
     "auth_token", "bearer", "client_secret", "signing_key",
+    # HTTP Authorization / Cookie headers carry bearer tokens and session ids
+    # verbatim -- the most common place a secret value rides through a
+    # middleware-sanitized payload.
+    "authorization", "cookie", "set-cookie", "set_cookie",
 )
 
 
@@ -102,9 +107,10 @@ def _is_secret_key(key: str) -> bool:
 
 
 def sanitize_dict(d: Optional[dict]) -> dict:
-    """Return a shallow copy of *d* with secret-bearing keys stripped.
+    """Return a copy of *d* with secret-bearing keys stripped.
 
-    Top-level and one level of nesting are scanned.  This implements the
+    Scans to arbitrary depth, including dicts nested inside lists/tuples
+    (e.g. ``{"headers": [{"authorization": ...}]}``).  This implements the
     value-free protocol's **secret-key filtering** (cyberware pattern):
     only var *names* cross the governance wire — values are never logged
     or audited.
@@ -115,11 +121,18 @@ def sanitize_dict(d: Optional[dict]) -> dict:
     for k, v in d.items():
         if _is_secret_key(str(k)):
             out[k] = "[REDACTED]"
-        elif isinstance(v, dict):
-            out[k] = sanitize_dict(v)
         else:
-            out[k] = v
+            out[k] = _sanitize_value(v)
     return out
+
+
+def _sanitize_value(v):
+    if isinstance(v, dict):
+        return sanitize_dict(v)
+    if isinstance(v, (list, tuple)):
+        sanitized = [_sanitize_value(item) for item in v]
+        return type(v)(sanitized) if isinstance(v, tuple) else sanitized
+    return v
 
 
 @dataclass
@@ -140,6 +153,13 @@ class PendingApproval:
     description: str
     reason: str
     created_at: float = field(default_factory=time.time)
+    # Lets `custodian approve`/`custodian deny` -- separate later CLI
+    # invocations -- continue the SAME ledger correlation chain the
+    # original `custodian request` escalation started, instead of each
+    # writing disconnected fragments. Defaults fresh so an old record
+    # from before this field existed still gets *a* chain, just not
+    # joined to its own `proposed`/`decided`/`escalated` history.
+    correlation_id: str = field(default_factory=lambda: uuid.uuid4().hex)
 
     def is_expired(self, ttl_seconds: int = 600) -> bool:
         return (time.time() - self.created_at) > ttl_seconds
@@ -151,6 +171,7 @@ class PendingApproval:
             description=d["description"],
             reason=d.get("reason", ""),
             created_at=float(d.get("created_at", time.time())),
+            correlation_id=d.get("correlation_id") or uuid.uuid4().hex,
         )
 
     def to_dict(self) -> dict:

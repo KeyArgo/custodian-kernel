@@ -1,6 +1,7 @@
 from __future__ import annotations
 import json
 import logging
+import math
 import uuid
 from typing import Optional
 
@@ -29,18 +30,38 @@ class CustodianMiddleware:
 
     def __init__(self, app, policy: Optional[str] = None,
                  state_dir: Optional[str] = None, default_band: str = "L2",
-                 value_free_cap: float = 10.00):
+                 value_free_cap: float = 10.00,
+                 max_body_bytes: int = 1_048_576):
         self.app = app
         self.policy_path = policy
         self.state_dir = state_dir
         self.default_band = default_band
         self.value_free_cap = value_free_cap
+        if max_body_bytes <= 0:
+            raise ValueError("max_body_bytes must be positive")
+        self.max_body_bytes = int(max_body_bytes)
         self._governed_paths: dict = {}
         self._value_free_paths: list = []  # auto-route: /__custodian__/plan etc.
 
+    @staticmethod
+    def _normalize_path(path: str) -> str:
+        """Normalize a request path before matching it against registered
+        governed routes.
+
+        A byte-for-byte-only match against scope["path"] let a request
+        differing only by a trailing slash, a doubled leading slash, or
+        case reach the downstream application completely ungoverned --
+        no band/cap/kill-switch check, no audit trail at all. Reproduced:
+        a route registered as /charge (L4, always-escalates) let a
+        $999,999 request through as an ordinary 200 via /charge/,
+        //charge, or /CHARGE. Found in review.
+        """
+        segments = [s for s in (path or "").strip().split("/") if s]
+        return ("/" + "/".join(segments)).lower()
+
     def register_path(self, path: str, band: str = "L2", cap: float = 10.00):
         """Register a route as governed. Returns self for chaining."""
-        self._governed_paths[path] = {"band": band, "cap": cap}
+        self._governed_paths[self._normalize_path(path)] = {"band": band, "cap": cap}
         return self
 
     async def __call__(self, scope, receive, send):
@@ -48,27 +69,17 @@ class CustodianMiddleware:
             await self.app(scope, receive, send)
             return
 
-        path = scope.get("path", "")
+        path = self._normalize_path(scope.get("path", ""))
 
         # Value-free plan endpoint: /__custodian__/plan
         if path == "/__custodian__/plan":
-            body = b""
-            more_body = True
-            while more_body:
-                msg = await receive()
-                body += msg.get("body", b"")
-                more_body = msg.get("more_body", False)
+            body = await self._read_body(receive)
+            if body is None:
+                await self._send_json(send, 413, {"error": "request-body-too-large"})
+                return
             result = await self._handle_value_free_plan(body)
             status = result.pop("status", 200)
-            body_out = json.dumps(result).encode()
-            await send({
-                "type": "http.response.start",
-                "status": status,
-                "headers": [
-                    [b"content-type", b"application/json"],
-                ],
-            })
-            await send({"type": "http.response.body", "body": body_out})
+            await self._send_json(send, status, result)
             return
 
         route_cfg = self._governed_paths.get(path)
@@ -78,21 +89,36 @@ class CustodianMiddleware:
             return
 
         # Buffer body — needed to extract amount AND replay to the app
-        body = b""
-        more_body = True
-        while more_body:
-            msg = await receive()
-            body += msg.get("body", b"")
-            more_body = msg.get("more_body", False)
+        body = await self._read_body(receive)
+        if body is None:
+            await self._send_json(send, 413, {"error": "request-body-too-large"})
+            return
 
-        amount = 0.0
         try:
-            amount = float(json.loads(body).get("amount", 0.0))
-        except Exception:
-            pass
+            data = json.loads(body)
+        except (json.JSONDecodeError, UnicodeDecodeError):
+            await self._send_json(send, 400, {"error": "invalid-json"})
+            return
+        if not isinstance(data, dict):
+            await self._send_json(send, 400, {"error": "json-object-required"})
+            return
+        if "amount" not in data:
+            await self._send_json(send, 400, {"error": "missing-amount"})
+            return
+        if isinstance(data["amount"], bool):
+            await self._send_json(send, 400, {"error": "invalid-amount"})
+            return
+        try:
+            amount = float(data["amount"])
+        except (TypeError, ValueError, OverflowError):
+            await self._send_json(send, 400, {"error": "invalid-amount"})
+            return
+        if not math.isfinite(amount):
+            await self._send_json(send, 400, {"error": "non-finite-amount"})
+            return
 
         from custodian.govern import _evaluate
-        from custodian.types import SpendRequest, Verdict, sanitize_dict
+        from custodian.types import SpendRequest, Verdict
 
         request = SpendRequest(amount=amount, description=f"HTTP {path}")
         decision = _evaluate(request, route_cfg["band"], route_cfg["cap"],
@@ -101,22 +127,16 @@ class CustodianMiddleware:
 
         if decision.verdict in (Verdict.DENIED, Verdict.ESCALATION_REQUIRED):
             status = 403 if decision.verdict == Verdict.DENIED else 402
-            body_out = json.dumps({
+            response = {
                 "error": decision.verdict.value,
                 "reason": decision.reason,
                 "audit_id": audit_id,
-                "kernel": "custodian/0.2.0",
-            }).encode()
-            await send({
-                "type": "http.response.start",
-                "status": status,
-                "headers": [
-                    [b"content-type", b"application/json"],
-                    [b"x-custodian-verdict", decision.verdict.value.encode()],
-                    [b"x-custodian-audit-id", audit_id.encode()],
-                ],
-            })
-            await send({"type": "http.response.body", "body": body_out})
+                "kernel": "custodian/0.4.0",
+            }
+            await self._send_json(send, status, response, headers=[
+                [b"x-custodian-verdict", decision.verdict.value.encode()],
+                [b"x-custodian-audit-id", audit_id.encode()],
+            ])
             return
 
         # AUTONOMOUS — replay buffered body to app, inject verdict headers on response
@@ -133,6 +153,29 @@ class CustodianMiddleware:
 
         await self.app(scope, patched_receive, patched_send)
 
+    async def _read_body(self, receive) -> Optional[bytes]:
+        body = bytearray()
+        more_body = True
+        while more_body:
+            msg = await receive()
+            if msg.get("type") == "http.disconnect":
+                return None
+            body.extend(msg.get("body", b""))
+            if len(body) > self.max_body_bytes:
+                return None
+            more_body = msg.get("more_body", False)
+        return bytes(body)
+
+    @staticmethod
+    async def _send_json(send, status: int, payload: dict,
+                         headers: Optional[list] = None) -> None:
+        response_headers = [[b"content-type", b"application/json"]]
+        response_headers.extend(headers or [])
+        await send({"type": "http.response.start", "status": status,
+                    "headers": response_headers})
+        await send({"type": "http.response.body",
+                    "body": json.dumps(payload, allow_nan=False).encode("utf-8")})
+
     # ── value-free plan endpoint ──────────────────────────────────────────────
 
     async def _handle_value_free_plan(self, body: bytes) -> dict:
@@ -144,8 +187,10 @@ class CustodianMiddleware:
 
         try:
             data = json.loads(body)
-        except json.JSONDecodeError:
+        except (json.JSONDecodeError, UnicodeDecodeError):
             return {"error": "invalid-json", "status": 400}
+        if not isinstance(data, dict):
+            return {"error": "json-object-required", "status": 400}
 
         # Required fields: skill, perk, var_keys
         skill = data.get("skill")
@@ -156,17 +201,23 @@ class CustodianMiddleware:
             return {
                 "error": "missing-fields",
                 "status": 400,
-                "missing": [f for f in ("skill", "perk", "var_keys")
-                            if not (f == "skill" and skill)
-                                or (f == "perk" and perk)
-                                or (f == "var_keys" and var_keys_raw)],
+                # Operator precedence in the old list comprehension made
+                # `not (f == "skill" and skill)` true for every f != "skill",
+                # so "perk" and "var_keys" were reported as missing even when
+                # both were present. Found in review.
+                "missing": [f for f, v in
+                            (("skill", skill), ("perk", perk), ("var_keys", var_keys_raw))
+                            if not v],
             }
 
-        var_keys = set(var_keys_raw) if isinstance(var_keys_raw, list) else set(var_keys_raw)
+        if (not isinstance(var_keys_raw, list)
+                or not all(isinstance(item, str) and item for item in var_keys_raw)):
+            return {"error": "var-keys-must-be-nonempty-string-list", "status": 400}
+        var_keys = set(var_keys_raw)
         band = data.get("band", self.default_band)
 
         # Sanitize the request before audit (never log secrets)
-        sanitized = sanitize_dict(data)
+        sanitize_dict(data)
 
         # Evaluate kernel policy
         request = SpendRequest(

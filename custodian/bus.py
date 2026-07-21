@@ -17,8 +17,14 @@ def _default_audit_handler(event: str, payload: Any) -> None:
         line = f"{ts} {event} {payload}\n"
         with open(log_path, "a") as f:
             f.write(line)
-    except Exception:
-        pass
+    except Exception as e:
+        # This is the sole persistence path for kernel_denied and
+        # escalation_required events -- kill-switch fires, spend denials.
+        # A bare `except: pass` here meant a write failure (e.g. a full
+        # disk, a permissions change) made one of these vanish from the
+        # audit trail with no trace anywhere: no stderr, no log, nothing.
+        # Found in review.
+        log.warning("EventBus failed to write audit log for event %s: %s", event, e)
 
 
 class EventBus:

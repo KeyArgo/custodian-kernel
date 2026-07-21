@@ -29,6 +29,7 @@ def triage(
     state: AuthorityState,
     *,
     killed: bool = False,
+    ledger_storage=None,
 ) -> TriageResult:
     """Run one case end to end.
 
@@ -51,6 +52,7 @@ def triage(
         skill=pack.requested_action,
         context={"disposition": disposition},
         killed=killed,
+        ledger_storage=ledger_storage,
     )
 
     # The single honest outcome: money moves on its own ONLY when the domain
@@ -109,11 +111,19 @@ def replay_with_policy_change(
     """
     before = triage(pack, copy.deepcopy(envelope), kernel_policy, state)
 
-    saved = dict(pack.rules)
-    try:
-        pack.rules = {**pack.rules, **rule_overrides}
-        after = triage(pack, copy.deepcopy(envelope), kernel_policy, state)
-    finally:
-        pack.rules = saved
+    # Build an independent copy with the overridden rules instead of
+    # mutating pack.rules on the shared instance in place. The old
+    # mutate-then-restore pattern was a real race: any concurrent triage()
+    # call on the SAME pack instance during the override window would read
+    # the temporarily-overridden rules and could reach a different
+    # disposition on live money movement, based on a "what-if" policy that
+    # was never actually in effect. Not reachable through either current
+    # caller (both construct a fresh PolicyPack per request), but this is a
+    # documented public API and the fix is free -- no reason to leave the
+    # landmine for whoever adds instance pooling/caching later. Found in
+    # review.
+    overridden_pack = copy.copy(pack)
+    overridden_pack.rules = {**pack.rules, **rule_overrides}
+    after = triage(overridden_pack, copy.deepcopy(envelope), kernel_policy, state)
 
     return before, after

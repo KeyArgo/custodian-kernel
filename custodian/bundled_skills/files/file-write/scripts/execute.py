@@ -7,7 +7,8 @@ def main():
     a = p.parse_args()
     try:
         real = os.path.realpath(a.path)
-        if not real.startswith(os.path.realpath(ALLOWED)):
+        allowed_real = os.path.realpath(ALLOWED)
+        if real != allowed_real and not real.startswith(allowed_real + os.sep):
             raise PermissionError(f"Path must be under {ALLOWED}")
         mode = "a" if a.append else "w"
         with open(a.path, mode, encoding="utf-8") as f:

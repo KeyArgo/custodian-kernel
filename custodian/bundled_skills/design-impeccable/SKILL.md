@@ -133,7 +133,7 @@ These are the most common AI-generated UI mistakes. Check for each before shippi
 
 ## Installation (for reference)
 
-This skill is already installed in your project at:
-`/mnt/homes/galileo/argo/Development/hermes-hackathon-2026/skills/design-impeccable/SKILL.md`
+This skill ships inside the `custodian-kernel` package under
+`custodian/bundled_skills/design-impeccable/SKILL.md`.
 
 Your AI agent (Hermes, Claude Code, Codex) will load this file when working on frontend tasks. No additional install steps required.

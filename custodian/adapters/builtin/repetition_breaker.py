@@ -9,6 +9,15 @@ practice:
   that never terminates.
 * **Churn** — the same skill called with trivially-varied args many
   times in a short burst (retry storms with jittered wording).
+* **Scatter** — many actions in a short window with no single repeated
+  skill or exact call to pin down (rotating across enough distinct
+  skills/args defeats the three shapes above, which all require some
+  concrete thing — a fingerprint, an A/B pair, one skill name — to
+  repeat; a model burning through unrelated tool calls without
+  converging is still a loop even though nothing about it repeats
+  exactly. Verified live: 50 calls across 5 rotating skill names with a
+  unique arg each time produced zero denials from the other three
+  checks. Found in review).
 
 The breaker's DENY message is written *for the model*: it states what
 was repeated and instructs it to change strategy — which, injected back
@@ -41,6 +50,7 @@ class RepetitionBreaker(Adapter):
         self.max_identical = int(self.config.get("max_identical", 3))
         self.max_pingpong = int(self.config.get("max_pingpong", 3))  # A-B pairs
         self.max_same_skill_burst = int(self.config.get("max_same_skill_burst", 10))
+        self.max_total_burst = int(self.config.get("max_total_burst", 20))
         self._history: list[tuple[float, str, str]] = []  # (ts, fingerprint, skill)
 
     def pre_action(self, ctx: ActionContext) -> Verdict:
@@ -75,6 +85,17 @@ class RepetitionBreaker(Adapter):
                 self.name,
                 f"{burst + 1} calls to {ctx.skill!r} in 60s — retry storm; "
                 f"back off and reconsider",
+            )
+
+        # Scatter: no single skill/fingerprint repeats enough to trip the
+        # checks above, but the total call rate is still a loop.
+        total_burst = sum(1 for t, _, _ in self._history if now - t <= 60)
+        if total_burst + 1 > self.max_total_burst:
+            return Verdict.deny(
+                self.name,
+                f"{total_burst + 1} actions in 60s across {len({s for _, _, s in self._history})} "
+                f"different skills — this looks like a non-converging loop even though no "
+                f"single call repeats; stop and summarize what you have learned instead",
             )
 
         self._history.append((now, fp, ctx.skill))

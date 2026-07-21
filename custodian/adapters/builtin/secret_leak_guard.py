@@ -7,8 +7,8 @@ Two detection layers:
    check on long opaque tokens. Applied to *both* directions: arguments
    (agent trying to send a credential somewhere) and outputs (a
    credential coming back into model context).
-2. **Caduceus tripwire** — if a :class:`caduceus.broker.LeakSentinel` is
-   provided, every token is hashed and checked against the values Caduceus
+2. **Paladin tripwire** — if a :class:`paladin.broker.LeakSentinel` is
+   provided, every token is hashed and checked against the values Paladin
    actually released. This catches the worst case precisely: a secret
    the agent was never shown, surfacing in its context anyway (echoed by
    a subprocess, printed in an error, reflected by an API).
@@ -38,7 +38,25 @@ _PATTERNS: list[tuple[re.Pattern, str]] = [
     (re.compile(r"\bAIza[0-9A-Za-z_-]{35}\b"), "google-api-key"),
 ]
 
-_TOKEN_SPLIT = re.compile(r"[\s\"'`,;=(){}\[\]<>]+")
+_TOKEN_SPLIT = re.compile(r"[\s\"'`,;=(){}\[\]<>/\\.?&:]+")
+# '.', '?', '&', ':' added: sentence punctuation ("the credential X. please
+# retry") and URL query separators ("?key=X&y=1") merged the actual secret
+# into a token that matched neither the paladin tripwire's exact-value hash
+# nor (once diluted by the extra low-information characters) the
+# high-entropy fallback threshold -- so a secret sitting next to any of
+# these characters produced zero findings. Deliberately NOT splitting on
+# '-', '_', '+': those are legitimate interior characters for token shapes
+# this guard already recognizes (sk-..., gh[pousr]_..., xox[baprs]-...,
+# base64's '+'), so splitting on them would fragment real tokens instead
+# of isolating them. Found in review.
+
+# A ref is a zero-value pointer, so its name is exempt from the high-entropy
+# check — a long secret name is not a leaked secret. Matched against the RAW
+# text, never against tokens: _TOKEN_SPLIT deliberately splits on "/" (see
+# _findings), so no token ever retains a "paladin://" prefix and a
+# startswith() test here is unreachable dead code. The pre-rename scheme is
+# accepted because refs minted before the rename are still in circulation.
+_REF_RE = re.compile(r"(?:paladin|warden)://([a-zA-Z0-9][a-zA-Z0-9_.\-/]{0,127})")
 
 
 def _entropy(s: str) -> float:
@@ -52,15 +70,38 @@ def _entropy(s: str) -> float:
 
 
 def _scan(text: str, sentinel) -> list[tuple[str, str]]:
-    """Return [(matched_text, label)] for every finding in `text`."""
+    """Return [(matched_text, label)] for every finding in `text`.
+
+    _TOKEN_SPLIT includes '/' and '\\' (path separators) specifically so
+    the high-entropy fallback below evaluates path SEGMENTS rather than
+    a whole filesystem path as one token. Confirmed live against a real
+    Hermes Agent session: an ordinary file-write to a path containing a
+    UUID-bearing temp directory (e.g. .../0192eba3-ffe3-.../file.txt —
+    common for session/container/scratch dirs) was a false positive
+    before this fix, because the *whole path* (80+ chars, high per-char
+    entropy from the hex+dash UUID) tripped the len>=32/entropy>=4.5
+    threshold. Once split on '/', the UUID segment alone (36 chars,
+    entropy ~3.8) falls under the threshold — while a genuine freestanding
+    credential (which is never itself a filesystem path) is unaffected
+    either way.
+    """
     findings = []
     for pattern, label in _PATTERNS:
         for m in pattern.finditer(text):
             findings.append((m.group(0), label))
+    # Ref names, collected from the raw text before tokenizing (see _REF_RE).
+    # A name may itself contain '/' (openrouter/api_key), so split it the same
+    # way the text is split or its segments won't match.
+    exempt = set()
+    for m in _REF_RE.finditer(text):
+        exempt.update(_TOKEN_SPLIT.split(m.group(1)))
     for token in _TOKEN_SPLIT.split(text):
+        # Order matters: a token the sentinel has seen is a real vault VALUE
+        # and stays a finding even if it also appears as a ref name.
         if sentinel is not None and sentinel.seen(token):
-            findings.append((token, "caduceus-vault-value"))
-        elif len(token) >= 32 and _entropy(token) >= 4.5 and not token.startswith("caduceus://"):
+            findings.append((token, "paladin-vault-value"))
+        elif (len(token) >= 32 and _entropy(token) >= 4.5
+              and token not in exempt):
             findings.append((token, "high-entropy-token"))
     return findings
 
@@ -83,7 +124,7 @@ class SecretLeakGuard(Adapter):
             return Verdict.deny(
                 self.name,
                 f"credential material in tool arguments ({', '.join(labels)}) — "
-                f"use a caduceus:// ref instead of a raw value",
+                f"use a paladin:// ref instead of a raw value",
             )
         return Verdict.allow(self.name)
 

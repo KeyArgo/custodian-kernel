@@ -164,7 +164,14 @@ def verify_claims(claims: list[Claim], ledger_scope: dict) -> list[Claim]:
     for c in claims:
         actual, found = _resolve(ledger_scope, c.ledger_path)
         c.actual = actual
-        if not found and c.relation not in ("absent",):
+        # An unresolvable path is UNVERIFIABLE only for value comparisons
+        # (eq/gt/...), where there is genuinely nothing to compare against.
+        # For presence relations the absence of the path IS the ground truth:
+        # an "exists" claim on a missing field is refuted by that absence
+        # (CONTRADICTED, not merely unverifiable -- otherwise a fabricated
+        # "authorization exists" claim slips past the lie-catch), and an
+        # "absent" claim on a missing field is confirmed by it.
+        if not found and c.relation not in ("absent", "exists"):
             c.status = ClaimStatus.UNVERIFIABLE
             continue
         holds = _compare(actual, c.relation, c.asserted)

@@ -15,8 +15,16 @@ Ordering and semantics:
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from typing import Callable, Optional
 
 from custodian.adapters.base import ActionContext, Adapter, Decision, Verdict
+
+# An observer is called once per non-ALLOW verdict as the pipeline runs:
+# (ActionContext, Verdict) -> None. It exists so an integration layer can
+# persist denials/warnings (e.g. to a tamper-evident log) WITHOUT the pure
+# kernel pipeline taking a dependency on that layer. The pipeline stays
+# brand-neutral; talaria wires a paladin-audit-backed observer into it.
+VerdictObserver = Callable[[ActionContext, Verdict], None]
 
 
 @dataclass
@@ -49,12 +57,29 @@ class PipelineResult:
 
 
 class AdapterPipeline:
-    def __init__(self, adapters: list[Adapter] | None = None) -> None:
+    def __init__(self, adapters: list[Adapter] | None = None,
+                 observer: Optional[VerdictObserver] = None) -> None:
         self.adapters: list[Adapter] = list(adapters or [])
+        # Optional sink for DENY/WARN verdicts (see VerdictObserver). A
+        # crashing observer must never break enforcement, so calls are
+        # wrapped — logging the denial is best-effort; denying is not.
+        self.observer: Optional[VerdictObserver] = observer
 
     def add(self, adapter: Adapter) -> "AdapterPipeline":
         self.adapters.append(adapter)
         return self
+
+    def set_observer(self, observer: Optional[VerdictObserver]) -> "AdapterPipeline":
+        self.observer = observer
+        return self
+
+    def _notify(self, ctx: ActionContext, verdict: Verdict) -> None:
+        if self.observer is None or verdict.decision == Decision.ALLOW:
+            return
+        try:
+            self.observer(ctx, verdict)
+        except Exception:
+            pass  # never let a logging failure change enforcement
 
     def _run(self, hook_name: str, ctx: ActionContext) -> PipelineResult:
         verdicts: list[Verdict] = []
@@ -70,6 +95,7 @@ class AdapterPipeline:
                     v = Verdict.warn(adapter.name,
                                      f"adapter crashed ({type(e).__name__}: {e}) — skipped")
             verdicts.append(v)
+            self._notify(ctx, v)
             if v.decision == Decision.DENY:
                 return PipelineResult(allowed=False, verdicts=verdicts)
         return PipelineResult(allowed=True, verdicts=verdicts)

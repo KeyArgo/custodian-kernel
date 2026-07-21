@@ -86,18 +86,38 @@ def main():
         print(f'[authority] REJECTED -- {args.payment_intent_id} is not a real, prior executed '
               'charge in this skill\'s own audit log. Cannot refund a payment that never happened.')
         sys.exit(1)
-    if args.amount > original_amount:
-        print(f'[authority] REJECTED -- refund amount ${args.amount:.2f} exceeds the original '
-              f'charge of ${original_amount:.2f} for {args.payment_intent_id}.')
+    # Cumulative check: compare against what's LEFT to refund, not the original
+    # charge. Without subtracting prior refunds, three $100 refunds against a
+    # $100 charge each passed (>$100 total refunded). execute_refund re-checks
+    # this authoritatively; rejecting here avoids escalating a doomed refund to
+    # a human for a Twilio code.
+    already_refunded = _core.refunded_amount(args.payment_intent_id)
+    remaining = round(original_amount - already_refunded, 2)
+    if args.amount > remaining:
+        print(f'[authority] REJECTED -- refund amount ${args.amount:.2f} exceeds the ${remaining:.2f} '
+              f'still refundable on {args.payment_intent_id} '
+              f'(${original_amount:.2f} charged, ${already_refunded:.2f} already refunded).')
         sys.exit(1)
 
     import notify
     reason_str = f'refund of ${args.amount:.2f} against {args.payment_intent_id} -- all refunds require human approval, no exceptions'
-    notify.write_pending(args.amount, args.description, reason_str,
-                          kind='refund', payment_intent_id=args.payment_intent_id)
-    notify.send_approval_code(args.amount, args.description)
-
     state = _core.load_state()
+    try:
+        notify.write_pending(args.amount, args.description, reason_str,
+                              kind='refund', payment_intent_id=args.payment_intent_id)
+    except notify.PendingEscalationExistsError as e:
+        # See spend.py's identical handling: refuse rather than clobber a
+        # still-live escalation someone else is waiting to approve.
+        _core.append_log({
+            'event': 'refund_denied', 'amount': args.amount, 'description': args.description,
+            'payment_intent_id': args.payment_intent_id, 'band': state['band'],
+            'reason': f'another escalation is already pending: {e}',
+        })
+        print(f'[authority] DENIED -- {e}')
+        print('[authority] Only one escalation can be pending at a time. Wait for the '
+              'current one to be approved or to expire, then retry.')
+        sys.exit(2)
+    notify.send_approval_code(args.amount, args.description)
     _core.append_log({
         'event': 'refund_escalation_required', 'amount': args.amount, 'description': args.description,
         'payment_intent_id': args.payment_intent_id, 'band': state['band'], 'reason': reason_str,

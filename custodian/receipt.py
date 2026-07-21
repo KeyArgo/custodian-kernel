@@ -14,8 +14,12 @@ class GovernedReceipt:
 
     Every @govern-wrapped function, middleware intercept, or session.request()
     can produce a GovernedReceipt. The fingerprint is
-    SHA-256(receipt_id:band:amount:verdict:output_hash) covering all five
-    tamper-sensitive fields — changing any one invalidates verify().
+    SHA-256(receipt_id:fn_name:band:amount:verdict:reason:description:claim_proof:output_hash),
+    covering every semantically load-bearing field — changing any one
+    invalidates verify(). In particular claim_proof (the verifier's
+    VERIFIED/CONTRADICTED/UNVERIFIABLE result) is inside the hash, so a receipt
+    cannot be edited to claim it passed verification when it did not. Only the
+    non-semantic timing fields (ts, elapsed_ms) are outside the hash.
 
     Usage:
         result = charge_customer(85.00, "cus_123")
@@ -34,13 +38,23 @@ class GovernedReceipt:
     elapsed_ms: float
     output_hash: str       # SHA-256(json(output))
     claim_proof: Optional[str]
-    fingerprint: str       # SHA-256(receipt_id:band:amount:verdict:output_hash)
+    fingerprint: str       # see _compute_fingerprint for covered fields
+
+    @staticmethod
+    def _compute_fingerprint(receipt_id: str, fn_name: str, band: str, amount: float,
+                             verdict: str, reason: str, description: str,
+                             claim_proof: Optional[str], output_hash: str) -> str:
+        return hashlib.sha256(
+            f"{receipt_id}:{fn_name}:{band}:{amount}:{verdict}:{reason}:"
+            f"{description}:{claim_proof}:{output_hash}".encode()
+        ).hexdigest()
 
     def verify(self) -> bool:
         """Recompute and compare fingerprint. Returns True iff receipt is untampered."""
-        expected = hashlib.sha256(
-            f"{self.receipt_id}:{self.band}:{self.amount}:{self.verdict}:{self.output_hash}".encode()
-        ).hexdigest()
+        expected = self._compute_fingerprint(
+            self.receipt_id, self.fn_name, self.band, self.amount, self.verdict,
+            self.reason, self.description, self.claim_proof, self.output_hash,
+        )
         return self.fingerprint == expected
 
     def to_dict(self) -> dict:
@@ -58,9 +72,10 @@ class GovernedReceipt:
         output_hash = hashlib.sha256(
             json.dumps(output, default=str, sort_keys=True).encode()
         ).hexdigest()
-        fingerprint = hashlib.sha256(
-            f"{receipt_id}:{band}:{amount}:{verdict}:{output_hash}".encode()
-        ).hexdigest()
+        fingerprint = cls._compute_fingerprint(
+            receipt_id, fn_name, band, amount, verdict, reason, description,
+            claim_proof, output_hash,
+        )
         return cls(
             receipt_id=receipt_id, ts=ts, fn_name=fn_name, band=band,
             amount=amount, description=description, verdict=verdict,

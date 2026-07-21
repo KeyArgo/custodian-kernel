@@ -67,6 +67,14 @@ class ActionContext:
 def _strings_of(obj: Any) -> list[str]:
     if isinstance(obj, str):
         return [obj]
+    # bytes/bytearray decode into the surface rather than vanishing from it.
+    # Returning [] for them dropped the value from text_surface() entirely, so
+    # every text-scanning guard (secret-leak, prompt-injection, egress,
+    # pii-redactor) was blind to a credential passed as a bytes body while
+    # catching the identical str. errors="replace" because a guard must scan
+    # what it can read, not refuse to look at non-UTF-8 input.
+    if isinstance(obj, (bytes, bytearray)):
+        return [bytes(obj).decode("utf-8", errors="replace")]
     if isinstance(obj, dict):
         out = []
         for k, v in obj.items():

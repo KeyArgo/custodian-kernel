@@ -58,15 +58,26 @@ class ContextAnchor(Adapter):
                 f"skill {ctx.skill!r} is outside this session's allowed set "
                 f"{sorted(self.allowed_skills)}",
             )
-        if self.max_session_cost_usd and ctx.cost_usd:
-            if self.session_cost_usd + ctx.cost_usd > self.max_session_cost_usd:
+        # ctx.args["amount"] is the primary source for the real dollar
+        # figure of a spend action, same precedence spend_sentinel.py uses
+        # (ctx.cost_usd is a fallback, not the source of truth) -- this
+        # used to read only ctx.cost_usd, so for any skill where the
+        # amount lives in args (the common shape -- the only real
+        # ActionContext(...) construction site outside tests,
+        # custodian/cli/cmd_adapters.py, passes cost_usd via a wholly
+        # separate --cost flag from --amount) this budget meter could
+        # accumulate $0 regardless of what was actually spent. Found in
+        # review.
+        cost = float(ctx.args.get("amount", ctx.cost_usd) or 0)
+        if self.max_session_cost_usd and cost:
+            if self.session_cost_usd + cost > self.max_session_cost_usd:
                 return Verdict.deny(
                     self.name,
                     f"session budget: {self.session_cost_usd:.2f} spent of "
-                    f"{self.max_session_cost_usd:.2f} — this {ctx.cost_usd:.2f} "
+                    f"{self.max_session_cost_usd:.2f} — this {cost:.2f} "
                     f"action would exceed it",
                 )
-            self.session_cost_usd += ctx.cost_usd
+            self.session_cost_usd += cost
         return Verdict.allow(self.name)
 
     # -- re-anchoring surface (used by the Hermes bridge) ----------------------

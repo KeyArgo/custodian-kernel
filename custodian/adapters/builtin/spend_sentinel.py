@@ -62,8 +62,16 @@ class SpendSentinel(Adapter):
                   if now - t <= self.duplicate_window_s]
 
         # Duplicate spend: same amount + same description in the window.
+        # The trailing `and desc` used to skip this check entirely for an
+        # empty description -- ctx.description defaults to "", so a spend
+        # call that never sets one (a real, easily-reached shape, not an
+        # edge case) got zero duplicate protection: 5 identical $25.00
+        # spends with an empty description, 2 minutes apart, all allowed.
+        # Two spends of the same amount with the same (even blank)
+        # description within the window is exactly the duplicate-payment
+        # signature this adapter exists to catch -- found in review.
         for t, a, d in recent:
-            if a == amount and d == desc and desc:
+            if a == amount and d == desc:
                 return Verdict.deny(
                     self.name,
                     f"duplicate spend: {amount:.2f} for {desc!r} already requested "

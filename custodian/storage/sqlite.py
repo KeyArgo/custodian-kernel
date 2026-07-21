@@ -20,7 +20,7 @@ from typing import Optional
 
 from custodian.exceptions import StorageError
 from custodian.storage.base import StorageBackend
-from custodian.types import AuditEntry, AuthorityState, KillSwitchState, PendingApproval
+from custodian.types import AuditEntry, AuthorityState, Band, KillSwitchState, PendingApproval
 
 _SCHEMA_SQL = """
 CREATE TABLE IF NOT EXISTS authority_state (
@@ -54,7 +54,8 @@ CREATE TABLE IF NOT EXISTS pending_approval (
     amount      REAL    NOT NULL,
     description TEXT    NOT NULL,
     reason      TEXT    NOT NULL DEFAULT '',
-    created_at  REAL    NOT NULL
+    created_at  REAL    NOT NULL,
+    correlation_id TEXT
 );
 
 CREATE TABLE IF NOT EXISTS kill_switch (
@@ -75,6 +76,13 @@ class SqliteStorage(StorageBackend):
             conn = sqlite3.connect(str(path))
             conn.execute("PRAGMA journal_mode=WAL;")
             conn.executescript(_SCHEMA_SQL)
+            # CREATE TABLE IF NOT EXISTS is a no-op against an
+            # already-existing database from before correlation_id existed
+            # -- add the column explicitly for upgrades, not just fresh
+            # installs.
+            cols = {r[1] for r in conn.execute("PRAGMA table_info(pending_approval)")}
+            if "correlation_id" not in cols:
+                conn.execute("ALTER TABLE pending_approval ADD COLUMN correlation_id TEXT")
             conn.commit()
             conn.close()
         except sqlite3.Error as e:
@@ -93,7 +101,15 @@ class SqliteStorage(StorageBackend):
             if row is None:
                 return None
             return AuthorityState(
-                band=row["band"],
+                # Coerce to Band. sqlite hands back a plain str, and
+                # save_authority_state reads state.band.value -- so any
+                # load -> modify -> save cycle (the normal way to record a
+                # spend) died on AttributeError: 'str' object has no attribute
+                # 'value', and the write was lost. Band subclasses str, so
+                # Band.L2 == "L2" and an equality assertion on the loaded
+                # dataclass passes either way: the round-trip test could not
+                # see this.
+                band=Band(row["band"]),
                 per_action_cap=row["per_action_cap"],
                 session_cap=row["session_cap"],
                 spent_this_session=row["spent_this_session"],
@@ -176,10 +192,10 @@ class SqliteStorage(StorageBackend):
             conn = self._connect()
             conn.execute(
                 "INSERT OR REPLACE INTO pending_approval "
-                "(id, amount, description, reason, created_at) "
-                "VALUES (1, ?, ?, ?, ?)",
+                "(id, amount, description, reason, created_at, correlation_id) "
+                "VALUES (1, ?, ?, ?, ?, ?)",
                 (approval.amount, approval.description,
-                 approval.reason, approval.created_at),
+                 approval.reason, approval.created_at, approval.correlation_id),
             )
             conn.commit()
             conn.close()
@@ -194,6 +210,28 @@ class SqliteStorage(StorageBackend):
             conn.close()
         except sqlite3.Error as e:
             raise StorageError(f"failed to clear pending approval: {e}") from e
+
+    def record_spend(self, amount: float) -> bool:
+        """Atomically add `amount` to spent_this_session.
+
+        A single UPDATE rather than load-modify-save, so two concurrent spends
+        cannot overwrite each other's accounting. Returns False when no
+        authority row exists yet (workspace not scaffolded) -- the caller
+        already warned about that case and there is nothing to update.
+        """
+        try:
+            conn = self._connect()
+            cur = conn.execute(
+                "UPDATE authority_state "
+                "SET spent_this_session = spent_this_session + ? WHERE id = 1",
+                (float(amount),),
+            )
+            conn.commit()
+            updated = cur.rowcount > 0
+            conn.close()
+            return updated
+        except sqlite3.Error as e:
+            raise StorageError(f"failed to record spend: {e}") from e
 
     def get_kill_switch(self) -> KillSwitchState:
         try:
@@ -223,3 +261,30 @@ class SqliteStorage(StorageBackend):
             conn.close()
         except sqlite3.Error as e:
             raise StorageError(f"failed to set kill switch state: {e}") from e
+        # Mirror to the JSON stores the other two enforcement surfaces read, so
+        # an operator's `custodian kill` actually stops them. Without this the
+        # kill switch is bypassable: the @govern decorator reads
+        # <state_dir>/kill_switch.json and the tool registry reads
+        # ~/.custodian/kill_switch.json -- neither of which the SQLite write
+        # above touches. Mirror failures must not mask the authoritative DB
+        # write, so they are swallowed (the DB remains source of truth for the
+        # CLI request path).
+        self._mirror_kill_switch(state)
+
+    def _mirror_kill_switch(self, state: KillSwitchState) -> None:
+        payload = json.dumps({
+            "killed": bool(state.killed),
+            "reason": state.reason,
+            "by": state.by,
+            "changed_at": state.changed_at,
+        })
+        targets = [
+            self.path.parent / "kill_switch.json",          # read by @govern
+            Path.home() / ".custodian" / "kill_switch.json",  # read by ToolRegistry
+        ]
+        for target in targets:
+            try:
+                target.parent.mkdir(parents=True, exist_ok=True)
+                target.write_text(payload)
+            except OSError:
+                pass

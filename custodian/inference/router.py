@@ -17,7 +17,7 @@ import urllib.error
 import urllib.request
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Optional
+from typing import Callable, Optional
 
 DEFAULT_ENDPOINTS = [
     # 1. OpenRouter — primary (reliable, fast failover between providers)
@@ -86,8 +86,12 @@ class NemoClawRouter:
             key = self._openrouter_key()
             if key:
                 headers["Authorization"] = f"Bearer {key}"
-            headers["HTTP-Referer"] = "https://getcustodian.xyz"
-            headers["X-Title"] = "Custodian"
+            # OpenRouter attribution is deployment metadata, not a property of
+            # the reusable kernel.  A consuming application may opt in without
+            # every Custodian install advertising the maintainer's website.
+            if referer := os.environ.get("CUSTODIAN_HTTP_REFERER"):
+                headers["HTTP-Referer"] = referer
+            headers["X-Title"] = os.environ.get("CUSTODIAN_APP_TITLE", "Custodian")
         return headers
 
     @staticmethod
@@ -106,7 +110,20 @@ class NemoClawRouter:
     # reaching it at all ("no JSON object found") -- both were silently
     # falling back to a generic placeholder that looked like every triage
     # submission "just escalating" rather than a token-budget failure.
-    def complete(self, system: str, user: str, max_tokens: int = 2200) -> str:
+    def complete(self, system: str, user: str, max_tokens: int = 2200,
+                requester: str = "inference-router") -> str:
+        # Every real, billed call this router makes used to bypass the
+        # kernel entirely -- no kill-switch check, no spend cap, no audit
+        # trail, unlike every registered tool (anthropic-chat, openai-chat,
+        # etc.) which goes through CustodianTool.invoke()'s gate. Gated on
+        # the worst-case cost (max_tokens fully consumed) *before* any
+        # network call, using the same kernel_gate() every other governed
+        # call path uses -- so the kill switch stops inference spend too,
+        # and a cumulative cap eventually denies further calls once the
+        # session total crosses it. Reconciled down to the real token count
+        # afterward for an accurate audit trail. Found in review.
+        gate = self._ledger_propose_and_gate(max_tokens, requester)
+
         last_error: Exception = RuntimeError("no endpoints configured")
         for endpoint in self.endpoints:
             headers = self._headers_for(endpoint)
@@ -152,6 +169,8 @@ class NemoClawRouter:
                 content = choices[0]["message"]["content"]
                 self.name = f"nemoclaw-router → {endpoint}"
                 self.live = True
+                usage = result.get("usage") or {}
+                gate.record_executed(usage.get("total_tokens"))
                 return self._strip_thinking(content)
             except (urllib.error.URLError, OSError, TimeoutError,
                     KeyError, IndexError, json.JSONDecodeError) as e:
@@ -187,11 +206,79 @@ class NemoClawRouter:
                 if content:
                     self.name = f"nemoclaw-router → {ollama_host} (ollama)"
                     self.live = True
+                    gate.record_executed(0)  # local inference: no billed cost
                     return self._strip_thinking(content)
             except Exception:
                 pass  # Ollama not available — that's OK, this is best-effort
 
+        gate.record_failed(str(last_error))
         raise RuntimeError(
             f"NemoClawRouter: all {len(self.endpoints)} cloud endpoints failed, "
             f"Ollama also unavailable. Last error: {last_error}"
         )
+
+    def _ledger_propose_and_gate(self, max_tokens: int, requester: str) -> "_InferenceGateHandle":
+        """Kernel-gate this call on its worst-case cost before any network
+        request, and write the proposed/decided ledger events. Raises
+        RuntimeError if the kernel denies or escalates -- this router has
+        no interactive human-in-the-loop path (chat/report-generation
+        contexts, not a CLI a human is sitting at), so escalation fails
+        closed rather than silently proceeding."""
+        from custodian.policy.gate import kernel_gate
+        from custodian.tools.registry import _state_dir
+        from custodian.universal_ledger import LedgerEvent, UniversalLedger
+        import uuid as _uuid
+
+        state_dir = _state_dir()
+        ledger = UniversalLedger(state_dir / "ledger.db")
+        correlation_id = _uuid.uuid4().hex
+        cost_per_1k = float(os.environ.get("CUSTODIAN_INFERENCE_COST_PER_1K_TOKENS", "0.01"))
+        worst_case_cost = (max_tokens / 1000.0) * cost_per_1k
+
+        def _write(**kw) -> None:
+            try:
+                ledger.append(LedgerEvent(
+                    correlation_id=correlation_id, requester=requester,
+                    provider="custodian", action="inference:complete", **kw,
+                ))
+            except Exception:
+                pass  # ledger is additive; never block an inference call on it
+
+        _write(lifecycle_event="proposed", amount=worst_case_cost, currency="USD")
+
+        decision = kernel_gate(worst_case_cost, action="inference:complete",
+                               state_dir=state_dir, fallback_band="L2")
+        _write(lifecycle_event="decided", verdict=decision["verdict"],
+              band=decision["band"], amount=worst_case_cost, currency="USD")
+
+        if decision["verdict"] != "autonomous":
+            _write(lifecycle_event="failed", band=decision["band"],
+                  amount=worst_case_cost, currency="USD",
+                  metadata={"reason": decision["reason"][:200]})
+            raise RuntimeError(
+                f"NemoClawRouter: kernel {decision['verdict']} for this inference "
+                f"call: {decision['reason']}"
+            )
+
+        return _InferenceGateHandle(_write, cost_per_1k, worst_case_cost, decision["band"])
+
+
+@dataclass
+class _InferenceGateHandle:
+    _write: "Callable"
+    cost_per_1k_tokens: float
+    worst_case_cost: float
+    band: str
+
+    def record_executed(self, actual_tokens: Optional[int]) -> None:
+        cost = (
+            (actual_tokens / 1000.0) * self.cost_per_1k_tokens
+            if actual_tokens is not None else self.worst_case_cost
+        )
+        self._write(lifecycle_event="executed", band=self.band,
+                    amount=round(cost, 6), currency="USD")
+
+    def record_failed(self, reason: str) -> None:
+        self._write(lifecycle_event="failed", band=self.band,
+                    amount=self.worst_case_cost, currency="USD",
+                    metadata={"reason": reason[:200]})

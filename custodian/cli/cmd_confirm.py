@@ -22,11 +22,29 @@ from __future__ import annotations
 
 import sys
 import time
+import uuid
 from pathlib import Path
 
 from custodian.config import CustodianConfig
 from custodian.storage.sqlite import SqliteStorage
 from custodian.types import AuditEntry, Band
+from custodian.universal_ledger import LedgerEvent, UniversalLedger
+
+
+def _ledger_write(state_dir: Path, **kw) -> None:
+    try:
+        UniversalLedger(state_dir / "ledger.db").append(LedgerEvent(**kw))
+    except Exception as e:
+        print(f"warning: failed to write ledger event: {e}", file=sys.stderr)
+
+
+def _band_value(band) -> str:
+    """AuditEntry.band is a real Band enum when constructed directly, but a
+    plain string when reconstructed via AuditEntry.from_dict() (which
+    deliberately doesn't re-wrap it -- see custodian/types.py). An entry
+    read back from storage, as every entry in this file is, is the string
+    case."""
+    return band.value if isinstance(band, Band) else band
 
 
 def _default_deadline_seconds() -> int:
@@ -64,7 +82,7 @@ def run(args) -> int:
         print("usage: custodian confirm <request-id>", file=sys.stderr)
         return 1
 
-    deadline = int(getattr(args, "deadline", _default_deadline_seconds()))
+    deadline = int(getattr(args, "deadline", None) or _default_deadline_seconds())
 
     state_dir_raw = getattr(args, "state_dir", None)
     if state_dir_raw:
@@ -105,6 +123,13 @@ def run(args) -> int:
         except Exception as e:
             print(f"error: failed to record confirmation: {e}", file=sys.stderr)
             return 1
+        _ledger_write(
+            state_dir, correlation_id=uuid.uuid4().hex, requester="cli:confirm",
+            provider="custodian", action=f"confirm:{request_id}",
+            lifecycle_event="verified", band=_band_value(entry.band),
+            amount=entry.amount, currency="USD",
+            external_id=entry.payment_intent_id or None,
+        )
         print(f"✓ request {request_id} confirmed within {deadline}s")
         return 0
 
@@ -123,6 +148,18 @@ def run(args) -> int:
     except Exception as e:
         print(f"error: failed to record unverified status: {e}", file=sys.stderr)
         return 1
+    # "unverified" isn't a universal_ledger lifecycle_event (verification
+    # failing to happen in time is a kind of failure, not a new stage of
+    # the same lifecycle) -- "failed" with the reason in metadata carries
+    # the same information without inventing a new enum value.
+    _ledger_write(
+        state_dir, correlation_id=uuid.uuid4().hex, requester="cli:confirm",
+        provider="custodian", action=f"confirm:{request_id}",
+        lifecycle_event="failed", band=_band_value(entry.band),
+        amount=entry.amount, currency="USD",
+        external_id=entry.payment_intent_id or None,
+        metadata={"reason": f"confirmation past deadline ({int(age)}s old, deadline {deadline}s)"},
+    )
     age_int = int(age)
     print(f"✗ request {request_id} past deadline ({age_int} seconds old), marked UNVERIFIED")
     return 1

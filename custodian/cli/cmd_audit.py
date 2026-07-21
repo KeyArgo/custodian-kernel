@@ -42,4 +42,6 @@ def run(args) -> None:
             extra = f" (approved by {entry.approved_by})"
         elif entry.denied_by:
             extra = f" (denied by {entry.denied_by})"
+        if entry.payment_intent_id:
+            extra += f" id={entry.payment_intent_id}"
         print(f"[{ts}] {d['event']}: ${entry.amount:.2f} '{entry.description}' band={_band_str(entry.band)}{extra}")

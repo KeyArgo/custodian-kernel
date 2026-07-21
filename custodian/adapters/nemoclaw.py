@@ -104,8 +104,8 @@ class NemoClawExecutor:
     Usage:
         from custodian.adapters.nemoclaw import NemoClawExecutor
 
-        sandbox = NemoClawExecutor(sandbox_name="hermes-hackathon",
-                                    fallback_binary_path="/home/argonaut/.local/bin/nemohermes")
+        sandbox = NemoClawExecutor(sandbox_name="my-sandbox",
+                                    fallback_binary_path="/usr/local/bin/nemohermes")
         result = sandbox.run("earn.py", "--amount", "1200.00")
         if not result.ok:
             ...  # a real script failure, e.g. validation error — show it
@@ -132,6 +132,35 @@ class NemoClawExecutor:
             "nemohermes binary not found on PATH and no fallback_binary_path configured"
         )
 
+    def _spawn(self, cmd, **kwargs):
+        """subprocess.run wrapper that treats a missing/unrunnable sandbox
+        binary as the sandbox being unreachable, not an uncaught crash.
+
+        Every exec here shells out to ``self.binary_path`` (the nemohermes
+        CLI). If that binary isn't installed on this host — e.g. the web
+        dashboard is running somewhere the sandbox CLI was never deployed —
+        subprocess.run raises FileNotFoundError before any of the per-method
+        timeout/return-code handling runs, and it would propagate as a 500.
+        Converting it to SandboxGatewayDownError (a NemoClawError, which every
+        caller already degrades on) means the dashboard's live feed, the
+        Nemotron guide, and the operator panel all fail soft instead of
+        crashing when the sandbox host is absent. TimeoutExpired is a
+        SubprocessError (not OSError) so it still propagates to each method's
+        own handler untouched."""
+        try:
+            return subprocess.run(cmd, **kwargs)
+        except FileNotFoundError as e:
+            raise SandboxGatewayDownError(
+                f"sandbox CLI {self.binary_path!r} not found on this host — "
+                f"the NemoClaw sandbox is unreachable from here. Install "
+                f"nemohermes or point at a host that has it."
+            ) from e
+        except OSError as e:
+            raise SandboxGatewayDownError(
+                f"sandbox CLI {self.binary_path!r} could not be executed "
+                f"({type(e).__name__}: {e}) — treating the sandbox as unreachable."
+            ) from e
+
     def run(self, script_path: str, *args: str, timeout: Optional[float] = None,
             check: bool = False) -> ExecResult:
         """Run `python3 <script_path> *args` inside the sandbox.
@@ -145,7 +174,7 @@ class NemoClawExecutor:
         cmd = [self.binary_path, self.sandbox_name, "exec", "--", "python3", script_path, *args]
         effective_timeout = timeout or self.default_timeout
         try:
-            proc = subprocess.run(cmd, capture_output=True, text=True, timeout=effective_timeout)
+            proc = self._spawn(cmd, capture_output=True, text=True, timeout=effective_timeout)
         except subprocess.TimeoutExpired as e:
             raise SandboxTimeoutError(
                 f"sandbox '{self.sandbox_name}' exec timed out after {effective_timeout}s "
@@ -191,7 +220,7 @@ class NemoClawExecutor:
         cmd = [self.binary_path, self.sandbox_name, "exec", "--", "cat", absolute_path]
         effective_timeout = timeout or self.default_timeout
         try:
-            proc = subprocess.run(cmd, capture_output=True, text=True,
+            proc = self._spawn(cmd, capture_output=True, text=True,
                                    timeout=effective_timeout, stdin=subprocess.DEVNULL)
         except subprocess.TimeoutExpired as e:
             raise SandboxTimeoutError(
@@ -225,7 +254,7 @@ class NemoClawExecutor:
                "sh", "-c", f'cat {redirect} "$1"', "_", absolute_path]
         effective_timeout = timeout or self.default_timeout
         try:
-            proc = subprocess.run(cmd, input=content, capture_output=True, text=True,
+            proc = self._spawn(cmd, input=content, capture_output=True, text=True,
                                    timeout=effective_timeout)
         except subprocess.TimeoutExpired as e:
             raise SandboxTimeoutError(
@@ -258,7 +287,7 @@ class NemoClawExecutor:
     def _run_fs_command(self, cmd: list, timeout: Optional[float], description: str) -> None:
         effective_timeout = timeout or self.default_timeout
         try:
-            proc = subprocess.run(cmd, capture_output=True, text=True, timeout=effective_timeout)
+            proc = self._spawn(cmd, capture_output=True, text=True, timeout=effective_timeout)
         except subprocess.TimeoutExpired as e:
             raise SandboxTimeoutError(
                 f"sandbox '{self.sandbox_name}' timed out after {effective_timeout}s: {description}"
@@ -278,7 +307,7 @@ class NemoClawExecutor:
         the JSON payload on stdout is the real signal."""
         cmd = [self.binary_path, self.sandbox_name, "doctor", "--json"]
         try:
-            proc = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
+            proc = self._spawn(cmd, capture_output=True, text=True, timeout=timeout)
         except subprocess.TimeoutExpired as e:
             raise SandboxTimeoutError(
                 f"sandbox '{self.sandbox_name}' doctor timed out after {timeout}s"

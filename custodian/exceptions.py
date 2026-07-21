@@ -68,3 +68,11 @@ class SandboxScriptError(NemoClawError):
     — by default `run()` returns this as a non-ok ExecResult instead, since
     an ordinary script failure is meaningful data the caller usually wants
     to inspect (e.g. render to a demo UI), not an exception to catch."""
+
+
+class ToolSandboxUnavailableError(CustodianError):
+    """A governed skill script cannot be run because filesystem/exec
+    confinement (bwrap + unprivileged user namespaces) is unavailable on
+    this host and CUSTODIAN_ALLOW_UNSANDBOXED_TOOLS was not set. Raised by
+    custodian.tools.registry.CustodianTool.invoke() -- fail closed rather
+    than run a governed script with full ambient filesystem access."""
