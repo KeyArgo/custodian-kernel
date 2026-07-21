@@ -166,4 +166,22 @@ def test_docs_documents_guardrails_and_paladin():
     but never explained what either feature is anywhere in the page body."""
     html = _read("docs.html")
     assert 'id="guardrails"' in html, "docs.html has no Guardrails content section"
+
+
+def test_home_page_nav_links_to_every_demo_page():
+    """Regression 2026-07-21: index.html's nav ("simplify nav" commit
+    fe79e5f) dropped Console, Operator, Triage, and Tools, leaving home the
+    only page whose top nav didn't expose the full set of demo pages. The
+    home nav keeps its own style/anchors/CTA (it's a landing page, not a
+    console-area page, so it's exempt from CANONICAL_LINKS' exact
+    order/label check) -- but every page a visitor can navigate to from
+    elsewhere on the site must also be reachable from home."""
+    html = _read("index.html")
+    nav_match = re.search(r'<div class="nav-links">(.*?)</div>', html, re.DOTALL)
+    assert nav_match, 'index.html has no <div class="nav-links"> nav block'
+    block = nav_match.group(1)
+    hrefs = set(re.findall(r'href="([^"]+)"', block))
+    required = {href for href, _label in CANONICAL_LINKS if href != "/"}
+    missing = required - hrefs
+    assert not missing, f"index.html nav is missing links to: {missing}"
     assert 'id="paladin"' in html, "docs.html has no Paladin content section"
