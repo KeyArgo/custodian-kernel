@@ -361,7 +361,7 @@ h1,h2,h3,h4{font-weight:700;letter-spacing:-0.01em;color:var(--text)}
       <p>Linux Security Module enforcing least-privilege file and network access at the syscall boundary. The agent's process <strong>cannot open a socket to a payment endpoint the kernel hasn't whitelisted</strong>. The OS rejects the syscall before user-space code sees it. A prompt cannot override a syscall rejection.</p>
 
       <h3>OPA Policy Engine</h3>
-      <p>Open Policy Agent evaluates every action request against the current authority band in real time. Per-action caps ($250), rolling session windows ($1,000 / 2 hr), and escalation thresholds are enforced as Rego rules, not application code that can be patched or reasoned around.</p>
+      <p>Open Policy Agent evaluates every action request against the current authority band in real time. Per-action caps ($250), session spend caps ($1,000, a running total until reset), and escalation thresholds are enforced as Rego rules, not application code that can be patched or reasoned around.</p>
 
       <h3>OCSF Audit Log</h3>
       <p>Every allow and deny emits an Open Cybersecurity Schema Framework event. The log is append-only, tamper-evident, and structured: verifiable by any SIEM. You can see the live feed on the <a href="/console">Live Console</a>.</p>
@@ -447,8 +447,8 @@ class CapturedClient:                # testing / replay
           </tr>
           <tr>
             <td><code>session_cap</code></td>
-            <td>$1,000.00 / 2 hr</td>
-            <td>"How much total can the agent spend autonomously in a rolling 2-hour window?"</td>
+            <td>$1,000.00</td>
+            <td>"How much total can the agent spend autonomously before it needs a reset?"</td>
           </tr>
         </tbody>
       </table>
@@ -590,7 +590,7 @@ class CapturedClient:                # testing / replay
         <div class="api-block-body">
           <p><strong>Body:</strong> <code>{ question: string, history?: [{role, content}], page?: string }</code></p>
           <p><strong>Response:</strong> <code>{ answer: string }</code> — may contain <code>[[jump:KEY|label]]</code> and <code>[[suggest:text]]</code> markers parsed by the live console UI.</p>
-          <p>Rate-limited to 20 requests / minute per IP.</p>
+          <p>Rate-limited to 30 requests / minute per IP.</p>
         </div>
       </div>
 
@@ -601,9 +601,9 @@ class CapturedClient:                # testing / replay
           <span class="api-desc">Run lie-catch on any text</span>
         </div>
         <div class="api-block-body">
-          <p><strong>Body:</strong> <code>{ customer_email: string }</code></p>
-          <p><strong>Response:</strong> <code>{ verdict, ai_recommendation, claims[], contradictions[], confidence }</code></p>
-          <p>Runs the real Nemotron model and the real deterministic verifier against sandbox order <code>ord_6006</code>.</p>
+          <p><strong>Body:</strong> <code>{ pack?: "refunds"|"purchasing"|"cloud" (default "refunds"), customer_email: string, amount?: number }</code></p>
+          <p><strong>Response:</strong> <code>{ case_id, final_action, amount, agent_summary, agent_confidence, agent_recommended, claims[], policy_clauses_cited[], contradiction_count, adapter_disposition, adapter_reasons, kernel_verdict, kernel_reason }</code></p>
+          <p>Runs the real Nemotron model and the real deterministic verifier against one of three sandbox fixtures, selected by <code>pack</code>.</p>
         </div>
       </div>
 
@@ -680,7 +680,7 @@ class CapturedClient:                # testing / replay
 
       <div class="glossary-item">
         <div class="glossary-term">Authority band</div>
-        <div class="glossary-def">The set of spending limits that govern an agent session. The L2 band has a $250 per-action cap and a $1,000 rolling 2-hour session cap.</div>
+        <div class="glossary-def">The set of spending limits that govern an agent session. The L2 band has a $250 per-action cap and a $1,000 session cap — a running total that persists until the operator resets it, not a timed rolling window.</div>
       </div>
       <div class="glossary-item">
         <div class="glossary-term">per_action_cap</div>

@@ -49,6 +49,12 @@ enforced locally no matter where your inference runs.
 Right now your link to the live enforcement box is briefly down, so you cannot see live session \
 numbers (budgets, treasury, audit feed). Do not invent any live figures. If asked for live numbers, \
 say you can't see them this moment and suggest asking again shortly.
+Two agent integrations ship today and you know about both: Codex Guard (a capability firewall for \
+OpenAI Codex coding agents — credential use, destructive commands, and money/production changes stop \
+at a human-approval boundary the model can't grant itself) and Talaria (the integration surface \
+between a local Hermes Agent and the kernel — secrets, files, prompt-injection, and spend anomalies \
+checked below the model). Claude, Gemini, and opencode integrations are on the roadmap, not built \
+yet. Never deny knowing about Codex Guard or Talaria — they're real, shipped parts of this project.
 Rules: under 120 words, one or two short paragraphs, plain language for a smart non-technical \
 visitor, no raw field names, no JSON, no bullet breakdowns. Friendly, lightly self-aware robot \
 humor. Point first-time visitors at the Operator panel (the /operator page) where they can run the \
@@ -122,7 +128,10 @@ function nemoSelfcountRunStart(s) {
   return runLen >= 5 ? runStart : null;
 }
 
-const NEMO_TALLY_MARKER_RE = /\bSentence\s*\d+\s*:|\bTotal so far\b|\bTotal:\s*\d|->\s*\d+\s*$|->\s*\d+\b.{0,20}$|\b\d+\s*words\b.{0,30}(Let|However|Actually)/gi;
+// Live leak 2026-07-21 (Integrations page): "...leave! 😄 (Word count: 98)"
+// -- every marker above requires the number BEFORE "words"; this shape puts
+// "count" between "word" and the number, so none of them fired.
+const NEMO_TALLY_MARKER_RE = /\bSentence\s*\d+\s*:|\bTotal so far\b|\bTotal:\s*\d|->\s*\d+\s*$|->\s*\d+\b.{0,20}$|\b\d+\s*words\b.{0,30}(Let|However|Actually)|\bWord\s*count\s*:?\s*\d+\b/gi;
 const NEMO_CONSTRAINT_ECHO_RE = /\b(?:under|below|within|beneath|at most|no more than|fewer than|less than|max|maximum|limit(?:ed)?\s+to|keep\s+(?:it\s+)?(?:to|under))\s*\d+\s*words\b/i;
 
 function nemoTallyStart(s) {
@@ -169,7 +178,15 @@ function nemoStripThinking(text) {
     .filter((i) => i !== null);
   if (cutCandidates.length) {
     text = text.slice(0, Math.min(...cutCandidates)).replace(/\s+$/, '').replace(/["“]+$/, '');
-    if (text && !/[.!?]["')\]]?$/.test(text)) {
+    // The cut point can land mid-decoration: a trailing emoji ("...you
+    // leave! 😄" -- the system prompt asks for light robot humor so this
+    // happens on real answers too), or for the "(Word count: 98)" shape, a
+    // dangling "(" left behind because the cut lands right after it. Strip
+    // both before checking for a real sentence ending underneath.
+    const cleaned = text.replace(/(?:[\u{1F300}-\u{1FAFF}☀-➿]|\(|\s)+$/u, '');
+    if (cleaned && /[.!?]["')\]]?$/.test(cleaned)) {
+      text = cleaned;
+    } else {
       text = '';
     }
   }

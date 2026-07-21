@@ -178,3 +178,29 @@ def test_worker_strips_same_line_selfcount_leak():
     )
     result = _strip_via_worker(leaked)
     assert result == "", f"expected fail-closed empty string, got {result!r}"
+
+
+def test_worker_strips_word_count_suffix_keeps_good_prefix():
+    """Live leak 2026-07-21 (Integrations page): a genuinely good answer was
+    followed, on the same line, by a decorative emoji and then a literal
+    "(Word count: 98)" tally -- no marker anywhere matched this shape (every
+    existing one requires the number BEFORE "words", not after "count:"), so
+    the whole trailing artifact reached the visitor. Unlike the pure-leak
+    tests above, this one has a real, complete answer that must survive --
+    only the emoji + tally suffix should be trimmed."""
+    leaked = (
+        "I'm Nemotron 3 Super, focused on understanding your messy messages "
+        "and turning them into clear actions for the Custodian sandbox. I "
+        "don't have details on \"Codex Guard\" or \"Talaria\" – those "
+        "aren't part of *this* demo's visible layers (my role, the "
+        "enforcement box, or the Operator panel). My world is refunds, "
+        "complaints, and invoices right now.  \n"
+        "For hands-on exploration with real Stripe tests and SMS codes, "
+        "swing by the Operator page (`/operator`). It’s where you "
+        "steer the demo yourself – I’ll be here interpreting the "
+        "notes you leave! \U0001F604 (Word count: 98)"
+    )
+    result = _strip_via_worker(leaked)
+    assert "Word count" in leaked  # sanity: the fixture actually has the leak
+    assert "Word count" not in result
+    assert result.endswith("you leave!"), repr(result)

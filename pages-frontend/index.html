@@ -383,7 +383,6 @@
       <span class="nm">CUSTO<b>DIAN</b></span>
     </a>
     <div class="nav-links">
-      <a href="/console">Console</a>
       <a href="/operator">Operator</a>
       <a href="/triage">Triage</a>
       <a href="/lie-catch">Lie-Catch</a>
@@ -496,7 +495,7 @@
         <span id="kt-status">KERNEL ACTIVE</span>
       </span>
       <span class="kernel-message" style="color:var(--muted);font-size:0.92em">
-        <span id="kt-message">authority bands loaded · 3 packs · 100 tools governed</span>
+        <span id="kt-message">authority bands loaded · 3 packs · 100+ tools governed</span>
       </span>
     </div>
 
@@ -514,7 +513,7 @@
         <div style="color:var(--amber);margin-bottom:6px">$ custodian status</div>
         <div>kernel: <span style="color:var(--green)">active</span> · band: <span style="color:var(--amber2)" id="s-band-vkit">L2</span> · cap: <span style="color:var(--amber2)" id="s-cap-vkit">$250</span></div>
         <div>packs: <span style="color:var(--text)">refunds</span> · <span style="color:var(--text)">purchasing</span> · <span style="color:var(--text)">cloud</span></div>
-        <div>tools: <span style="color:var(--green)">100/100 governed</span> · audit: <span style="color:var(--green)">append-only OCSF</span></div>
+        <div>tools: <span style="color:var(--green)">100+/100+ governed</span> · audit: <span style="color:var(--green)">append-only OCSF</span></div>
       </div>
     </div>
 
@@ -540,7 +539,7 @@
       <div class="spec"><div class="k">Authority band</div><div class="v" id="s-band">—</div></div>
       <div class="spec live"><div class="k">Session budget left</div><div class="v" id="s-remaining">—</div></div>
       <div class="spec"><div class="k">Decision modules</div><div class="v" id="s-packs">3</div></div>
-      <div class="spec"><div class="k">Governed tools</div><div class="v">100</div></div>
+      <div class="spec"><div class="k">Governed tools</div><div class="v">100+</div></div>
       <div class="spec"><div class="k">Boundary</div><div class="v enf">ENFORCED AT KERNEL</div></div>
     </div>
   </div>
@@ -776,7 +775,7 @@
         <span class="nemo-badge">Layer 2</span>
         <div class="nemo-ic">📋</div>
         <h4>OPA Policy Engine</h4>
-        <p>Open Policy Agent evaluates every action request against the authority band in real time. Per-action caps ($250), rolling session windows ($1,000/2 hr), and escalation thresholds are enforced as Rego rules, not application code that can be patched around.</p>
+        <p>Open Policy Agent evaluates every action request against the authority band in real time. Per-action caps ($250), session spend caps ($1,000, a running total until reset), and escalation thresholds are enforced as Rego rules, not application code that can be patched around.</p>
       </div>
       <div class="nemo-card reveal">
         <span class="nemo-badge">Layer 3</span>
@@ -821,7 +820,7 @@
           <li><b>Real money rail</b> — Stripe test-mode PaymentIntents you can open on Stripe's own dashboard.</li>
           <li><b>Real human approval</b> — escalations send a genuine Twilio Verify SMS code.</li>
           <li><b>Rail-agnostic</b> — the same kernel governs refunds, payables, and NVIDIA NIM job provisioning.</li>
-          <li><b>100 governed tools</b> — email, SMS, GitHub, Docker, web search, NVIDIA NIM, Stripe extended, and more — every call kernel-checked.</li>
+          <li><b>100+ governed tools</b> — email, SMS, GitHub, Docker, web search, NVIDIA NIM, Stripe extended, and more — every call kernel-checked.</li>
         </ul>
         <a class="btn btn-primary" href="/console" style="margin-top:22px">Open the live console →</a>
       </div>
@@ -902,7 +901,7 @@
 <section id="tools" style="padding:60px 0">
   <div class="wrap">
     <div class="reveal">
-      <div class="sec-eyebrow" style="color:var(--nvidia)">100 Governed Tools</div>
+      <div class="sec-eyebrow" style="color:var(--nvidia)">100+ Governed Tools</div>
       <h2>The kernel for every tool — not just payments</h2>
       <p class="sec-sub">Every tool call — whether it sends an SMS, submits an NVIDIA NIM inference job, reads a GitHub PR, or posts a Slack message — passes through the same Custodian kernel before executing. One governance layer. Every tool.</p>
     </div>
@@ -929,7 +928,7 @@
       </div>
     </div>
     <div style="text-align:center;margin-top:28px">
-      <a class="btn btn-ghost" href="/tools">Browse all 100 tools →</a>
+      <a class="btn btn-ghost" href="/tools">Browse all 100+ tools →</a>
     </div>
   </div>
 </section>

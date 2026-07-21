@@ -243,7 +243,13 @@ def _strip_thinking(text: str) -> str:
 
     _TALLY_MARKER_RE = re.compile(
         r'\bSentence\s*\d+\s*:|\bTotal so far\b|\bTotal:\s*\d|'
-        r'->\s*\d+\s*$|->\s*\d+\b.{0,20}$|\b\d+\s*words\b.{0,30}(Let|However|Actually)',
+        r'->\s*\d+\s*$|->\s*\d+\b.{0,20}$|\b\d+\s*words\b.{0,30}(Let|However|Actually)|'
+        # Live leak 2026-07-21 (Integrations page): "...leave! 😄 (Word count:
+        # 98)" -- every existing marker above requires the number to come
+        # BEFORE "words"; this shape puts "count" between "word" and the
+        # number instead, so none of them fired and the whole thing reached
+        # the visitor untouched.
+        r'\bWord\s*count\s*:?\s*\d+\b',
         re.IGNORECASE,
     )
 
@@ -297,11 +303,20 @@ def _strip_thinking(text: str) -> str:
         text = text[:min(_cut_candidates)].rstrip().rstrip('"“')
         # A genuine answer that happened to run right up against the leak
         # always ends on a complete sentence (every real case observed
-        # does). A remainder that trails off into a colon/lead-in ("...is:",
-        # "From the live authority state:") is itself just the start of the
-        # deliberation, not a usable answer -- discard rather than show a
-        # dangling fragment.
-        if text and not re.search(r'[.!?]["\')\]]?$', text):
+        # does). The cut point can land mid-decoration though: a trailing
+        # emoji ("...you leave! 😄" -- the system prompt asks for "lightly
+        # self-aware robot humor" so this happens on real answers too), or
+        # for the "(Word count: 98)" shape, a dangling "(" left behind
+        # because the cut lands right after it, not before it. Strip both
+        # before checking, and keep the cleaned text if a real sentence is
+        # underneath. A remainder that trails off into a colon/lead-in
+        # ("...is:", "From the live authority state:") is itself just the
+        # start of the deliberation, not a usable answer -- discard rather
+        # than show a dangling fragment.
+        _cleaned = re.sub(r'(?:[\U0001F300-\U0001FAFF☀-➿️]|\(|\s)+$', '', text)
+        if _cleaned and re.search(r'[.!?]["\')\]]?$', _cleaned):
+            text = _cleaned
+        else:
             text = ''
 
     # Heuristic: is a paragraph model self-talk vs. real reply?
@@ -882,8 +897,39 @@ IMPORTANT: Do NOT use [[jump:KEY|label]] or [[entry:TS|label]] syntax here. Plai
 Do offer [[suggest:...]] questions to continue the tour.
 """
 
+_INTEGRATIONS_GUIDANCE = """
+PAGE CONTEXT: The visitor is on the INTEGRATIONS page (/integrations). This page shows that the
+kernel doesn't know or care which agent it's governing — each agent gets a thin adapter translating
+its own tool-call surface into the kernel's action schema, while bands, caps, guard adapters, the
+kill switch, and the hash-chained receipt log are defined once and apply to every integration
+equally.
+
+Two integrations are LIVE today, and you should be able to explain both if asked:
+- Codex Guard — for OpenAI Codex coding agents. A capability firewall: Codex can read, test, and
+  edit freely inside an approved workspace, but credential use, network calls, destructive
+  commands, production changes, money movement, and governance edits stop at a human-approval
+  boundary the model cannot grant itself. Ships as a repo-local Codex plugin plus a
+  dependency-free MCP server (guard_action, verify_receipts). Doesn't trust the model's own risk
+  label — known tool/command shapes independently raise the minimum risk class. Approvals are
+  action-bound, expiring, and single-use; every decision produces a value-free HMAC hash-chained
+  receipt.
+- Talaria — for Hermes Agent (named for Hermes' winged sandals). The integration surface between a
+  local Hermes Agent and everything the Custodian kernel enforces: secrets, files, tools,
+  prompt-injection, and spend anomalies, all checked mechanically below the model. One command
+  (`custodian setup --profile hermes`) installs a kill switch and a tamper-evident audit trail;
+  caught 5/5 live secret-leak evasion attempts in testing.
+
+Claude, Gemini, and opencode integrations are on the ROADMAP (not built yet) — say so plainly if
+asked, don't imply they exist. Do NOT deny knowledge of Codex Guard or Talaria; they are real,
+shipped parts of this project and this page is specifically about them.
+
+IMPORTANT: Do NOT use [[jump:KEY|label]] or [[entry:TS|label]] syntax here. Plain prose only.
+Do offer [[suggest:...]] questions to continue the tour.
+"""
+
 _PAGE_GUIDANCE: dict[str, str] = {
     'home': _HOME_GUIDANCE,
+    'integrations': _INTEGRATIONS_GUIDANCE,
     'console': _CONSOLE_GUIDANCE,
     'hermes': _CONSOLE_GUIDANCE,   # legacy alias — console.html still sends page:'hermes'
     'operator': _OPERATOR_GUIDANCE,

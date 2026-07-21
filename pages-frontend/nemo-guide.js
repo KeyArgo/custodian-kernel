@@ -106,6 +106,14 @@
         "How does the audit log prevent tampering?",
       ],
     },
+    '/integrations': {
+      greeting: "What am I looking at here, and how is Codex Guard different from Talaria?",
+      suggests: [
+        "Why does the kernel not know which agent it's governing?",
+        "What does Codex Guard actually stop that Codex's own sandbox doesn't?",
+        "Will Custodian support Claude or Gemini agents too?",
+      ],
+    },
   };
 
   /* ─── Identify current page ──────────────────────────────────── */

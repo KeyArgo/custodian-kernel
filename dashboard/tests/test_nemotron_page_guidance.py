@@ -22,3 +22,17 @@ def test_operator_guidance_overrides_triage_self_description():
     assert "OVERRIDE" in guidance
     assert "bystander" in guidance.lower()
     assert "triage" in guidance.lower()
+
+
+def test_integrations_page_has_guidance_and_knows_codex_guard_and_talaria():
+    """Live incident 2026-07-21: a visitor on /integrations asked Nemotron
+    about Codex Guard and Talaria -- the exact topic of the page -- and it
+    denied knowing about either, because there was no _PAGE_GUIDANCE entry
+    for 'integrations' at all (the page didn't exist when SYSTEM_PROMPT was
+    written) and the base prompt only knows about refunds/claims/disposition.
+    """
+    assert 'integrations' in nemotron_chat._PAGE_GUIDANCE
+    guidance = nemotron_chat._PAGE_GUIDANCE['integrations']
+    assert 'Codex Guard' in guidance
+    assert 'Talaria' in guidance
+    assert 'do not deny' in guidance.lower() or "don't deny" in guidance.lower()
