@@ -136,21 +136,33 @@ verification and form-write passes from the last hour.)
 ================================================================
 INSTALL
 ================================================================
-pip install custodian-kernel
+git clone https://github.com/KeyArgo/custodian-codex-guard
+cd custodian-codex-guard
+python -m venv .venv && . .venv/bin/activate
+pip install -e .                    # pulls custodian-kernel>=0.4.0 as a dep
+custodian-codex setup
+custodian-codex doctor
+custodian-codex-guard-mcp           # MCP server (optional)
 custodian codex-guard receipts --verify
+
+Two-repo split:
+- custodian-kernel (parent, pre-existing, agent-agnostic):
+  https://github.com/KeyArgo/custodian-kernel
+- custodian-codex-guard (Build Week contribution):
+  https://github.com/KeyArgo/custodian-codex-guard
 
 ================================================================
 LINKS
 ================================================================
-- Repo: https://github.com/inovinlabs/custodian-dev
+- Build Week contribution: https://github.com/KeyArgo/custodian-codex-guard
+- Parent kernel: https://github.com/KeyArgo/custodian-kernel
 - Video: [paste YouTube URL]
 - Demo script: scripts/codex-guard-demo.py
 - Test suite: tests/test_codex_guard_cli.py (37 tests)
             tests/test_codex_guard.py
             tests/test_codex_policy_wiring.py
             tests/test_self_approval_regression.py
-- Repo: https://github.com/inovinlabs/custodian-dev
-  (dev branch: feat/0.5.0-codex; tag: hackathon-submission-2026-07-21)
+- Tag: hackathon-submission-2026-07-21
 
 ================================================================
 "WHAT PROBLEM DOES YOUR PROJECT SOLVE?"
