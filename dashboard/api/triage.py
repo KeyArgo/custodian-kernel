@@ -14,6 +14,7 @@ Two envelope sources, always labelled honestly:
 """
 import datetime
 import json
+import math
 import os
 from pathlib import Path
 
@@ -351,11 +352,17 @@ def custom():
     # Sandbox order — known ground truth so the lie-catch demo is reproducible
     # across all three packs. The amount can be overridden by the payload for
     # tests, but defaults to the canonical sandbox amount.
+    try:
+        amount = float(payload.get("amount") or sandbox["amount"])
+    except (TypeError, ValueError):
+        return jsonify({"error": "amount must be a number"}), 400
+    if not math.isfinite(amount) or amount <= 0:
+        return jsonify({"error": "amount must be a finite positive number"}), 400
     case_input = {
         "case_id": "visitor-custom",
         "customer_id": sandbox["customer_id"],
         "order_id": sandbox["order_id"],
-        "amount": float(payload.get("amount") or sandbox["amount"]),
+        "amount": amount,
         "customer_email": text,
     }
 
