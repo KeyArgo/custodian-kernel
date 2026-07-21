@@ -24,8 +24,9 @@ import pytest
 PAGES_DIR = Path(__file__).resolve().parents[1] / "pages-frontend"
 
 CONSOLE_AREA_PAGES = [
-    "console.html", "docs.html", "guardrails.html", "lie-catch.html",
-    "operator.html", "paladin.html", "tools.html", "triage.html",
+    "console.html", "docs.html", "guardrails.html", "integrations.html",
+    "lie-catch.html", "operator.html", "paladin.html", "tools.html",
+    "triage.html",
 ]
 
 CANONICAL_LINKS = [
@@ -36,6 +37,7 @@ CANONICAL_LINKS = [
     ("/lie-catch", "Lie-Catch"),
     ("/guardrails", "Guardrails"),
     ("/paladin", "Paladin"),
+    ("/integrations", "Integrations"),
     ("/tools", "Tools"),
     ("/docs", "Docs"),
 ]
@@ -44,6 +46,7 @@ ACTIVE_HREF = {
     "console.html": "/console",
     "docs.html": "/docs",
     "guardrails.html": "/guardrails",
+    "integrations.html": "/integrations",
     "lie-catch.html": "/lie-catch",
     "operator.html": "/operator",
     "paladin.html": "/paladin",

@@ -202,6 +202,7 @@ h1,h2,h3,h4{font-weight:700;letter-spacing:-0.01em;color:var(--text)}
     <a href="/lie-catch">Lie-Catch</a>
     <a href="/guardrails">Guardrails</a>
     <a href="/paladin">Paladin</a>
+    <a href="/integrations">Integrations</a>
     <a href="/tools">Tools</a>
     <a href="/docs" class="active">Docs</a>
   </div>
@@ -232,6 +233,7 @@ h1,h2,h3,h4{font-weight:700;letter-spacing:-0.01em;color:var(--text)}
       <a href="#earning-vs-spending" class="sb-link">Earning vs spending</a>
       <a href="#guardrails" class="sb-link">Guardrails (adapters)</a>
       <a href="#paladin" class="sb-link">Paladin (credentials)</a>
+      <a href="#integrations" class="sb-link">Integrations (Codex Guard, Talaria)</a>
     </div>
     <div class="sb-section">
       <div class="sb-heading">Reference</div>
@@ -532,6 +534,19 @@ class CapturedClient:                # testing / replay
       <div class="callout callout-violet">
         <div class="callout-label">See it live</div>
         <p>Full walkthrough of the vault, grants, and sandboxed egress model on the <a href="/paladin">Paladin page</a>.</p>
+      </div>
+    </section>
+
+    <section class="doc-section" id="integrations">
+      <div class="section-eyebrow">Core concept</div>
+      <h2>Integrations — one kernel, every agent</h2>
+      <p>The kernel doesn't know which agent it's governing. Each agent gets a thin adapter translating its own tool-call surface into the kernel's action schema; bands, caps, guard adapters, the kill switch, and the hash-chained receipt log are defined once and apply to every integration equally.</p>
+
+      <p><b>Codex Guard</b> is live for OpenAI Codex coding agents — a capability firewall that lets Codex read, test, and edit freely inside an approved workspace while credential use, destructive commands, and production/money-moving actions stop at a human-approval boundary the model cannot grant itself. <b>Talaria</b> is live for Hermes Agent — secrets, files, tools, prompt-injection, and spend anomalies checked mechanically below the model. Claude, Gemini, and opencode integrations follow the same adapter pattern.</p>
+
+      <div class="callout callout-blue">
+        <div class="callout-label">See it live</div>
+        <p>Full breakdown of what's shipped and what's next on the <a href="/integrations">Integrations page</a>.</p>
       </div>
     </section>
 

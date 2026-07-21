@@ -142,3 +142,39 @@ def test_worker_keeps_a_clean_answer_untouched():
 def test_worker_strips_think_tags():
     text = "<think>internal reasoning here</think>The real answer."
     assert _strip_via_worker(text) == "The real answer."
+
+
+def test_worker_strips_same_line_selfcount_leak():
+    """Live leak 2026-07-21: a visitor on the Tools page saw the fallback
+    lane's raw deliberation because the whole thing was ONE unbroken line
+    (no newlines at all) -- nemoIsMetaLine only ever classified whole
+    LINES, so a giant single line sailed through untouched. This is the
+    exact v7 shape dashboard/api/nemotron_chat.py's _strip_thinking() fixed
+    on 2026-07-04 (token-level self-count-run + tally detection, not
+    line-level) -- the Worker's port never carried that fix until now.
+
+    dashboard/tests/test_nemotron_strip_thinking.py's Python
+    _strip_thinking() reduces this exact captured text to '' (the "Count:"
+    prefix before the self-talk doesn't end in sentence punctuation, so the
+    fail-closed guard blanks it). The Worker port must match."""
+    leaked = (
+        "Count: You've(1) walked2 through3 the4 demo5 flow6 and7 the8 "
+        "Operator9 panel;10 now11 the12 Tools13 page14 shows15 the16 "
+        "individual17 pieces — claim18 extractor,19 disposition20 engine,21 "
+        "and22 sandbox23 logger — you24 can25 tweak26 each27 to28 see29 "
+        "how30 they31 shape32 the33 final34 decision35. 35 words, under 50. "
+        "Good. No re-introduction. No JSON. Friendly. No self-aware robot "
+        "humor? Could add a light joke. Maybe add \" (no soldering "
+        "required)\". But that adds words. Let's see if we can add a bit "
+        "of humor while staying under 50. Add \" (no soldering required)\" "
+        "at end. That adds words: no(36) soldering(37) required(38) . "
+        "Actually parentheses count as separate? We'll count words: "
+        "\"no\"(36) \"soldering\"(37) \"required\"(38). So total 38 words. "
+        "Still under 50. Let's rewrite sentence: \"You've walked through "
+        "the demo flow and the Operator panel; now the Tools page shows "
+        "the individual pieces — claim extractor, disposition engine, and "
+        "sandbox logger — you can tweak each to see how they shape the "
+        "final decision (no soldering required).\""
+    )
+    result = _strip_via_worker(leaked)
+    assert result == "", f"expected fail-closed empty string, got {result!r}"

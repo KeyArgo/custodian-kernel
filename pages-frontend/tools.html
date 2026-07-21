@@ -124,6 +124,7 @@ footer{border-top:1px solid var(--line);padding:32px 0;color:var(--dim);font-siz
     <a href="/lie-catch">Lie-Catch</a>
     <a href="/guardrails">Guardrails</a>
     <a href="/paladin">Paladin</a>
+    <a href="/integrations">Integrations</a>
     <a href="/tools" class="active">Tools</a>
     <a href="/docs">Docs</a>
   </div>
@@ -233,15 +234,17 @@ function applyFilter() {
   grid.innerHTML = filtered.map(t => renderCard(t)).join('');
 }
 
+const escapeHtml = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
 function renderCard(t) {
-  const tags = (t.tags || []).slice(0, 3).map(g => `<span class="tc-tag">${g}</span>`).join('');
+  const tags = (t.tags || []).slice(0, 3).map(g => `<span class="tc-tag">${escapeHtml(g)}</span>`).join('');
   const cost = t.cost_usd ? `<span class="tc-tag">~$${t.cost_usd.toFixed(2)}/call</span>` : '';
   return `<div class="tool-card ${t.configured ? 'configured' : 'stub'}">
     <div class="tc-head">
-      <span class="tc-name">${t.name}</span>
+      <span class="tc-name">${escapeHtml(t.name)}</span>
       <span class="tc-band band-${t.band}">${t.band}</span>
     </div>
-    <div class="tc-desc">${t.description}</div>
+    <div class="tc-desc">${escapeHtml(t.description)}</div>
     <div class="tc-foot">
       <span class="tc-status ${t.configured ? 'configured' : 'stub'}">${t.configured ? '✓ configured' : '○ stub'}</span>
       ${tags}${cost}

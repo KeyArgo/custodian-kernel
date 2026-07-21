@@ -8,6 +8,7 @@
  * /lie-catch       → lie-catch.html static asset (separate page: the verifier/lie-catch demo)
  * /guardrails      → guardrails.html static asset (adapter catalog)
  * /paladin         → paladin.html static asset (credential broker)
+ * /integrations    → integrations.html static asset (Codex Guard, Talaria, agent roadmap)
  * /api/v1/*        → Flask API endpoints (proxied to Flask backend)
  * everything else  → CF Pages static assets
  *
@@ -82,6 +83,67 @@ const NEMO_META_LINE_RE = new RegExp(
 );
 const NEMO_TALLY_SUFFIX_RE = /\(\s*(?:maybe\s*)?~?\d+\s*words?\)\s*$/i;
 
+// Live leak 2026-07-21 (Tools page): the fallback lane served a leak with
+// NO newlines at all -- "Count: You've(1) walked2 through3 the4 demo5..."
+// followed by the model tallying its own word count and drafting a rewrite,
+// all on one unbroken line. nemoIsMetaLine below only classifies whole
+// LINES, so a single giant line that happens to start with plausible-looking
+// prose sails straight through untouched -- the same v7 gap the Python
+// _strip_thinking() closed on 2026-07-04 with token-level (not line-level)
+// scanning. Ported here for the first time; this fallback lane had never
+// carried the fix even though the exact leak shape is years old on the
+// other side.
+const NEMO_NUMBERED_TOKEN_RE = /^\(?[^\s]*?\)?\d{1,3}\)?[.,;:]?$/;
+const NEMO_PAREN_NUMBERED_RE = /^\(\d{1,3}\)[.,;:]?$/;
+
+function nemoLooksNumbered(tok) {
+  if (!NEMO_NUMBERED_TOKEN_RE.test(tok)) return false;
+  if (/[A-Za-z]/.test(tok)) return true;
+  return NEMO_PAREN_NUMBERED_RE.test(tok);
+}
+
+function nemoSelfcountRunStart(s) {
+  let runStart = null, runLen = 0, gap = 0;
+  const re = /\S+/g;
+  let m;
+  while ((m = re.exec(s)) !== null) {
+    if (nemoLooksNumbered(m[0])) {
+      if (runStart === null) runStart = m.index;
+      runLen += 1;
+      gap = 0;
+    } else {
+      gap += 1;
+      if (gap > 1) {
+        if (runLen >= 5) return runStart;
+        runStart = null; runLen = 0; gap = 0;
+      }
+    }
+  }
+  return runLen >= 5 ? runStart : null;
+}
+
+const NEMO_TALLY_MARKER_RE = /\bSentence\s*\d+\s*:|\bTotal so far\b|\bTotal:\s*\d|->\s*\d+\s*$|->\s*\d+\b.{0,20}$|\b\d+\s*words\b.{0,30}(Let|However|Actually)/gi;
+const NEMO_CONSTRAINT_ECHO_RE = /\b(?:under|below|within|beneath|at most|no more than|fewer than|less than|max|maximum|limit(?:ed)?\s+to|keep\s+(?:it\s+)?(?:to|under))\s*\d+\s*words\b/i;
+
+function nemoTallyStart(s) {
+  NEMO_TALLY_MARKER_RE.lastIndex = 0;
+  let m;
+  while ((m = NEMO_TALLY_MARKER_RE.exec(s)) !== null) {
+    const windowStart = Math.max(0, m.index - 24);
+    const window = s.slice(windowStart, m.index + m[0].length);
+    if (NEMO_CONSTRAINT_ECHO_RE.test(window)) continue;
+    return m.index;
+  }
+  return null;
+}
+
+const NEMO_JSON_KEY_RE = /"[a-zA-Z_]+"\s*:\s*/g;
+
+function nemoJsonDumpStart(s) {
+  const matches = [...s.matchAll(NEMO_JSON_KEY_RE)];
+  return matches.length >= 2 ? matches[0].index : null;
+}
+
 function nemoIsMetaLine(rawLine) {
   const s = rawLine.trim();
   if (NEMO_META_LINE_RE.test(s)) return true;
@@ -99,6 +161,18 @@ function nemoStripThinking(text) {
   text = text.replace(/<think>[\s\S]*?<\/think>/g, '')
              .replace(/<thinking>[\s\S]*?<\/thinking>/g, '')
              .trim();
+  if (!text) return text;
+
+  // Same-line self-count / tally / JSON-dump leak, before line-splitting
+  // even happens (see comment above nemoSelfcountRunStart).
+  const cutCandidates = [nemoSelfcountRunStart(text), nemoTallyStart(text), nemoJsonDumpStart(text)]
+    .filter((i) => i !== null);
+  if (cutCandidates.length) {
+    text = text.slice(0, Math.min(...cutCandidates)).replace(/\s+$/, '').replace(/["“]+$/, '');
+    if (text && !/[.!?]["')\]]?$/.test(text)) {
+      text = '';
+    }
+  }
   if (!text) return text;
 
   const lines = text.split('\n');

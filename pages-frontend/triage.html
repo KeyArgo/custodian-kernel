@@ -282,6 +282,7 @@
     <a href="/lie-catch">Lie-Catch</a>
     <a href="/guardrails">Guardrails</a>
     <a href="/paladin">Paladin</a>
+    <a href="/integrations">Integrations</a>
     <a href="/tools">Tools</a>
     <a href="/docs">Docs</a>
   </div>
@@ -390,7 +391,7 @@ const FINAL = {
   needs_human_review:{t:'✋ HELD FOR A HUMAN — domain did not clear autonomy', c:'v-escalate'},
   blocked_kill_switch:{t:'⛔ BLOCKED — kill switch engaged', c:'v-deny'},
 };
-const esc = s => (s??'').toString().replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+const esc = s => (s??'').toString().replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
 function vchip(d){return `<span class="verdict ${VCLASS[d]||''}">${VLABEL[d]||esc(d)}</span>`;}
 

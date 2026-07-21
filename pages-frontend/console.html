@@ -682,6 +682,7 @@
     <a href="/lie-catch">Lie-Catch</a>
     <a href="/guardrails">Guardrails</a>
     <a href="/paladin">Paladin</a>
+    <a href="/integrations">Integrations</a>
     <a href="/tools">Tools</a>
     <a href="/docs">Docs</a>
   </div>
@@ -1548,10 +1549,10 @@
                         <thead><tr><th>ID</th><th>Amount</th><th>Status</th><th>Description</th><th>Date</th></tr></thead>
                         <tbody>${payments.slice(0, 10).map(p => `
                         <tr>
-                            <td><a class="stripe-pi-link" href="${p.dashboard_url || '#'}" target="_blank" rel="noopener">${p.id || '—'}</a></td>
+                            <td><a class="stripe-pi-link" href="${p.dashboard_url || '#'}" target="_blank" rel="noopener">${escapeHtml(p.id || '—')}</a></td>
                             <td>${fmtStripeUSD(p.amount || 0, p.currency || currency)}</td>
                             <td class="${p.status === 'succeeded' ? 'stripe-status-succeeded' : 'stripe-status-other'}">${p.status || '—'}</td>
-                            <td style="color:#8a8a8a;font-size:0.9em;">${p.description || '—'}</td>
+                            <td style="color:#8a8a8a;font-size:0.9em;">${escapeHtml(p.description || '—')}</td>
                             <td style="color:#5a5a5a;">${p.created ? fmtStripeDate(p.created) : '—'}</td>
                         </tr>`).join('')}
                         </tbody>
