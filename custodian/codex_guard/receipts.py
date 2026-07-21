@@ -132,7 +132,43 @@ class ReceiptChain:
                 stream.write(json.dumps(record, sort_keys=True, separators=(",", ":")) + "\n")
                 stream.flush()
                 os.fsync(stream.fileno())
+            self._mirror_to_universal_ledger(body)
             return record
+
+    def _mirror_to_universal_ledger(self, body: dict[str, Any]) -> None:
+        """Best-effort fan-out into custodian's shared UniversalLedger --
+        the same store Talaria's denial log now mirrors into (see
+        talaria/denial_log.py), and the one `custodian console` merges
+        alongside this receipt chain. This is the one piece Codex Guard
+        itself was missing: its own decisions never reached the shared
+        ledger, only this module's chain.
+
+        Only mirrors the three verdicts UniversalLedger's own _VERDICTS
+        actually accepts (autonomous/escalation_required/denied) --
+        "approved" is a later resolution of an escalation already recorded,
+        not a new top-level verdict, and LedgerEvent would reject it.
+        Swallowed on failure, same as this receipt chain's own guarantee:
+        this is a side-channel audit fan-out, not the enforcement itself,
+        and must not make a broken/missing ledger break guard decisions."""
+        if body["verdict"] not in ("autonomous", "escalation_required", "denied"):
+            return
+        try:
+            from custodian.universal_ledger import UniversalLedger, LedgerEvent
+            ledger = UniversalLedger(self.state_dir / "ledger.db")
+            ledger.append(LedgerEvent(
+                correlation_id=body["session_id"],
+                requester=f"{body['harness']}:{body['session_id']}",
+                provider="codex_guard",
+                action=body["tool"],
+                lifecycle_event="decided",
+                verdict=body["verdict"],
+                band=body["band"],
+                metadata={"reason": body["reason"][:200], "action_kind": body["action_kind"]},
+            ))
+        except Exception as e:
+            import warnings
+            warnings.warn(f"codex guard: failed to mirror {body['verdict']!r} decision "
+                          f"for tool {body['tool']!r} into universal ledger: {e}", stacklevel=2)
 
     def verify(self) -> int:
         _private_dir(self.state_dir)

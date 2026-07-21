@@ -108,6 +108,14 @@ def _recent_blocks(state_dir: Path, limit: int = 3) -> list[dict]:
         from custodian.universal_ledger import UniversalLedger
         ledger = UniversalLedger(state_dir / "ledger.db")
         for row in ledger.by_verdict("denied", limit=limit):
+            # codex_guard/opencode_guard mirror their own decisions into this
+            # same ledger (see receipts.py's _mirror_to_universal_ledger) so
+            # Talaria/registry activity shows up here too -- but that means
+            # their denials are already fully covered by the receipt chain
+            # above. Re-including them here would show every Codex/OpenCode
+            # denial twice.
+            if row.get("provider") in ("codex_guard", "opencode_guard"):
+                continue
             denied.append({
                 "tool": row.get("action", "unknown"),
                 "reason": (row.get("metadata") or {}).get("reason", "denied by policy"),
