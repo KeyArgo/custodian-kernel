@@ -71,7 +71,7 @@ _GUIDE = """
   THAT'S IT.
     You now know the whole tool. Everything else is a variation of these.
     Stuck? Type   custodian help   for the full list, or read the guide at
-    https://github.com/inovinlabs/custodian-dev
+    https://github.com/KeyArgo/custodian-codex-guard
 """
 
 
@@ -203,7 +203,7 @@ DEMO COMMANDS (no credentials, no side effects)
   custodian demo receipt                       @govern + SHA-256 receipt walkthrough
 
 docs:    https://getcustodian.xyz
-install: pip install custodian-kernel
+install: pip install custodian-codex-guard
 """
 
 

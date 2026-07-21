@@ -30,7 +30,7 @@ or agent framework — see `tests/test_architecture_boundaries.py`.
 **Install:**
 
 ```bash
-pip install custodian-kernel
+pip install custodian-codex-guard
 custodian setup              # detects a local Hermes Agent, tells you what to add
 custodian setup --profile hermes   # installs + configures Talaria and its dashboard
 custodian doctor --profile hermes  # verifies the complete installation
@@ -41,7 +41,7 @@ Hermes profile installs the compatible Talaria release with its local
 dashboard, installs the guard plugin and starter policy, creates the Paladin
 vault if needed, and enables the plugin when Hermes is available. Prefer to
 wire it up yourself instead? Plain extras work exactly as before:
-`pip install custodian-kernel[paladin]` and `pip install custodian-talaria`.
+`pip install custodian-codex-guard[paladin]` and `pip install custodian-talaria`.
 
 ### Custodian Guard for Codex (OpenAI Build Week, July 2026)
 
@@ -91,7 +91,7 @@ See [the Codex Guard judge guide](docs/CODEX_GUARD.md) and the
 **Verify in 60 seconds, no credentials, no cloning:**
 
 ```bash
-pip install custodian-kernel
+pip install custodian-codex-guard
 custodian-verify
 ```
 
@@ -108,8 +108,8 @@ Custodian never assumes that an installation belongs to getcustodian.xyz.
 **Or, for the deeper proof:**
 
 ```bash
-git clone https://github.com/inovinlabs/custodian-dev
-cd custodian-kernel
+git clone https://github.com/KeyArgo/custodian-codex-guard
+cd custodian-codex-guard
 pip install -e ".[dev]"
 python3 verify_kit.py
 ```
@@ -145,7 +145,7 @@ Any company running an AI agent with a Stripe account, a Modal spend, a NIM infe
 
 ## Links
 
-- **Repo (GitHub):** https://github.com/inovinlabs/custodian-dev
+- **Repo (GitHub):** https://github.com/KeyArgo/custodian-codex-guard
 - **PyPI:** https://pypi.org/project/custodian-kernel/
 - **Live dashboard:** https://getcustodian.xyz
 - **Operator panel:** https://getcustodian.xyz/operator
@@ -215,7 +215,7 @@ pattern applied to five concrete, named business shapes, not just the one shown 
 ## Installation
 
 ```bash
-pip install custodian-kernel
+pip install custodian-codex-guard
 ```
 
 For development (clone first):
@@ -363,10 +363,10 @@ with their band and description so the capability surface is visible during revi
 **Don't take any of this on faith.** Everything verifiable from pip:
 
 ```bash
-pip install custodian-kernel       # install the kernel
+pip install custodian-codex-guard       # install the kernel
 custodian demo verify              # live claim check against the running system
-pip install custodian-kernel[dev] && pytest tests/   # 1,747 tests, 0 failures
-git clone https://github.com/inovinlabs/custodian-dev  # read every line
+pip install custodian-codex-guard[dev] && pytest tests/   # 1,747 tests, 0 failures
+git clone https://github.com/KeyArgo/custodian-codex-guard  # read every line
 ```
 
 See `docs/VERIFICATION.md` for the full manual breakdown.

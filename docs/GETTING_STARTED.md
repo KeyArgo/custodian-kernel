@@ -7,15 +7,15 @@ that exist in the Custodian CLI. Before starting, verify the test suite
 passes:
 
 ```bash
-pip install custodian-kernel[dev]
+pip install custodian-codex-guard[dev]
 pytest tests/ --tb=short 2>&1 | tail -3
 ```
 
 Or from source:
 
 ```bash
-git clone https://github.com/inovinlabs/custodian-dev
-cd custodian-kernel
+git clone https://github.com/KeyArgo/custodian-codex-guard
+cd custodian-codex-guard
 pip install -e ".[dev]"
 pytest tests/ --tb=short 2>&1 | tail -3
 ```

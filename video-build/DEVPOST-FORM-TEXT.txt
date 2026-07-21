@@ -147,7 +147,7 @@ custodian codex-guard receipts --verify
 
 Two-repo split:
 - custodian-kernel (parent, pre-existing, agent-agnostic):
-  https://github.com/KeyArgo/custodian-kernel
+  https://github.com/KeyArgo/custodian-codex-guard
 - custodian-codex-guard (Build Week contribution):
   https://github.com/KeyArgo/custodian-codex-guard
 
@@ -155,7 +155,7 @@ Two-repo split:
 LINKS
 ================================================================
 - Build Week contribution: https://github.com/KeyArgo/custodian-codex-guard
-- Parent kernel: https://github.com/KeyArgo/custodian-kernel
+- Parent kernel: https://github.com/KeyArgo/custodian-codex-guard
 - Video: [paste YouTube URL]
 - Demo script: scripts/codex-guard-demo.py
 - Test suite: tests/test_codex_guard_cli.py (37 tests)

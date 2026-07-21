@@ -15,7 +15,7 @@ dependencies = [
     "requests",
     # Required by the paladin credential vault (scrypt + AES-256-GCM), which
     # ships a console script. Kept in base deps (not an optional extra) so
-    # `pip install custodian-kernel` gives a working `paladin` instead of a
+    # `pip install custodian-codex-guard` gives a working `paladin` instead of a
     # command that raises CryptoUnavailableError on first real use.
     "cryptography>=42.0",
     # zoneinfo reads the OS tz database, which Windows does not have at all and
@@ -37,7 +37,7 @@ classifiers = [
 
 [project.urls]
 Homepage = "https://getcustodian.xyz"
-Repository = "https://github.com/inovinlabs/custodian-dev"
+Repository = "https://github.com/KeyArgo/custodian-codex-guard"
 Documentation = "https://getcustodian.xyz/docs"
 
 [project.optional-dependencies]
