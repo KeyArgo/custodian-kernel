@@ -56,12 +56,15 @@ ffmpeg -y \
 
 # Step 4: stitch screen + close, lay voice on top
 echo "[4/5] combining screen + close + voiceover..."
+# - screen-trim has no audio (made -an in step 1)
+# - close.mp4 has no audio either
+# - voice goes in as a third input and is laid on top with [2:a]
 ffmpeg -y \
   -i screen-trim.mp4 \
   -i close.mp4 \
   -i "$VOICE" \
-  -filter_complex "[0:v][0:a][1:v]concat=n=2:v=1:a=1[outv][outa]" \
-  -map "[outv]" -map "[outa]" \
+  -filter_complex "[0:v][1:v]concat=n=2:v=1:a=0[outv]" \
+  -map "[outv]" -map "2:a" \
   -c:v libx264 -preset fast -crf 18 -pix_fmt yuv420p \
   -c:a aac -b:a 192k \
   -movflags +faststart \
