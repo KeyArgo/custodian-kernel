@@ -4,6 +4,76 @@ All notable changes to custodian-kernel are recorded here. Dates are UTC.
 
 ## [0.4.0] — unreleased
 
+### Custodian Guard — Codex-native authority firewall
+
+A new Codex plugin/MCP integration treating Codex as an untrusted proposer,
+not its own authority: independent risk classification (the model cannot
+downgrade `rm`, deploy, network, or credential operations to a "read"),
+action-bound single-use expiring human approvals, value-free HMAC-linked
+receipt chain, and a `custodian-codex` operator CLI (`setup`/`doctor`/
+`status`/`approve`/`disable`). See `docs/CODEX_GUARD.md` for the full threat
+model. 45 focused adversarial tests (`tests/test_codex_guard.py`).
+
+### Governed OpenCode
+
+`custodian-opencode` — the same guard, approval store, filesystem policy,
+and receipt chain extended to OpenCode via a generated global plugin hook
+that runs before every tool call. `opencode --auto` cannot override a
+denial or escalation; `custodian-opencode` (the governed launcher) refuses
+`--pure`, since OpenCode documents that flag as disabling external plugins.
+Harness identity is assigned by the installed adapter, not accepted from the
+model, so Codex- and OpenCode-specific rules cannot impersonate each other.
+Unknown tools and delegated tasks fail closed. See
+`docs/OPENCODE_INTEGRATION.md`.
+
+### Control-plane foundation for the coordinated 0.4 release
+
+`custodian/control/` — normalized control-plane policy, filesystem policy,
+and service contracts shared by the Codex and OpenCode integrations, plus a
+`custodian console` CLI surface. Operator rules apply to every action,
+including ordinary reads/writes. See `docs/CONTROL_PLANE_TOPOLOGY.md`,
+`docs/CONTROL_INTEGRATION_API.md`, `docs/CUSTODIAN_CONSOLE.md`,
+`docs/FILESYSTEM_POLICY.md`.
+
+### Dashboard / getcustodian.xyz — 3 more real bugs found and fixed
+
+Found while auditing the live demo site end-to-end:
+
+- **`dashboard/api/stripe_webhook.py`** — closed a TOCTOU race in the
+  payment-dedup check: two near-simultaneous deliveries of the same Stripe
+  event (Stripe does retry) could both pass the dedup check before either
+  wrote, double-crediting revenue in the publicly-displayed P&L total. Same
+  cross-platform locking pattern as `custodian/codex_guard/receipts.py`.
+- **`dashboard/api/operator.py`** — `require_operator`'s
+  `except Exception: return 401` failed safe but silently swallowed real
+  internal bugs (e.g. a corrupted secrets file) as an indistinguishable
+  "unauthorized" — now logs the exception before still denying. Separately,
+  `/pending_code` and `/forward_code` were the last two demo-arc routes still
+  gated behind operator auth, contradicting the demo's own design (the whole
+  arc except `/reset` is meant to be anonymously reachable) — now public,
+  each protected by its own rate limit instead (60/min/IP for the polled
+  `pending_code`; the pre-existing 3/10min/IP Twilio-cost limit for
+  `forward_code`).
+- **`pages-frontend/operator.html`** — Step 7's refund button sent whatever
+  was in the PaymentIntent field straight to `/refund` with no format check;
+  if Step 1 never ran (or its budget was exhausted), this produced a
+  confusing backend error instead of pointing the visitor back at Step 1.
+
+Also fixed a pre-existing test (`dashboard/tests/test_ported_tour_guide_
+system_2026_07_03.py`) whose own route-name assertions were inverted
+(asserted the stale `/hermes` route present, current `/console` absent) —
+silently never run as part of the main `tests/` suite.
+
+### Deploy hazard closed — 6 copies of this repo were each deploying independently
+
+At least 6 copies of this repo existed on this host, each with its own
+working `deploy.sh` doing a direct `wrangler pages deploy` upload to the
+same live Cloudflare Pages project — not git-triggered, no trace, whichever
+copy deployed last silently won. This was the likely real cause of repeated
+"things keep reverting" reports across sessions. `/home/dev/custodian-dev`
+is now the single source of truth; the other 5 copies' `deploy.sh` are
+disabled. See `DEPLOYMENT.md`.
+
 ### Bundled skills — 5 more bugs fixed (independent Qwen bug-hunt review)
 
 Found by a 3-agent Qwen3.6-35B adversarial review, independently re-verified
