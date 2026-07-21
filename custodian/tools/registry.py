@@ -197,6 +197,10 @@ class CustodianTool:
     tags: list[str] = field(default_factory=list)
     version: str = "1.0.0"
     execute_script: Optional[Path] = None  # scripts/execute.py if present
+    # Opt-in per-tool network destination allowlist (see custodian/egress_proxy.py).
+    # Empty = unrestricted, today's behavior -- a tool only gets enforcement
+    # once its SKILL.md declares real destinations.
+    allowed_hosts: frozenset = field(default_factory=frozenset)
 
     @property
     def band_label(self) -> str:
@@ -410,8 +414,20 @@ class CustodianTool:
         except ToolSandboxUnavailableError as e:
             return {"ok": False, "error": str(e), "tool": self.name}
 
+        egress_proxy = None
         try:
             tool_env = _tool_environment(self.name, _env)
+            # Opt-in per-tool destination allowlist (see
+            # custodian/egress_proxy.py for exactly what this does and does
+            # not guarantee -- it redirects cooperative HTTP clients, it
+            # does not isolate the network namespace). No-op for the ~all
+            # existing tools that haven't declared allowed_hosts yet.
+            if self.allowed_hosts:
+                from custodian.egress_proxy import EgressProxy
+                egress_proxy = EgressProxy(allowed_hosts=self.allowed_hosts)
+                egress_proxy.start()
+                tool_env = {**tool_env, **egress_proxy.proxy_env()}
+
             result = subprocess.run(
                 argv, capture_output=True, text=True, timeout=30,
                 cwd=str(self.skill_dir) if self.skill_dir else None,
@@ -437,6 +453,9 @@ class CustodianTool:
             return {"ok": False, "error": "timeout", "tool": self.name}
         except Exception as e:
             return {"ok": False, "error": str(e), "tool": self.name}
+        finally:
+            if egress_proxy is not None:
+                egress_proxy.stop()
 
 
 class ToolRegistry:
@@ -480,6 +499,7 @@ class ToolRegistry:
                     tags=list(meta.get("metadata", {}).get("hermes", {}).get("tags", [])),
                     version=str(meta.get("version", "1.0.0")),
                     execute_script=execute if execute.exists() else None,
+                    allowed_hosts=frozenset(custodian_meta.get("allowed_hosts") or ()),
                 )
                 self._tools[name] = tool
             except Exception:

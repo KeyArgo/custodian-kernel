@@ -593,6 +593,92 @@ class TestGitHubTools:
             assert "content" in r
 
 
+# ── Per-tool egress allowlist, end to end through the real sandboxed path ──────
+
+class TestToolEgressAllowlist:
+    """A tool's declared allowed_hosts (SKILL.md custodian.allowed_hosts)
+    must actually reach the sandboxed subprocess and be enforced there --
+    not just work in EgressProxy's own unit tests. Reminder: this redirects
+    cooperative HTTP clients (urllib, requests, curl) via HTTP_PROXY/
+    HTTPS_PROXY; it does not isolate the network namespace (see
+    custodian/egress_proxy.py's docstring) -- that's deferred to 0.6.0."""
+
+    @pytest.fixture
+    def destination(self):
+        import http.server
+        import threading
+
+        class _Handler(http.server.BaseHTTPRequestHandler):
+            def log_message(self, fmt, *a): pass
+            def do_GET(self):
+                body = b"real destination response"
+                self.send_response(200)
+                self.send_header("Content-Length", str(len(body)))
+                self.end_headers()
+                self.wfile.write(body)
+
+        server = http.server.HTTPServer(("127.0.0.1", 0), _Handler)
+        thread = threading.Thread(target=server.serve_forever, daemon=True)
+        thread.start()
+        yield server
+        server.shutdown()
+        server.server_close()
+
+    def _make_fetch_tool(self, tmp_path, name, allowed_hosts):
+        d = tmp_path / "skills" / name
+        (d / "scripts").mkdir(parents=True)
+        allowed_yaml = "\n".join(f"      - {h}" for h in allowed_hosts)
+        (d / "SKILL.md").write_text(
+            f"---\nname: {name}\ndescription: fetch\n"
+            f"metadata:\n  custodian:\n    band: L0\n    configured: true\n"
+            + (f"    allowed_hosts:\n{allowed_yaml}\n" if allowed_hosts else "")
+            + "---\n"
+        )
+        (d / "scripts" / "execute.py").write_text("""
+import argparse, json, urllib.request
+p = argparse.ArgumentParser()
+p.add_argument("--url")
+args = p.parse_args()
+try:
+    with urllib.request.urlopen(args.url, timeout=5) as resp:
+        print(json.dumps({"ok": True, "body": resp.read().decode()}))
+except Exception as e:
+    print(json.dumps({"ok": False, "error": str(e)}))
+""")
+        return d
+
+    def test_declared_host_is_reachable(self, tmp_path, destination):
+        from custodian.tools.registry import ToolRegistry
+        host, port = destination.server_address
+        self._make_fetch_tool(tmp_path, "fetch-ok", [host])
+        result = ToolRegistry(tmp_path / "skills").run(
+            "fetch-ok", url=f"http://{host}:{port}/",
+        )
+        assert result["ok"] is True
+        assert result["body"] == "real destination response"
+
+    def test_undeclared_host_is_refused(self, tmp_path, destination):
+        from custodian.tools.registry import ToolRegistry
+        host, port = destination.server_address
+        self._make_fetch_tool(tmp_path, "fetch-blocked", ["some-other-host.example"])
+        result = ToolRegistry(tmp_path / "skills").run(
+            "fetch-blocked", url=f"http://{host}:{port}/",
+        )
+        assert result["ok"] is False
+        assert "403" in result["error"] or "Forbidden" in result["error"]
+
+    def test_tool_without_allowed_hosts_is_unrestricted(self, tmp_path, destination):
+        """Opt-in only -- a tool that never declares allowed_hosts keeps
+        today's unrestricted behavior, proxy not even started."""
+        from custodian.tools.registry import ToolRegistry
+        host, port = destination.server_address
+        self._make_fetch_tool(tmp_path, "fetch-unrestricted", [])
+        result = ToolRegistry(tmp_path / "skills").run(
+            "fetch-unrestricted", url=f"http://{host}:{port}/",
+        )
+        assert result["ok"] is True
+
+
 # ── Kernel safety invariant ───────────────────────────────────────────────────
 
 class TestKernelInvariants:
