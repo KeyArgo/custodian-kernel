@@ -291,7 +291,30 @@ class CustodianTool:
         callers that don't pass one are recorded under a generic label.
 
         Returns dict with at minimum {"ok": bool}.
+
+        If CUSTODIAN_EXECUTOR_SOCKET is set, this delegates entirely to a
+        separate executor process over that socket instead of deciding and
+        executing in-process (see custodian/executor/) -- the strongest
+        guarantee: this process never runs the skill script itself, so a
+        fully compromised agent process cannot bypass the kernel's decision
+        by simply not calling it. Opt-in today, not the default, because it
+        requires an operator to have started `custodian executor start`
+        separately; the in-process path below is unchanged for callers that
+        don't configure it.
         """
+        executor_socket = os.environ.get("CUSTODIAN_EXECUTOR_SOCKET")
+        if executor_socket:
+            from custodian.executor.client import ExecutorClient, ExecutorUnavailableError
+            client = ExecutorClient(Path(executor_socket))
+            try:
+                return client.propose(
+                    self.name, kwargs, requester=requester,
+                    workspace=str(self.skill_dir) if self.skill_dir else "",
+                    env=_env,
+                )
+            except ExecutorUnavailableError as e:
+                return {"ok": False, "error": str(e), "tool": self.name}
+
         from custodian import bus as _event_bus
         from custodian.universal_ledger import UniversalLedger
         import uuid as _uuid
@@ -364,13 +387,32 @@ class CustodianTool:
                     currency="USD",
                 )
 
+        result = self._run_script(kwargs, _env)
+        error_reason = result.get("error") if not result.get("ok") else None
+        _ledger_write(
+            ledger, correlation_id=correlation_id, requester=requester,
+            provider="custodian", action=self.name,
+            lifecycle_event="executed" if result.get("ok") else "failed",
+            band=self.band, amount=real_amount, currency="USD",
+            metadata={"reason": error_reason[:200]} if error_reason else {},
+        )
+        return result
+
+    def _run_script(self, kwargs: dict, _env: Optional[dict] = None) -> dict:
+        """Actually run the skill's execute.py script, sandboxed.
+
+        No kernel gating here at all -- this is the low-level execution
+        mechanics shared by invoke() (which has already gated on
+        _kernel_decide) and custodian.executor.service's delegated executor
+        (which gates independently, in a separate process, before ever
+        calling this). Kept as one method rather than duplicated in both
+        places: a sandboxing or redaction fix applied to only one copy is
+        exactly the kind of subtle two-tier bug this codebase has already
+        been adversarially reviewed for elsewhere this session.
+        """
+        from custodian import bus as _event_bus
+
         if not self.execute_script or not self.execute_script.exists():
-            _ledger_write(
-                ledger, correlation_id=correlation_id, requester=requester,
-                provider="custodian", action=self.name, lifecycle_event="failed",
-                band=self.band, amount=real_amount, currency="USD",
-                metadata={"reason": "no execute script found"},
-            )
             return {
                 "ok": False,
                 "error": f"no execute script found for {self.name}",
@@ -405,12 +447,6 @@ class CustodianTool:
                 allow_unsandboxed=os.environ.get("CUSTODIAN_ALLOW_UNSANDBOXED_TOOLS") == "1",
             )
         except ToolSandboxUnavailableError as e:
-            _ledger_write(
-                ledger, correlation_id=correlation_id, requester=requester,
-                provider="custodian", action=self.name, lifecycle_event="failed",
-                band=self.band, amount=real_amount, currency="USD",
-                metadata={"reason": "sandbox unavailable"},
-            )
             return {"ok": False, "error": str(e), "tool": self.name}
 
         try:
@@ -435,28 +471,10 @@ class CustodianTool:
                 "ok": parsed.get("ok", False),
                 "result": parsed,
             })
-            _ledger_write(
-                ledger, correlation_id=correlation_id, requester=requester,
-                provider="custodian", action=self.name,
-                lifecycle_event="executed" if parsed.get("ok") else "failed",
-                band=self.band, amount=real_amount, currency="USD",
-            )
             return parsed
         except subprocess.TimeoutExpired:
-            _ledger_write(
-                ledger, correlation_id=correlation_id, requester=requester,
-                provider="custodian", action=self.name, lifecycle_event="failed",
-                band=self.band, amount=real_amount, currency="USD",
-                metadata={"reason": "timeout"},
-            )
             return {"ok": False, "error": "timeout", "tool": self.name}
         except Exception as e:
-            _ledger_write(
-                ledger, correlation_id=correlation_id, requester=requester,
-                provider="custodian", action=self.name, lifecycle_event="failed",
-                band=self.band, amount=real_amount, currency="USD",
-                metadata={"reason": str(e)[:200]},
-            )
             return {"ok": False, "error": str(e), "tool": self.name}
 
 

@@ -120,6 +120,7 @@ from custodian.cli import cmd_demo_receipt, cmd_generate_report
 from custodian.cli import cmd_adapters
 from custodian.cli import cmd_backup
 from custodian.cli import cmd_setup, cmd_doctor
+from custodian.cli import cmd_executor
 from custodian.cli._version import LazyVersionAction
 from custodian.config import CustodianConfig
 
@@ -497,6 +498,9 @@ def main(argv: list[str] | None = None) -> int:
 
     # ── adapters ──────────────────────────────────────────────────────────────
     cmd_adapters.register(sub)
+
+    # ── executor (delegated execution) ────────────────────────────────────────
+    cmd_executor.register(sub)
 
     # ── demo ──────────────────────────────────────────────────────────────────
     demo_parser = sub.add_parser(
