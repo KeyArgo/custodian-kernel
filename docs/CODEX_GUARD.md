@@ -1,5 +1,8 @@
 # Custodian Guard for Codex — Build Week handoff
 
+For the exact entry copy, judge commands, and timed video script, see
+[`BUILD_WEEK_SUBMISSION_PLAYBOOK.md`](BUILD_WEEK_SUBMISSION_PLAYBOOK.md).
+
 ## What is new after July 13, 2026
 
 The existing Custodian kernel, Paladin vault, and guard-adapter framework are
@@ -7,6 +10,7 @@ the foundation. The Build Week work is a new Codex-native enforcement surface:
 
 - a repo-local Codex plugin and governance skill;
 - a dependency-free MCP server exposing `guard_action` and `verify_receipts`;
+- action-bound, expiring, single-use human approvals that the model cannot grant;
 - a typed coding-action risk model independent of the model's own label;
 - fail-closed composition of workspace, secret, prompt-injection, and
   kernel-self-protection guards;
@@ -40,6 +44,8 @@ remain defense in depth.
 3. **0:40–1:35 — Live demo.** Run `python scripts/codex-guard-demo.py`. Point
    out safe test/edit, `.env` denial, and `rm`/deploy claimed as reads but
    independently escalated.
+   Then show `custodian-codex approve ID`: changing the approved command or
+   replaying the approval is denied.
 4. **1:35–2:05 — Evidence.** Show `verify_receipts`, the tamper rejection, and
    `pytest -q tests/test_codex_guard.py`.
 5. **2:05–2:35 — Codex collaboration.** Show the Build Week branch/session and

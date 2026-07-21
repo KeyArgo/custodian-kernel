@@ -23,10 +23,17 @@ class ReceiptChain:
     def _key(self) -> bytes:
         self.state_dir.mkdir(parents=True, exist_ok=True)
         if not self.key_path.exists():
-            fd = os.open(self.key_path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
-            with os.fdopen(fd, "wb") as stream:
-                stream.write(os.urandom(32))
-        return self.key_path.read_bytes()
+            try:
+                fd = os.open(self.key_path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+            except FileExistsError:
+                pass
+            else:
+                with os.fdopen(fd, "wb") as stream:
+                    stream.write(os.urandom(32))
+        key = self.key_path.read_bytes()
+        if len(key) != 32:
+            raise ValueError("receipt key is invalid")
+        return key
 
     @staticmethod
     def _canonical(value: dict[str, Any]) -> bytes:

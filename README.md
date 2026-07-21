@@ -65,6 +65,19 @@ python scripts/codex-guard-demo.py
 pytest -q tests/test_codex_guard.py
 ```
 
+For the judge-ready Codex plugin install:
+
+```bash
+python -m pip install -e .
+custodian-codex setup
+custodian-codex doctor
+```
+
+Start a new Codex thread, then ask it to evaluate a risky action. Codex may
+create a pending request, but only the separate operator command
+`custodian-codex approve ID --digest DIGEST` can grant one exact, expiring,
+single-use action.
+
 See [the Codex Guard judge guide](docs/CODEX_GUARD.md) and the
 [plugin README](plugins/custodian-codex-guard/README.md).
 

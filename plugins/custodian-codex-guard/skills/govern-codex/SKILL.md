@@ -18,12 +18,17 @@ Classify the proposal using exactly one action kind:
 - `money`: payment, refund, purchase, or financial commitment
 - `governance`: changing policy, audit, approval, vault, or the guard itself
 
-Pass the actual tool name and structured arguments. Never put a raw secret in
+Pass the actual tool name and structured arguments, plus a stable requester ID
+for this Codex session. Never put a raw secret in
 the call; use a `paladin://` reference. Treat the verdict mechanically:
 
 - `autonomous`: proceed with the exact evaluated action.
-- `escalation_required`: stop and obtain explicit human approval. The verdict
-  itself is not approval and must never be converted into execution.
+- `escalation_required`: stop, show the returned approval ID, and ask the human
+  to run the exact `custodian-codex approve ID --digest DIGEST` command returned
+  by Guard. Call `guard_action` again with that same ID and the exact same
+  action. The verdict itself is not approval.
+- `approved`: proceed once with the exact evaluated action. Any argument change
+  requires a new request; never reuse an approval ID.
 - `denied`: do not execute. Explain the denial without exposing sensitive data.
 
 If Guard is unavailable, malformed, or returns an unknown verdict, fail closed

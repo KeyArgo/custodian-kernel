@@ -3,11 +3,18 @@
 from __future__ import annotations
 
 import json
+import os
 import tempfile
 from pathlib import Path
+import sys
+
+# Make the documented `python scripts/codex-guard-demo.py` work from a fresh
+# clone before installation; Python otherwise places only scripts/ on sys.path.
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from custodian.codex_guard import evaluate_action
-from custodian.codex_guard.approvals import ApprovalError, ApprovalStore, action_digest
+from custodian.codex_guard.approvals import ApprovalStore
+from custodian.codex_guard.mcp_server import handle
 from custodian.codex_guard.receipts import ReceiptChain
 
 
@@ -40,47 +47,53 @@ def main() -> int:
         count = chain.verify()
         print(f"\nReceipt chain: VALID ({count} value-free, HMAC-linked decisions)")
 
-        # Bind human approval to one exact consequential action. The store
-        # persists only the digest and bounded metadata, never the command.
-        approvals = ApprovalStore(root / "state")
+        # Exercise the real MCP surface, then approve out of band. The model
+        # can request this record but has no MCP tool capable of approving it.
+        state = root / "state"
+        os.environ["CUSTODIAN_CODEX_GUARD_STATE_DIR"] = str(state)
         action = {
             "tool": "shell-exec",
             "action_kind": "production",
             "arguments": {"command": "deploy --environment staging"},
             "workspace": str(workspace),
             "requester": "codex:judge-demo",
+            "session_id": "judge-demo",
         }
-        digest = action_digest(**action)
-        pending = approvals.request(
-            digest=digest, requester=action["requester"], ttl_seconds=60,
+        pending = handle("tools/call", {
+            "name": "guard_action", "arguments": action,
+        })["structuredContent"]
+        print(f"MCP approval:     REQUESTED ({pending['approval_id'][:8]}…, model cannot grant it)")
+        approvals = ApprovalStore(state)
+        approvals.approve(
+            pending["approval_id"],
+            approved_by="human-operator",
+            expected_digest=pending["action_digest"],
         )
-        approvals.approve(pending.approval_id, approved_by="human-operator")
-        mutated = dict(action)
+        mutated = {**action, "approval_id": pending["approval_id"]}
         mutated["arguments"] = {"command": "deploy --environment production"}
-        try:
-            approvals.consume(
-                pending.approval_id,
-                digest=action_digest(**mutated),
-                requester=action["requester"],
-            )
-        except ApprovalError:
-            print("Argument mutation: BLOCKED (action digest changed)")
-        else:
-            print("Argument mutation: FAILED")
+        changed = handle("tools/call", {
+            "name": "guard_action", "arguments": mutated,
+        })["structuredContent"]
+        print(f"Argument mutation: {changed['verdict'].upper()} (action digest changed)")
+        if changed["verdict"] != "denied":
             return 1
-        approvals.consume(
-            pending.approval_id, digest=digest, requester=action["requester"],
-        )
-        print("Exact approval: CONSUMED ONCE (action digest bound)")
-        try:
-            approvals.consume(
-                pending.approval_id, digest=digest, requester=action["requester"],
-            )
-        except ApprovalError:
-            print("Approval replay: BLOCKED (single-use claim already consumed)")
-        else:
-            print("Approval replay: FAILED")
+        exact = handle("tools/call", {
+            "name": "guard_action",
+            "arguments": {**action, "approval_id": pending["approval_id"]},
+        })["structuredContent"]
+        print(f"Exact approval:   {exact['verdict'].upper()} ONCE (human + digest bound)")
+        if exact["verdict"] != "approved":
             return 1
+        replay = handle("tools/call", {
+            "name": "guard_action",
+            "arguments": {**action, "approval_id": pending["approval_id"]},
+        })["structuredContent"]
+        print(f"Approval replay:  {replay['verdict'].upper()} (single-use grant consumed)")
+        if replay["verdict"] != "denied":
+            return 1
+
+        count = chain.verify()
+        print(f"MCP audit chain:  VALID ({count} decisions, including denied replay)")
 
         # Prove verification is meaningful without damaging the real chain.
         record = json.loads(chain.path.read_text().splitlines()[0])
