@@ -22,8 +22,6 @@ def client():
     ("post", "/api/v1/operator/approve"),
     ("post", "/api/v1/operator/kill"),
     ("post", "/api/v1/operator/resume"),
-    ("get", "/api/v1/operator/pending_code"),
-    ("post", "/api/v1/operator/forward_code"),
     ("post", "/api/v1/operator/spark/disable"),
     ("post", "/api/v1/operator/spark/enable"),
     ("get", "/api/v1/operator/sandbox/status"),
@@ -33,6 +31,43 @@ def test_privileged_routes_reject_missing_operator_token(client, method, path):
     response = getattr(client, method)(path, json={})
     assert response.status_code == 401
     assert response.get_json() == {"error": "unauthorized"}
+
+
+@pytest.mark.parametrize(("method", "path"), [
+    ("get", "/api/v1/operator/pending_code"),
+    ("post", "/api/v1/operator/forward_code"),
+])
+def test_public_demo_arc_routes_do_not_require_operator_token(client, method, path):
+    """pending_code and forward_code are the deliberate exception: the whole
+    demo arc except /reset is intentionally reachable by an anonymous
+    visitor (Steps 3 and 8). Each has its own rate limit instead of an auth
+    gate -- forward_code costs real money per call (a Twilio send)."""
+    response = getattr(client, method)(path, json={})
+    assert response.status_code != 401
+
+
+def test_forward_code_is_rate_limited_per_ip(client, monkeypatch):
+    import collections
+    import api.operator as operator
+    monkeypatch.setattr(operator, "_sms_rate", collections.defaultdict(list))
+    for _ in range(operator._SMS_LIMIT):
+        r = client.post("/api/v1/operator/forward_code",
+                        json={"phone": "5551234567", "code": "123456"})
+        assert r.status_code != 429
+    r = client.post("/api/v1/operator/forward_code",
+                    json={"phone": "5551234567", "code": "123456"})
+    assert r.status_code == 429
+
+
+def test_pending_code_is_rate_limited_per_ip(client, monkeypatch):
+    import collections
+    import api.operator as operator
+    monkeypatch.setattr(operator, "_pending_code_rate", collections.defaultdict(list))
+    for _ in range(operator._PENDING_CODE_LIMIT):
+        r = client.get("/api/v1/operator/pending_code")
+        assert r.status_code != 429
+    r = client.get("/api/v1/operator/pending_code")
+    assert r.status_code == 429
 
 
 @pytest.mark.parametrize("amount", ["NaN", "Infinity", "-Infinity"])

@@ -309,9 +309,31 @@ _PENDING_APPROVAL_PATH = f'{SKILL_STATE_DIR}/pending_approval.json'
 _PENDING_CODE_PATH = f'{SKILL_STATE_DIR}/pending_code.json'
 
 
+_pending_code_rate: dict = collections.defaultdict(list)  # ip -> [timestamp, ...]
+_PENDING_CODE_LIMIT = 60
+_PENDING_CODE_WINDOW = 60  # the frontend polls every 1.5s -- ~40 calls/min per
+                           # legitimate session, so 60/min per IP leaves headroom
+                           # without letting the poll run unbounded once public
+
+
+def _pending_code_allowed(ip: str) -> bool:
+    now = time.time()
+    timestamps = [t for t in _pending_code_rate[ip] if now - t < _PENDING_CODE_WINDOW]
+    _pending_code_rate[ip] = timestamps
+    if len(timestamps) >= _PENDING_CODE_LIMIT:
+        return False
+    _pending_code_rate[ip].append(now)
+    return True
+
+
 @bp.route('/pending_code', methods=['GET'])
-@require_operator
 def pending_code():
+    # Public: the whole demo arc except /reset is intentionally reachable by
+    # an anonymous visitor. Rate-limited (unlike the money/kill-switch
+    # routes above) because it's polled every 1.5s and each call reaches the
+    # real sandbox via nemohermes exec, not a free in-memory read.
+    if not _pending_code_allowed(_client_ip()):
+        return jsonify({'pending': False, 'code': None, 'reason': 'rate limited'}), 429
     """Previously this read both paths through a host-side bind mount that
     doesn't exist on this container (2026-07-14 finding), so it always fell
     through to 'no pending code' regardless of what was actually pending —
@@ -389,9 +411,14 @@ def _client_ip() -> str:
 
 
 @bp.route('/forward_code', methods=['POST'])
-@require_operator
 def forward_code():
-    """Forward the pending SMS code to a visitor-supplied phone number via Twilio."""
+    """Forward the pending SMS code to a visitor-supplied phone number via Twilio.
+
+    Public: the whole demo arc except /reset is intentionally reachable by an
+    anonymous visitor. Unlike pending_code above, this one costs real money
+    per call (a Twilio send) -- protected by _sms_allowed's dedicated 3-per-
+    10-minute-per-IP limit below, not just the general rate limit.
+    """
     import urllib.request, urllib.parse, base64
     ip = _client_ip()
     if not _sms_allowed(ip):
