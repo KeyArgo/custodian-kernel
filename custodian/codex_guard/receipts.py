@@ -102,8 +102,14 @@ class ReceiptChain:
             return []
         return [json.loads(line) for line in self.path.read_text().splitlines() if line.strip()]
 
-    def append(self, decision: dict[str, Any], *, tool: str, session_id: str) -> dict[str, Any]:
+    def append(self, decision: dict[str, Any], *, tool: str, session_id: str,
+               harness: str = "unknown") -> dict[str, Any]:
         # Deliberately value-free: arguments and model text never enter receipts.
+        # `harness` is stamped by the caller from a server-pinned identity
+        # (see mcp_server.py's evaluate_guard_action) -- never accepted from
+        # model-supplied arguments -- so ledger_access_policy can later grant
+        # or deny cross-adapter visibility based on a value nothing but the
+        # trusted adapter code itself could have set.
         _private_dir(self.state_dir)
         with self._lock, _process_lock(self.lock_path):
             records = self._records()
@@ -111,6 +117,7 @@ class ReceiptChain:
             body = {
                 "ts": time.time(),
                 "event": "codex_guard_decision",
+                "harness": harness[:64],
                 "tool": tool[:128],
                 "session_id": session_id[:128],
                 "verdict": decision["verdict"],
@@ -136,10 +143,15 @@ class ReceiptChain:
             for index, record in enumerate(records):
                 if record.get("prev") != prev:
                     raise ValueError(f"receipt {index}: broken previous-record link")
-                body = {k: record[k] for k in (
-                    "ts", "event", "tool", "session_id", "verdict",
-                    "action_kind", "band", "reason",
-                )}
+                # "harness" is only included if the record actually has the
+                # key -- a record written before this field existed had no
+                # "harness" key in the body its mac was computed over, so
+                # reconstructing with a default value here would recompute a
+                # DIFFERENT canonical encoding than the one originally sealed
+                # and falsely fail verification for every pre-existing receipt.
+                body_keys = ("ts", "event", "harness", "tool", "session_id",
+                             "verdict", "action_kind", "band", "reason")
+                body = {k: record[k] for k in body_keys if k in record}
                 expected = hmac.new(
                     key, prev.encode() + self._canonical(body), hashlib.sha256,
                 ).hexdigest()
@@ -147,3 +159,16 @@ class ReceiptChain:
                     raise ValueError(f"receipt {index}: HMAC mismatch")
                 prev = record["mac"]
             return len(records)
+
+    def list_visible(self, policy, *, harness: str, model: str, limit: int = 50) -> list[dict[str, Any]]:
+        """Return the most recent records `harness`+`model` may view --
+        always its own, plus anything ledger_access_policy.LedgerAccessPolicy
+        has explicitly granted. Never includes another harness's records
+        without a grant, even though physically they share one file."""
+        _private_dir(self.state_dir)
+        visible = policy.visible_harnesses(harness=harness, model=model)
+        with self._lock, _process_lock(self.lock_path):
+            records = self._records()
+        if visible != "*":
+            records = [r for r in records if r.get("harness", "unknown") in visible]
+        return list(reversed(records[-limit:])) if limit else list(reversed(records))

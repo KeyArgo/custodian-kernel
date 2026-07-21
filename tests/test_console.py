@@ -273,6 +273,33 @@ class TestRun:
         assert len(policy.list()) == 1
         assert policy.list()[0].mode == "deny"
 
+    def test_g_adds_a_ledger_access_grant(self, tmp_path):
+        from custodian.control.ledger_access_policy import LedgerAccessPolicy
+        with patch("custodian.cli.cmd_console._key", side_effect=["g", "q"]):
+            with patch("builtins.input", side_effect=["opencode", "*", "codex"]):
+                run(_make_args(tmp_path))
+        ledger_access = LedgerAccessPolicy(tmp_path / "ledger-access-policy.json")
+        grants = ledger_access.list()
+        assert len(grants) == 1
+        assert grants[0].harness == "opencode"
+        assert grants[0].can_view == ("codex",)
+
+    def test_g_with_invalid_input_does_not_save(self, tmp_path):
+        from custodian.control.ledger_access_policy import LedgerAccessPolicy
+        with patch("custodian.cli.cmd_console._key", side_effect=["g", "q"]):
+            with patch("builtins.input", side_effect=["opencode", "*", ""]):
+                run(_make_args(tmp_path))
+        ledger_access = LedgerAccessPolicy(tmp_path / "ledger-access-policy.json")
+        assert ledger_access.list() == []
+
+    def test_ledger_grant_count_shown_in_status_line(self, tmp_path, capsys):
+        from custodian.control.ledger_access_policy import LedgerAccessPolicy, LedgerGrant
+        ledger_access = LedgerAccessPolicy(tmp_path / "ledger-access-policy.json")
+        ledger_access.add(LedgerGrant(harness="opencode", can_view=("codex",)))
+        _draw(tmp_path, "")
+        out = capsys.readouterr().out
+        assert "Ledger access grants: 1" in out
+
     def test_approve_codex_record_updates_status(self, tmp_path):
         rec = _seed_codex_pending(tmp_path)
         with patch("custodian.cli.cmd_console._key", side_effect=["a", "q"]):

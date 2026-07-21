@@ -80,6 +80,12 @@ class ApprovalRecord:
     approved_at: float | None = None
     consumed_at: float | None = None
     mac: str = ""
+    # Stamped server-side by the caller from a trusted adapter identity (see
+    # mcp_server.py's evaluate_guard_action) -- never accepted from a model-
+    # supplied argument. "unknown" only for records written before this field
+    # existed. Lets ledger_access_policy grant or deny cross-adapter
+    # visibility based on a value nothing but trusted adapter code could set.
+    harness: str = "unknown"
 
 
 class ApprovalStore:
@@ -171,6 +177,15 @@ class ApprovalStore:
                 continue
         return sorted(records, key=lambda record: record.created_at, reverse=True)
 
+    def list_visible(self, policy, *, harness: str, model: str) -> list[ApprovalRecord]:
+        """Same visibility scoping as ReceiptChain.list_visible -- always
+        includes `harness`'s own records, plus anything explicitly granted."""
+        visible = policy.visible_harnesses(harness=harness, model=model)
+        records = self.list_records()
+        if visible == "*":
+            return records
+        return [r for r in records if r.harness in visible]
+
     def deny(self, approval_id: str, *, denied_by: str) -> ApprovalRecord:
         if not denied_by.strip():
             raise ApprovalError("operator identity is required")
@@ -183,7 +198,8 @@ class ApprovalStore:
         self._write(path, record)
         return self.get(approval_id)
 
-    def request(self, *, digest: str, requester: str, ttl_seconds: int = 300) -> ApprovalRecord:
+    def request(self, *, digest: str, requester: str, ttl_seconds: int = 300,
+                harness: str = "unknown") -> ApprovalRecord:
         if len(digest) != 64 or any(c not in "0123456789abcdef" for c in digest):
             raise ApprovalError("invalid action digest")
         if not requester or len(requester) > 128 or ttl_seconds < 1 or ttl_seconds > 3600:
@@ -195,6 +211,7 @@ class ApprovalStore:
             requester=requester,
             created_at=now,
             expires_at=now + ttl_seconds,
+            harness=harness[:64],
         )
         path = self._path(record.approval_id)
         self._write(path, asdict(record))

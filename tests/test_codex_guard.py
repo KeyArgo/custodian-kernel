@@ -10,9 +10,10 @@ from custodian.codex_guard.approvals import (
     ApprovalStore,
     action_digest,
 )
-from custodian.codex_guard.mcp_server import handle
+from custodian.codex_guard.mcp_server import evaluate_guard_action, handle, list_receipts_for
 from custodian.codex_guard.receipts import ReceiptChain
 from custodian.codex_guard.cli import main as cli_main
+from custodian.control.ledger_access_policy import LedgerAccessPolicy, LedgerGrant
 
 
 def decide(tmp_path: Path, **overrides):
@@ -272,10 +273,39 @@ def test_receipt_chain_detects_tampering(tmp_path):
         chain.verify()
 
 
+def test_verify_accepts_pre_harness_field_receipts_written_by_hand(tmp_path):
+    """Regression: verify()'s body reconstruction used to hardcode a fixed
+    set of keys that didn't include "harness". Adding harness to append()
+    would have broken verification for every receipt written before this
+    field existed (a real record with no "harness" key at all) unless
+    verify() only reconstructs "harness" when the key is actually present."""
+    import hashlib
+    import hmac as hmac_module
+    import json as json_module
+
+    chain = ReceiptChain(tmp_path)
+    chain._key()  # ensure the key file exists before hand-writing a record
+    key = chain._key()
+
+    # Simulate a receipt written by the OLD append() -- no "harness" key.
+    body = {
+        "ts": 1.0, "event": "codex_guard_decision", "tool": "read_file",
+        "session_id": "s", "verdict": "autonomous", "action_kind": "read",
+        "band": "L1", "reason": "ok",
+    }
+    canonical = json_module.dumps(body, sort_keys=True, separators=(",", ":")).encode()
+    from custodian.codex_guard.receipts import GENESIS
+    mac = hmac_module.new(key, GENESIS.encode() + canonical, hashlib.sha256).hexdigest()
+    record = {**body, "prev": GENESIS, "mac": mac}
+    chain.path.write_text(json_module.dumps(record) + "\n")
+
+    assert chain.verify() == 1
+
+
 def test_mcp_lists_guard_tools():
     result = handle("tools/list", {})
     assert [tool["name"] for tool in result["tools"]] == [
-        "guard_action", "verify_receipts",
+        "guard_action", "verify_receipts", "list_receipts",
     ]
 
 
@@ -284,6 +314,74 @@ def test_setup_dry_run_is_non_mutating_and_discovers_repo(capsys):
     output = capsys.readouterr().out
     assert "codex plugin marketplace add" in output
     assert "custodian-codex-guard@custodian-build-week" in output
+
+
+def _guard_args(tmp_path, **overrides):
+    values = {
+        "tool": "read_file", "action_kind": "read",
+        "arguments": {"path": str(tmp_path / "README.md")},
+        "workspace": str(tmp_path), "requester": "test-requester",
+    }
+    values.update(overrides)
+    return values
+
+
+def test_evaluate_guard_action_stamps_the_caller_supplied_harness(tmp_path, monkeypatch):
+    monkeypatch.setenv("CUSTODIAN_CODEX_GUARD_STATE_DIR", str(tmp_path / "state"))
+    evaluate_guard_action(_guard_args(tmp_path), harness="codex")
+    evaluate_guard_action(_guard_args(tmp_path), harness="opencode")
+
+    chain = ReceiptChain(tmp_path / "state")
+    records = chain._records()
+    harnesses = {r["harness"] for r in records}
+    assert harnesses == {"codex", "opencode"}
+
+
+def test_list_receipts_defaults_to_the_callers_own_harness(tmp_path, monkeypatch):
+    monkeypatch.setenv("CUSTODIAN_CODEX_GUARD_STATE_DIR", str(tmp_path / "state"))
+    evaluate_guard_action(_guard_args(tmp_path), harness="codex")
+    evaluate_guard_action(_guard_args(tmp_path), harness="opencode")
+    evaluate_guard_action(_guard_args(tmp_path), harness="opencode")
+
+    result = list_receipts_for({}, harness="opencode")
+    assert result["count"] == 2
+    assert all(r["harness"] == "opencode" for r in result["receipts"])
+
+
+def test_list_receipts_denies_cross_harness_without_a_grant(tmp_path, monkeypatch):
+    monkeypatch.setenv("CUSTODIAN_CODEX_GUARD_STATE_DIR", str(tmp_path / "state"))
+    evaluate_guard_action(_guard_args(tmp_path), harness="codex")
+
+    result = list_receipts_for({"target_harness": "codex"}, harness="opencode")
+    assert "error" in result
+    assert "not granted" in result["error"]
+    assert "receipts" not in result
+
+
+def test_list_receipts_allows_cross_harness_with_an_explicit_grant(tmp_path, monkeypatch):
+    monkeypatch.setenv("CUSTODIAN_CODEX_GUARD_STATE_DIR", str(tmp_path / "state"))
+    evaluate_guard_action(_guard_args(tmp_path), harness="codex")
+
+    policy = LedgerAccessPolicy(tmp_path / "state" / "ledger-access-policy.json")
+    policy.add(LedgerGrant(harness="opencode", can_view=("codex",)))
+
+    result = list_receipts_for({"target_harness": "codex"}, harness="opencode")
+    assert "error" not in result
+    assert result["count"] == 1
+    assert result["receipts"][0]["harness"] == "codex"
+
+
+def test_list_receipts_via_mcp_tools_call(tmp_path, monkeypatch):
+    """End-to-end through the real JSON-RPC handle() dispatch, same path
+    a live Codex session actually calls."""
+    monkeypatch.setenv("CUSTODIAN_CODEX_GUARD_STATE_DIR", str(tmp_path / "state"))
+    handle("tools/call", {"name": "guard_action", "arguments": _guard_args(tmp_path)})
+
+    result = handle("tools/call", {"name": "list_receipts", "arguments": {}})
+    body = result["structuredContent"]
+    assert result["isError"] is False
+    assert body["count"] == 1
+    assert body["receipts"][0]["harness"] == "codex"
 
 
 def test_state_directories_are_private(tmp_path):
@@ -491,3 +589,19 @@ def test_approval_record_tampering_is_detected(tmp_path):
             digest=approval_digest(tmp_path),
             requester="codex:test-session",
         )
+
+
+def test_approval_store_list_visible_scopes_by_harness(tmp_path):
+    store = ApprovalStore(tmp_path / "state")
+    store.request(digest=approval_digest(tmp_path), requester="r1", harness="codex")
+    store.request(digest=approval_digest(tmp_path), requester="r2", harness="opencode")
+    store.request(digest=approval_digest(tmp_path), requester="r3", harness="opencode")
+
+    policy = LedgerAccessPolicy(tmp_path / "state" / "ledger-access-policy.json")
+    own_only = store.list_visible(policy, harness="codex", model="*")
+    assert len(own_only) == 1
+    assert own_only[0].requester == "r1"
+
+    policy.add(LedgerGrant(harness="codex", can_view=("opencode",)))
+    with_grant = store.list_visible(policy, harness="codex", model="*")
+    assert {r.requester for r in with_grant} == {"r1", "r2", "r3"}

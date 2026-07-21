@@ -4,6 +4,66 @@ All notable changes to custodian-kernel are recorded here. Dates are UTC.
 
 ## [0.4.0] — unreleased
 
+### Per-harness ledger isolation
+
+Every receipt and approval is now stamped with the harness that produced it
+(server-side, from the same trusted-adapter identity already pinned for
+`guard_action` -- never a model-supplied argument). By default a harness
+sees only its own history; a new MCP tool, `list_receipts`, returns a
+harness's own receipts and clearly denies (not silently empties) a request
+for another harness's without an explicit grant. Grants are managed via a
+new `custodian/control/ledger_access_policy.py` (`custodian console`'s new
+`[G]` key) -- e.g. "let opencode see codex's ledger" -- scoped optionally to
+one trusted model id, following the same shape as the existing filesystem
+and approval policies. The operator's own console/CLI view is unaffected:
+the isolation boundary is agent-to-agent, not operator-to-agent. One
+physical hash-chained receipt log is kept (not split per harness), matching
+this module's existing tamper-evidence design; isolation is enforced at the
+query boundary. 22 new tests.
+
+### Second adversarial-review pass -- 15 more bugs found and fixed
+
+A 9-agent review covering codex_guard core, opencode_guard + control-plane,
+the executor/console CLI, and all remaining bundled skills/dashboard/
+frontend files not yet independently reviewed.
+
+- **CRITICAL**: an argv-list shell command (`["git","push","--force",...]`,
+  the shape a real coding agent actually uses) was str()'d directly into its
+  Python repr, whose stray quotes/brackets/commas broke every risk-inference
+  pattern requiring whitespace between words -- silently defeating the
+  "risk can never be lowered" guarantee for exactly this tool-call shape.
+- **CRITICAL**: "workspace" (the containment boundary) is a value the
+  caller/model itself declares, with no independent anchor -- declaring
+  `$HOME` or `/` as the workspace made the entire filesystem "inside the
+  workspace." Now denied outright; ordinary project subdirectories are
+  unaffected.
+- `apply_patch` -- the actual tool name OpenAI's real Codex CLI uses for
+  file edits -- was missing from the sensitive-config-write tool set,
+  letting CI/CD pipeline files be silently rewritten with no escalation.
+- Receipts leaked resolved filesystem paths verbatim via adapter denial
+  reasons, contradicting the module's own "deliberately value-free" design.
+- Console's pending-action list wasn't truly oldest-first despite its own
+  label claiming so -- an operator could approve/deny a different action
+  than the one shown.
+- `executor approve/deny latest` resolved to the newest pending capability
+  with no requester filter -- an operator could silently act on a different
+  requester's pending capability.
+- `find_pending_by_digest` didn't exclude denied capabilities -- a resend
+  after an explicit denial got stuck on that same capability_id forever.
+- A requester-length mismatch (128 vs. 256 chars) between two call sites
+  meant a long requester's approved capability could never be found again.
+- Console's interactive approve compared a record's digest to itself -- a
+  tautology, not a check. Removed the parameter.
+- 12 bundled-skill fixes: TwiML/XML injection in `twilio-voice-call`
+  (crafted call-hijacking), missing destination validation (SSRF) in
+  `http-get`/`http-post`/`web-scrape`/`webhook-post`, missing path
+  boundaries in `file-read`/`file-list`/`base64-encode`/`hash-sha256`/
+  `s3-get`, a NoSQL-operator denylist gap and unbounded `--limit 0` in
+  `mongodb-find`, inconsistent URL quoting in `calendar-delete`/
+  `calendar-update`, and a mislabeled trust band on `kv-set`.
+
+53 new/updated regression tests. Full suite: 2560 passed, 1 skipped, 0 failed.
+
 ### Custodian Guard — Codex-native authority firewall
 
 A new Codex plugin/MCP integration treating Codex as an untrusted proposer,

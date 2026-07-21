@@ -9,7 +9,16 @@ The existing Custodian kernel, Paladin vault, and guard-adapter framework are
 the foundation. The Build Week work is a new Codex-native enforcement surface:
 
 - a repo-local Codex plugin and governance skill;
-- a dependency-free MCP server exposing `guard_action` and `verify_receipts`;
+- a dependency-free MCP server exposing `guard_action`, `verify_receipts`,
+  and `list_receipts`;
+- per-harness ledger isolation: every receipt and approval is stamped with
+  the harness that produced it (server-side, never a model-supplied value),
+  and `list_receipts` defaults to a harness's own history only — seeing
+  another adapter's (e.g. Codex reading OpenCode's) requires an explicit
+  operator-granted `LedgerAccessPolicy` rule, managed from `custodian
+  console`'s `[G]` key. Not physically separate storage (one shared,
+  hash-chained receipt log, matching this module's existing tamper-evidence
+  design) — isolation is enforced at the query boundary;
 - action-bound, expiring, single-use human approvals that the model cannot grant;
 - a typed coding-action risk model independent of the model's own label;
 - fail-closed composition of workspace, secret, prompt-injection, and

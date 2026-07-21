@@ -11,6 +11,7 @@ from custodian.codex_guard.approvals import ApprovalError, ApprovalStore
 from custodian.codex_guard.receipts import ReceiptChain
 from custodian.control.policy import ApprovalPolicy, ApprovalRule
 from custodian.control.filesystem_policy import FilesystemPolicy, FilesystemRule
+from custodian.control.ledger_access_policy import LedgerAccessPolicy, LedgerGrant
 from custodian.executor.capability import CapabilityStore
 
 _CLEAR = "\x1b[2J\x1b[H"
@@ -144,6 +145,7 @@ def _draw(state_dir: Path, message: str) -> tuple[ApprovalStore, CapabilityStore
     print("\n────────────────────────────────────────────────────────────────────────────────")
     fs_rules = FilesystemPolicy(state_dir / "filesystem-policy.json").list()
     policy_rules = ApprovalPolicy(state_dir / "approval-policy.json").list()
+    ledger_grants = LedgerAccessPolicy(state_dir / "ledger-access-policy.json").list()
     mode_counts: dict[str, int] = {}
     for r in policy_rules:
         mode_counts[r.mode] = mode_counts.get(r.mode, 0) + 1
@@ -151,8 +153,9 @@ def _draw(state_dir: Path, message: str) -> tuple[ApprovalStore, CapabilityStore
     modes = ", ".join(f"{c} {m}" for m, c in sorted(mode_counts.items()))
     print(f"  {_DIM}Policy: {active_rules} active rule(s) — {modes if modes else 'all ask (default)'}{_RESET}")
     print(f"  {_DIM}Filesystem scopes: {len(fs_rules)}{_RESET}")
+    print(f"  {_DIM}Ledger access grants: {len(ledger_grants)} (every harness sees only its own receipts by default){_RESET}")
     print(f"  {_YELLOW}[A]{_RESET} approve once    {_YELLOW}[D]{_RESET} deny    {_YELLOW}[I]{_RESET} ignore 5m    {_YELLOW}[L]{_RESET} lease (1h/25 uses)")
-    print(f"  {_YELLOW}[F]{_RESET} filesystem scope    {_YELLOW}[R]{_RESET} rules    {_YELLOW}[K]{_RESET} global stop    {_YELLOW}[Q]{_RESET} quit")
+    print(f"  {_YELLOW}[F]{_RESET} filesystem scope    {_YELLOW}[G]{_RESET} ledger grant    {_YELLOW}[R]{_RESET} rules    {_YELLOW}[K]{_RESET} global stop    {_YELLOW}[Q]{_RESET} quit")
     print(f"  {_DIM}Approve-once: single-use — the next matching action consumes it.{_RESET}")
     print(f"  {_DIM}Lease: temporary rule with max uses.  Permanent: no expiry or limit.{_RESET}")
     print(f"  {_DIM}Actions apply to the oldest pending request (order shown).{_RESET}")
@@ -164,6 +167,7 @@ def run(args) -> int:
     state_dir = Path(args.state_dir)
     policy = ApprovalPolicy(state_dir / "approval-policy.json")
     filesystem = FilesystemPolicy(state_dir / "filesystem-policy.json")
+    ledger_access = LedgerAccessPolicy(state_dir / "ledger-access-policy.json")
     message = ""
     while True:
         try:
@@ -203,6 +207,21 @@ def run(args) -> int:
                         allow_roots=allow, deny_roots=deny, enforcement=enforcement,
                     ))
                     message = f"Saved {access} scope for {harness}/{model}; deny overrides allow."
+                except ValueError as exc:
+                    message = f"Not saved: {exc}"
+            elif key == "g":
+                print(_CLEAR, end="")
+                print("Ledger access grant — every harness sees only its own receipts by default.")
+                print("This grants ONE harness visibility into another's ledger/receipt history.")
+                harness = input("Grant visibility TO harness [codex]: ").strip() or "codex"
+                model = input("Trusted model id [all]: ").strip() or "*"
+                can_view = tuple(
+                    h.strip() for h in input("Can view harness(es), comma separated (or * for all): ").split(",")
+                    if h.strip()
+                )
+                try:
+                    ledger_access.add(LedgerGrant(harness=harness, model=model, can_view=can_view))
+                    message = f"Granted {harness}/{model} visibility into: {', '.join(can_view)}."
                 except ValueError as exc:
                     message = f"Not saved: {exc}"
             elif key == "k":
