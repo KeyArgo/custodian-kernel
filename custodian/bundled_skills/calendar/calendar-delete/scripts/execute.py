@@ -8,7 +8,7 @@ token = os.environ.get("GOOGLE_CALENDAR_TOKEN", "")
 if not token:
     print(json.dumps({"ok": False, "stub": True, "tool": "calendar-delete", "message": "Set GOOGLE_CALENDAR_TOKEN to enable"})); exit(0)
 try:
-    url = f"https://www.googleapis.com/calendar/v3/calendars/{urllib.parse.quote(a.calendar_id)}/events/{a.event_id}"
+    url = f"https://www.googleapis.com/calendar/v3/calendars/{urllib.parse.quote(a.calendar_id)}/events/{urllib.parse.quote(a.event_id, safe='')}"
     req = urllib.request.Request(url, method="DELETE", headers={"Authorization": f"Bearer {token}"})
     with urllib.request.urlopen(req, timeout=10) as r:
         r.read()

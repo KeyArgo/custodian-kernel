@@ -63,6 +63,13 @@ _TOOL_KINDS = {
     "file-write": ActionKind.WRITE,
     "patch": ActionKind.WRITE,
     "edit_file": ActionKind.WRITE,
+    # "apply_patch" is the actual tool name OpenAI's real Codex CLI uses for
+    # file edits -- it was missing from this set entirely, so a proposal
+    # naming it this way never triggered the sensitive-config-write check
+    # below despite being a normal, expected way to reach it.
+    "apply_patch": ActionKind.WRITE,
+    "update_file": ActionKind.WRITE,
+    "write": ActionKind.WRITE,
     "file-delete": ActionKind.DESTRUCTIVE,
     "delete_file": ActionKind.DESTRUCTIVE,
     "git-push": ActionKind.NETWORK,
@@ -121,17 +128,48 @@ def _inferred_kind(tool: str, arguments: dict[str, Any]) -> ActionKind | None:
         if mapped in _ESCALATE:
             return mapped
     if normalized in {"shell", "bash", "terminal", "shell-exec", "exec", "exec_command"}:
-        command = str(arguments.get("command", arguments.get("cmd", "")))
+        raw_command = arguments.get("command", arguments.get("cmd", ""))
+        # An argv-list command (e.g. ["git","push","--force","origin","main"])
+        # must not be str()'d directly -- that produces its Python repr
+        # ("['git', 'push', ...]"), whose stray quotes/brackets/commas break
+        # every _SHELL_RULES pattern that requires whitespace between words
+        # or an anchor, silently defeating risk inference for exactly the
+        # tool-call shape a real coding agent uses.
+        if isinstance(raw_command, (list, tuple)):
+            command = " ".join(str(part) for part in raw_command)
+        else:
+            command = str(raw_command)
         for pattern, inferred in _SHELL_RULES:
             if pattern.search(command):
                 return inferred
     surfaces = tuple(_strings(arguments))
     if any("paladin://" in value or "warden://" in value for value in surfaces):
         return ActionKind.CREDENTIAL
-    if normalized in {"write_file", "file-write", "patch", "edit_file"}:
+    # Keyed off the same _TOOL_KINDS mapping (rather than a second,
+    # independently-maintained literal tool-name set) so a write-shaped tool
+    # name missing from this check can't silently reappear the way
+    # "apply_patch" -- the real Codex CLI's actual edit tool name -- did.
+    if mapped == ActionKind.WRITE:
         if any(_SENSITIVE_WRITE_PATH.search(value) for value in surfaces):
             return ActionKind.GOVERNANCE
     return mapped
+
+
+def _is_unreasonable_workspace_root(resolved: Path) -> bool:
+    """A legitimate project workspace is a specific subdirectory -- never the
+    caller's entire home directory or a filesystem root. Since `workspace`
+    is a value the model itself declares (see mcp_server.py's own docstring:
+    harness identity is pinned by the trusted adapter, but workspace is not),
+    accepting either of these would let virtually any real-world path
+    ("~/.bashrc", "/etc/passwd") resolve as "inside the workspace,"
+    defeating the entire containment boundary with an ordinary-looking
+    value an agent could plausibly declare on its own.
+    """
+    if resolved == Path.home().resolve():
+        return True
+    if resolved.parent == resolved:  # filesystem root ("/", "C:\\", ...)
+        return True
+    return False
 
 
 def _pipeline(workspace: str, forbidden_paths: list[str] | None,
@@ -186,6 +224,20 @@ def evaluate_action(
             verdict="denied",
             action_kind=kind.value,
             reason="tool and object-shaped arguments are required",
+            band="L4",
+        )
+
+    try:
+        resolved_workspace = Path(workspace).expanduser().resolve()
+    except (OSError, RuntimeError, ValueError):
+        resolved_workspace = None
+    if resolved_workspace is None or _is_unreasonable_workspace_root(resolved_workspace):
+        return GuardDecision(
+            verdict="denied",
+            action_kind=kind.value,
+            reason=("declared workspace is the home directory, a filesystem root, or "
+                    "unresolvable; a real project workspace must be a specific "
+                    "subdirectory -- Custodian fails closed"),
             band="L4",
         )
 

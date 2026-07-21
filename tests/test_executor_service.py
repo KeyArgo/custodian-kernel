@@ -118,6 +118,36 @@ print(json.dumps({{"ok": True}}))
     assert calls_file.read_text().count("ran") == 1  # still exactly once
 
 
+def test_long_requester_string_does_not_break_approve_and_resend(skills_root, tmp_path, monkeypatch):
+    """Regression: service.handle() truncated the incoming requester to 256
+    chars, but CapabilityStore.request() truncates to 128 internally when
+    storing it. A requester string between 129-256 chars got stored
+    shorter than the value later compared against in
+    find_pending_by_digest()/consume() -- the approved capability could
+    never be found/consumed again, so the resend silently issued a fresh
+    escalation forever instead of executing the approved one."""
+    calls_file = skills_root / "big-charge" / "calls.txt"
+    _make_skill(skills_root, "big-charge", "L2", 0.0, f"""
+import json
+with open({str(calls_file)!r}, "a") as f:
+    f.write("ran\\n")
+print(json.dumps({{"ok": True}}))
+""")
+    monkeypatch.setattr(Path, "home", lambda: tmp_path)
+    service = _service(skills_root, tmp_path)
+
+    long_requester = "session:" + "x" * 200  # 208 chars, between 128 and 256
+    request = {"tool": "big-charge", "args": {"amount": 999999.0}, "requester": long_requester}
+    first = service.handle(request)
+    assert first["verdict"] == "escalation_required"
+
+    service.capabilities.approve(first["capability_id"], approved_by="operator")
+
+    second = service.handle(request)  # identical resend, now approved
+    assert second["ok"] is True, f"resend did not find the approved capability: {second}"
+    assert calls_file.read_text().count("ran") == 1
+
+
 def test_approval_for_one_action_cannot_execute_a_different_action(skills_root, tmp_path, monkeypatch):
     """The core delegated-execution guarantee: an operator approving action
     A must not let action B (different args) execute."""

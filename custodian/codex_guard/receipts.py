@@ -5,6 +5,7 @@ import hashlib
 import hmac
 import json
 import os
+import re
 import time
 from contextlib import contextmanager
 from pathlib import Path
@@ -13,6 +14,18 @@ from threading import Lock
 from typing import Any
 
 GENESIS = "0" * 64
+
+# Adapter denial reasons (e.g. custodian/adapters/builtin/path_fence.py's
+# f"path {resolved!r} is inside a forbidden location") embed the resolved,
+# real filesystem path verbatim -- confirmed to leak filenames/usernames/
+# directory layout into this receipt chain, contradicting this module's own
+# "deliberately value-free" design. Redact any single-quoted, path-shaped
+# segment before persisting.
+_PATH_LIKE = re.compile(r"'[^']*[/\\][^']*'")
+
+
+def _redact_reason(reason: str) -> str:
+    return _PATH_LIKE.sub("'[REDACTED-PATH]'", reason)
 
 
 def _private_dir(path: Path) -> None:
@@ -103,7 +116,7 @@ class ReceiptChain:
                 "verdict": decision["verdict"],
                 "action_kind": decision["action_kind"],
                 "band": decision["band"],
-                "reason": decision["reason"][:512],
+                "reason": _redact_reason(decision["reason"])[:512],
             }
             mac = hmac.new(self._key(), prev.encode() + self._canonical(body), hashlib.sha256).hexdigest()
             record = {**body, "prev": prev, "mac": mac}

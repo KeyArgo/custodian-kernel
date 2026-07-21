@@ -38,6 +38,19 @@ def _resolve_capability(
             pending.append(candidate)
     if not pending:
         raise CapabilityError("no unexpired pending capabilities")
+    requesters = {item.requester for item in pending}
+    if len(requesters) > 1:
+        # 'latest' used to mean "the newest pending capability regardless of
+        # who requested it" -- an operator approving/denying their own
+        # session's latest request could silently act on a completely
+        # different requester's pending capability instead (a benign
+        # concurrent agent, or one racing to submit right before the
+        # operator hits enter). Refuse the ambiguous shorthand rather than
+        # guess; the operator must name the exact capability_id.
+        raise CapabilityError(
+            "multiple requesters have pending capabilities -- 'latest' is "
+            "ambiguous; specify the exact capability_id instead"
+        )
     return max(pending, key=lambda item: item.created_at).capability_id
 
 

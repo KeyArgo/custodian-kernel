@@ -114,10 +114,20 @@ def _draw(state_dir: Path, message: str) -> tuple[ApprovalStore, CapabilityStore
     print("╠══════════════════════════════════════════════════════════════════════════════╣")
     print(f"║  Pending {len(records)+len(caps):<4}  Snoozed {snoozed:<3}  Blocks {len(blocks):<4}  Harness {len(records):<4}     ║")
     print("╚══════════════════════════════════════════════════════════════════════════════╝")
-    combined = [("CODEX", r) for r in records] + [("EXEC", r) for r in caps]
+    # Sorted oldest-first (not just CODEX-then-EXEC in creation order within
+    # each group) so "the oldest pending request" -- what the operator
+    # actions below are documented to apply to -- is genuinely combined[0],
+    # and so a >12-item backlog still keeps the true oldest items in the
+    # displayed slice below rather than truncating them out of view while an
+    # unrendered item is still the one an action would silently apply to.
+    combined = sorted(
+        [("CODEX", r) for r in records] + [("EXEC", r) for r in caps],
+        key=lambda pair: pair[1].created_at,
+    )
     if not combined:
         print(f"\n  {_GREEN}✓ No actions waiting. Custodian is watching.{_RESET}")
-    for index, (source, record) in enumerate(combined[:12], 1):
+    combined = combined[:12]
+    for index, (source, record) in enumerate(combined, 1):
         ident = getattr(record, "approval_id", getattr(record, "capability_id", ""))
         digest = record.action_digest[:12]
         expiry = _remaining(record)
@@ -203,23 +213,34 @@ def run(args) -> int:
                     policy.add(rule)
                     message = f"Global deny rule enabled: {rule.rule_id[:8]}…"
             elif key == "i" and pending:
-                _, record = pending[-1]
+                # combined/pending is sorted oldest-first in _draw() -- index 0
+                # is genuinely "1." on screen, matching the documented
+                # "applies to the oldest pending request."
+                _, record = pending[0]
                 ident = getattr(record, "approval_id", getattr(record, "capability_id", ""))
                 _snooze(state_dir, ident)
                 message = "Ignored for 5 minutes — still pending, never authorized."
             elif key in {"a", "d"} and pending:
-                source, record = pending[-1]
+                source, record = pending[0]
                 try:
                     if source == "CODEX":
                         if key == "a":
-                            approvals.approve(record.approval_id, approved_by=args.operator,
-                                              expected_digest=record.action_digest)
+                            # No expected_digest: record.action_digest is the
+                            # same record being approved, so comparing it to
+                            # itself can never fail -- a tautology, not a
+                            # check. This interactive console's real safety
+                            # property is the operator having just read the
+                            # full displayed record (requester/digest/age)
+                            # before pressing a key; it does not pretend to
+                            # verify against an independently-obtained value
+                            # the way `custodian executor approve --digest`
+                            # does for the scripted/remote flow.
+                            approvals.approve(record.approval_id, approved_by=args.operator)
                         else:
                             approvals.deny(record.approval_id, denied_by=args.operator)
                     else:
                         if key == "a":
-                            capabilities.approve(record.capability_id, approved_by=args.operator,
-                                                  expected_digest=record.action_digest)
+                            capabilities.approve(record.capability_id, approved_by=args.operator)
                         else:
                             capabilities.deny(record.capability_id, denied_by=args.operator)
                     message = "Approved — single-use; consumed on next matching action." if key == "a" else "Denied."

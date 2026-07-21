@@ -92,6 +92,101 @@ def test_caller_cannot_downgrade_risky_shell_command(tmp_path, command, expected
         assert "caller supplied read" in result.reason
 
 
+@pytest.mark.parametrize(("command", "expected_kind"), [
+    (["rm", "-rf", "build/output"], "destructive"),
+    (["git", "push", "--force", "origin", "main"], "network"),
+    (["kubectl", "apply", "-f", "deployment.yaml"], "production"),
+    (["docker", "push", "example/app:latest"], "production"),
+])
+def test_caller_cannot_downgrade_risky_argv_list_shell_command(tmp_path, command, expected_kind):
+    """Regression: an argv-list command (the shape a real coding agent
+    actually uses, e.g. ["git","push","--force","origin","main"]) was
+    previously str()'d directly, producing its Python repr
+    ("['git', 'push', ...]") whose stray quotes/brackets/commas broke every
+    _SHELL_RULES pattern requiring whitespace between words -- silently
+    defeating risk inference for exactly this tool-call shape."""
+    result = decide(
+        tmp_path,
+        tool="shell-exec",
+        action_kind="read",
+        arguments={"command": command},
+    )
+    assert result.verdict in {"escalation_required", "denied"}
+    assert result.action_kind == expected_kind
+
+
+@pytest.mark.parametrize("tool", ["apply_patch", "update_file", "write"])
+def test_sensitive_configuration_writes_via_apply_patch_cannot_be_underclassified(tmp_path, tool):
+    """Regression: "apply_patch" is the actual tool name OpenAI's real Codex
+    CLI uses for file edits, but it was missing from the sensitive-write
+    tool set entirely -- a CI/CD pipeline file could be silently rewritten
+    with no escalation merely by using this real, ordinary tool name."""
+    result = decide(
+        tmp_path,
+        tool=tool,
+        action_kind="write",
+        arguments={"path": str(tmp_path / ".github" / "workflows" / "release.yml"),
+                   "content": "malicious CI step"},
+    )
+    assert result.verdict == "escalation_required"
+    assert result.action_kind == "governance"
+
+
+@pytest.mark.parametrize("workspace_fn", [
+    lambda tmp_path: str(Path.home()),
+    lambda tmp_path: "~",
+    lambda tmp_path: "/",
+])
+def test_declaring_home_directory_or_filesystem_root_as_workspace_is_denied(tmp_path, workspace_fn):
+    """Regression: workspace is a value the caller/model itself declares
+    (see mcp_server.py -- harness identity is pinned server-side, but
+    workspace is not). Declaring $HOME or "/" as the workspace previously
+    made the entire filesystem "inside the workspace," letting an
+    autonomous write reach e.g. ~/.bashrc. Neither is ever a legitimate
+    project workspace."""
+    result = decide(
+        tmp_path,
+        tool="write_file",
+        action_kind="write",
+        workspace=workspace_fn(tmp_path),
+        arguments={"path": "innocuous-looking.txt", "content": "x"},
+    )
+    assert result.verdict == "denied"
+    assert "home directory" in result.reason or "filesystem root" in result.reason
+
+
+def test_declaring_an_actual_project_subdirectory_still_works(tmp_path):
+    """The fix above must not deny ordinary, legitimate workspaces --
+    only the home directory and filesystem root specifically."""
+    result = decide(tmp_path)
+    assert result.verdict == "autonomous"
+
+
+def test_receipt_reason_redacts_resolved_filesystem_paths(tmp_path, monkeypatch):
+    """Regression: adapter denial reasons (e.g. PathFence's
+    f"path {resolved!r} is inside a forbidden location") embedded the
+    real, resolved filesystem path verbatim into the persisted receipt
+    chain -- contradicting this module's own "deliberately value-free"
+    design and leaking filenames/usernames/directory layout."""
+    from custodian.codex_guard.receipts import ReceiptChain
+    monkeypatch.setenv("CUSTODIAN_CODEX_GUARD_STATE_DIR", str(tmp_path / "state"))
+    secret_path = Path.home() / ".ssh" / "id_ed25519"
+    result = decide(
+        tmp_path,
+        tool="read_file",
+        action_kind="read",
+        arguments={"path": str(secret_path)},
+    )
+    assert result.verdict == "denied"
+    assert str(secret_path) in result.reason, "sanity check: the raw decision must actually contain the path"
+
+    chain = ReceiptChain(tmp_path / "state")
+    receipt = chain.append(result.to_dict(), tool="read_file", session_id="s1")
+    assert str(secret_path) not in receipt["reason"]
+    assert "id_ed25519" not in receipt["reason"]
+    assert "[REDACTED-PATH]" in receipt["reason"]
+
+
 def test_secret_value_is_denied_before_authority(tmp_path):
     result = decide(
         tmp_path,

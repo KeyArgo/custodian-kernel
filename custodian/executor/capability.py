@@ -268,7 +268,15 @@ class CapabilityStore:
                 continue
             if record.action_digest != digest or record.requester != requester:
                 continue
-            if record.status == "consumed" or record.is_expired(now=now):
+            # "denied" must be excluded too, not just "consumed" -- the
+            # docstring above promises "pending/approved" only. Without
+            # this, a resend of the identical proposal after an operator's
+            # explicit denial kept resolving to that same, permanently
+            # denied capability_id (approve() on it fails with "capability
+            # is not pending" forever) instead of getting a fresh one --
+            # the exact action could never be re-escalated again until its
+            # original TTL lapsed.
+            if record.status in ("consumed", "denied") or record.is_expired(now=now):
                 continue
             if best is None or record.created_at > best.created_at:
                 best = record

@@ -140,6 +140,21 @@ def test_find_pending_by_digest_ignores_consumed_capabilities(tmp_path):
     assert store.find_pending_by_digest(digest, "r") is None
 
 
+def test_find_pending_by_digest_ignores_denied_capabilities(tmp_path):
+    """Regression: the docstring promises 'pending/approved' only, but
+    "denied" was never actually excluded from the filter -- a resend of the
+    identical proposal after an operator's explicit denial kept resolving
+    to that same, permanently-denied capability_id (approve() on it fails
+    forever with "capability is not pending") instead of a fresh one. The
+    action could never be re-escalated again until its original TTL lapsed."""
+    store = CapabilityStore(tmp_path)
+    digest = action_digest(tool="t", args={}, workspace="/ws", requester="r")
+    cap = store.request(digest=digest, requester="r")
+    store.deny(cap.capability_id, denied_by="op")
+
+    assert store.find_pending_by_digest(digest, "r") is None
+
+
 def test_concurrent_consume_only_one_thread_wins(tmp_path):
     store = CapabilityStore(tmp_path)
     digest = action_digest(tool="t", args={}, workspace="/ws", requester="r")

@@ -68,11 +68,25 @@ class TestResolveCapability:
         with pytest.raises(CapabilityError, match="no unexpired pending"):
             _resolve_capability(store, "latest")
 
-    def test_latest_ignores_other_requester(self, tmp_path):
+    def test_latest_resolves_fine_with_a_single_requester(self, tmp_path):
         store = CapabilityStore(tmp_path, now=lambda: 1000.0)
         _make_pending(store, tool="a", requester="bob")
         cap_id = _resolve_capability(store, "latest", now=1000.0)
         assert cap_id is not None
+
+    def test_latest_refuses_when_multiple_requesters_are_pending(self, tmp_path):
+        """Regression: 'latest' previously scanned every pending capability
+        and returned whichever had the newest created_at with NO requester
+        filter -- an operator approving/denying their own session's latest
+        request via the documented 'latest' shorthand could silently act on
+        a completely different requester's pending capability instead
+        (created moments later, whether by a benign concurrent agent or one
+        racing to submit right before the operator hits enter)."""
+        store = CapabilityStore(tmp_path, now=lambda: 1000.0)
+        _make_pending(store, tool="transfer-50", requester="bob-session")
+        _make_pending(store, tool="transfer-999999", requester="mallory-session")
+        with pytest.raises(CapabilityError, match="multiple requesters"):
+            _resolve_capability(store, "latest", now=1000.0)
 
 
 # ── cmd_executor_approve ─────────────────────────────────────────────────────────

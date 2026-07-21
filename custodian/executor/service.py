@@ -48,7 +48,15 @@ class ExecutorService:
     def handle(self, payload: dict) -> dict:
         tool_name = payload.get("tool")
         args = dict(payload.get("args") or {})
-        requester = str(payload.get("requester") or "executor-client")[:256]
+        # Truncate to the SAME length CapabilityStore.request() uses
+        # internally (capability.py's requester[:128]) -- a mismatch here
+        # (this used to truncate at 256) meant a requester string longer
+        # than 128 chars got stored shorter than the value later compared
+        # against in find_pending_by_digest()/consume(), so an approved
+        # capability could never be found/consumed again: the resend loop
+        # silently issued a fresh escalation forever instead of executing
+        # the one the operator had just approved.
+        requester = str(payload.get("requester") or "executor-client")[:128]
         workspace = str(payload.get("workspace") or "")
         if "env" in payload:
             return {"ok": False, "verdict": "denied", "error": "client environment injection is forbidden"}
