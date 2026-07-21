@@ -83,18 +83,46 @@ def _age(record) -> str:
 
 
 def _recent_blocks(state_dir: Path, limit: int = 3) -> list[dict]:
-    """Return recent authenticated hard denials for persistent display."""
+    """Return recent authenticated hard denials for persistent display.
+
+    Merges two independent stores: Codex/OpenCode Guard's ReceiptChain and
+    the UniversalLedger written by the general tool registry (which is what
+    Talaria's HermesBridge feeds via registry.run()). Before this, denials
+    from Talaria/registry-driven tool calls never appeared here -- the
+    console only ever read the receipt chain, so "operator sees everything"
+    silently didn't cover that whole path.
+    """
     chain = ReceiptChain(state_dir)
     try:
         chain.verify()
         records = chain._records()
+        denied = [r for r in records if r.get("verdict") == "denied"]
     except Exception as exc:
-        return [{
+        denied = [{
             "tool": "receipt-chain",
             "reason": f"audit verification failed: {type(exc).__name__}",
             "ts": time.time(),
         }]
-    denied = [record for record in records if record.get("verdict") == "denied"]
+
+    try:
+        from custodian.universal_ledger import UniversalLedger
+        ledger = UniversalLedger(state_dir / "ledger.db")
+        for row in ledger.by_verdict("denied", limit=limit):
+            denied.append({
+                "tool": row.get("action", "unknown"),
+                "reason": (row.get("metadata") or {}).get("reason", "denied by policy"),
+                "ts": row.get("ts", time.time()),
+                "verdict": "denied",
+                "source": row.get("requester", "-"),
+            })
+    except Exception as exc:
+        denied.append({
+            "tool": "universal-ledger",
+            "reason": f"ledger read failed: {type(exc).__name__}",
+            "ts": time.time(),
+        })
+
+    denied.sort(key=lambda r: r.get("ts", 0))
     return denied[-limit:]
 
 

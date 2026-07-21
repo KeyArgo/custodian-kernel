@@ -126,6 +126,7 @@ from custodian.cli import cmd_console
 from custodian.cli import cmd_codex_guard
 from custodian.cli._version import LazyVersionAction
 from custodian.config import CustodianConfig
+from custodian.tools.registry import _state_dir as _codex_guard_state_dir
 
 
 _DESCRIPTION = "Custodian — kernel-enforced authority and spend governance for AI agents."
@@ -504,7 +505,14 @@ def main(argv: list[str] | None = None) -> int:
 
     # ── executor (delegated execution) ────────────────────────────────────────
     cmd_executor.register(sub)
-    cmd_console.register(sub, str(env_defaults.state_dir))
+    # Console reads ApprovalStore/CapabilityStore/ReceiptChain -- the same
+    # ~/.custodian (or $CUSTODIAN_STATE_DIR) location codex_guard/mcp_server.py
+    # and the executor actually write to. `env_defaults.state_dir` is a
+    # different, older default (./state, project-local) used by the
+    # request/approve/deny/resume/kill band-approval commands -- passing it
+    # here left the console pointed at an empty directory by default, showing
+    # "No actions waiting" while real pending approvals piled up elsewhere.
+    cmd_console.register(sub, str(_codex_guard_state_dir()))
 
     # ── codex-guard ───────────────────────────────────────────────────────────
     cg_parser = sub.add_parser(
@@ -519,7 +527,7 @@ def main(argv: list[str] | None = None) -> int:
         help="Print the codex-guard receipt chain",
         description="Pretty-print the JSONL receipt chain for Codex Guard decisions.",
     )
-    _add_state_dir(cg_rec, str(Path.home() / ".custodian"))
+    _add_state_dir(cg_rec, str(_codex_guard_state_dir()))
     cg_rec.add_argument(
         "--limit", type=int, default=50,
         help="Max receipts to show (default: 50; 0 or negative means all)",
