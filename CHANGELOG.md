@@ -4,6 +4,43 @@ All notable changes to custodian-kernel are recorded here. Dates are UTC.
 
 ## [0.4.0] — unreleased
 
+### Bundled skills — 5 more bugs fixed (independent Qwen bug-hunt review)
+
+Found by a 3-agent Qwen3.6-35B adversarial review, independently re-verified
+against the real invocation path before fixing (two of the review's other
+claims did not reproduce and are not included here — see the session handover
+for details).
+
+- **`redis-set`/`redis-get`/`redis-delete`** — hand-built the raw Redis
+  inline-command protocol via unescaped f-strings; a key or value containing
+  `\r\n` could inject arbitrary additional Redis commands. Switched to the
+  RESP array protocol, which is length-prefixed and can't be broken out of by
+  delimiter bytes inside a value.
+- **`postgres-query`/`mysql-query`** — declared band **L0** ("read-only, no
+  real-world effects") but ran the caller's query verbatim with no validation
+  at all — any write or DDL statement would execute. Added an allowlist
+  (single `SELECT`/`WITH` statement only, comment- and string-literal-aware)
+  matching the tool's own declared band and description.
+- **`sqlite-query`** — its write-blocking check was a blocklist of a handful
+  of keywords (`INSERT`/`UPDATE`/`DELETE`/`DROP`/`ALTER`/`CREATE`/`TRUNCATE`/
+  `REPLACE`) that missed others entirely (e.g. `ATTACH DATABASE`). Replaced
+  with the same allowlist approach as the two fixes above.
+- **`file-write`** — its path-allowlist check (`realpath(path).startswith(
+  realpath(ALLOWED))`) had no directory-separator boundary, so a sibling
+  directory sharing a string prefix (e.g. `/tmp/allowed` vs.
+  `/tmp/allowed-evil`) bypassed it.
+- **`shell-exec`** — `python3` sat in the command allowlist at band **L2**
+  ("autonomous, routine") with no argument restriction at all — unlike
+  git/curl/find, there is no safe restricted subset of "run arbitrary code"
+  reachable by denying a few flags, so it's removed from the allowlist
+  entirely. (A `--workdir` restriction was also considered for this tool and
+  reverted after re-checking against its own test suite: every allowlisted
+  binary here already accepts arbitrary absolute-path arguments with no
+  directory restriction, and `--workdir` is the only legitimate way to point
+  `git log`/`git status` at a specific repo since `git -C` is already
+  blocked — restricting it further would not close a distinct capability,
+  only break intended, already-tested usage.)
+
 First 0.4 release. Adds a first-class credential broker (`paladin`), Windows
 support, backup/restore, and bulk credential onboarding — and carries a round
 of money/security hardening with a regression test for every fix (each verified
