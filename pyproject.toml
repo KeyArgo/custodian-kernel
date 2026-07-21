@@ -66,6 +66,7 @@ paladin = "paladin.cli:main"
 paladin-import = "paladin.cli:main_import"
 custodian-codex-guard-mcp = "custodian.codex_guard.mcp_server:main"
 custodian-codex = "custodian.codex_guard.cli:main"
+custodian-opencode = "custodian.opencode_guard.cli:main"
 
 [build-system]
 requires = ["setuptools>=64"]

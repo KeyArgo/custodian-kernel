@@ -74,7 +74,8 @@ _TOOL_KINDS = {
 _SHELL_RULES = (
     (re.compile(
         r"\bcustodian-codex\s+(?:approve|disable|setup)\b"
-        r"|\bcustodian\.codex_guard\.cli\s+(?:approve|disable|setup)\b", re.I,
+        r"|\bcustodian\.codex_guard\.cli\s+(?:approve|disable|setup)\b"
+        r"|\bopencode\b|\bcustodian-opencode\s+(?:setup|evaluate)\b", re.I,
     ), ActionKind.GOVERNANCE),
     (re.compile(
         r"(?:^|[;&|]\s*)(?:sudo\s+)?(?:rm|rmdir|shred|truncate|del|erase|rd)\b"
@@ -133,7 +134,8 @@ def _inferred_kind(tool: str, arguments: dict[str, Any]) -> ActionKind | None:
     return mapped
 
 
-def _pipeline(workspace: str, forbidden_paths: list[str] | None) -> AdapterPipeline:
+def _pipeline(workspace: str, forbidden_paths: list[str] | None,
+              allow_paths: list[str] | None = None) -> AdapterPipeline:
     root = str(Path(workspace).expanduser().resolve())
     forbidden = forbidden_paths or [
         "~/.ssh", "~/.aws", "~/.config/gcloud", "~/.kube",
@@ -147,7 +149,7 @@ def _pipeline(workspace: str, forbidden_paths: list[str] | None) -> AdapterPipel
         PathFence({
             "forbidden_paths": forbidden,
             "forbidden_globs": ["*.env", "*.pem", "id_rsa", "id_ed25519"],
-            "allow_paths": [root],
+            "allow_paths": allow_paths if allow_paths is not None else [root],
             "base_path": root,
         }),
     ])
@@ -161,6 +163,7 @@ def evaluate_action(
     workspace: str,
     intent: str = "",
     forbidden_paths: list[str] | None = None,
+    allow_paths: list[str] | None = None,
 ) -> GuardDecision:
     """Evaluate one proposed action without executing it.
 
@@ -197,7 +200,7 @@ def evaluate_action(
         description=intent,
         band="L1" if effective_kind in _AUTONOMOUS else "L3",
     )
-    result = _pipeline(workspace, forbidden_paths).run_pre(ctx)
+    result = _pipeline(workspace, forbidden_paths, allow_paths).run_pre(ctx)
     warnings = tuple(v.reason for v in result.warnings if v.reason)
     if not result.allowed:
         reasons = "; ".join(v.reason for v in result.denials if v.reason)

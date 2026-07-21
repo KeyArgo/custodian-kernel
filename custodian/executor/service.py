@@ -50,7 +50,19 @@ class ExecutorService:
         args = dict(payload.get("args") or {})
         requester = str(payload.get("requester") or "executor-client")[:256]
         workspace = str(payload.get("workspace") or "")
-        env = payload.get("env")  # pre-resolved trusted env, if any (Paladin egress)
+        if "env" in payload:
+            return {"ok": False, "verdict": "denied", "error": "client environment injection is forbidden"}
+        credential_refs = payload.get("credential_refs") or []
+        if not isinstance(credential_refs, list) or any(
+            not isinstance(ref, str) or not ref.startswith("paladin://")
+            for ref in credential_refs
+        ):
+            return {"ok": False, "verdict": "denied", "error": "invalid credential reference"}
+        # Resolution belongs behind this boundary. Fail closed until a
+        # server-owned Paladin resolver is configured.
+        if credential_refs:
+            return {"ok": False, "verdict": "denied", "error": "executor credential resolver is not configured"}
+        env = None
 
         tool = self.registry.get(tool_name) if tool_name else None
         if tool is None:

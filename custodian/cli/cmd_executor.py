@@ -3,15 +3,42 @@ executor, the separate process that holds the only code path allowed to
 actually run a governed skill script (see custodian/executor/)."""
 from __future__ import annotations
 
+import hmac
+import os
 import sys
+import time
 from pathlib import Path
-
 from custodian.executor.capability import CapabilityError, CapabilityStore
 from custodian.tools.registry import _state_dir
 
 
 def _default_socket_path() -> Path:
     return _state_dir() / "executor.sock"
+
+
+def _resolve_capability(
+    store: CapabilityStore, capability_id: str, *, now: float | None = None,
+) -> str:
+    """Return a concrete capability_id, resolving 'latest' when appropriate.
+
+    Raises CapabilityError on any problem so callers keep a single error path.
+    """
+    if capability_id != "latest":
+        return capability_id
+
+    ts = now if now is not None else time.time()
+    pending = []
+    paths = store.capabilities_dir.glob("*.json") if store.capabilities_dir.exists() else ()
+    for path in paths:
+        try:
+            candidate = store.get(path.stem)
+        except (OSError, CapabilityError):
+            continue
+        if candidate.status == "pending" and candidate.expires_at >= ts:
+            pending.append(candidate)
+    if not pending:
+        raise CapabilityError("no unexpired pending capabilities")
+    return max(pending, key=lambda item: item.created_at).capability_id
 
 
 def cmd_executor_start(args) -> int:
@@ -36,16 +63,96 @@ def cmd_executor_start(args) -> int:
 def cmd_executor_approve(args) -> int:
     state_dir = Path(args.state_dir) if args.state_dir else _state_dir()
     store = CapabilityStore(state_dir)
+
     try:
-        cap = store.approve(args.capability_id, approved_by=args.approved_by)
-    except CapabilityError as e:
-        print(f"error: {e}", file=sys.stderr)
+        capability_id = _resolve_capability(store, args.capability_id)
+    except CapabilityError:
         return 1
+
+    # Read *before* approve so the operator can see the digest even if the
+    # call fails (fail-closed: we never approve what we cannot show).
+    try:
+        cap = store.get(capability_id)
+    except CapabilityError:
+        return 1
+
+    print(f"Pending capability {cap.capability_id} (requester={cap.requester!r}):")
+    print(f"  action digest : {cap.action_digest}")
+    print(f"  created at    : {cap.created_at}")
+    print(f"  expires at    : {cap.expires_at}")
+
+    if args.digest is not None:
+        if not hmac.compare_digest(str(args.digest), str(cap.action_digest)):
+            print(
+                f"error: displayed digest does not match capability digest; "
+                f"refusing to approve to prevent approval of a different action",
+                file=sys.stderr,
+            )
+            return 1
+        print("  digest check  : OK -- action matches provided digest")
+
+    if not args.approved_by.strip():
+        print("error: operator identity is required (--approved-by NAME)", file=sys.stderr)
+        return 2
+
+    try:
+        approved = store.approve(
+            capability_id,
+            approved_by=args.approved_by,
+            expected_digest=args.digest,
+        )
+    except CapabilityError:
+        return 1
+
     print(
-        f"Approved capability {cap.capability_id} (requester={cap.requester!r}). "
+        f"Approved capability {approved.capability_id} (requester={approved.requester!r}). "
         f"Resend the identical request to consume it and execute."
     )
     return 0
+
+
+def cmd_executor_deny(args) -> int:
+    state_dir = Path(args.state_dir) if args.state_dir else _state_dir()
+    store = CapabilityStore(state_dir)
+
+    denied_by = args.denied_by or os.environ.get("USER") or os.environ.get("USERNAME")
+    if not denied_by:
+        print("error: operator identity is required (--denied-by NAME)", file=sys.stderr)
+        return 2
+
+    try:
+        capability_id = _resolve_capability(store, args.capability_id)
+    except CapabilityError:
+        return 1
+
+    try:
+        cap = store.get(capability_id)
+    except CapabilityError:
+        return 1
+
+    print(f"Deny pending capability {cap.capability_id} (requester={cap.requester!r}):")
+    print(f"  action digest : {cap.action_digest}")
+    print(f"  created at    : {cap.created_at}")
+    print(f"  expires at    : {cap.expires_at}")
+
+    if args.digest is not None:
+        if not hmac.compare_digest(str(args.digest), str(cap.action_digest)):
+            print(
+                f"error: displayed digest does not match capability digest; "
+                f"refusing to deny a different action than expected",
+                file=sys.stderr,
+            )
+            return 1
+        print("  digest check  : OK -- action matches provided digest")
+
+    print(f"  denied by     : {denied_by}")
+
+    try:
+        denied = store.deny(capability_id, denied_by=denied_by)
+        print(f"Denied capability {denied.capability_id} (requester={denied.requester!r}).")
+        return 0
+    except CapabilityError:
+        return 1
 
 
 def register(sub) -> None:
@@ -70,7 +177,19 @@ def register(sub) -> None:
     sp.set_defaults(func=cmd_executor_start)
 
     sp = esub.add_parser("approve", help="Approve a pending capability by id")
-    sp.add_argument("capability_id")
+    sp.add_argument("capability_id", help="Capability UUID, or 'latest'")
     sp.add_argument("--approved-by", required=True, help="Operator identity for the audit trail")
+    sp.add_argument(
+        "--digest",
+        help="Full action digest (64-char hex) for verification before approval. "
+             "If provided and it does not match the capability, approval is rejected.",
+    )
     sp.add_argument("--state-dir", help="State directory (default: ~/.custodian or $CUSTODIAN_STATE_DIR)")
     sp.set_defaults(func=cmd_executor_approve)
+
+    sp = esub.add_parser("deny", help="Deny a pending capability")
+    sp.add_argument("capability_id", help="Capability UUID, or 'latest'")
+    sp.add_argument("--denied-by", help="Operator identity (falls back to $USER)")
+    sp.add_argument("--digest", help="Full action digest (64-char hex) to verify before denying.")
+    sp.add_argument("--state-dir", help="State directory (default: ~/.custodian or $CUSTODIAN_STATE_DIR)")
+    sp.set_defaults(func=cmd_executor_deny)

@@ -160,6 +160,29 @@ class ApprovalStore:
         """Read one record only after authenticating it."""
         return ApprovalRecord(**self._read(approval_id))
 
+    def list_records(self) -> list[ApprovalRecord]:
+        _private_dir(self.state_dir)
+        _private_dir(self.approvals_dir)
+        records = []
+        for path in self.approvals_dir.glob("*.json"):
+            try:
+                records.append(self.get(path.stem))
+            except ApprovalError:
+                continue
+        return sorted(records, key=lambda record: record.created_at, reverse=True)
+
+    def deny(self, approval_id: str, *, denied_by: str) -> ApprovalRecord:
+        if not denied_by.strip():
+            raise ApprovalError("operator identity is required")
+        path = self._path(approval_id)
+        record = self._read(approval_id)
+        if record["status"] != "pending":
+            raise ApprovalError("approval is not pending")
+        record.update(status="denied", approved_by=denied_by.strip()[:128],
+                      approved_at=self._now())
+        self._write(path, record)
+        return self.get(approval_id)
+
     def request(self, *, digest: str, requester: str, ttl_seconds: int = 300) -> ApprovalRecord:
         if len(digest) != 64 or any(c not in "0123456789abcdef" for c in digest):
             raise ApprovalError("invalid action digest")

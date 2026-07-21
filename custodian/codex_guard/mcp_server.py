@@ -10,6 +10,8 @@ from typing import Any
 from .approvals import ApprovalError, ApprovalStore, action_digest
 from .guard import ActionKind, evaluate_action
 from .receipts import ReceiptChain
+from custodian.control.policy import ApprovalPolicy, Proposal
+from custodian.control.filesystem_policy import FilesystemPolicy
 
 
 def _state_dir() -> Path:
@@ -57,6 +59,99 @@ TOOLS = [
 ]
 
 
+def evaluate_guard_action(args: dict[str, Any], *, harness: str = "codex") -> dict[str, Any]:
+    """Evaluate one exact proposal for any supported harness.
+
+    Harness identity is supplied by the trusted adapter, never by model tool
+    arguments. Operator policy is applied to every action, including otherwise
+    autonomous reads/writes, so an explicit deny/ask rule cannot be skipped.
+    """
+    if not harness or len(harness) > 64:
+        raise ValueError("invalid harness identity")
+    chain = ReceiptChain(_state_dir())
+    try:
+        model = os.environ.get("CUSTODIAN_TRUSTED_MODEL_ID", "*")
+        requested_kind = str(args.get("action_kind", ""))
+        access = "read" if requested_kind == "read" else "write"
+        fs_config = FilesystemPolicy(_state_dir() / "filesystem-policy.json").fence_config(
+            harness=harness, model=model, access=access,
+            inherited_allow=[args.get("workspace", "")],
+            inherited_deny=["~/.ssh", "~/.aws", "~/.config/gcloud", "~/.kube"],
+        )
+        decision = evaluate_action(
+            tool=args.get("tool", ""), action_kind=requested_kind,
+            arguments=args.get("arguments"), workspace=args.get("workspace", ""),
+            intent=args.get("intent", ""), forbidden_paths=fs_config["forbidden_paths"],
+            allow_paths=fs_config["allow_paths"],
+        ).to_dict()
+        decision["filesystem_policy"] = {
+            "harness": harness, "model": model, "source": fs_config["source"],
+            "enforcement": fs_config["enforcement"],
+        }
+        requester = args["requester"]
+        proposal = Proposal(
+            adapter=harness, action_kind=decision["action_kind"],
+            tool=args["tool"], requester=requester, workspace=args["workspace"],
+        )
+        mode, rule_id = ApprovalPolicy(_state_dir() / "approval-policy.json").decide(proposal)
+
+        # Mandatory adapter denials always win. Explicit operator denial is
+        # next. A matching `ask` rule can promote an autonomous action.
+        if decision["verdict"] != "denied" and mode == "deny":
+            decision.update(verdict="denied", reason="blocked by operator policy",
+                            policy_rule_id=rule_id)
+        elif decision["verdict"] == "autonomous" and mode == "ask" and rule_id:
+            decision.update(verdict="escalation_required",
+                            reason="matching operator policy requires approval",
+                            policy_rule_id=rule_id, band="L3")
+
+        if decision["verdict"] == "escalation_required":
+            digest = action_digest(
+                tool=args["tool"], action_kind=decision["action_kind"],
+                arguments=args["arguments"], workspace=args["workspace"],
+                requester=requester, policy_version=args.get("policy_version", "default"),
+            )
+            store = ApprovalStore(_state_dir())
+            approval_id = args.get("approval_id")
+            if approval_id:
+                store.consume(approval_id, digest=digest, requester=requester)
+                decision.update(verdict="approved",
+                                reason="exact action approved once by the human operator",
+                                approval_id=approval_id)
+            elif mode == "auto":
+                exact = store.request(digest=digest, requester=requester)
+                store.approve(exact.approval_id, approved_by=f"policy:{rule_id}",
+                              expected_digest=digest)
+                store.consume(exact.approval_id, digest=digest, requester=requester)
+                decision.update(verdict="approved",
+                                reason="exact action approved by scoped operator policy",
+                                approval_id=exact.approval_id, policy_rule_id=rule_id)
+            else:
+                pending = store.request(digest=digest, requester=requester)
+                decision.update(
+                    approval_id=pending.approval_id, action_digest=digest,
+                    approval_expires_at=pending.expires_at,
+                    next_step=("Open `custodian console`, or ask the operator to run: "
+                               f"custodian-codex approve {pending.approval_id} --digest {digest}"),
+                )
+        receipt = chain.append(decision, tool=args.get("tool", ""),
+                               session_id=args.get("session_id", "default"))
+        decision["receipt"] = {"timestamp": receipt["ts"], "chain_mac": receipt["mac"]}
+        return decision
+    except ApprovalError as exc:
+        denied = {"verdict": "denied", "reason": str(exc),
+                  "action_kind": str(args.get("action_kind", "unknown")),
+                  "band": "L4", "enforcement_required": True}
+        receipt = chain.append(denied, tool=args.get("tool", ""),
+                               session_id=args.get("session_id", "default"))
+        denied["receipt"] = {"timestamp": receipt["ts"], "chain_mac": receipt["mac"]}
+        return denied
+    except Exception as exc:
+        return {"verdict": "denied",
+                "reason": f"guard evaluation failed closed ({type(exc).__name__})",
+                "enforcement_required": True}
+
+
 def handle(method: str, params: dict[str, Any]) -> dict[str, Any] | None:
     if method == "initialize":
         return {
@@ -73,76 +168,8 @@ def handle(method: str, params: dict[str, Any]) -> dict[str, Any] | None:
         args = params.get("arguments") or {}
         chain = ReceiptChain(_state_dir())
         if name == "guard_action":
-            try:
-                decision = evaluate_action(
-                    tool=args.get("tool", ""),
-                    action_kind=args.get("action_kind", ""),
-                    arguments=args.get("arguments"),
-                    workspace=args.get("workspace", ""),
-                    intent=args.get("intent", ""),
-                ).to_dict()
-                if decision["verdict"] == "escalation_required":
-                    requester = args["requester"]
-                    digest = action_digest(
-                        tool=args["tool"],
-                        action_kind=decision["action_kind"],
-                        arguments=args["arguments"],
-                        workspace=args["workspace"],
-                        requester=requester,
-                        policy_version=args.get("policy_version", "default"),
-                    )
-                    store = ApprovalStore(_state_dir())
-                    approval_id = args.get("approval_id")
-                    if approval_id:
-                        store.consume(approval_id, digest=digest, requester=requester)
-                        decision.update(
-                            verdict="approved",
-                            reason="exact action approved once by the human operator",
-                            approval_id=approval_id,
-                        )
-                    else:
-                        pending = store.request(digest=digest, requester=requester)
-                        decision.update(
-                            approval_id=pending.approval_id,
-                            action_digest=digest,
-                            approval_expires_at=pending.expires_at,
-                            next_step=(
-                                "Ask the operator to run: custodian-codex approve "
-                                f"{pending.approval_id} --digest {digest}"
-                            ),
-                        )
-                receipt = chain.append(
-                    decision,
-                    tool=args.get("tool", ""),
-                    session_id=args.get("session_id", "default"),
-                )
-                decision["receipt"] = {
-                    "timestamp": receipt["ts"],
-                    "chain_mac": receipt["mac"],
-                }
-                return _text_result(decision)
-            except ApprovalError as exc:
-                denied = {
-                    "verdict": "denied",
-                    "reason": str(exc),
-                    "action_kind": str(args.get("action_kind", "unknown")),
-                    "band": "L4",
-                    "enforcement_required": True,
-                }
-                receipt = chain.append(
-                    denied,
-                    tool=args.get("tool", ""),
-                    session_id=args.get("session_id", "default"),
-                )
-                denied["receipt"] = {"timestamp": receipt["ts"], "chain_mac": receipt["mac"]}
-                return _text_result(denied, is_error=True)
-            except Exception as exc:
-                # Tool errors fail closed and avoid returning argument values.
-                return _text_result({
-                    "verdict": "denied",
-                    "reason": f"guard evaluation failed closed ({type(exc).__name__})",
-                    "enforcement_required": True,
-                }, is_error=True)
+            decision = evaluate_guard_action(args, harness="codex")
+            return _text_result(decision, is_error=decision.get("verdict") == "denied")
         if name == "verify_receipts":
             try:
                 count = chain.verify()

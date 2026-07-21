@@ -17,11 +17,12 @@ technique should differ.
 """
 from __future__ import annotations
 
+import os
 from dataclasses import asdict, dataclass
 import hashlib
 import hmac
 import json
-import os
+import platform
 from pathlib import Path
 import time
 from typing import Any, Optional
@@ -30,8 +31,47 @@ from uuid import uuid4
 from custodian.exceptions import CustodianError
 
 
+
+
+def _ensure_private_permissions(dir_path: Path, file_path: Path) -> None:
+    """Enforce 0700 on *dir_path* and 0600 on *file_path*, cross-platform.
+
+    On Windows (where chmod is limited), we at least skip silently since the
+    OS security model replaces Unix permissions there.
+    """
+    try:
+        os.chmod(dir_path, 0o700)
+    except OSError:
+        if platform.system() != "Windows":
+            raise
+    if file_path.exists():
+        try:
+            os.chmod(file_path, 0o600)
+        except OSError:
+            if platform.system() != "Windows":
+                raise
+
+
 class CapabilityError(CustodianError):
     """A capability is missing, invalid, expired, changed, or already used."""
+
+    def __init__(self, message: str = "capability error") -> None:
+        super().__init__(message)
+
+
+def _path_is_symlink_in_chain(path: Path) -> bool:
+    """Return True if the path itself or any parent component is a symlink.
+
+    Inspects the *unresolved* path chain so that a symlink at *any* level --
+    including a directory component in the middle of the path -- is caught.
+    """
+    for part in [path] + list(path.parents):
+        try:
+            if part.is_symlink():
+                return True
+        except OSError:
+            pass
+    return False
 
 
 def action_digest(*, tool: str, args: dict, workspace: str, requester: str,
@@ -51,7 +91,8 @@ def action_digest(*, tool: str, args: dict, workspace: str, requester: str,
     }
     try:
         encoded = json.dumps(
-            body, sort_keys=True, separators=(",", ":"), ensure_ascii=False, default=str,
+            body, sort_keys=True, separators=(",", ":"), ensure_ascii=False,
+            allow_nan=False,
         ).encode("utf-8")
     except (TypeError, ValueError) as exc:
         raise CapabilityError("action is not canonically serializable") from exc
@@ -106,6 +147,9 @@ class CapabilityStore:
 
     def _key(self) -> bytes:
         self.state_dir.mkdir(parents=True, exist_ok=True)
+        _ensure_private_permissions(self.state_dir, self.key_path)
+        if _path_is_symlink_in_chain(self.key_path):
+            raise CapabilityError("executor capability key path compromised")
         if not self.key_path.exists():
             try:
                 fd = os.open(self.key_path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
@@ -114,7 +158,15 @@ class CapabilityStore:
             else:
                 with os.fdopen(fd, "wb") as stream:
                     stream.write(os.urandom(32))
-        key = self.key_path.read_bytes()
+        _ensure_private_permissions(self.state_dir, self.key_path)
+        try:
+            fd = os.open(self.key_path, os.O_RDONLY | os.O_NOFOLLOW)
+        except OSError as exc:
+            raise CapabilityError("executor capability key is unreadable") from exc
+        try:
+            key = os.read(fd, 64)
+        finally:
+            os.close(fd)
         if len(key) != 32:
             raise CapabilityError("executor capability key is invalid")
         return key
@@ -141,10 +193,14 @@ class CapabilityStore:
     def _path(self, capability_id: str) -> Path:
         if not capability_id or any(c not in "0123456789abcdef-" for c in capability_id):
             raise CapabilityError("invalid capability id")
-        return self.capabilities_dir / f"{capability_id}.json"
+        path = self.capabilities_dir / f"{capability_id}.json"
+        if _path_is_symlink_in_chain(path):
+            raise CapabilityError("capability path contains symlink")
+        return path
 
     def _write(self, path: Path, record: dict[str, Any]) -> None:
         self.capabilities_dir.mkdir(parents=True, exist_ok=True)
+        _ensure_private_permissions(self.capabilities_dir, path)
         tmp = path.with_suffix(f".{uuid4().hex}.tmp")
         fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
         try:
@@ -160,10 +216,16 @@ class CapabilityStore:
     def _read(self, capability_id: str) -> dict[str, Any]:
         path = self._path(capability_id)
         try:
-            record = json.loads(path.read_text(encoding="utf-8"))
-        except FileNotFoundError as exc:
-            raise CapabilityError("capability not found") from exc
-        except (OSError, json.JSONDecodeError) as exc:
+            fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW)
+        except OSError as exc:
+            raise CapabilityError("capability record is unreadable") from exc
+        try:
+            raw = os.read(fd, 131072)
+        finally:
+            os.close(fd)
+        try:
+            record = json.loads(raw.decode("utf-8"))
+        except (OSError, json.JSONDecodeError, UnicodeDecodeError) as exc:
             raise CapabilityError("capability record is unreadable") from exc
         self._verify(record)
         return record
@@ -185,11 +247,16 @@ class CapabilityStore:
         self._write(path, asdict(record))
         return CapabilityRecord(**self._read(record.capability_id))
 
+    def _require_no_symlinks(self) -> None:
+        if _path_is_symlink_in_chain(self.capabilities_dir):
+            raise CapabilityError("capability storage is compromised")
+
     def find_pending_by_digest(self, digest: str, requester: str) -> Optional[CapabilityRecord]:
         """Return the most recent non-expired pending/approved capability
         for this exact (digest, requester) pair, if any -- lets a caller
         that just retries the same proposal (rather than remembering a
         capability_id) discover its own outstanding or approved request."""
+        self._require_no_symlinks()
         self.capabilities_dir.mkdir(parents=True, exist_ok=True)
         now = self._now()
         best: Optional[CapabilityRecord] = None
@@ -207,7 +274,8 @@ class CapabilityStore:
                 best = record
         return best
 
-    def approve(self, capability_id: str, *, approved_by: str) -> CapabilityRecord:
+    def approve(self, capability_id: str, *, approved_by: str,
+                expected_digest: str | None = None) -> CapabilityRecord:
         if not approved_by.strip():
             raise CapabilityError("operator identity is required")
         path = self._path(capability_id)
@@ -217,9 +285,40 @@ class CapabilityStore:
             raise CapabilityError("capability is not pending")
         if now > record["expires_at"]:
             raise CapabilityError("capability expired")
+        if expected_digest is not None and not hmac.compare_digest(
+            str(record["action_digest"]), expected_digest
+        ):
+            raise CapabilityError("displayed action digest does not match capability")
         record.update(status="approved", approved_by=approved_by.strip()[:128], approved_at=now)
         self._write(path, record)
         return CapabilityRecord(**self._read(capability_id))
+
+    def deny(self, capability_id: str, *, denied_by: str) -> CapabilityRecord:
+        if not denied_by.strip():
+            raise CapabilityError("operator identity is required")
+        path = self._path(capability_id)
+        record = self._read(capability_id)
+        if record["status"] != "pending":
+            raise CapabilityError("capability is not pending")
+        record.update(status="denied", approved_by=denied_by.strip()[:128],
+                      approved_at=self._now())
+        self._write(path, record)
+        return CapabilityRecord(**self._read(capability_id))
+
+    def get(self, capability_id: str) -> CapabilityRecord:
+        """Read one record only after authenticating it."""
+        return CapabilityRecord(**self._read(capability_id))
+
+    def list_records(self) -> list[CapabilityRecord]:
+        self._require_no_symlinks()
+        self.capabilities_dir.mkdir(parents=True, exist_ok=True)
+        records = []
+        for entry in self.capabilities_dir.glob("*.json"):
+            try:
+                records.append(CapabilityRecord(**self._read(entry.stem)))
+            except CapabilityError:
+                continue
+        return sorted(records, key=lambda item: item.created_at, reverse=True)
 
     def consume(self, capability_id: str, *, digest: str, requester: str) -> CapabilityRecord:
         """Atomically mark a capability consumed. Safe under concurrent
@@ -247,7 +346,6 @@ class CapabilityStore:
             record.update(status="consumed", consumed_at=now)
             self._write(path, record)
             return CapabilityRecord(**self._read(capability_id))
-        except Exception:
-            if self._read(capability_id).get("status") != "consumed":
+        finally:
+            if claim.exists():
                 claim.unlink(missing_ok=True)
-            raise

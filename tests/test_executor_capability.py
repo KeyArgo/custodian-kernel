@@ -1,5 +1,8 @@
 """Tests for the delegated executor's capability primitive: signed,
 digest-bound, single-use, TTL-bound approval records."""
+import json
+import os
+import stat
 import threading
 import time
 
@@ -8,6 +11,7 @@ import pytest
 from custodian.executor.capability import (
     CapabilityError,
     CapabilityStore,
+    _path_is_symlink_in_chain,
     action_digest,
 )
 
@@ -105,9 +109,6 @@ def test_tampering_the_record_on_disk_is_detected(tmp_path):
     cap = store.request(digest=digest, requester="r")
     store.approve(cap.capability_id, approved_by="op")
 
-    # Flip a field directly on disk without re-sealing the MAC -- e.g. an
-    # attacker with filesystem access trying to rewrite who approved this.
-    import json
     path = tmp_path / "executor-capabilities" / f"{cap.capability_id}.json"
     record = json.loads(path.read_text())
     assert record["status"] == "approved"
@@ -126,7 +127,6 @@ def test_find_pending_by_digest_lets_a_retrying_caller_discover_its_own_capabili
     assert found is not None
     assert found.capability_id == cap.capability_id
 
-    # A different requester's identical action must not find someone else's.
     assert store.find_pending_by_digest(digest, "someone-else") is None
 
 
@@ -167,3 +167,137 @@ def test_concurrent_consume_only_one_thread_wins(tmp_path):
 
     assert len(wins) == 1
     assert len(errors) == 19
+
+
+def test_path_is_symlink_in_chain_detects_direct_symlink(tmp_path):
+    target = tmp_path / "real_file"
+    target.write_text("data")
+    link = tmp_path / "link_file"
+    link.symlink_to(target)
+    assert _path_is_symlink_in_chain(link) is True
+
+
+def test_path_is_symlink_in_chain_detects_parent_symlink(tmp_path):
+    real_dir = tmp_path / "real_dir"
+    real_dir.mkdir()
+    child = real_dir / "child.txt"
+    child.write_text("data")
+    link_dir = tmp_path / "link_dir"
+    link_dir.symlink_to(real_dir, target_is_directory=True)
+    assert _path_is_symlink_in_chain(link_dir / "child.txt") is True
+
+
+def test_path_is_symlink_in_chain_returns_false_for_normal_path(tmp_path):
+    d = tmp_path / "normal_dir"
+    d.mkdir()
+    f = d / "normal_file.txt"
+    f.write_text("data")
+    assert _path_is_symlink_in_chain(f) is False
+
+
+def test_store_rejects_symlink_key_file(tmp_path):
+    real_key = tmp_path / "real_key"
+    real_key.write_bytes(b"a" * 32)
+    link_key = tmp_path / "executor-capability.key"
+    link_key.symlink_to(real_key)
+    store = CapabilityStore(tmp_path)
+    with pytest.raises(CapabilityError, match="key path compromised"):
+        store._key()
+
+
+def test_store_rejects_symlink_capability_path(tmp_path):
+    store = CapabilityStore(tmp_path)
+    digest = action_digest(tool="t", args={}, workspace="/ws", requester="r")
+    cap = store.request(digest=digest, requester="r")
+    cap_path = tmp_path / "executor-capabilities" / f"{cap.capability_id}.json"
+    real_path = tmp_path / "real_cap.json"
+    cap_path.rename(real_path)
+    cap_path.symlink_to(real_path)
+    with pytest.raises(CapabilityError, match="symlink"):
+        store.get(cap.capability_id)
+
+
+def test_store_rejects_symlink_capabilities_dir(tmp_path):
+    real_dir = tmp_path / "real_caps"
+    real_dir.mkdir()
+    caps_link = tmp_path / "executor-capabilities"
+    caps_link.symlink_to(real_dir, target_is_directory=True)
+    store = CapabilityStore(tmp_path)
+    with pytest.raises(CapabilityError, match="compromised"):
+        store.list_records()
+
+
+def test_permissions_are_set_on_key_and_capability_dir(tmp_path):
+    store = CapabilityStore(tmp_path)
+    digest = action_digest(tool="t", args={}, workspace="/ws", requester="r")
+    cap = store.request(digest=digest, requester="r")
+
+    dir_mode = stat.S_IMODE(tmp_path.joinpath("executor-capabilities").stat().st_mode)
+    assert dir_mode == 0o700
+
+    key_mode = stat.S_IMODE(tmp_path.joinpath("executor-capability.key").stat().st_mode)
+    assert key_mode == 0o600
+
+    cap_mode = stat.S_IMODE(
+        tmp_path.joinpath("executor-capabilities", f"{cap.capability_id}.json").stat().st_mode
+    )
+    assert cap_mode == 0o600
+
+
+def test_consume_claim_file_is_cleaned_up_on_success(tmp_path):
+    store = CapabilityStore(tmp_path)
+    digest = action_digest(tool="t", args={}, workspace="/ws", requester="r")
+    cap = store.request(digest=digest, requester="r")
+    store.approve(cap.capability_id, approved_by="op")
+    store.consume(cap.capability_id, digest=digest, requester="r")
+    claim_path = tmp_path / "executor-capabilities" / f"{cap.capability_id}.claim"
+    assert not claim_path.exists()
+
+
+def test_consume_claim_file_is_cleaned_up_on_failure(tmp_path):
+    store = CapabilityStore(tmp_path)
+    digest = action_digest(tool="t", args={}, workspace="/ws", requester="r")
+    cap = store.request(digest=digest, requester="r")
+    claim_path = tmp_path / "executor-capabilities" / f"{cap.capability_id}.claim"
+    with pytest.raises(CapabilityError, match="not been approved"):
+        store.consume(cap.capability_id, digest=digest, requester="r")
+    assert not claim_path.exists()
+
+
+def test_approve_rejects_expired_capability(tmp_path):
+    clock = [1000.0]
+    store = CapabilityStore(tmp_path, now=lambda: clock[0])
+    digest = action_digest(tool="t", args={}, workspace="/ws", requester="r")
+    cap = store.request(digest=digest, requester="r", ttl_seconds=10)
+    clock[0] += 11
+    with pytest.raises(CapabilityError, match="expired"):
+        store.approve(cap.capability_id, approved_by="op")
+
+
+def test_approve_binds_expected_digest(tmp_path):
+    store = CapabilityStore(tmp_path)
+    digest_a = action_digest(tool="refund", args={"amount": 5.0}, workspace="/ws", requester="r")
+    digest_b = action_digest(tool="refund", args={"amount": 999.0}, workspace="/ws", requester="r")
+    cap = store.request(digest=digest_a, requester="r")
+    with pytest.raises(CapabilityError, match="does not match"):
+        store.approve(cap.capability_id, approved_by="op", expected_digest=digest_b)
+
+
+def test_error_messages_do_not_leak_key_or_path(tmp_path):
+    store = CapabilityStore(tmp_path)
+    digest = action_digest(tool="t", args={}, workspace="/ws", requester="r")
+    cap = store.request(digest=digest, requester="r")
+    store.approve(cap.capability_id, approved_by="op")
+
+    cap_path = tmp_path / "executor-capabilities" / f"{cap.capability_id}.json"
+    record = json.loads(cap_path.read_text())
+    record["mac"] = "bad"
+    cap_path.write_text(json.dumps(record))
+
+    with pytest.raises(CapabilityError) as exc:
+        store.consume(cap.capability_id, digest=digest, requester="r")
+    msg = str(exc.value)
+    assert "authentication failed" in msg
+    assert tmp_path.as_posix() not in msg
+    assert "executor-capability.key" not in msg
+    assert cap.capability_id not in msg

@@ -28,10 +28,16 @@ class ExecutorClient:
         self.timeout = timeout
 
     def propose(self, tool: str, args: dict, *, requester: str,
-               workspace: str = "", env: Optional[dict] = None) -> dict:
+               workspace: str = "", credential_refs: list[str] | None = None,
+               env: Optional[dict] = None) -> dict:
+        if env:
+            return {
+                "ok": False, "verdict": "denied",
+                "error": "client environment injection is forbidden; use paladin:// references",
+            }
         payload = {
             "tool": tool, "args": args, "requester": requester,
-            "workspace": workspace, "env": env,
+            "workspace": workspace, "credential_refs": credential_refs or [],
         }
         try:
             with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as sock:

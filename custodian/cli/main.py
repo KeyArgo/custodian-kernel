@@ -121,6 +121,7 @@ from custodian.cli import cmd_adapters
 from custodian.cli import cmd_backup
 from custodian.cli import cmd_setup, cmd_doctor
 from custodian.cli import cmd_executor
+from custodian.cli import cmd_console
 from custodian.cli._version import LazyVersionAction
 from custodian.config import CustodianConfig
 
@@ -501,6 +502,7 @@ def main(argv: list[str] | None = None) -> int:
 
     # ── executor (delegated execution) ────────────────────────────────────────
     cmd_executor.register(sub)
+    cmd_console.register(sub, str(env_defaults.state_dir))
 
     # ── demo ──────────────────────────────────────────────────────────────────
     demo_parser = sub.add_parser(

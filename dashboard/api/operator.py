@@ -134,6 +134,7 @@ def login():
 _DEMO_AMOUNT_MAX = 10_000.00  # test-mode Stripe limit for demo; prevents junk PI pollution
 
 @bp.route('/earn', methods=['POST'])
+@require_operator
 def earn():
     data = request.get_json(force=True, silent=True) or {}
     try:
@@ -169,6 +170,7 @@ def _write_flask_kill_switch(killed: bool, by: str, reason: str = '') -> None:
 
 
 @bp.route('/spend', methods=['POST'])
+@require_operator
 def spend():
     data = request.get_json(force=True, silent=True) or {}
     try:
@@ -220,6 +222,7 @@ def spend():
 
 
 @bp.route('/refund', methods=['POST'])
+@require_operator
 def refund():
     data = request.get_json(force=True, silent=True) or {}
     pi_id = str(data.get('payment_intent_id', ''))
@@ -243,6 +246,7 @@ def refund():
 
 
 @bp.route('/approve', methods=['POST'])
+@require_operator
 def approve():
     data = request.get_json(force=True, silent=True) or {}
     code = str(data.get('code', ''))[:32]
@@ -253,6 +257,7 @@ def approve():
 
 
 @bp.route('/kill', methods=['POST'])
+@require_operator
 def kill():
     data = request.get_json(force=True, silent=True) or {}
     by = str(data.get('by', 'Operator'))[:100]
@@ -269,6 +274,7 @@ def kill():
 
 
 @bp.route('/resume', methods=['POST'])
+@require_operator
 def resume():
     data = request.get_json(force=True, silent=True) or {}
     by = str(data.get('by', 'Operator'))[:100]
