@@ -3,8 +3,17 @@ hermes-hackathon-2026 (2026-07-03).
 
 custodian-dev's console-equivalent page is /console (console.html).
 site-tour.js is page-agnostic and was copied verbatim; tour-tracker.js
-and nemo-guide.js hardcode the console route and had every '/console'
-occurrence remapped to '/console' (unchanged in custodian-dev).
+and nemo-guide.js hardcode the console route and originally had every
+hermes-hackathon-2026 occurrence remapped from '/hermes' to '/console'.
+
+Update 2026-07-21: this file's own two route-name assertions had it
+backwards (asserted '/hermes' present, '/console' absent) -- the opposite
+of the actual, intentional rename verified elsewhere (see
+tests/test_pages_frontend_nav_consistency.py and the 2026-07-21 bughunt
+handover, which found and fixed 12+3 real leftover '/hermes' references
+in these same two files: a stale route broke the duplicate-widget guard
+and the tour's "what to suggest next" guidance). Fixed to assert the
+correct, current state: '/console' present, no leftover '/hermes'.
 """
 from __future__ import annotations
 
@@ -23,18 +32,18 @@ def test_site_tour_js_exists_and_is_page_agnostic():
     assert "/console" not in src, "site-tour.js should never hardcode a page route"
 
 
-def test_tour_tracker_js_has_no_leftover_console_route():
+def test_tour_tracker_js_has_no_leftover_hermes_route():
     src = read_text("pages-frontend/tour-tracker.js")
-    assert "'/console'" not in src, "leftover /console route not remapped to /hermes"
-    assert "'/hermes'" in src
+    assert "'/hermes'" not in src, "leftover /hermes route not remapped to /console"
+    assert "'/console'" in src
     # Internal names that merely contain "console" are not routes and must survive.
     assert "ALL_CONSOLE_TABS" in src
 
 
-def test_nemo_guide_js_has_no_leftover_console_route():
+def test_nemo_guide_js_has_no_leftover_hermes_route():
     src = read_text("pages-frontend/nemo-guide.js")
-    assert "'/console'" not in src, "leftover /console route not remapped to /hermes"
-    assert "'/hermes'" in src
+    assert "'/hermes'" not in src, "leftover /hermes route not remapped to /console"
+    assert "'/console'" in src
     assert "panelId: 'nemotron-chat-panel'" in src, (
         "nemo-guide.js's EXISTING map must still point at hermes.html's real "
         "chat panel id (verified identical to hermes-hackathon-2026's console.html)"

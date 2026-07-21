@@ -131,6 +131,24 @@ def test_operator_code_flow_does_not_fake_prefill():
     assert "document.getElementById(approveInputId).value = d.code" in html
 
 
+def test_step7_rejects_malformed_payment_intent_before_api_call():
+    """Regression: Step 7 must not call /refund with an empty or garbage
+    PaymentIntent ID (e.g. Step 1 never ran, or its budget was exhausted).
+
+    Previously the raw input value was sent straight to /refund, producing
+    a confusing backend error instead of pointing back at the actual
+    problem (Step 1 needs to be re-run first).
+    """
+    html = read_operator()
+    handler_start = html.index("document.getElementById('refund-btn').addEventListener")
+    handler_end = html.index("document.getElementById('approve2-btn')")
+    handler = html[handler_start:handler_end]
+    validation = handler.index("/^pi_[A-Za-z0-9]+$/.test(pi)")
+    api_call = handler.index("call('/refund'")
+    assert validation < api_call, "PaymentIntent format must be validated before the API call"
+    assert "step1-btn" in handler[validation:api_call], "must point the visitor back at Step 1"
+
+
 def test_live_audit_feed_esc_function_is_in_scope():
     """Regression: `esc` (the HTML escaper) must be defined at the same
     scope as refreshLive() and refreshOpFeed() — both of which use it.

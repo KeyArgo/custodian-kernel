@@ -45,3 +45,23 @@ def test_operator_money_routes_reject_nonfinite_amounts(client, monkeypatch, amo
             headers={"X-Operator-Token": "valid"},
         )
         assert response.status_code == 400
+
+
+def test_require_operator_logs_internal_errors_instead_of_swallowing_them(client, monkeypatch, caplog):
+    """A bug inside _token_valid itself (e.g. a corrupted secrets file) must
+    still fail closed (401), but must not look identical in the logs to an
+    ordinary wrong-token request -- that hid real errors from debugging."""
+    import api.operator as operator
+
+    def _boom(token):
+        raise RuntimeError("secrets file is corrupted")
+
+    monkeypatch.setattr(operator, "_token_valid", _boom)
+    with caplog.at_level("ERROR"):
+        response = client.post(
+            "/api/v1/operator/earn", json={},
+            headers={"X-Operator-Token": "anything"},
+        )
+    assert response.status_code == 401
+    assert response.get_json() == {"error": "unauthorized"}
+    assert any("_token_valid raised" in r.message for r in caplog.records)

@@ -12,6 +12,7 @@ import hmac
 import json
 import sys
 import time
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 import pytest
@@ -42,14 +43,20 @@ def _event(stripe_id="pi_real_charge_001", amount=50000):
 
 
 @pytest.fixture
-def client(tmp_path, monkeypatch):
+def app(tmp_path, monkeypatch):
     import dashboard.api.stripe_webhook as webhook_module
     monkeypatch.setattr(webhook_module, "LEDGER", tmp_path / "ledger.json")
+    monkeypatch.setattr(webhook_module, "LEDGER_LOCK", tmp_path / "ledger.lock")
     monkeypatch.setenv("STRIPE_WEBHOOK_SECRET", SECRET)
 
     from flask import Flask
-    app = Flask(__name__)
-    app.register_blueprint(webhook_module.bp, url_prefix="/api/v1/stripe")
+    flask_app = Flask(__name__)
+    flask_app.register_blueprint(webhook_module.bp, url_prefix="/api/v1/stripe")
+    return flask_app
+
+
+@pytest.fixture
+def client(app):
     with app.test_client() as c:
         yield c
 
@@ -89,6 +96,32 @@ def test_replayed_webhook_is_not_double_credited(client):
                         headers={"Stripe-Signature": sig})
         assert r.status_code == 200  # Stripe expects a 2xx even on a dupe
 
+    events = client.get("/api/v1/stripe/ledger").get_json()
+    assert events["count"] == 1
+    assert events["total_earned"] == 500.0
+
+
+def test_concurrent_delivery_of_the_same_event_is_not_double_credited(app, client):
+    """The narrower TOCTOU bug: the dedup check reads the whole ledger,
+    then appends, with no lock between the two -- two near-simultaneous
+    deliveries of the *same* event (Stripe does retry on a slow response)
+    could both pass the check before either writes, double-crediting
+    revenue. Unlike test_replayed_webhook_is_not_double_credited above
+    (sequential replays), this fires genuinely concurrent requests, each
+    through its own test client (Flask's test client is not safe to share
+    across threads)."""
+    payload = _event()
+    sig = _sign(payload)
+
+    def _post():
+        with app.test_client() as c:
+            return c.post("/api/v1/stripe/webhook", data=payload,
+                          headers={"Stripe-Signature": sig}).status_code
+
+    with ThreadPoolExecutor(max_workers=8) as pool:
+        statuses = list(pool.map(lambda _: _post(), range(8)))
+
+    assert all(s == 200 for s in statuses)
     events = client.get("/api/v1/stripe/ledger").get_json()
     assert events["count"] == 1
     assert events["total_earned"] == 500.0

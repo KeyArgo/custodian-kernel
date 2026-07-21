@@ -944,8 +944,19 @@ document.getElementById('resume-btn').addEventListener('click', async () => {
 document.getElementById('refund-btn').addEventListener('click', async () => {
     const btn = document.getElementById('refund-btn');
     if (btn.disabled) return; // already in flight — a fast double-click/press must not fire a second overlapping /refund + SMS poll race
-    btn.disabled = true;
     const pi = document.getElementById('refund-pi').value.trim();
+    if (!/^pi_[A-Za-z0-9]+$/.test(pi)) {
+        // Step 1 never created a real PaymentIntent (budget was exhausted,
+        // or the visitor jumped straight to Step 7) -- calling /refund with
+        // an empty or garbage value produces a confusing backend error
+        // instead of pointing back at the actual problem.
+        renderOut('refund-out', { error: 'Step 7 is waiting for Step 1 to create a real PaymentIntent. Reset the exhausted demo session and retry Step 1.' });
+        const warn = document.getElementById('step1-budget-warn');
+        if (warn) warn.style.display = 'block';
+        document.getElementById('step1-btn').scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return;
+    }
+    btn.disabled = true;
     let data;
     try {
         data = await call('/refund', { payment_intent_id: pi, amount: '85.00', description: 'Demo: refund -- double-billed' });

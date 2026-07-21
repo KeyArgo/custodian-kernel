@@ -26,6 +26,7 @@ from __future__ import annotations
 import collections
 import hashlib
 import hmac
+import logging
 import math
 import os
 import time
@@ -72,6 +73,9 @@ def _token_valid(token: str) -> bool:
     return hmac.compare_digest(sig, _sign(expires))
 
 
+_log = logging.getLogger(__name__)
+
+
 def require_operator(f):
     """Verify the X-Operator-Token header against the signed token from /login."""
     @wraps(f)
@@ -81,6 +85,11 @@ def require_operator(f):
             if not _token_valid(token):
                 return jsonify({'error': 'unauthorized'}), 401
         except Exception:
+            # Fail safe (deny) either way, but a bug inside _token_valid
+            # itself (e.g. a corrupted secrets file) used to look identical
+            # to "wrong token" in the logs -- silently hiding a real error
+            # from whoever is debugging a login problem.
+            _log.exception('require_operator: _token_valid raised')
             return jsonify({'error': 'unauthorized'}), 401
         return f(*args, **kwargs)
     return wrapper

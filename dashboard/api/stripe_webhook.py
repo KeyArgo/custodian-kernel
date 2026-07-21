@@ -12,6 +12,7 @@ import json
 import os
 import time
 from collections import defaultdict, deque
+from contextlib import contextmanager
 from functools import wraps
 from pathlib import Path
 
@@ -20,8 +21,46 @@ from flask import Blueprint, jsonify, request
 bp = Blueprint("stripe_webhook", __name__)
 
 LEDGER = Path(__file__).resolve().parents[2] / "skills" / "earnings" / "hermes-earn-ledger.json"
+LEDGER_LOCK = LEDGER.parent / "hermes-earn-ledger.lock"
 # Repo-relative demo ledger (created on first write, see _append). Production:
 # point HERMES_EARN_LEDGER at a persistent path outside the checkout.
+
+
+@contextmanager
+def _process_lock():
+    """Serialize the dedup-check-then-append sequence across processes.
+
+    Without this, two near-simultaneous webhook deliveries for the same
+    Stripe event (Stripe itself retries on a slow response) could both read
+    the ledger, both see no existing stripe_id, and both append -- double-
+    crediting revenue in the publicly-displayed P&L total. Same cross-
+    platform locking pattern as custodian/codex_guard/receipts.py.
+    """
+    LEDGER_LOCK.parent.mkdir(parents=True, exist_ok=True)
+    fd = os.open(LEDGER_LOCK, os.O_RDWR | os.O_CREAT, 0o600)
+    stream = os.fdopen(fd, "r+b", buffering=0)
+    try:
+        if os.name == "nt":
+            import msvcrt
+            if LEDGER_LOCK.stat().st_size == 0:
+                stream.write(b"0")
+            stream.seek(0)
+            msvcrt.locking(stream.fileno(), msvcrt.LK_LOCK, 1)
+        else:
+            import fcntl
+            fcntl.flock(stream.fileno(), fcntl.LOCK_EX)
+        yield
+    finally:
+        try:
+            if os.name == "nt":
+                import msvcrt
+                stream.seek(0)
+                msvcrt.locking(stream.fileno(), msvcrt.LK_UNLCK, 1)
+            else:
+                import fcntl
+                fcntl.flock(stream.fileno(), fcntl.LOCK_UN)
+        finally:
+            stream.close()
 
 # Independent rate-limit bucket from the other public dashboard endpoints --
 # a flood on one shouldn't silently starve another's budget for the same
@@ -155,21 +194,22 @@ def stripe_webhook():
     if event.get("type") == "payment_intent.succeeded":
         pi = event.get("data", {}).get("object", {})
         stripe_id = pi.get("id", "")
-        already_processed = bool(stripe_id) and any(
-            e.get("stripe_id") == stripe_id for e in _read_all()
-        )
-        if not already_processed:
-            amount_cents = pi.get("amount", 0)
-            entry = {
-                "ts": time.time(),
-                "event": "earned",
-                "amount": round(amount_cents / 100, 2),
-                "currency": pi.get("currency", "usd"),
-                "description": pi.get("description") or "Stripe payment",
-                "stripe_id": stripe_id,
-                "source": "stripe_webhook",
-            }
-            _append(entry)
+        with _process_lock():
+            already_processed = bool(stripe_id) and any(
+                e.get("stripe_id") == stripe_id for e in _read_all()
+            )
+            if not already_processed:
+                amount_cents = pi.get("amount", 0)
+                entry = {
+                    "ts": time.time(),
+                    "event": "earned",
+                    "amount": round(amount_cents / 100, 2),
+                    "currency": pi.get("currency", "usd"),
+                    "description": pi.get("description") or "Stripe payment",
+                    "stripe_id": stripe_id,
+                    "source": "stripe_webhook",
+                }
+                _append(entry)
 
     return jsonify({"received": True}), 200
 
