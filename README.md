@@ -57,7 +57,7 @@ changes, money movement, and governance changes deny or require a human.
 Decisions produce value-free HMAC hash-chained receipts.
 
 **This is the contribution to the OpenAI Build Week track:** the policy
-bridge, the receipts CLI, the MCP server integration, and 110 tests
+bridge, the receipts CLI, the MCP server integration, and 104 tests
 covering the full Codex threat model. The kernel that does the work
 predates Build Week; the adapter is what we built this week.
 
