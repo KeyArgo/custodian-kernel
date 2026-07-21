@@ -130,13 +130,15 @@ custodian codex-guard receipts --verify
 ================================================================
 LINKS
 ================================================================
-- Repo: https://github.com/KeyArgo/custodian-kernel
+- Repo: https://github.com/inovinlabs/custodian-dev
 - Video: [paste YouTube URL]
 - Demo script: scripts/codex-guard-demo.py
 - Test suite: tests/test_codex_guard_cli.py (37 tests)
             tests/test_codex_guard.py
             tests/test_codex_policy_wiring.py
             tests/test_self_approval_regression.py
+- Repo: https://github.com/inovinlabs/custodian-dev
+  (dev branch: feat/0.5.0-codex; tag: hackathon-submission-2026-07-21)
 
 ================================================================
 "WHAT PROBLEM DOES YOUR PROJECT SOLVE?"

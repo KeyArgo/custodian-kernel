@@ -71,7 +71,7 @@ _GUIDE = """
   THAT'S IT.
     You now know the whole tool. Everything else is a variation of these.
     Stuck? Type   custodian help   for the full list, or read the guide at
-    https://github.com/KeyArgo/custodian-kernel
+    https://github.com/inovinlabs/custodian-dev
 """
 
 

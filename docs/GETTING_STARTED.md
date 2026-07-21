@@ -14,7 +14,7 @@ pytest tests/ --tb=short 2>&1 | tail -3
 Or from source:
 
 ```bash
-git clone https://github.com/KeyArgo/custodian-kernel
+git clone https://github.com/inovinlabs/custodian-dev
 cd custodian-kernel
 pip install -e ".[dev]"
 pytest tests/ --tb=short 2>&1 | tail -3

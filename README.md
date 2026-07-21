@@ -108,7 +108,7 @@ Custodian never assumes that an installation belongs to getcustodian.xyz.
 **Or, for the deeper proof:**
 
 ```bash
-git clone https://github.com/KeyArgo/custodian-kernel
+git clone https://github.com/inovinlabs/custodian-dev
 cd custodian-kernel
 pip install -e ".[dev]"
 python3 verify_kit.py
@@ -145,7 +145,7 @@ Any company running an AI agent with a Stripe account, a Modal spend, a NIM infe
 
 ## Links
 
-- **Repo (GitHub):** https://github.com/KeyArgo/custodian-kernel
+- **Repo (GitHub):** https://github.com/inovinlabs/custodian-dev
 - **PyPI:** https://pypi.org/project/custodian-kernel/
 - **Live dashboard:** https://getcustodian.xyz
 - **Operator panel:** https://getcustodian.xyz/operator
@@ -358,7 +358,7 @@ with their band and description so the capability surface is visible during revi
   test for the exact security bug this design prevents. The fix was proven
   by deliberately reintroducing the bug, confirming the test failed, then
   restoring the fix. That test exists so the bug can never silently return.
-- Public commit history at `github.com/KeyArgo/custodian-kernel`.
+- Public commit history at `github.com/inovinlabs/custodian-dev`.
 
 **Don't take any of this on faith.** Everything verifiable from pip:
 
@@ -366,7 +366,7 @@ with their band and description so the capability surface is visible during revi
 pip install custodian-kernel       # install the kernel
 custodian demo verify              # live claim check against the running system
 pip install custodian-kernel[dev] && pytest tests/   # 1,747 tests, 0 failures
-git clone https://github.com/KeyArgo/custodian-kernel  # read every line
+git clone https://github.com/inovinlabs/custodian-dev  # read every line
 ```
 
 See `docs/VERIFICATION.md` for the full manual breakdown.

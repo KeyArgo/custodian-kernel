@@ -152,7 +152,7 @@ def step3_from_checkout() -> bool:
         print(f"  {WARN} Not running from a git checkout (installed via pip).")
         print(f"  {INFO} The full 5-step verify kit — including the live regression")
         print(f"         test that re-injects the self-approval bug — is at the repo root:")
-        print(f"         https://github.com/KeyArgo/custodian-kernel")
+        print(f"         https://github.com/inovinlabs/custodian-dev")
         print(f"         Run:  python3 verify_kit.py")
         # Treat as PASS for the wheel case — the regression is verified at build time
         print(f"\n  {PASS} (wheel install — checkout-only step skipped; covered by build verification)")
@@ -211,7 +211,7 @@ def main(argv: Optional[list[str]] = None) -> int:
         elif results["checkout_or_skip"]:
             print("  3. Regression + kill switch tests pass")
         print(f"{RESET}{BOLD}{'=' * 70}{RESET}")
-        print(f"  Full 5-step kit: github.com/KeyArgo/custodian-kernel → verify_kit.py")
+        print(f"  Full 5-step kit: github.com/inovinlabs/custodian-dev → verify_kit.py")
         return 0
     else:
         print(f"{RED}{BOLD}SOME CHECKS FAILED — see above.{RESET}")

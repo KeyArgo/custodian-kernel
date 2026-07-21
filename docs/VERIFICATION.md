@@ -40,11 +40,11 @@ created it.
 
 ## 2. Public git history
 
-The kernel is at `github.com/KeyArgo/custodian-kernel` with real commit
+The kernel is at `github.com/inovinlabs/custodian-dev` with real commit
 timestamps showing the development history.
 
 ```bash
-git clone https://github.com/KeyArgo/custodian-kernel
+git clone https://github.com/inovinlabs/custodian-dev
 cd custodian-kernel
 git log --oneline
 ```
@@ -64,7 +64,7 @@ pytest tests/
 Or from source:
 
 ```bash
-git clone https://github.com/KeyArgo/custodian-kernel
+git clone https://github.com/inovinlabs/custodian-dev
 cd custodian-kernel
 pip install -e ".[dev]"
 pytest tests/ -v

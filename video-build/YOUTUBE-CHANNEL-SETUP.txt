@@ -46,7 +46,7 @@ an AI agent's action is allowed. Built by InovinLabs. Kernel
 ships as `custodian-kernel` on PyPI. Receipts are HMAC-chained
 and value-free. Open source.
 
-GitHub: https://github.com/KeyArgo/custodian-kernel
+GitHub: https://github.com/inovinlabs/custodian-dev
 PyPI:    pip install custodian-kernel
 
 ================================================================
@@ -69,7 +69,7 @@ Description (paste this):
   Built during OpenAI Build Week 2026 with Codex + GPT-5.6.
 
   Install: pip install custodian-kernel
-  Repo:    https://github.com/KeyArgo/custodian-kernel
+  Repo:    https://github.com/inovinlabs/custodian-dev
 
   The agent proposes. The kernel decides. The ledger proves.
 

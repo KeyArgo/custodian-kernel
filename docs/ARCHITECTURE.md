@@ -20,17 +20,17 @@ Real Stripe test-mode PaymentIntents move (and refund) throughout the demo.
 | Repo | Visibility | Purpose |
 |------|-----------|---------|
 | `inovinlabs/custodian-dev` (GitHub) | Private | Ongoing dev — push here when working |
-| `KeyArgo/custodian` (GitHub) | Public | Clean final version — judge-facing; only update on intentional releases |
+| `inovinlabs/custodian` (GitHub) | Public | Clean final version — judge-facing; only update on intentional releases |
 
 Local dev repo: `/mnt/homes/galileo/argo/Development/hermes-hackathon-2026/`
 
 Git remotes in that repo:
 - `custodian-kernel` → `https://github.com/inovinlabs/custodian-dev.git` (dev; ongoing work)
-- `gitea-custodian-public` → `https://git.argobox.com/KeyArgo/custodian.git` (internal mirror)
-- `origin` → `https://git.argobox.com/KeyArgo/hermes-hackathon-2026.git` (primary Gitea)
-- `github` → `https://github.com/KeyArgo/custodian-kernel.git` (GitHub mirror)
+- `gitea-custodian-public` → `https://github.com/inovinlabs/custodian-dev.git` (internal mirror)
+- `origin` → `https://github.com/inovinlabs/custodian-dev.git` (primary Gitea)
+- `github` → `https://github.com/inovinlabs/custodian-dev.git` (GitHub mirror)
 
-Judge-facing public kernel repo: `https://github.com/KeyArgo/custodian-kernel`
+Judge-facing public kernel repo: `https://github.com/inovinlabs/custodian-dev`
 
 **Workflow:** Push to `origin` for primary dev. Push to `custodian-kernel` remote for judge-facing kernel releases.
 

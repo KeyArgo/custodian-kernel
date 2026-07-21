@@ -16,7 +16,7 @@ covers, so the two stay linked.
 
 | Date | Session id (jsonl filename) | Path | Handover doc | Summary |
 |---|---|---|---|---|
-| 2026-07-14 → 2026-07-15 | `0192eba3-ffe3-425d-a1a9-dc69eb427522` | `/home/dev/.claude/projects/-home-dev/0192eba3-ffe3-425d-a1a9-dc69eb427522.jsonl` | [HANDOVER-2026-07-15.md](HANDOVER-2026-07-15.md) | PII/integrity audit of PyPI 0.3.0/0.3.1 + KeyArgo/custodian-kernel mirror, GitHub Releases creation, second adversarial-review pass (8 confirmed bugs fixed across path-fence/egress-guard/policy compilers/vault), broker naming finalized to Custodian Paladin + full rename + live vault migration, `talaria dashboard` built, custodian/paladin/talaria package-boundary enforcement added. |
+| 2026-07-14 → 2026-07-15 | `0192eba3-ffe3-425d-a1a9-dc69eb427522` | `/home/dev/.claude/projects/-home-dev/0192eba3-ffe3-425d-a1a9-dc69eb427522.jsonl` | [HANDOVER-2026-07-15.md](HANDOVER-2026-07-15.md) | PII/integrity audit of PyPI 0.3.0/0.3.1 + inovinlabs/custodian-kernel mirror, GitHub Releases creation, second adversarial-review pass (8 confirmed bugs fixed across path-fence/egress-guard/policy compilers/vault), broker naming finalized to Custodian Paladin + full rename + live vault migration, `talaria dashboard` built, custodian/paladin/talaria package-boundary enforcement added. |
 
 Note: this session's transcript itself spans a **compaction boundary** —
 context was summarized partway through by the harness, but the session id

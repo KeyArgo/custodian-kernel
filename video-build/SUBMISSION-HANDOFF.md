@@ -46,7 +46,7 @@ and you can add captions via YouTube Studio.
    The agent proposes. Custodian decides.
 
    Install: pip install custodian-kernel
-   Repo: https://github.com/KeyArgo/custodian-kernel
+   Repo: https://github.com/inovinlabs/custodian-dev
    Built for the OpenAI Devpost Hackathon.
    ```
 6. Tags: openai, codex, gpt-5, ai-safety, devops, kernel, hackathon
@@ -69,7 +69,7 @@ Go to https://openai.devpost.com/ and click "Submit" on your project page.
 | Built with | Python, Codex, GPT-5.6, MCP, ffmpeg, PIL |
 | Categories | Developer Tools (primary; this includes DevOps, agentic workflows, and security) |
 | Video URL | Your YouTube URL from above |
-| Repo URL | https://github.com/KeyArgo/custodian-kernel |
+| Repo URL | https://github.com/inovinlabs/custodian-dev |
 
 **Project description (markdown):**
 
@@ -113,7 +113,7 @@ are the source of the explicit, deterministic guarantees.
 ## Try it
 
 ```bash
-git clone https://github.com/KeyArgo/custodian-kernel
+git clone https://github.com/inovinlabs/custodian-dev
 cd custodian-kernel
 pip install -e .
 python scripts/codex-guard-demo.py     # the demo in the video
