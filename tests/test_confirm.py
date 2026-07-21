@@ -149,3 +149,42 @@ class TestConfirmDeadline:
         out = capsys.readouterr().out
         assert "✓" in out
         assert "within 120s" in out
+
+
+class TestConfirmLedgerWrites:
+    """confirm used to only write the legacy JSONL-backed audit_log; the
+    universal ledger never saw a confirmation or a missed deadline at all."""
+
+    def test_verified_confirmation_writes_a_ledger_event(self, state_dir):
+        from custodian.universal_ledger import UniversalLedger
+
+        storage = SqliteStorage(state_dir / "custodian.db")
+        storage.append_audit_entry(AuditEntry(
+            event="executed", amount=2.5, description="x", band=Band.L2,
+            payment_intent_id="pi_fresh2", ts=time.time(),
+        ))
+        cmd_confirm.run(_ns("pi_fresh2", str(state_dir)))
+
+        ledger = UniversalLedger(state_dir / "ledger.db")
+        events = ledger.by_provider("custodian")
+        assert len(events) == 1
+        assert events[0]["lifecycle_event"] == "verified"
+        assert events[0]["amount"] == 2.5
+        assert events[0]["external_id"] == "pi_fresh2"
+        ledger.verify()
+
+    def test_missed_deadline_writes_a_failed_ledger_event(self, state_dir):
+        from custodian.universal_ledger import UniversalLedger
+
+        storage = SqliteStorage(state_dir / "custodian.db")
+        storage.append_audit_entry(AuditEntry(
+            event="executed", amount=1.0, description="x", band=Band.L2,
+            payment_intent_id="pi_old2", ts=time.time() - 120,
+        ))
+        cmd_confirm.run(_ns("pi_old2", str(state_dir)))
+
+        ledger = UniversalLedger(state_dir / "ledger.db")
+        events = ledger.by_provider("custodian")
+        assert len(events) == 1
+        assert events[0]["lifecycle_event"] == "failed"
+        assert "deadline" in events[0]["metadata"]["reason"]

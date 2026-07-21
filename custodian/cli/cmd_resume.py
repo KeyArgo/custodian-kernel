@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 import sys
+import uuid
 from pathlib import Path
 
 from custodian.storage.sqlite import SqliteStorage
 from custodian.types import AuditEntry, Band, KillSwitchState
+from custodian.universal_ledger import LedgerEvent, UniversalLedger
 
 
 def run(args) -> None:
@@ -31,5 +33,16 @@ def run(args) -> None:
         ))
     except Exception as e:
         print(f"warning: failed to write audit entry: {e}", file=sys.stderr)
+    # See cmd_kill.py: the kill switch's own engage/resume events were
+    # invisible to the tamper-evident ledger. Found in review.
+    try:
+        UniversalLedger(state_dir / "ledger.db").append(LedgerEvent(
+            correlation_id=uuid.uuid4().hex, requester=f"cli:resume:{args.by}",
+            provider="custodian", action="kill-switch",
+            lifecycle_event="approved", band=Band.L0.value, amount=0.0,
+            currency="USD", approver=args.by,
+        ))
+    except Exception as e:
+        print(f"warning: failed to write ledger event: {e}", file=sys.stderr)
 
     print(f"Kill switch released by {args.by}. Normal decisions will resume.")
