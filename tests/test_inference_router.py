@@ -137,3 +137,78 @@ class TestNemoClawRouter:
         assert isinstance(router.name, str)
         assert isinstance(router.live, bool)
         assert callable(router.complete)
+
+
+class TestNemoClawRouterGovernance:
+    """complete() used to bypass the kernel entirely -- no kill-switch
+    check, no spend cap, no audit trail, unlike every registered tool.
+    Found in review."""
+
+    def test_kill_switch_blocks_inference_before_any_network_call(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path,
+    ):
+        from custodian.tools.registry import _state_dir
+        _state_dir().mkdir(parents=True, exist_ok=True)
+        (_state_dir() / "kill_switch.json").write_text('{"killed": true}')
+
+        called = []
+
+        def fake_urlopen(req, timeout):
+            called.append(req.full_url)
+            return _ok_response()
+
+        monkeypatch.setattr(urllib.request, "urlopen", fake_urlopen)
+        router = NemoClawRouter(endpoints=["http://ep1:8000/v1"])
+        with pytest.raises(RuntimeError, match="denied"):
+            router.complete("sys", "user")
+        assert called == []  # never reached the network
+
+    def test_successful_call_writes_a_ledger_entry_reconciled_to_real_tokens(
+        self, monkeypatch: pytest.MonkeyPatch,
+    ):
+        from custodian.tools.registry import _state_dir
+        from custodian.universal_ledger import UniversalLedger
+
+        def fake_urlopen(req, timeout):
+            body = json.dumps({
+                "choices": [{"message": {"content": "hi"}}],
+                "usage": {"total_tokens": 42},
+            }).encode()
+            resp = MagicMock()
+            resp.read.return_value = body
+            resp.__enter__ = lambda s: s
+            resp.__exit__ = MagicMock(return_value=False)
+            return resp
+
+        monkeypatch.setattr(urllib.request, "urlopen", fake_urlopen)
+        router = NemoClawRouter(endpoints=["http://ep1:8000/v1"])
+        result = router.complete("sys", "user", max_tokens=2200, requester="test:x")
+        assert result == "hi"
+
+        ledger = UniversalLedger(_state_dir() / "ledger.db")
+        events = ledger.by_provider("custodian")  # newest first
+        kinds = [e["lifecycle_event"] for e in reversed(events)]
+        assert kinds == ["proposed", "decided", "executed"]
+        # Reconciled to the real 42 tokens, not the max_tokens worst case.
+        executed = events[0]
+        assert executed["amount"] < 2200 / 1000.0 * 0.01
+
+    def test_all_endpoints_failing_writes_a_failed_ledger_entry(
+        self, monkeypatch: pytest.MonkeyPatch,
+    ):
+        from custodian.tools.registry import _state_dir
+        from custodian.universal_ledger import UniversalLedger
+
+        monkeypatch.delenv("OLLAMA_HOST", raising=False)
+
+        def fake_urlopen(req, timeout):
+            raise _url_error()
+
+        monkeypatch.setattr(urllib.request, "urlopen", fake_urlopen)
+        router = NemoClawRouter(endpoints=["http://ep1:8000/v1"])
+        with pytest.raises(RuntimeError):
+            router.complete("sys", "user")
+
+        ledger = UniversalLedger(_state_dir() / "ledger.db")
+        events = ledger.by_provider("custodian")
+        assert events[0]["lifecycle_event"] == "failed"

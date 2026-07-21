@@ -222,57 +222,18 @@ class CustodianTool:
         $0 regardless of what was really requested. Verified live: a
         $999,999.99 call to a fresh L2 tool sailed through as autonomous
         with a $2.00 default per-action cap. Found in review.
+
+        Thin wrapper over custodian.policy.gate.kernel_gate, which every
+        other governed call path (the delegated executor, the inference
+        router) also uses -- kept as one implementation so a fix here can't
+        silently fail to reach the others.
         """
-        try:
-            from custodian.policy import load_policy
-            from custodian.policy.evaluator import decide
-            from custodian.types import AuthorityState, Band, KillSwitchState, SpendRequest
-
-            # Load or default authority state
-            state_path = _state_dir() / "authority.json"
-            if state_path.exists():
-                state = AuthorityState.from_dict(json.loads(state_path.read_text()))
-            else:
-                state = AuthorityState(
-                    band=Band.L2, per_action_cap=250.0, session_cap=1000.0
-                )
-
-            # Kill switch — fail closed on corruption (same policy as govern.py)
-            ks_path = _state_dir() / "kill_switch.json"
-            killed = False
-            if ks_path.exists():
-                try:
-                    ks_data = json.loads(ks_path.read_text())
-                    killed = bool(ks_data.get("killed", False))
-                except Exception:
-                    killed = True  # corrupted kill switch file = treat as killed
-
-            # Policy: workspace first, then default preset
-            policy_path = _state_dir() / "policy.yaml"
-            if not policy_path.exists():
-                here = Path(__file__).resolve().parent.parent
-                policy_path = here / "policy" / "presets" / "default.yaml"
-            policy = load_policy(policy_path)
-
-            request = SpendRequest(
-                amount=self.cost_usd if amount is None else amount,
-                description=f"tool:{self.name}",
-            )
-            decision = decide(request, state, policy, skill=self.name, killed=killed)
-            return {
-                "verdict": decision.verdict.value,
-                "reason": decision.reason,
-                "band": decision.band.value,
-            }
-        except Exception as exc:
-            return {
-                "verdict": "escalation_required",
-                "reason": (
-                    "kernel decision could not be evaluated "
-                    f"({type(exc).__name__}: {exc}) -- escalating fail-closed"
-                ),
-                "band": self.band,
-            }
+        from custodian.policy.gate import kernel_gate
+        return kernel_gate(
+            self.cost_usd if amount is None else amount,
+            action=f"tool:{self.name}", state_dir=_state_dir(),
+            fallback_band=self.band,
+        )
 
     def invoke(self, _env: Optional[dict] = None, requester: str = "tool-registry",
                **kwargs) -> dict:
