@@ -156,7 +156,7 @@ LINKS
 ================================================================
 - Build Week contribution: https://github.com/KeyArgo/custodian-codex-guard
 - Parent kernel: https://github.com/KeyArgo/custodian-codex-guard
-- Video: [paste YouTube URL]
+- Video: https://youtu.be/WTVrlsT0-UQ
 - Demo script: scripts/codex-guard-demo.py
 - Test suite: tests/test_codex_guard_cli.py (37 tests)
             tests/test_codex_guard.py
