@@ -1,5 +1,20 @@
 # Custodian Deployment Notes
 
+> **This directory (`/home/dev/custodian-dev`) is the single source of truth
+> for deploys.** At least 6 copies of this repo existed on this host as of
+> 2026-07-21, each with its own working `deploy.sh` doing a direct
+> `wrangler pages deploy` upload to the same live Cloudflare project (no git
+> trace, whichever ran last silently won) — the likely real cause of
+> repeated "things keep reverting" reports. The other 5 copies' `deploy.sh`
+> have been renamed to `deploy.sh.disabled`. If you find yet another copy of
+> this repo anywhere on this host, do the same before running anything in it.
+>
+> **Cloudflare deploy is currently blocked**: the `cloudflare_pages_token` in
+> paladin is missing the `User → User Details → Read` permission. Every
+> `./deploy.sh` attempt fails with `Authentication error [code: 10000]`
+> before uploading anything. This needs the user to add that permission in
+> the Cloudflare dashboard — it can't be fixed from here.
+
 ## Enforcement Nodes
 
 Three nodes run the custodian kernel. The enforcer tries the Spark chain
