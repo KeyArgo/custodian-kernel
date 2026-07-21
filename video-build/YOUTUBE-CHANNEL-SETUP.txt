@@ -1,0 +1,112 @@
+# YouTube Channel Setup Walkthrough
+# InovinLabs — for Custodian hackathon submission
+# Total time: 5-7 minutes
+
+================================================================
+STEP 1: CREATE A GOOGLE ACCOUNT (1 min)
+================================================================
+Go to: https://accounts.google.com/signup
+
+Use any Gmail you control, or create a fresh one. Suggested:
+  - [PII:email]
+  - [PII:email]
+
+You'll need a phone number for verification. Google will text or
+call you with a 6-digit code. This is the only real wait.
+
+================================================================
+STEP 2: GO TO YOUTUBE STUDIO (30 sec)
+================================================================
+Once signed in to your Google account, go to:
+  https://studio.youtube.com/
+
+YouTube will ask if you want to create a channel. Click "Create
+a channel" or use your existing Google account name.
+
+If you used a new Google account, you'll be the channel owner
+automatically.
+
+================================================================
+STEP 3: CHANNEL NAME + HANDLE (1 min)
+================================================================
+Channel name: InovinLabs
+Handle: @InovinLabs  (if available)
+  Fallback: @Inovin  or  @InovinLabsAI
+
+⚠ YouTube handle locks for 14 days after creation. Pick the
+one you want to keep.
+
+================================================================
+STEP 4: CHANNEL DESCRIPTION (30 sec)
+================================================================
+Authority and spend platform for AI agents.
+
+Custodian is the open-source policy kernel that decides whether
+an AI agent's action is allowed. Built by InovinLabs. Kernel
+ships as `custodian-kernel` on PyPI. Receipts are HMAC-chained
+and value-free. Open source.
+
+GitHub: https://github.com/KeyArgo/custodian-kernel
+PyPI:    pip install custodian-kernel
+
+================================================================
+STEP 5: UPLOAD THE VIDEO (3-5 min)
+================================================================
+Click the camera icon (top right) → "Upload videos"
+Drag the file: /home/dev/custodian-04-integration/video-build/
+              custodian-openai-hackathon-final-cinematic.mp4
+(2.9 MB, 2:21, MP4 h264)
+
+Title (paste this):
+  Custodian — the authority kernel for AI agents (OpenAI Build Week)
+
+Description (paste this):
+  Custodian is an open-source safety kernel for AI agents. The
+  kernel sits between any agent and its tools, classifies every
+  proposed action, and writes a tamper-evident HMAC receipt for
+  every decision.
+
+  Built during OpenAI Build Week 2026 with Codex + GPT-5.6.
+
+  Install: pip install custodian-kernel
+  Repo:    https://github.com/KeyArgo/custodian-kernel
+
+  The agent proposes. The kernel decides. The ledger proves.
+
+Visibility: UNLISTED (so the link works for the Devpost form
+            but it doesn't appear in search)
+
+Tags: ai-agents, openai, codex, gpt-5, security, kernel,
+      open-source, python, mcp, hackathon
+
+Category: Science & Technology
+
+End screen / Cards: skip for now
+
+================================================================
+STEP 6: COPY THE URL
+================================================================
+After upload completes, copy the URL from the address bar.
+Format: https://youtu.be/XXXXXXXXXXX
+
+Paste this into the Devpost form's "Video URL" field.
+
+================================================================
+TIMING
+================================================================
+Right now is ~8:15 AM Mountain. YouTube processing for a 2:21
+video at this size takes 1-3 minutes. By the time you fill the
+Devpost form (~15 min), the video will be ready.
+
+================================================================
+TROUBLESHOOTING
+================================================================
+- "Handle already taken" → try @Inovin or @InovinLabsAI
+- "Phone verification failed" → use a different phone or wait 5 min
+- "Upload stuck at 0%" → refresh, try again with smaller file
+  (or use a different browser)
+- "Video processing error" → re-export from ffmpeg:
+    ffmpeg -i custodian-openai-hackathon-final-cinematic.mp4 \
+           -c:v libx264 -crf 23 -preset fast \
+           -c:a aac -b:a 128k -movflags +faststart \
+           reupload.mp4

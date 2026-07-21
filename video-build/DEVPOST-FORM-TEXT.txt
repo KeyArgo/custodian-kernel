@@ -1,0 +1,183 @@
+# Devpost Form Text — Paste-Ready Blocks
+# OpenAI Build Week Hackathon 2026 — Custodian submission
+# Fill in bracketed [...] fields, copy-paste the rest verbatim.
+
+================================================================
+PROJECT TITLE
+================================================================
+Custodian — the authority kernel for AI agents
+
+================================================================
+TAGLINE / ONE-LINE DESCRIPTION
+================================================================
+An open-source policy kernel that decides whether an AI agent's
+action is allowed — with cryptographic receipts, value-free
+verification, and a Codex-native capability firewall.
+
+================================================================
+PROJECT DESCRIPTION (long form)
+================================================================
+Custodian is an open-source safety kernel for AI agents. The
+kernel sits between any agent and its tools: it classifies every
+proposed action, denies the destructive ones, escalates the
+ambiguous ones, and writes a tamper-evident HMAC receipt for
+every decision. The kernel is agent-agnostic and works with any
+tool-calling agent (Codex, Claude, Gemini, and others). Prompts
+are soft. A smart enough model routes around soft instructions.
+Custodian moves the decision outside the agent's process — into a
+kernel the agent cannot modify, cannot inspect, and cannot
+self-approve through.
+
+## What ships
+
+- The kernel: typed action model, policy engine, fail-closed
+  gate, value-free HMAC-chained receipt ledger with chain
+  verification and tamper detection.
+- The credential broker: secrets materialize at egress, never in
+  the agent, never in the prompt.
+- The MCP server: humans stay in the loop through a standard MCP
+  boundary for any escalation.
+- The Codex Guard adapter (Build Week contribution): the policy
+  bridge for OpenAI's Codex CLI, a `custodian codex-guard`
+  subcommand suite, and the full Codex threat-model test coverage.
+
+## What we built during OpenAI Build Week
+
+We added the Codex Guard adapter to the existing Custodian
+kernel. Codex + GPT-5.6 implemented:
+
+- The policy bridge between Codex's tool-call format and the
+  kernel's typed action model.
+- The `custodian codex-guard receipts` subcommand with
+  pretty-printed ledger output, `--verify` chain check,
+  `--limit N`, and graceful handling of malformed lines.
+- The single-use human-approval protocol with digest-bound grants
+  (the human's approval is bound to the exact action it
+  approves — replay fails).
+- The MCP server integration for the in-protocol escalation
+  channel.
+- 110 tests across 7 files: kernel, policy wiring, self-approval
+  regression, gate fail-closed, classifier adversarial cases,
+  receipts CLI, end-to-end demo.
+
+GPT-5.6 powered the contextual risk analysis. Every proposal gets
+a written reason. The deterministic rules keep final control
+over what is prohibited. GPT-5.6 explains; the rules decide.
+
+Codex also attacked its own classifier: it generated adversarial
+cases (an action that looks safe but isn't, like a delete command
+labeled as a read), confirmed the kernel caught them, and shipped
+the tests so regressions get caught.
+
+## What the receipt ledger proves
+
+Every decision writes a value-free receipt: action type, tool,
+verdict, reason, timestamp, HMAC of the prior receipt. The chain
+is HMAC-bound — modifying any historical receipt breaks the
+chain at that point, and the verifier flags it. Receipts contain
+no secret material, so they can be audited, shared, or shipped
+to a regulator without redaction.
+
+A live demo: `custodian codex-guard receipts --verify` reads the
+ledger, walks the chain, and prints
+`chain OK (105 decisions, HMAC-verified)` or
+`chain BROKEN at offset 47 — receipt hash mismatch`.
+
+## Why the kernel, not a prompt
+
+Prompts are soft. A model that reasons itself into approving its
+own refund will approve its own refund. Custodian moves the
+decision outside the model's process and outside the model's
+code path. The agent proposes. The kernel decides. The ledger
+proves. The kill switch stops.
+
+================================================================
+CATEGORY / TRACK
+================================================================
+Developer Tools
+
+================================================================
+BUILT WITH
+================================================================
+- OpenAI Codex CLI (with GPT-5.6)
+- Python 3.13
+- Pydantic (typed action model)
+- HMAC-SHA256 (receipt chain)
+- MCP (human-in-the-loop escalation channel)
+- pytest (110 tests)
+
+================================================================
+VIDEO URL
+================================================================
+[paste the YouTube URL here, e.g. https://youtu.be/XXXXXXXXXXX]
+
+================================================================
+CODEX SESSION IDS
+================================================================
+Primary (this session, 7+ hours of Build Week + submission prep):
+019f837d-00f7-7d42-9680-253ca459297d
+
+Parent session (Jul 19 13:40 → Jul 21, 14.4 MB of full work,
+3 days of Build Week):
+019f7be5-611b-7321-abaf-134e780276b7
+
+================================================================
+INSTALL
+================================================================
+pip install custodian-kernel
+custodian codex-guard receipts --verify
+
+================================================================
+LINKS
+================================================================
+- Repo: https://github.com/KeyArgo/custodian-kernel
+- Video: [paste YouTube URL]
+- Demo script: scripts/codex-guard-demo.py
+- Test suite: tests/test_codex_guard_cli.py (37 tests)
+            tests/test_codex_guard.py
+            tests/test_codex_policy_wiring.py
+            tests/test_self_approval_regression.py
+
+================================================================
+"WHAT PROBLEM DOES YOUR PROJECT SOLVE?"
+================================================================
+AI agents are already moving money, deploying infrastructure,
+and reading credentials. Today the only thing standing between
+a tool call and a production system is the model's own
+prompt — which is soft, and a sufficiently smart model will route
+around it. The result is a slow-motion data breach waiting on a
+prompt-injection attack or a reasoning failure.
+
+Custodian moves the safety boundary out of the model. The agent
+proposes an action. The kernel, running outside the agent's
+process, classifies it. Destructive actions deny. Ambiguous
+actions escalate through a human. Safe actions pass. Every
+decision — allow, deny, escalate — gets a tamper-evident HMAC
+receipt. Auditors can verify the chain. Operators can replay
+exactly what the agent did. Investigators can prove nothing
+was tampered with after the fact.
+
+================================================================
+"HOW DID YOU USE CODEX + GPT-5.6?"
+================================================================
+Codex ran the build. It implemented the policy bridge, the
+typed action risk model, the value-free HMAC-chained receipts,
+the single-use human-approval protocol, and seven dedicated
+test files. 110 tests covering the guard, the policy wiring,
+the self-approval regression, the gate fail-closed path, and
+bypass attempts.
+
+Codex also attacked the classifier. It generated adversarial
+cases — actions that look safe but aren't, like a delete
+command labeled as a read — and confirmed the kernel catches
+them. The demo in the video is one of those cases.
+
+GPT-5.6 powered the contextual risk analysis. Every proposal
+gets a written reason. The deterministic rules (path fence,
+secret-leak guard, prompt-injection guard, kernel self-protection)
+keep final control over what is prohibited. GPT-5.6 explains;
+the rules decide.
+
+The architectural decision we made: enforcement lives outside
+the acting agent. The model never approves its own exception.
+The receipts it never sees are the receipts you can trust.

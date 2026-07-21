@@ -43,22 +43,29 @@ vault if needed, and enables the plugin when Hermes is available. Prefer to
 wire it up yourself instead? Plain extras work exactly as before:
 `pip install custodian-kernel[paladin]` and `pip install custodian-talaria`.
 
-### Custodian Guard for Codex (Build Week)
+### Custodian Guard for Codex (OpenAI Build Week, July 2026)
 
-The `feat/codex-guard` work adds a Codex-native capability firewall without
-hardcoding Custodian to Codex or to this project's website. A repo-local plugin
-routes proposed coding actions through a dependency-free MCP boundary. Safe
-workspace reads, tests, and edits may proceed; secrets, off-scope paths,
-destructive commands, network access, production changes, money movement, and
-governance changes deny or require a human. Decisions produce value-free HMAC
-hash-chained receipts.
+Custodian is a kernel. The kernel existed before Build Week. The kernel is
+agent-agnostic — it works with any tool-calling agent.
 
-This extension was built collaboratively with Codex using GPT-5.6 during the
-OpenAI Build Week window. Codex inspected the existing adapter architecture,
-implemented the typed action bridge and MCP server, adversarially tested false
-risk labels and path handling, and produced the deterministic judge demo. The
-dated branch history and session submitted through `/feedback` distinguish the
-new work from the pre-existing 0.4.0 kernel.
+What we shipped during OpenAI Build Week is the **Codex Guard adapter** — the
+piece that knows how to talk to OpenAI's Codex CLI. The adapter sits between
+Codex and the kernel. Every action Codex proposes gets classified by the
+kernel before it runs. Safe workspace reads, tests, and edits may proceed;
+secrets, off-scope paths, destructive commands, network access, production
+changes, money movement, and governance changes deny or require a human.
+Decisions produce value-free HMAC hash-chained receipts.
+
+**This is the contribution to the OpenAI Build Week track:** the policy
+bridge, the receipts CLI, the MCP server integration, and 110 tests
+covering the full Codex threat model. The kernel that does the work
+predates Build Week; the adapter is what we built this week.
+
+Codex (with GPT-5.6) implemented the typed action bridge and MCP server,
+adversarially tested false risk labels and path handling, and produced
+the deterministic judge demo. The dated branch history and session
+submitted through `/feedback` distinguish the new work from the
+pre-existing 0.4.0 kernel.
 
 ```bash
 python scripts/codex-guard-demo.py
@@ -142,7 +149,7 @@ Any company running an AI agent with a Stripe account, a Modal spend, a NIM infe
 - **PyPI:** https://pypi.org/project/custodian-kernel/
 - **Live dashboard:** https://getcustodian.xyz
 - **Operator panel:** https://getcustodian.xyz/operator
-- **Hackathon entry:** Hermes Agent Accelerated Business Hackathon (NVIDIA x Stripe x Nous Research)
+- **Hackathon entry:** OpenAI Build Week 2026 (Codex + GPT-5.6, Developer Tools track)
 
 
 ## Features
