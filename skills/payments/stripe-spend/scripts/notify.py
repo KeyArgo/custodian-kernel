@@ -27,7 +27,6 @@ import requests  # noqa: E402
 SECRET_FILE = Path("/sandbox/.hermes/secrets/twilio.env")
 PENDING_FILE = SKILL_DIR / "state" / "pending_approval.json"
 PENDING_CODE_FILE = SKILL_DIR / "state" / "pending_code.json"
-OPERATOR_PHONE = os.environ.get("HERMES_OPERATOR_PHONE", "")  # e.g. +15551234567
 CODE_TTL = 600
 
 
@@ -117,6 +116,12 @@ def send_approval_code(amount: float, description: str) -> bool:
     sid = secrets_map["TWILIO_ACCOUNT_SID"]
     token = secrets_map["TWILIO_AUTH_TOKEN"]
     from_number = secrets_map["TWILIO_FROM_NUMBER"]
+    # Loaded from the same git-ignored secrets file as the Twilio credentials
+    # above -- never a source-code default. A real phone number was
+    # previously hardcoded here as a fallback default and got deployed to
+    # the live sandbox outside of git; moving it into the secrets file is
+    # what keeps it out of anything that gets committed or distributed.
+    operator_phone = secrets_map["HERMES_OPERATOR_PHONE"]
 
     code = f"{secrets.randbelow(1000000):06d}"
 
@@ -133,7 +138,7 @@ def send_approval_code(amount: float, description: str) -> bool:
     r = requests.post(
         f"https://api.twilio.com/2010-04-01/Accounts/{sid}/Messages.json",
         auth=(sid, token),
-        data={"To": OPERATOR_PHONE, "From": from_number, "Body": body},
+        data={"To": operator_phone, "From": from_number, "Body": body},
         timeout=10,
     )
     r.raise_for_status()

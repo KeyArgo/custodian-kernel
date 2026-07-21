@@ -787,8 +787,8 @@ document.getElementById('step0-btn').addEventListener('click', async () => {
     if (!data.error) nemoNarrate(0);
 });
 
-document.getElementById('step1-btn').addEventListener('click', async () => {
-    const data = await call('/spend', { amount: '85.00', description: 'Demo: cloud backup storage renewal' });
+async function runStep1(alreadyRetried) {
+    const data = await call('/spend', { amount: '85.00', description: 'Demo: cloud backup storage renewal', auto_release_kill_switch: true });
     renderOut('step1-out', data);
     if (siteTour && !data.error) siteTour.markOperatorStep(1, { completed: true });
     if (!data.error) opRailMark(1);
@@ -809,14 +809,26 @@ document.getElementById('step1-btn').addEventListener('click', async () => {
                 setTimeout(() => copyBtn.textContent = '📋 Copy PaymentIntent ID for Step 7', 2000);
             });
         };
-    } else if (budgetWarn && /ESCALATION REQUIRED|remaining session budget|cap exceeded|escalation_required/i.test(text)) {
+    } else if (/ESCALATION REQUIRED|remaining session budget|cap exceeded|escalation_required/i.test(text)) {
         // Step 1 is meant to execute autonomously. If it escalated, the demo
-        // session's spend budget is exhausted (accumulated across prior runs),
-        // so no PaymentIntent was created and Step 7 has nothing to auto-fill.
-        // Surface the actionable fix instead of failing silently.
-        budgetWarn.style.display = 'block';
+        // session's spend budget is exhausted (it's shared global state
+        // across every visitor, accumulated across prior runs -- not just
+        // this one), so no PaymentIntent was created and Step 7 has nothing
+        // to auto-fill. Self-heal once, the same way the manual "Reset
+        // session & retry" button does (token-based reset, no password
+        // prompt needed since operator actions are already unlocked). Only
+        // fall back to the warning box if that doesn't clear it -- e.g. no
+        // token yet, or the retry escalated again too.
+        if (!alreadyRetried) {
+            const jumpReset = document.getElementById('step1-jump-reset');
+            if (jumpReset) { jumpReset.click(); return; }
+        }
+        if (budgetWarn) budgetWarn.style.display = 'block';
     }
-});
+}
+window.__runStep1 = runStep1;
+
+document.getElementById('step1-btn').addEventListener('click', () => runStep1(false));
 
 function smsNow() {
     const d = new Date();
@@ -1168,8 +1180,10 @@ document.addEventListener('DOMContentLoaded', () => {
     async function retryStep1AfterReset() {
         const warn = document.getElementById('step1-budget-warn');
         if (warn) warn.style.display = 'none';
-        const s1 = document.getElementById('step1-btn');
-        if (s1) s1.click();  // re-run the autonomous spend so Step 7 fills from its PI
+        // Call runStep1 directly with alreadyRetried=true (not s1.click(), which
+        // would re-enter with alreadyRetried=false and could auto-reset forever
+        // if a concurrent visitor's spend drains the budget again immediately).
+        if (window.__runStep1) await window.__runStep1(true);
     }
 
     // One-click reset using the stored token (no password prompt). True on success.
