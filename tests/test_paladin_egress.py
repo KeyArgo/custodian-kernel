@@ -236,6 +236,27 @@ def test_reflecting_upstream_cannot_return_query_injected_secret(broker, vault, 
     assert "[REDACTED:paladin-value]" in result["body"]
 
 
+def test_redact_response_catches_the_quote_encoding_not_just_quote_plus():
+    """quote_plus and stdlib quote() (default safe='/') encode differently
+    at exactly the '/' character -- quote_plus escapes it to %2F, quote()
+    leaves it literal. _redact_response only checked the quote_plus form,
+    so a reflecting upstream that happened to URL-encode via quote()
+    instead (e.g. an error page echoing a raw query string) leaked a
+    credential containing '/' in a form the check didn't recognize.
+    Found in review."""
+    from urllib.parse import quote
+    from paladin.broker import Broker
+
+    value = "sk_test_AbC/def+123="
+    result = {
+        "status": 200, "headers": {},
+        "body": f"error: invalid api_key={quote(value)}",
+    }
+    cleaned = Broker._redact_response(result, value)
+    assert quote(value) not in cleaned["body"]
+    assert "[REDACTED:paladin-value]" in cleaned["body"]
+
+
 def test_plain_http_to_non_loopback_is_denied_before_vault_access(broker):
     with pytest.raises(EgressDeniedError, match="requires HTTPS"):
         broker.egress_request({

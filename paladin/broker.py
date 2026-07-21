@@ -28,7 +28,7 @@ import ssl
 import subprocess
 from pathlib import Path
 from typing import Mapping, Optional, Sequence
-from urllib.parse import parse_qsl, quote_plus, urlencode, urlsplit, urlunsplit
+from urllib.parse import parse_qsl, quote, quote_plus, urlencode, urlsplit, urlunsplit
 
 from paladin.audit import AuditLog
 from paladin.errors import EgressDeniedError, GrantDeniedError, UnknownRefError
@@ -317,7 +317,7 @@ class Broker:
     def _redact_response(result: dict, value: str) -> dict:
         """Ensure a reflecting upstream cannot return a credential to a child.
 
-        Also redacts the query-encoded form of ``value``: query injection
+        Also redacts both encoded forms of ``value``: query injection
         (``_apply_injection``'s "query" branch) sends the value through
         ``urlencode()``, which percent-encodes via ``quote_plus`` -- so a
         secret containing ``+``, ``/``, or ``=`` (the base64 alphabet, a
@@ -327,19 +327,33 @@ class Broker:
         free to hand the credential straight back in its encoded --
         trivially reversible -- form. Found in review, reproduced: a
         value containing '+' survived this redaction unchanged.
+
+        Checking only ``quote_plus``'s encoding was itself incomplete:
+        ``quote_plus`` and stdlib ``quote()`` (default ``safe='/'``) encode
+        differently at exactly the '/' character -- quote_plus escapes it
+        to %2F, quote() leaves it literal. A reflecting upstream that
+        happens to URL-encode via quote() instead of quote_plus() (e.g. an
+        error page echoing a raw query string) leaked a credential
+        containing '/' in a form this check didn't recognize. Found in
+        review, reproduced: 'sk_test_AbC/def+123=' survived as
+        'sk_test_AbC/def%2B123%3D' -- the '/' never got redacted.
         """
         if not value:
             return result
         marker = "[REDACTED:paladin-value]"
-        encoded = quote_plus(value)
+        encodings = (quote_plus(value), quote(value))
         cleaned = dict(result)
-        cleaned["body"] = (
-            str(cleaned.get("body", "")).replace(value, marker).replace(encoded, marker)
-        )
-        cleaned["headers"] = {
-            str(key): str(header_value).replace(value, marker).replace(encoded, marker)
-            for key, header_value in (cleaned.get("headers") or {}).items()
-        }
+        body = str(cleaned.get("body", "")).replace(value, marker)
+        for encoded in encodings:
+            body = body.replace(encoded, marker)
+        cleaned["body"] = body
+        headers = {}
+        for key, header_value in (cleaned.get("headers") or {}).items():
+            text = str(header_value).replace(value, marker)
+            for encoded in encodings:
+                text = text.replace(encoded, marker)
+            headers[str(key)] = text
+        cleaned["headers"] = headers
         return cleaned
 
     def _perform(self, method: str, url: str, headers: dict, body,

@@ -11,6 +11,8 @@ import hmac
 import json
 import os
 import time
+from collections import defaultdict, deque
+from functools import wraps
 from pathlib import Path
 
 from flask import Blueprint, jsonify, request
@@ -20,6 +22,44 @@ bp = Blueprint("stripe_webhook", __name__)
 LEDGER = Path(__file__).resolve().parents[2] / "skills" / "earnings" / "hermes-earn-ledger.json"
 # Repo-relative demo ledger (created on first write, see _append). Production:
 # point HERMES_EARN_LEDGER at a persistent path outside the checkout.
+
+# Independent rate-limit bucket from the other public dashboard endpoints --
+# a flood on one shouldn't silently starve another's budget for the same
+# visitor. Same pattern as nemotron_chat.py/playground.py.
+_RATE_LIMIT_WINDOW_SECONDS = 60
+_RATE_LIMIT_MAX_REQUESTS = 30
+_request_log: dict = defaultdict(deque)
+
+
+def _client_ip() -> str:
+    """CF-Connecting-IP is client-supplied input -- trusting it
+    unconditionally lets a client rotate the header value per request to
+    get a fresh rate-limit bucket every time. Only honored when the
+    operator has explicitly confirmed a trusted proxy terminates every
+    path to this process (TRUSTED_PROXY_HEADER=CF-Connecting-IP); otherwise
+    falls back to request.remote_addr, which a client cannot forge. Same
+    fix applied to nemotron_chat.py/playground.py this session."""
+    if os.environ.get("TRUSTED_PROXY_HEADER") == "CF-Connecting-IP":
+        return request.headers.get("CF-Connecting-IP") or request.remote_addr or "unknown"
+    return request.remote_addr or "unknown"
+
+
+def rate_limited(f):
+    @wraps(f)
+    def wrapper(*args, **kwargs):
+        ip = _client_ip()
+        now = time.time()
+        log = _request_log[ip]
+        while log and now - log[0] > _RATE_LIMIT_WINDOW_SECONDS:
+            log.popleft()
+        if len(log) >= _RATE_LIMIT_MAX_REQUESTS:
+            return jsonify({
+                "error": f"Rate limit exceeded -- max {_RATE_LIMIT_MAX_REQUESTS} requests per "
+                         f"{_RATE_LIMIT_WINDOW_SECONDS}s per IP on this demo endpoint.",
+            }), 429
+        log.append(now)
+        return f(*args, **kwargs)
+    return wrapper
 
 
 def _append(entry: dict) -> None:
@@ -47,6 +87,7 @@ def _read_all() -> list[dict]:
 
 
 @bp.route("/demo-earn", methods=["POST"])
+@rate_limited
 def demo_earn():
     body = request.get_json(silent=True) or {}
     try:
@@ -69,6 +110,9 @@ def demo_earn():
     return jsonify(entry), 200
 
 
+_WEBHOOK_TIMESTAMP_TOLERANCE_SECONDS = 300  # Stripe's own recommended tolerance
+
+
 @bp.route("/webhook", methods=["POST"])
 def stripe_webhook():
     payload = request.get_data()
@@ -78,6 +122,18 @@ def stripe_webhook():
     if not secret:
         return jsonify({"error": "webhook secret not configured — rejecting unverifiable event"}), 500
 
+    # Signature verification alone is not anti-replay: a captured, genuinely
+    # valid (payload, signature) pair passed this check every time it was
+    # resent, with no bound on how many times or how long after the fact.
+    # Two independent guards close this, matching Stripe's own recommended
+    # practice: (1) reject a signature whose timestamp has aged out of a
+    # reasonable tolerance -- closes off replaying an intercepted request
+    # long after the fact; (2) de-duplicate by the event's own Stripe id --
+    # closes off both a replay within that window and Stripe's own ordinary
+    # retries (which legitimately resend the identical event on a timeout).
+    # Verified live: 5 identical webhook deliveries used to append 5 ledger
+    # entries and credit 5x the real amount -- pnl.py's publicly-displayed
+    # total_earned/margin_pct sum this same file. Found in review.
     try:
         parts = {p.split("=")[0]: p.split("=")[1] for p in sig.split(",") if "=" in p}
         ts = parts.get("t", "0")
@@ -86,6 +142,8 @@ def stripe_webhook():
         expected = hmac.new(secret.encode(), signed, hashlib.sha256).hexdigest()
         if not hmac.compare_digest(expected, v1):
             return jsonify({"error": "invalid signature"}), 400
+        if abs(time.time() - float(ts)) > _WEBHOOK_TIMESTAMP_TOLERANCE_SECONDS:
+            return jsonify({"error": "signature timestamp outside tolerance"}), 400
     except Exception:
         return jsonify({"error": "signature check failed"}), 400
 
@@ -96,17 +154,22 @@ def stripe_webhook():
 
     if event.get("type") == "payment_intent.succeeded":
         pi = event.get("data", {}).get("object", {})
-        amount_cents = pi.get("amount", 0)
-        entry = {
-            "ts": time.time(),
-            "event": "earned",
-            "amount": round(amount_cents / 100, 2),
-            "currency": pi.get("currency", "usd"),
-            "description": pi.get("description") or "Stripe payment",
-            "stripe_id": pi.get("id", ""),
-            "source": "stripe_webhook",
-        }
-        _append(entry)
+        stripe_id = pi.get("id", "")
+        already_processed = bool(stripe_id) and any(
+            e.get("stripe_id") == stripe_id for e in _read_all()
+        )
+        if not already_processed:
+            amount_cents = pi.get("amount", 0)
+            entry = {
+                "ts": time.time(),
+                "event": "earned",
+                "amount": round(amount_cents / 100, 2),
+                "currency": pi.get("currency", "usd"),
+                "description": pi.get("description") or "Stripe payment",
+                "stripe_id": stripe_id,
+                "source": "stripe_webhook",
+            }
+            _append(entry)
 
     return jsonify({"received": True}), 200
 

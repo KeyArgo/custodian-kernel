@@ -174,6 +174,25 @@ def read_backup(source: Path) -> tuple[bytes, Optional[bytes]]:
     return blob, audit
 
 
+def _next_safety_path(live: Path) -> Path:
+    """Return a `.pre-restore` path that doesn't already exist yet.
+
+    os.replace() onto a fixed `<name>.pre-restore` path silently overwrites
+    it if one already exists -- two ordinary, consecutive restores (restore
+    backup A, later restore backup B instead; or just retry) meant the
+    second restore's safety copy clobbered the first restore's, permanently
+    losing whatever "current vault before restore #1" data it held, with
+    zero warning. Violates this module's own documented invariant ("a
+    restore can never lose data, even a botched one"). Found in review.
+    """
+    candidate = Path(str(live) + ".pre-restore")
+    n = 1
+    while candidate.exists():
+        candidate = Path(str(live) + f".pre-restore.{n}")
+        n += 1
+    return candidate
+
+
 def restore_backup(source: Path, vault_path: Path, *, force: bool = False,
                    passphrase: Optional[str] = None,
                    keyfile: Optional[Path] = None) -> BackupInfo:
@@ -214,7 +233,7 @@ def restore_backup(source: Path, vault_path: Path, *, force: bool = False,
     os.chmod(vault_path.parent, 0o700)
     for live in (vault_path, audit_path):
         if live.exists():
-            safety = Path(str(live) + ".pre-restore")
+            safety = _next_safety_path(live)
             os.replace(live, safety)
 
     def _write(path: Path, data: bytes) -> None:
