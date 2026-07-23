@@ -6,8 +6,6 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
-from custodian.codex_guard.receipts import ReceiptChain
-
 
 def _color(verdict: str, is_tty: bool) -> str:
     if not is_tty:
@@ -18,6 +16,7 @@ def _color(verdict: str, is_tty: bool) -> str:
 
 
 def run(args) -> None:
+    from custodian.codex_guard.receipts import ReceiptChain
     state_dir = Path(args.state_dir).resolve()
     chain = ReceiptChain(state_dir)
     path = chain.path

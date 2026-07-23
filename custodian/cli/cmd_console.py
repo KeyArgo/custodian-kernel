@@ -7,8 +7,6 @@ from pathlib import Path
 import sys
 import time
 
-from custodian.codex_guard.approvals import ApprovalError, ApprovalStore
-from custodian.codex_guard.receipts import ReceiptChain
 from custodian.control.policy import ApprovalPolicy, ApprovalRule
 from custodian.control.filesystem_policy import FilesystemPolicy, FilesystemRule
 from custodian.control.ledger_access_policy import LedgerAccessPolicy, LedgerGrant
@@ -92,6 +90,7 @@ def _recent_blocks(state_dir: Path, limit: int = 3) -> list[dict]:
     console only ever read the receipt chain, so "operator sees everything"
     silently didn't cover that whole path.
     """
+    from custodian.codex_guard.receipts import ReceiptChain
     chain = ReceiptChain(state_dir)
     try:
         chain.verify()
@@ -135,6 +134,7 @@ def _recent_blocks(state_dir: Path, limit: int = 3) -> list[dict]:
 
 
 def _draw(state_dir: Path, message: str) -> tuple[ApprovalStore, CapabilityStore, list]:
+    from custodian.codex_guard.approvals import ApprovalStore
     approvals = ApprovalStore(state_dir)
     capabilities = CapabilityStore(state_dir)
     hidden = _snoozes(state_dir)
@@ -200,6 +200,7 @@ def _draw(state_dir: Path, message: str) -> tuple[ApprovalStore, CapabilityStore
 
 
 def run(args) -> int:
+    from custodian.codex_guard.approvals import ApprovalError
     state_dir = Path(args.state_dir)
     policy = ApprovalPolicy(state_dir / "approval-policy.json")
     filesystem = FilesystemPolicy(state_dir / "filesystem-policy.json")

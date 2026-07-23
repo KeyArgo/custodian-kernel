@@ -1,0 +1,88 @@
+__pycache__/
+*.pyc
+*.egg-info/
+.pytest_cache/
+dist/
+build/
+*.db
+*.db-wal
+*.db-shm
+secrets/*.env
+state-snapshot/
+custodian/custodian/
+export/
+# custodian workspace artifacts (created by `custodian init`)
+policy.yaml
+/state/
+/secrets/*.env
+# video project artifacts and media files (not part of this repo)
+video-hf/
+video/
+video-build/**/*.mp4
+video-build/**/*.wav
+video-build/**/*.m4a
+video-build/**/*.aup3
+video-build/newaudio
+video-build/" is .wav"
+# delivery/ contains runtime Stripe PaymentIntent IDs — not source
+delivery/
+.venv-dev/
+.venv-release/
+
+*.egg-info/
+
+# Wrangler machine-local cache (contains Cloudflare account id/email)
+.wrangler/
+**/.wrangler/
+
+# Personal test scripts + internal handover notes (contain personal email/keys) —
+# kept locally for the author, never published.
+demo.sh
+process-orders.sh
+docs/DEMO-CYCLE-IMPLEMENTATION.md
+docs/DISCORD-POST.md
+docs/HANDOVER-2026-07-01.md
+
+# Private PII/exposure tracking note — remediation TODO list, author eyes only.
+PII-EXPOSURE-PRIVATE.md
+
+# runtime earn ledger (created by the dashboard demo-earn endpoint)
+skills/earnings/
+
+# ── Credential safety: never commit secrets, vaults, keyfiles, or backups ──
+# Belt-and-suspenders — the vault normally lives in ~/.paladin (outside the
+# repo), but this guarantees that even a vault/keyfile/backup created INSIDE the
+# checkout can never be staged. Enforced by tests/test_no_credentials_tracked.py.
+*.paladin
+*.warden
+vault.paladin
+vault.warden
+.paladin/
+.warden/
+paladin-backup-*.zip
+*-backup-*.zip
+*.pre-restore
+# env files (allow committed *.example / *.template / *.sample only)
+.env
+.env.*
+!.env.example
+!*.env.example
+!*.env.template
+!*.env.sample
+secrets/
+!secrets/README.md
+!secrets/.gitkeep
+# private keys / keyfiles
+*.pem
+*.key
+id_rsa
+id_ed25519
+*.keyfile
+# runtime state that can hold amounts / ids
+skills/**/state/
+custodian/bundled_skills/**/state/
+
+# Unrelated-competition planning docs kept physically alongside this repo
+# for convenience, deliberately never tracked here -- a different
+# submission (XPRIZE) with its own deadline, not Custodian/Build-Week work.
+docs/xprize/

@@ -71,7 +71,7 @@ _GUIDE = """
   THAT'S IT.
     You now know the whole tool. Everything else is a variation of these.
     Stuck? Type   custodian help   for the full list, or read the guide at
-    https://github.com/KeyArgo/custodian-kernel
+    https://github.com/KeyArgo/custodian-codex-guard
 """
 
 
@@ -203,7 +203,7 @@ DEMO COMMANDS (no credentials, no side effects)
   custodian demo receipt                       @govern + SHA-256 receipt walkthrough
 
 docs:    https://getcustodian.xyz
-install: pip install custodian-kernel
+install: pip install custodian-codex-guard
 """
 
 
@@ -215,11 +215,16 @@ def _add_policy(p: argparse.ArgumentParser, default: str) -> None:
     p.add_argument("--policy", default=default, help="Path to policy YAML file")
 
 
-def main(argv: list[str] | None = None) -> int:
-    from custodian._encoding import force_utf8_io
-    force_utf8_io()
+def build_parser(env_defaults: CustodianConfig | None = None) -> argparse.ArgumentParser:
+    """Construct the full `custodian` argparse tree with no side effects.
 
-    env_defaults = CustodianConfig.from_env()
+    Split out of main() so tests can walk every registered subcommand
+    (including nested ones like `codex-guard receipts`) without invoking
+    any of them -- this is what let a subcommand's own module-level import
+    crash *every* invocation, `--version` included, unnoticed until a real
+    clean-venv install."""
+    if env_defaults is None:
+        env_defaults = CustodianConfig.from_env()
 
     parser = _FriendlyParser(
         prog="custodian",
@@ -616,6 +621,14 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--amount", type=float, default=35.00, help="Earn amount (default: 35.00)")
     p.set_defaults(func=cmd_generate_report.run)
 
+    return parser
+
+
+def main(argv: list[str] | None = None) -> int:
+    from custodian._encoding import force_utf8_io
+    force_utf8_io()
+
+    parser = build_parser()
     args = parser.parse_args(argv)
     if getattr(args, "command", None) is None or not hasattr(args, "func"):
         # A human at a terminal gets the interactive menu; a pipe/script/CI
