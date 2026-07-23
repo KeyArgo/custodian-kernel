@@ -360,6 +360,30 @@ def test_evaluate_guard_action_stamps_the_caller_supplied_harness(tmp_path, monk
     assert harnesses == {"codex", "opencode"}
 
 
+def test_opencode_guard_wiring_is_self_protected(tmp_path, monkeypatch):
+    """OpenCode's guard plugin lives under ~/.config/opencode/plugins/ (XDG
+    convention, unlike Codex/Claude's direct ~/.codex, ~/.claude dotfile
+    homes) -- see opencode_guard/cli.py's _plugin_path(). A bash redirect
+    into that file could disable the plugin the same way ~/.codex/config.toml
+    is fenced for Codex, so it must be denied the same way."""
+    monkeypatch.setenv("CUSTODIAN_CODEX_GUARD_STATE_DIR", str(tmp_path / "state"))
+    home = tmp_path / "home"
+    workspace = tmp_path / "workspace"
+    home.mkdir()
+    workspace.mkdir()
+    monkeypatch.setenv("HOME", str(home))
+
+    result = evaluate_guard_action(
+        _guard_args(
+            workspace,
+            arguments={"path": str(home / ".config" / "opencode" / "plugins" / "custodian-guard.js")},
+        ),
+        harness="opencode",
+    )
+    assert result["verdict"] == "denied"
+    assert "forbidden location" in result["reason"]
+
+
 def test_list_receipts_denies_self_by_default(tmp_path, monkeypatch):
     """No harness sees anything by default -- not even its own history. An
     agent that can read its own denial reasons/tools/verdicts has an oracle

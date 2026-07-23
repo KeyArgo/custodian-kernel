@@ -85,9 +85,18 @@ _SHELL_RULES = (
         r"|\bopencode\b|\bcustodian-opencode\s+(?:setup|evaluate)\b", re.I,
     ), ActionKind.GOVERNANCE),
     (re.compile(
-        r"(?:^|[;&|]\s*)(?:sudo\s+)?(?:rm|rmdir|shred|truncate|del|erase|rd)\b"
+        # The separator class must include newline (and CR). A shell command
+        # string is frequently multi-line -- heredocs, `&&\n`-formatted
+        # scripts, or a plain "echo hi\nrm -rf ~" -- and a newline separates
+        # commands exactly as ";" does. Anchoring only on [;&|] meant a
+        # destructive command on any line after the first (not preceded by
+        # ;/&/|) was classified as a harmless local action and ran
+        # autonomously; confirmed with `_inferred_kind("shell",
+        # {"command": "echo hi\nrm -rf ~/project"})` returning None before
+        # this fix. re.M additionally lets ^ match each line start.
+        r"(?:^|[;&|\n\r]\s*)(?:sudo\s+)?(?:rm|rmdir|shred|truncate|del|erase|rd)\b"
         r"|\b(?:remove-item|clear-content|format-volume)\b"
-        r"|\bgit\s+(?:reset\s+--hard|clean\s+-[a-z]*f)", re.I,
+        r"|\bgit\s+(?:reset\s+--hard|clean\s+-[a-z]*f)", re.I | re.M,
     ), ActionKind.DESTRUCTIVE),
     (re.compile(
         r"\b(?:kubectl|helm|terraform)\s+(?:apply|destroy|upgrade|install)\b"

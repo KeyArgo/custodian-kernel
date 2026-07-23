@@ -96,7 +96,19 @@ def evaluate_guard_action(args: dict[str, Any], *, harness: str = "codex") -> di
         fs_config = FilesystemPolicy(_state_dir() / "filesystem-policy.json").fence_config(
             harness=harness, model=model, access=access,
             inherited_allow=[args.get("workspace", "")],
-            inherited_deny=["~/.ssh", "~/.aws", "~/.config/gcloud", "~/.kube"],
+            # `~/.codex` (and `~/.claude`) hold the guard's own hook wiring and
+            # policy; fencing them here stops a bash redirect like
+            # `echo ... >> ~/.codex/config.toml` from disabling the guard the way
+            # only an apply_patch write was already caught (guard.py
+            # _SENSITIVE_WRITE_PATH). Self-protection, not user data.
+            # OpenCode's guard plugin lives under `~/.config/opencode/plugins/`
+            # (XDG convention, unlike Codex/Claude's direct dotfile homes) --
+            # see opencode_guard/cli.py's _plugin_path(). Same bash-redirect
+            # self-disable risk applies there too. This literal doesn't
+            # follow a custom $XDG_CONFIG_HOME override, matching the other
+            # entries here, which are also plain literals.
+            inherited_deny=["~/.ssh", "~/.aws", "~/.config/gcloud", "~/.kube",
+                            "~/.codex", "~/.claude", "~/.config/opencode"],
         )
         decision = evaluate_action(
             tool=args.get("tool", ""), action_kind=requested_kind,
@@ -133,6 +145,12 @@ def evaluate_guard_action(args: dict[str, Any], *, harness: str = "codex") -> di
             )
             store = ApprovalStore(_state_dir())
             approval_id = args.get("approval_id")
+            # Hook-based harnesses can't replay an approval_id through a tool
+            # call, so bind the identical re-run to an out-of-band operator
+            # approval by its digest instead. Only ever finds an approval the
+            # operator already granted for this exact action + requester.
+            if not approval_id:
+                approval_id = store.find_approved(digest=digest, requester=requester)
             if approval_id:
                 store.consume(approval_id, digest=digest, requester=requester)
                 decision.update(verdict="approved",

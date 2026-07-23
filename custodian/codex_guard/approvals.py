@@ -186,6 +186,30 @@ class ApprovalStore:
             return records
         return [r for r in records if r.harness in visible]
 
+    def find_approved(self, *, digest: str, requester: str) -> str | None:
+        """Return the id of an approved, unexpired, unconsumed approval that
+        binds exactly this action digest and requester, or None.
+
+        A hook-based harness (Codex/Claude PreToolUse) has no channel to pass an
+        approval_id back through the tool call the way the MCP `guard_action`
+        tool does -- the harness only hands us the raw tool invocation. So after
+        an operator approves an escalation out of band (`custodian-codex approve
+        ID`), the *only* thing that ties the subsequent identical re-run to that
+        approval is the digest itself. This lets the guard consume the approval
+        on the exact re-run without the model ever holding or replaying an id.
+        Constant-time digest/requester comparison, newest first.
+        """
+        if len(digest) != 64 or any(c not in "0123456789abcdef" for c in digest):
+            return None
+        now = self._now()
+        for record in self.list_records():  # already newest-first
+            if (record.status == "approved"
+                    and record.expires_at > now
+                    and hmac.compare_digest(record.action_digest, digest)
+                    and hmac.compare_digest(record.requester, requester)):
+                return record.approval_id
+        return None
+
     def deny(self, approval_id: str, *, denied_by: str) -> ApprovalRecord:
         if not denied_by.strip():
             raise ApprovalError("operator identity is required")

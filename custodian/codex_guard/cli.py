@@ -13,6 +13,7 @@ import shutil
 from .approvals import ApprovalError, ApprovalStore
 from .mcp_server import _state_dir
 from .receipts import ReceiptChain
+from . import hook_install
 
 PLUGIN_ID = "custodian-codex-guard@custodian-build-week"
 
@@ -139,6 +140,8 @@ def cmd_setup(args: argparse.Namespace) -> int:
         print("would run: " + " ".join(_mcp_command()))
         for command in commands:
             print("would run: " + " ".join(command))
+        print(f"would install PreToolUse enforcement hook into: {hook_install.codex_config_path()}")
+        print(f"  command: {hook_install.hook_command()}")
         return 0
 
     plugin_mcp = root / "plugins" / "custodian-codex-guard" / ".mcp.json"
@@ -165,6 +168,45 @@ def cmd_setup(args: argparse.Namespace) -> int:
             print(f"setup failed: {detail}", file=sys.stderr)
             return 1
     print(f"installed and enabled: {PLUGIN_ID}")
+    # The hook -- not the plugin/MCP tool -- is what makes the guard mandatory:
+    # Codex enforces it on every tool call before its own approval decision, so
+    # it holds even under approval_policy=never or a trusted project -- but only
+    # once the hook is TRUSTED or MANAGED. A plain user-level install (the
+    # default here, no --managed-lock) starts Untrusted and is silently SKIPPED
+    # in non-interactive `codex exec` until approved once in the TUI (see
+    # docs/ROADMAP-codex-kernel-enforcement.md's live smoke-test finding). The
+    # print statements below already say this; don't let this comment drift
+    # back to the unqualified claim. The MCP server above stays for
+    # receipt/approval visibility either way.
+    try:
+        path = hook_install.install(matcher=args.matcher)
+        print(f"installed PreToolUse enforcement hook: {path}")
+    except hook_install.HookInstallError as exc:
+        print(f"WARNING: could not install enforcement hook ({exc}); "
+              "the guard is NOT mandatory until this is fixed", file=sys.stderr)
+        return 1
+
+    if getattr(args, "managed_lock", False):
+        # Always-on, unstrippable enforcement: a managed hook is auto-trusted and
+        # runs in non-interactive exec with no TUI trust prompt. Needs write
+        # access to the managed dir (root-owned /etc/codex by default).
+        try:
+            cfg, req = hook_install.install_managed(matcher=args.matcher)
+            print(f"installed MANAGED (always-on) hook: {cfg}")
+            if req:
+                print(f"locked config to managed hooks only: {req}")
+        except (PermissionError, OSError) as exc:
+            print(f"WARNING: managed install needs write access to "
+                  f"{hook_install.managed_dir()} ({type(exc).__name__}); "
+                  f"{hook_install.elevation_hint()}, or set CUSTODIAN_CODEX_MANAGED_DIR",
+                  file=sys.stderr)
+            return 1
+    else:
+        # A user-level hook starts UNTRUSTED and is skipped in exec until trusted.
+        print("IMPORTANT: run `codex` once interactively and approve the hook "
+              "trust prompt, or the hook is skipped in non-interactive runs.")
+        print("For always-on, unstrippable enforcement instead: "
+              "sudo custodian-codex setup --managed-lock")
     print("start a new Codex thread to load the guard")
     return 0
 
@@ -372,6 +414,28 @@ def cmd_doctor(args: argparse.Namespace) -> int:
                 except (json.JSONDecodeError, OSError):
                     results.append(("plugin .mcp.json", False, "parse error"))
 
+    # PreToolUse enforcement hook -- the mandatory-enforcement check. Without
+    # it the guard is only advisory (the model must choose to call the MCP tool).
+    managed = hook_install.managed_status()
+    hook_state = hook_install.status()
+    if managed["installed"]:
+        # Managed hooks are always-on and auto-trusted -- the strongest state.
+        lock = "locked to managed-only" if managed["locked"] else "not locked"
+        results.append(("enforcement hook", True, f"MANAGED always-on ({lock}): {managed['path']}"))
+    elif not hook_state["installed"]:
+        results.append(("enforcement hook", False,
+                        f"NOT installed in {hook_state['path']} -- guard is advisory only; run setup"))
+    elif not hook_state["interpreter_current"]:
+        results.append(("enforcement hook", False,
+                        f"stale interpreter ({hook_state['command']}); rerun setup"))
+    else:
+        # Installed user-level, but Codex skips it until the operator trusts it
+        # once in the TUI (trust lives in Codex's state db, not readable here).
+        results.append(("enforcement hook", True,
+                        f"{hook_state['path']} (user-level: approve the one-time "
+                        "codex TUI trust prompt, or use --managed-lock, or it is "
+                        "skipped in non-interactive runs)"))
+
     # Approval store
     state = _state_dir()
     try:
@@ -438,12 +502,55 @@ def cmd_deny(args: argparse.Namespace) -> int:
         return 1
 
 
+def cmd_hook_uninstall(args: argparse.Namespace) -> int:
+    """Operator escape hatch: turn the guard off if it is misbehaving.
+
+    Without --managed, removes the user-level hook. With --managed, removes the
+    always-on managed hook and the managed-only lock (needs root/admin write to
+    the managed dir) so Codex runs normally again.
+    """
+    if getattr(args, "managed", False):
+        try:
+            removed = hook_install.uninstall_managed()
+        except hook_install.HookInstallError as exc:
+            print(f"hook-uninstall --managed failed: {exc}", file=sys.stderr)
+            return 1
+        except (PermissionError, OSError) as exc:
+            print(f"hook-uninstall --managed needs write access to "
+                  f"{hook_install.managed_dir()} ({type(exc).__name__}); "
+                  f"{hook_install.elevation_hint()}", file=sys.stderr)
+            return 1
+        print(f"removed managed enforcement hook + lock from {hook_install.managed_dir()}"
+              if removed else f"no managed Custodian hook present in {hook_install.managed_dir()}")
+        return 0
+    try:
+        removed = hook_install.uninstall()
+    except hook_install.HookInstallError as exc:
+        print(f"hook-uninstall failed: {exc}", file=sys.stderr)
+        return 1
+    path = hook_install.codex_config_path()
+    print(f"removed enforcement hook from {path}" if removed
+          else f"no Custodian enforcement hook present in {path}")
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="custodian-codex")
     sub = parser.add_subparsers(dest="command", required=True)
-    setup = sub.add_parser("setup", help="install and enable the Codex plugin")
+    setup = sub.add_parser("setup", help="install the plugin, MCP server, and enforcement hook")
     setup.add_argument("--dry-run", action="store_true")
+    setup.add_argument("--matcher", default=hook_install.DEFAULT_MATCHER,
+                       help="tool-name regex the hook governs (default '.*' = all tools)")
+    setup.add_argument("--managed-lock", action="store_true",
+                       help="also install an always-on managed hook and lock config "
+                            "to managed hooks only (needs root/managed-dir write)")
     setup.set_defaults(fn=cmd_setup)
+    hook_uninstall = sub.add_parser("hook-uninstall",
+                                    help="operator escape hatch: remove the enforcement hook")
+    hook_uninstall.add_argument("--managed", action="store_true",
+                                help="remove the always-on MANAGED hook + lock "
+                                     "(needs root/admin write to the managed dir)")
+    hook_uninstall.set_defaults(fn=cmd_hook_uninstall)
     disable = sub.add_parser("disable", help="operator escape hatch; preserve evidence")
     disable.set_defaults(fn=cmd_disable)
     approve = sub.add_parser("approve", help="approve one exact pending action")
