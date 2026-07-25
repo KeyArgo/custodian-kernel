@@ -25,6 +25,7 @@ Nothing covered this module before, and all three regressions below shipped:
 """
 import importlib.util
 import json
+import os
 import sys
 import time
 import types
@@ -57,6 +58,19 @@ def core(tmp_path, monkeypatch):
     req.post = _unconfigured_post
     monkeypatch.setitem(sys.modules, "requests", req)
 
+    # _core.py sets these via os.environ.setdefault() at import time, for the
+    # real sandbox where /etc/openshell-tls/ca-bundle.pem exists. That's a
+    # plain os.environ mutation, invisible to monkeypatch, so importing it
+    # here leaks a nonexistent cert path into the rest of the pytest
+    # session -- including subprocess.run() calls with no explicit clean env,
+    # e.g. `python -m build`'s isolated-env bootstrap in
+    # test_package_manifest_hygiene.py / test_clean_wheel_install.py, which
+    # then fails with "Could not find a suitable TLS CA certificate bundle"
+    # for every test file collected after this one. Snapshot and restore
+    # exactly, rather than deleting unconditionally, in case a real value was
+    # already present before this fixture ran.
+    _env_before = {k: os.environ.get(k) for k in ("SSL_CERT_FILE", "REQUESTS_CA_BUNDLE")}
+
     spec = importlib.util.spec_from_file_location("core_under_test", _CORE_PATH)
     mod = importlib.util.module_from_spec(spec)
     sys.modules["core_under_test"] = mod
@@ -70,6 +84,11 @@ def core(tmp_path, monkeypatch):
     mod._requests = req
     yield mod
     del sys.modules["core_under_test"]
+    for _k, _v in _env_before.items():
+        if _v is None:
+            os.environ.pop(_k, None)
+        else:
+            os.environ[_k] = _v
 
 
 def _audit_events(core) -> list[str]:

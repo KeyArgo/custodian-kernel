@@ -14,6 +14,7 @@ code that really was valid a moment earlier. write_pending() now raises
 PendingEscalationExistsError instead of clobbering.
 """
 import importlib.util
+import os
 import sys
 import time
 from pathlib import Path
@@ -30,6 +31,14 @@ _NOTIFY_PATH = (
 def notify(tmp_path, monkeypatch):
     """Import notify.py fresh and redirect its state file paths into a
     tmp_path, so tests never touch the real skills/.../state directory."""
+    # notify.py sets these via os.environ.setdefault() at import time, for the
+    # real sandbox where /etc/openshell-tls/ca-bundle.pem exists. That's a
+    # plain os.environ mutation, invisible to monkeypatch, so importing it
+    # here leaks a nonexistent cert path into the rest of the pytest session
+    # -- see the matching comment in test_stripe_spend_core.py's `core`
+    # fixture, which hits the same bug via _core.py.
+    _env_before = {k: os.environ.get(k) for k in ("SSL_CERT_FILE", "REQUESTS_CA_BUNDLE")}
+
     spec = importlib.util.spec_from_file_location("notify_under_test", _NOTIFY_PATH)
     mod = importlib.util.module_from_spec(spec)
     sys.modules["notify_under_test"] = mod
@@ -38,6 +47,11 @@ def notify(tmp_path, monkeypatch):
     monkeypatch.setattr(mod, "PENDING_CODE_FILE", tmp_path / "pending_code.json")
     yield mod
     del sys.modules["notify_under_test"]
+    for _k, _v in _env_before.items():
+        if _v is None:
+            os.environ.pop(_k, None)
+        else:
+            os.environ[_k] = _v
 
 
 def test_write_pending_succeeds_when_nothing_pending(notify):
