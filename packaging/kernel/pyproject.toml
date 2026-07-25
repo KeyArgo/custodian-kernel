@@ -29,6 +29,7 @@ Changelog = "https://github.com/KeyArgo/custodian-kernel/blob/main/CHANGELOG.md"
 
 [project.optional-dependencies]
 dev = [
+    "build",
     "pytest",
     "pytest-asyncio",
     "pytest-cov",

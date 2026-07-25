@@ -42,6 +42,7 @@ Documentation = "https://getcustodian.xyz/docs"
 
 [project.optional-dependencies]
 dev = [
+    "build",
     "pytest",
     "pytest-asyncio",
     "pytest-cov",
