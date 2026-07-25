@@ -1,0 +1,74 @@
+{
+  "all_tests_passed": true,
+  "artifacts": [
+    {
+      "name": "custodian_codex_guard-0.1.2-py3-none-any.whl",
+      "path": "custodian_codex_guard-0.1.2-py3-none-any.whl",
+      "sha256": "a8ee5dbb3070885904286778e9c61221206e2f6ea01f77446cf21889619528e9",
+      "size": 48621
+    },
+    {
+      "name": "custodian_codex_guard-0.1.2.tar.gz",
+      "path": "custodian_codex_guard-0.1.2.tar.gz",
+      "sha256": "d3349ade8a207835dfca582e0ace5215a2874431ba846ac2200cca27e9315a76",
+      "size": 47460
+    }
+  ],
+  "component": "codex-guard",
+  "content_digest": "e7365b1da955d5d7632dc719a57fc694b55c9701bbc6ddd90fe264ae6b5a71c4",
+  "intended_tag": "v0.1.2",
+  "note": "PREPARATION ONLY. This manifest describes a candidate that has NOT been published.",
+  "package": "custodian-codex-guard",
+  "prepared_at": 1785005638.2467828,
+  "prepared_at_iso": "2026-07-25T18:53:58Z",
+  "private_source_commit": "b6e3f8df7a3724f30f15db7e39001aae4d15185e",
+  "public_repo": "KeyArgo/custodian-codex-guard",
+  "test_results": [
+    {
+      "passed": true,
+      "smoke": {
+        "checks": {
+          "MCP initialize handshake": true,
+          "custodian-codex --help": true
+        },
+        "passed": true,
+        "test": "smoke"
+      },
+      "test": "fresh-install",
+      "version": "True"
+    },
+    {
+      "passed": true,
+      "smoke": {
+        "checks": {
+          "MCP initialize handshake": true,
+          "custodian-codex --help": true
+        },
+        "passed": true,
+        "test": "smoke"
+      },
+      "test": "upgrade-from-pypi",
+      "upgraded_from": "0.1.1",
+      "version": "True"
+    },
+    {
+      "not_applicable": "managed install not applicable for codex-guard",
+      "passed": true,
+      "test": "managed-install"
+    },
+    {
+      "not_applicable": "PEP 668 only applies to kernel managed installer",
+      "passed": true,
+      "test": "pep668-compliance"
+    },
+    {
+      "checks": {
+        "MCP initialize handshake": true,
+        "custodian-codex --help": true
+      },
+      "passed": true,
+      "test": "smoke"
+    }
+  ],
+  "version": "0.1.2"
+}

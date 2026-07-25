@@ -1,0 +1,30 @@
+Custodian Release Preparation Report
+====================================
+Component: codex-guard
+Version:   0.1.2
+Time:      2026-07-25T18:53:58Z
+
+Artifacts:
+  custodian_codex_guard-0.1.2-py3-none-any.whl
+    path: custodian_codex_guard-0.1.2-py3-none-any.whl
+    size: 48621
+    SHA-256: a8ee5dbb3070885904286778e9c61221206e2f6ea01f77446cf21889619528e9
+  custodian_codex_guard-0.1.2.tar.gz
+    path: custodian_codex_guard-0.1.2.tar.gz
+    size: 47460
+    SHA-256: d3349ade8a207835dfca582e0ace5215a2874431ba846ac2200cca27e9315a76
+
+Test Results:
+  [PASS] fresh-install
+  [PASS] upgrade-from-pypi
+  [N/A] managed-install
+           managed install not applicable for codex-guard
+  [N/A] pep668-compliance
+           PEP 668 only applies to kernel managed installer
+  [PASS] smoke
+
+Overall: ALL TESTS PASSED
+
+Manifest: /mnt/homes/Development/custodian-dev/release-manifests/codex-guard-0.1.2/codex-guard-0.1.2.manifest.json
+
+This is a PREPARATION report. No packages were published.
