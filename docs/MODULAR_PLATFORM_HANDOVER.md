@@ -57,7 +57,7 @@ clear ownership.
 
 ### Canonical repositories
 
-- `inovinlabs/custodian-kernel`
+- `KeyArgo/custodian-kernel`
   - Authority policy and decisions
   - Human escalation and kill switch
   - Provider-neutral action/transaction ledger
@@ -65,7 +65,7 @@ clear ownership.
   - Adapter contracts and conformance tests
   - Main `custodian setup`, `custodian update`, and `custodian doctor` UX
 
-- `inovinlabs/paladin-vault`
+- `KeyArgo/paladin-vault`
   - Encrypted vault and cryptographic primitives
   - Credential grants, destination restrictions, and value-free vault audit
   - The full agent-facing Paladin product depends on `custodian-kernel` for
@@ -74,12 +74,12 @@ clear ownership.
     governance service is unavailable
   - Agent secret resolution fails closed when required governance is unavailable
 
-- `inovinlabs/custodian-stripe`
+- `KeyArgo/custodian-stripe`
   - Stripe SDK, PaymentIntent/refund/subscription operations, webhook handling,
     reconciliation, and translation into Custodian ledger events
   - Custodian must not import Stripe or understand Stripe-specific workflows
 
-- `inovinlabs/custodian-skills`
+- `KeyArgo/custodian-skills`
   - Provider-neutral governed skill packs (the future home of suitable content
     currently under `custodian/bundled_skills/`)
   - Explicit manifest roster: a directory is not loadable merely because it
@@ -92,13 +92,13 @@ clear ownership.
 - `inovinlabs/talaria`
   - Thick Hermes Agent/NemoClaw integration suite
 
-- `inovinlabs/custodian-codex`
+- `KeyArgo/custodian-codex`
   - Codex plugin and MCP integration; owned by the other active session
 
-- `inovinlabs/custodian-claude`
+- `KeyArgo/custodian-claude`
   - Claude Code hooks/plugin
 
-- `inovinlabs/custodian-antigravity`
+- `KeyArgo/custodian-antigravity`
   - Google Antigravity integration supporting the Gemini/GCP XPRIZE business
 
 Future providers follow the `custodian-<provider>` pattern.
@@ -108,7 +108,7 @@ Future providers follow the `custodian-<provider>` pattern.
 Cyberware separates its engine from `rhCat/skillChip`. Adopt the security
 property, not its exact file format or L++/perk abstraction.
 
-Custodian's equivalent is `inovinlabs/custodian-skills`. A pack manifest—not
+Custodian's equivalent is `KeyArgo/custodian-skills`. A pack manifest—not
 filesystem discovery—is authoritative. Loading requires all of:
 
 1. the skill is explicitly present in the installed manifest roster;

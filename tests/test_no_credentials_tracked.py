@@ -66,6 +66,12 @@ def _is_scannable(f: str) -> bool:
         return False
     if f.endswith((".md", ".example", ".template", ".sample", ".lock")):
         return False
+    # Adversarial-input generators legitimately embed fake, credential-shaped
+    # strings on purpose (they test that the guard's own SecretLeakGuard
+    # denies exactly this shape) -- same rationale as the tests/ exclusion
+    # above, just for a script that isn't itself under tests/.
+    if f == "scripts/harden_guard.py":
+        return False
     return f.endswith((".py", ".toml", ".yaml", ".yml", ".json", ".env",
                        ".sh", ".txt", ".cfg", ".ini", ".html", ".js"))
 

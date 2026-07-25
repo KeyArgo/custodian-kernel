@@ -126,7 +126,7 @@ The public release is split into focused, sanitized repositories and packages:
 
 | Release | Public repository | Distribution | Responsibility |
 |---|---|---|---|
-| 0.4.0 | `inovinlabs/custodian-kernel` | `custodian-kernel` | Provider-neutral action contract, policy, approval binding, ledger, adapters, Paladin module |
+| 0.4.0 | `KeyArgo/custodian-kernel` | `custodian-kernel` | Provider-neutral action contract, policy, approval binding, ledger, adapters, Paladin module |
 | 0.4.0 | `inovinlabs/custodian-codex` | `custodian-codex` | Codex plugin, hook/MCP bridge, installer, policy translator, demo and judge experience |
 | 0.1.x | `inovinlabs/talaria` | `custodian-talaria` | Hermes/NemoClaw integration; compatible consumer of the kernel, not part of the Codex entry |
 

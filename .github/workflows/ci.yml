@@ -25,6 +25,16 @@ jobs:
         run: pip install -e ".[dev]"
       - name: Run tests
         run: pytest tests/ -v --cov=custodian
+      - name: Security self-hardening gate (the guard graded against itself)
+        # Two standing gates, run on every OS/Python:
+        #  - mutation gate: flip each security-critical decision in a mutated
+        #    copy and prove a concrete input catches it (surviving mutant = an
+        #    untested enforcement line = build fails).
+        #  - gate corpus + fresh hunt: replay every frozen bypass (a fixed hole
+        #    may never reopen -- monotonic ratchet) AND re-run the adversarial
+        #    generator so the guard is graded against the whole attack surface.
+        # "It works" is the last line of this step, not a claim.
+        run: pytest tests/test_guard_mutation_gate.py tests/test_guard_gate_corpus.py -v
 
   build:
     # Prove the wheel installs clean and the flagship verify runs from it,
@@ -61,4 +71,20 @@ jobs:
           mkdir ../smoke-ws2 && cd ../smoke-ws2
           custodian restore ../smoke-backup.zip
           custodian status
+        shell: bash
+      - name: Every registered (sub)command must work from a clean install
+        # The 0.4.0 incident: custodian.codex_guard was missing from the
+        # actual published wheel while cli/cmd_console.py and
+        # cli/cmd_codex_guard.py both imported from it at module level, so
+        # *every* invocation -- --version included -- crashed. The fixed
+        # step above only exercises a hand-picked list of commands and
+        # would not by itself have caught a different subcommand breaking
+        # the same way. This walks the real, live argparse tree (including
+        # nested subcommands like `codex-guard receipts`) and confirms
+        # every leaf's --help works from a genuinely clean install -- no
+        # subcommand can be silently forgotten, since new ones are picked
+        # up automatically.
+        run: |
+          pip install pytest
+          pytest tests/test_clean_wheel_install.py -m network -v
         shell: bash

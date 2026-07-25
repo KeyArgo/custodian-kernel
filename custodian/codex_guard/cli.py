@@ -14,6 +14,7 @@ from .approvals import ApprovalError, ApprovalStore
 from .mcp_server import _state_dir
 from .receipts import ReceiptChain
 from . import hook_install
+from . import paladin_bridge
 
 PLUGIN_ID = "custodian-codex-guard@custodian-build-week"
 
@@ -207,8 +208,47 @@ def cmd_setup(args: argparse.Namespace) -> int:
               "trust prompt, or the hook is skipped in non-interactive runs.")
         print("For always-on, unstrippable enforcement instead: "
               "sudo custodian-codex setup --managed-lock")
+
+    # Phase 2 -- surface the Paladin credential path so the operator knows how
+    # Codex resolves secrets it doesn't hold. This never blocks setup: Paladin
+    # is optional and every branch is advisory.
+    if paladin_bridge.vault_configured():
+        helpers = paladin_bridge.git_helpers()
+        if helpers:
+            wired = ", ".join(f"{host} -> paladin://{ref}" for host, ref in helpers)
+            print(f"Paladin: vault configured; git credentials wired for {wired}")
+        else:
+            print("Paladin: vault configured but no git host is wired yet. "
+                  "Wire one so Codex git ops resolve tokens from the vault:")
+            print("  custodian-codex paladin-git <host> <ref>   "
+                  "(e.g. github.com github_token)")
+    elif paladin_bridge.paladin_available():
+        print("Paladin: installed but no vault yet. `paladin init` then "
+              "`custodian-codex paladin-git <host> <ref>` to keep secrets out "
+              "of Codex's context.")
     print("start a new Codex thread to load the guard")
     return 0
+
+
+def cmd_paladin_git(args: argparse.Namespace) -> int:
+    """Wire git -> Paladin for one host/ref so Codex git ops pull tokens from
+    the encrypted vault at request time -- never from config, a URL, or argv.
+
+    This is the transparent half of "Codex checks Paladin first for a password
+    it doesn't hold": once wired, `git push`/`git fetch` to <host> just work,
+    with the token resolved from the vault and never entering Codex's context.
+    """
+    if not paladin_bridge.paladin_available():
+        print("the `paladin` CLI is not on PATH; install Paladin first",
+              file=sys.stderr)
+        return 1
+    if not paladin_bridge.vault_configured():
+        print(f"no Paladin vault at {paladin_bridge.vault_path()}; run "
+              "`paladin init` and `paladin add <ref>` first", file=sys.stderr)
+        return 1
+    ok, message = paladin_bridge.wire_git_helper(args.host, args.ref)
+    print(message, file=sys.stdout if ok else sys.stderr)
+    return 0 if ok else 1
 
 
 def cmd_disable(_: argparse.Namespace) -> int:
@@ -429,12 +469,17 @@ def cmd_doctor(args: argparse.Namespace) -> int:
         results.append(("enforcement hook", False,
                         f"stale interpreter ({hook_state['command']}); rerun setup"))
     else:
-        # Installed user-level, but Codex skips it until the operator trusts it
-        # once in the TUI (trust lives in Codex's state db, not readable here).
-        results.append(("enforcement hook", True,
-                        f"{hook_state['path']} (user-level: approve the one-time "
-                        "codex TUI trust prompt, or use --managed-lock, or it is "
-                        "skipped in non-interactive runs)"))
+        # Installed user-level. Codex silently SKIPS an untrusted hook in
+        # non-interactive `exec`, and its trust state is a content hash in
+        # Codex's state db that we cannot read here -- so we can NOT confirm
+        # this hook actually enforces. Report WARN, never OK: a soft "OK" here
+        # would let an operator (or a judge) believe they are protected when
+        # enforcement may be silently inert. Only MANAGED is verifiably on.
+        results.append(("enforcement hook", "warn",
+                        f"{hook_state['path']} -- INSTALLED BUT NOT VERIFIABLE. "
+                        "Codex skips untrusted hooks in `codex exec`; approve the "
+                        "one-time TUI trust prompt, or use --managed-lock for "
+                        "verifiable always-on enforcement."))
 
     # Approval store
     state = _state_dir()
@@ -453,16 +498,64 @@ def cmd_doctor(args: argparse.Namespace) -> int:
     except Exception as exc:
         results.append(("receipt chain", False, str(exc)))
 
+    # Paladin credential path (Phase 2). Optional dependency: its absence is a
+    # WARN, never a FAIL -- codex-guard is fully functional without it, but a
+    # configured Paladin is how Codex resolves a secret it doesn't hold without
+    # prompting for or inlining a raw value. All checks are value-free (no unlock).
+    pal = paladin_bridge.status_summary()
+    if not pal["available"]:
+        results.append(("paladin", "warn",
+                        "not installed -- credential actions escalate to a human; "
+                        "install custodian-paladin to resolve secrets from a vault"))
+    elif not pal["vault_configured"]:
+        results.append(("paladin", "warn",
+                        f"installed but no vault at {pal['vault_path']} -- run "
+                        "`paladin init`, then `custodian-codex paladin-git <host> <ref>`"))
+    elif not pal["git_helpers"]:
+        results.append(("paladin", "warn",
+                        "vault configured but no git host wired -- run "
+                        "`custodian-codex paladin-git <host> <ref>` so Codex git "
+                        "ops resolve tokens from the vault"))
+    else:
+        wired = ", ".join(f"{host}->paladin://{ref}" for host, ref in pal["git_helpers"])
+        results.append(("paladin", True, f"vault configured; git wired for {wired}"))
+
+    # Three states: True -> OK, "warn" -> WARN (installed but unverifiable),
+    # False -> FAIL. WARN must never read as OK (see the enforcement-hook check).
     for name, passed, detail in results:
-        tag = "OK" if passed else "FAIL"
+        tag = "WARN" if passed == "warn" else ("OK" if passed else "FAIL")
         print(f"  {tag}  {name:<20} {detail}")
 
-    all_ok = all(ok for _, ok, _ in results)
-    if all_ok:
-        print("\nAll checks passed. Consequential actions fail closed unless approved.")
-    else:
+    has_fail = any(p is False for _, p, _ in results)
+    enforcement_warn = any(
+        name == "enforcement hook" and p == "warn" for name, p, _ in results
+    )
+    paladin_warn = any(name == "paladin" and p == "warn" for name, p, _ in results)
+    has_warn = any(p == "warn" for _, p, _ in results)
+    if has_fail:
         print("\nSome checks failed — see above.", file=sys.stderr)
-    return 0 if all_ok else 1
+    elif enforcement_warn:
+        # Not a clean pass: do NOT tell the operator they are protected.
+        print("\n⚠ Enforcement is installed but NOT verifiably active. Codex "
+              "silently skips an untrusted hook in `codex exec`. Confirm the "
+              "one-time Codex trust prompt was approved, or run "
+              "`custodian-codex setup --managed-lock` for verifiable, always-on "
+              "enforcement. Do not assume you are protected until then.",
+              file=sys.stderr)
+    elif paladin_warn:
+        # Enforcement is fine; only the credential path is not fully wired.
+        # Guard still works -- credential actions just escalate to a human
+        # instead of resolving from a vault.
+        print("\n⚠ Enforcement is active, but the Paladin credential path is not "
+              "fully wired (see above). Codex will escalate credential actions to "
+              "a human rather than resolving them from a vault. Wire it with "
+              "`custodian-codex paladin-git <host> <ref>` for hands-off, "
+              "leak-proof secret delivery.", file=sys.stderr)
+    else:
+        print("\nAll checks passed. Consequential actions fail closed unless approved.")
+    # WARN keeps exit 0 (the install is not broken), but the banner above makes
+    # the unverified state unmissable. A FAIL (missing/stale hook) exits 1.
+    return 1 if has_fail else 0
 
 
 def cmd_deny(args: argparse.Namespace) -> int:
@@ -553,6 +646,12 @@ def build_parser() -> argparse.ArgumentParser:
     hook_uninstall.set_defaults(fn=cmd_hook_uninstall)
     disable = sub.add_parser("disable", help="operator escape hatch; preserve evidence")
     disable.set_defaults(fn=cmd_disable)
+    paladin_git = sub.add_parser(
+        "paladin-git",
+        help="wire git -> Paladin for one host so Codex resolves tokens from the vault")
+    paladin_git.add_argument("host", help="git host, e.g. github.com")
+    paladin_git.add_argument("ref", help="vault ref name to resolve for that host")
+    paladin_git.set_defaults(fn=cmd_paladin_git)
     approve = sub.add_parser("approve", help="approve one exact pending action")
     approve.add_argument("approval_id", help="approval UUID, or 'latest'")
     approve.add_argument(

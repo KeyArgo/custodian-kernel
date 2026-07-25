@@ -228,6 +228,44 @@ class TestCliSetupDryRun:
         assert not (tmp_path / "plugins" / "custodian-codex-guard" / ".mcp.json").exists()
 
 
+class TestDoctorEnforcementState:
+    """The enforcement-hook line must never report a bare 'OK' for a state we
+    cannot verify. Codex silently skips an untrusted user-level hook in `exec`,
+    and its trust state is unreadable to us, so an unqualified OK there would
+    tell an operator they are protected when enforcement may be inert."""
+
+    def test_user_level_install_reports_warn_not_ok(self, tmp_path, capsys, monkeypatch):
+        from custodian.codex_guard import hook_install
+        monkeypatch.setenv("CODEX_HOME", str(tmp_path / "codex-home"))
+        monkeypatch.setenv("CUSTODIAN_CODEX_MANAGED_DIR", str(tmp_path / "empty-managed"))
+        hook_install.install()  # user-level, pinned to sys.executable
+        cli_main(["doctor"])
+        out = capsys.readouterr().out + capsys.readouterr().err
+        # find the enforcement-hook line
+        line = next(l for l in out.splitlines() if "enforcement hook" in l)
+        assert "WARN" in line and "OK  enforcement hook" not in line
+        assert "NOT VERIFIABLE" in line
+
+    def test_managed_install_reports_ok(self, tmp_path, capsys, monkeypatch):
+        from custodian.codex_guard import hook_install
+        monkeypatch.setenv("CODEX_HOME", str(tmp_path / "codex-home"))
+        monkeypatch.setenv("CUSTODIAN_CODEX_MANAGED_DIR", str(tmp_path / "managed"))
+        hook_install.install_managed()
+        cli_main(["doctor"])
+        out = capsys.readouterr().out
+        line = next(l for l in out.splitlines() if "enforcement hook" in l)
+        assert "OK" in line and "MANAGED always-on" in line
+
+    def test_not_installed_reports_fail(self, tmp_path, capsys, monkeypatch):
+        monkeypatch.setenv("CODEX_HOME", str(tmp_path / "codex-home"))
+        monkeypatch.setenv("CUSTODIAN_CODEX_MANAGED_DIR", str(tmp_path / "empty-managed"))
+        rc = cli_main(["doctor"])
+        out = capsys.readouterr().out
+        line = next(l for l in out.splitlines() if "enforcement hook" in l)
+        assert "FAIL" in line
+        assert rc == 1  # a missing enforcement hook is a hard failure
+
+
 def test_ensure_mcp_json_preserves_other_servers(tmp_path):
     path = tmp_path / "mcp.json"
     path.write_text(json.dumps({"mcpServers": {"other": {"command": "other"}}}))

@@ -78,6 +78,20 @@ _TOOL_KINDS = {
     "invoke-webrequest": ActionKind.NETWORK,
     "invoke-restmethod": ActionKind.NETWORK,
 }
+# A variable name that carries a credential keyword (STRIPE_SECRET_KEY,
+# GITHUB_TOKEN, AWS_SECRET_ACCESS_KEY, DB_PASSWORD, ...). Deliberately does NOT
+# match a bare "KEY" (would catch $KEYBOARD/$MONKEY) -- only KEY joined to
+# API/ACCESS/PRIVATE. Matches the keyword as a SUBSTRING (not a delimited
+# segment) on purpose: this also catches $MYSECRETKEY and camelCase secrets a
+# segment match would miss. The cost is a rare benign over-match (e.g.
+# $SECRETARIAT), which is acceptable because the rule ESCALATES (a one-time
+# human prompt), never denies -- for a credential leak, a false negative is far
+# worse than a false positive. Used only by the credential-exposure rule below.
+_SECRET_VAR_NAME = (
+    r"[A-Za-z0-9_]*(?:SECRET|TOKEN|PASSWORD|PASSWD|PASSPHRASE|CREDENTIAL"
+    r"|API[_-]?KEY|ACCESS[_-]?KEY|PRIVATE[_-]?KEY)[A-Za-z0-9_]*"
+)
+
 _SHELL_RULES = (
     (re.compile(
         r"\bcustodian-codex\s+(?:approve|disable|setup)\b"
@@ -108,6 +122,20 @@ _SHELL_RULES = (
         r"|\b(?:invoke-webrequest|invoke-restmethod)\b|(?:^|\s)(?:iwr|irm)\s", re.I,
     ), ActionKind.NETWORK),
     (re.compile(r"\b(?:paladin|vault)\b|paladin://|warden://", re.I), ActionKind.CREDENTIAL),
+    # Exposing a SECRET-NAMED environment variable to stdout writes the value
+    # into the agent's transcript/logs -- the exact leak Paladin exists to
+    # prevent ("the agent never sees the value"), yet `echo $STRIPE_SECRET_KEY`
+    # was classified autonomous. Scoped tightly to (a) an exposure verb
+    # (echo/printf/print/printenv/env) AND (b) a variable whose NAME carries a
+    # credential keyword, so `$HOME`/`$PATH` and mere presence checks like
+    # `[ -n "$API_KEY" ]` (no exposure verb) stay autonomous. Escalate, not deny:
+    # a human sometimes legitimately needs to inspect one. FOUND by
+    # scripts/harden_guard.py on its first run -- see the guard-gate corpus.
+    (re.compile(
+        r"\b(?:echo|printf|print)\b[^\n;&|]*\$\{?" + _SECRET_VAR_NAME + r"\}?"
+        r"|\b(?:printenv|env)\b[^\n;&|]*?\b" + _SECRET_VAR_NAME + r"\b",
+        re.I,
+    ), ActionKind.CREDENTIAL),
 )
 
 _SENSITIVE_WRITE_PATH = re.compile(
@@ -277,11 +305,27 @@ def evaluate_action(
             f"; independently classified from the proposed tool (caller supplied {kind.value})"
             if inferred is not None and inferred != kind else ""
         )
+        reason = (f"{effective_kind.value} actions require explicit human approval"
+                  f"{classification_note}")
+        # When Paladin is configured, steer the approver/model to the vault
+        # egress path instead of a raw secret. This fires for credential-class
+        # actions AND for any escalation whose arguments already carry a
+        # paladin:// ref (e.g. a `curl` that classifies as `network` but still
+        # needs a token) -- exactly the "needs a secret" case from the plan.
+        # Value-free and best-effort: a missing/uninstalled Paladin, or an
+        # action with no secret involved, returns "" and changes nothing.
+        try:
+            from . import paladin_bridge
+
+            if (effective_kind is ActionKind.CREDENTIAL
+                    or paladin_bridge.refs_in_arguments(arguments or {})):
+                reason += paladin_bridge.credential_guidance(arguments or {})
+        except Exception:
+            pass
         return GuardDecision(
             verdict="escalation_required",
             action_kind=effective_kind.value,
-            reason=(f"{effective_kind.value} actions require explicit human approval"
-                    f"{classification_note}"),
+            reason=reason,
             band="L3",
             warnings=warnings,
         )

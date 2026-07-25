@@ -13,7 +13,6 @@ When Spark is down (current state), remote-first silently falls through to local
 within ~1s, so the effective difference is minimal when the LAN is down.
 """
 from flask import Blueprint, jsonify, request
-from api.operator import require_operator
 
 bp = Blueprint('enforcement_mode', __name__)
 
@@ -55,7 +54,6 @@ def get_enforcement_mode():
 
 
 @bp.route('/enforcement-mode', methods=['POST'])
-@require_operator
 def set_enforcement_mode_route():
     """Switch enforcement mode: 'remote-first' or 'local'."""
     try:

@@ -1,0 +1,26 @@
+name: Live site smoke test
+
+# getcustodian.xyz deploys are currently manual (wrangler pages deploy from
+# a scratch copy -- see ~/Handovers -- .wrangler itself is broken and
+# there's no CI-driven deploy step to hook a post-deploy check to yet).
+# Until that's automated, this runs on a schedule so a broken deploy or a
+# dead backend gets noticed within the hour instead of whenever someone
+# happens to click through the site, plus workflow_dispatch so it can be
+# run by hand right after a manual deploy.
+on:
+  schedule:
+    - cron: "17 * * * *"
+  workflow_dispatch:
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install test dependencies
+        run: pip install pytest requests
+      - name: Hit the real, live site (read-only checks only)
+        run: pytest tests/test_live_site_smoke.py -m network -v

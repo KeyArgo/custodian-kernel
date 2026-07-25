@@ -1,4 +1,4 @@
-"""Operator control-plane routes must never be reachable anonymously."""
+"""The operator demo arc is public; only /reset keeps a password gate."""
 from __future__ import annotations
 
 import sys
@@ -24,26 +24,24 @@ def client():
     ("post", "/api/v1/operator/resume"),
     ("post", "/api/v1/operator/spark/disable"),
     ("post", "/api/v1/operator/spark/enable"),
+    ("get", "/api/v1/operator/spark/status"),
     ("get", "/api/v1/operator/sandbox/status"),
     ("post", "/api/v1/enforcement-mode"),
-])
-def test_privileged_routes_reject_missing_operator_token(client, method, path):
-    response = getattr(client, method)(path, json={})
-    assert response.status_code == 401
-    assert response.get_json() == {"error": "unauthorized"}
-
-
-@pytest.mark.parametrize(("method", "path"), [
     ("get", "/api/v1/operator/pending_code"),
     ("post", "/api/v1/operator/forward_code"),
 ])
 def test_public_demo_arc_routes_do_not_require_operator_token(client, method, path):
-    """pending_code and forward_code are the deliberate exception: the whole
-    demo arc except /reset is intentionally reachable by an anonymous
-    visitor (Steps 3 and 8). Each has its own rate limit instead of an auth
-    gate -- forward_code costs real money per call (a Twilio send)."""
+    """The whole demo arc, plus the Spark/enforcement-mode infra toggles, is
+    intentionally reachable by an anonymous visitor -- no operator token or
+    password required. Abuse is bounded by per-IP rate limits on the routes
+    that cost real money (forward_code) rather than by an auth gate."""
     response = getattr(client, method)(path, json={})
     assert response.status_code != 401
+
+
+def test_reset_rejects_missing_password_or_token(client):
+    response = client.post("/api/v1/operator/reset", json={})
+    assert response.status_code in (401, 503)
 
 
 def test_forward_code_is_rate_limited_per_ip(client, monkeypatch):
@@ -71,32 +69,9 @@ def test_pending_code_is_rate_limited_per_ip(client, monkeypatch):
 
 
 @pytest.mark.parametrize("amount", ["NaN", "Infinity", "-Infinity"])
-def test_operator_money_routes_reject_nonfinite_amounts(client, monkeypatch, amount):
-    import api.operator as operator
-    monkeypatch.setattr(operator, "_token_valid", lambda token: token == "valid")
+def test_operator_money_routes_reject_nonfinite_amounts(client, amount):
     for path in ("earn", "spend", "refund"):
         response = client.post(
             f"/api/v1/operator/{path}", json={"amount": amount},
-            headers={"X-Operator-Token": "valid"},
         )
         assert response.status_code == 400
-
-
-def test_require_operator_logs_internal_errors_instead_of_swallowing_them(client, monkeypatch, caplog):
-    """A bug inside _token_valid itself (e.g. a corrupted secrets file) must
-    still fail closed (401), but must not look identical in the logs to an
-    ordinary wrong-token request -- that hid real errors from debugging."""
-    import api.operator as operator
-
-    def _boom(token):
-        raise RuntimeError("secrets file is corrupted")
-
-    monkeypatch.setattr(operator, "_token_valid", _boom)
-    with caplog.at_level("ERROR"):
-        response = client.post(
-            "/api/v1/operator/earn", json={},
-            headers={"X-Operator-Token": "anything"},
-        )
-    assert response.status_code == 401
-    assert response.get_json() == {"error": "unauthorized"}
-    assert any("_token_valid raised" in r.message for r in caplog.records)

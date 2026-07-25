@@ -38,6 +38,24 @@ jobs:
           python -m venv /tmp/sbom-env
           /tmp/sbom-env/bin/pip install dist/*.whl
 
+      - name: The installed CLI must actually run, not just install
+        # This step existed before only to install the wheel for the SBOM
+        # below -- it never once invoked the CLI it just installed. That's
+        # exactly the gap that let 0.4.0 reach PyPI broken: pip install can
+        # succeed (dependency resolution is fine) while every real
+        # invocation still crashes on a module-level import. A clean pip
+        # install succeeding proves nothing about whether the CLI runs.
+        run: /tmp/sbom-env/bin/custodian --version
+
+      - name: Every registered (sub)command must work from a clean install
+        # Same clean-wheel-install regression suite as ci.yml's build job --
+        # walks the live argparse tree (including nested subcommands) and
+        # runs --help on every leaf. This is the last gate before signing;
+        # nothing past this point should ever run against a broken wheel.
+        run: |
+          pip install pytest build
+          pytest tests/test_clean_wheel_install.py -m network -v
+
       - name: Generate CycloneDX SBOM
         run: |
           pip install cyclonedx-bom

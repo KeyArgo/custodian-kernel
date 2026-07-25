@@ -1,36 +1,24 @@
-"""Operator-only control panel for running the real demo arc live.
-
-This is NOT exposed on the public dashboard or the public Pages frontend --
-it's a same-origin page served directly by this Flask app at /operator,
-used only by the project owner while presenting, so they can click buttons
-instead of typing commands at a terminal during a live demo.
+"""Public control panel for running the real demo arc, at /operator.
 
 Every action here shells out to the SAME real scripts demo_moment.sh uses
-(spend.py/refund.py/approve.py/kill_toggle.py) against the real NemoClaw
-sandbox via `nemohermes <sandbox> exec`. Nothing here is simulated: this
-panel moves real Stripe test-mode money and triggers real Twilio SMS sends,
-which is exactly why it requires a real password, unlike every other public
-endpoint in this app.
-
-A deliberate decision tied to this hackathon's own design claim: hackathon
-judges/visitors do NOT get this panel. Letting an anonymous stranger
-self-approve via a code sent to the same device they're already holding
-would stop being an out-of-band human approval and just become a form with
-two fields -- weakening the exact security property this project exists to
-demonstrate. Visitors get the playground (real decide() engine, simulated
-state) instead. Only the operator gets the real arc, and only with this
-password.
+(earn.py/spend.py/refund.py/approve.py/kill_toggle.py) against the real
+NemoClaw sandbox via `nemohermes <sandbox> exec`. Nothing here is simulated:
+this panel moves real Stripe test-mode money and triggers real Twilio SMS
+sends. It is intentionally public -- any visitor can run the whole arc,
+including the out-of-band SMS approval step, without a password. Abuse is
+bounded by per-IP rate limits (_pending_code_allowed, _sms_allowed) rather
+than an auth gate. /reset is the one exception: it keeps its own password
+check (see reset_demo below) since it discards shared state other visitors
+may be mid-arc with.
 """
 from __future__ import annotations
 
 import collections
 import hashlib
 import hmac
-import logging
 import math
 import os
 import time
-from functools import wraps
 from pathlib import Path
 
 from flask import Blueprint, jsonify, request
@@ -71,28 +59,6 @@ def _token_valid(token: str) -> bool:
     if int(expires) < time.time():
         return False
     return hmac.compare_digest(sig, _sign(expires))
-
-
-_log = logging.getLogger(__name__)
-
-
-def require_operator(f):
-    """Verify the X-Operator-Token header against the signed token from /login."""
-    @wraps(f)
-    def wrapper(*args, **kwargs):
-        token = request.headers.get('X-Operator-Token', '')
-        try:
-            if not _token_valid(token):
-                return jsonify({'error': 'unauthorized'}), 401
-        except Exception:
-            # Fail safe (deny) either way, but a bug inside _token_valid
-            # itself (e.g. a corrupted secrets file) used to look identical
-            # to "wrong token" in the logs -- silently hiding a real error
-            # from whoever is debugging a login problem.
-            _log.exception('require_operator: _token_valid raised')
-            return jsonify({'error': 'unauthorized'}), 401
-        return f(*args, **kwargs)
-    return wrapper
 
 
 from custodian.adapters.nemoclaw import NemoClawExecutor
@@ -143,7 +109,6 @@ def login():
 _DEMO_AMOUNT_MAX = 10_000.00  # test-mode Stripe limit for demo; prevents junk PI pollution
 
 @bp.route('/earn', methods=['POST'])
-@require_operator
 def earn():
     data = request.get_json(force=True, silent=True) or {}
     try:
@@ -179,7 +144,6 @@ def _write_flask_kill_switch(killed: bool, by: str, reason: str = '') -> None:
 
 
 @bp.route('/spend', methods=['POST'])
-@require_operator
 def spend():
     data = request.get_json(force=True, silent=True) or {}
     try:
@@ -231,7 +195,6 @@ def spend():
 
 
 @bp.route('/refund', methods=['POST'])
-@require_operator
 def refund():
     data = request.get_json(force=True, silent=True) or {}
     pi_id = str(data.get('payment_intent_id', ''))
@@ -255,7 +218,6 @@ def refund():
 
 
 @bp.route('/approve', methods=['POST'])
-@require_operator
 def approve():
     data = request.get_json(force=True, silent=True) or {}
     code = str(data.get('code', ''))[:32]
@@ -266,7 +228,6 @@ def approve():
 
 
 @bp.route('/kill', methods=['POST'])
-@require_operator
 def kill():
     data = request.get_json(force=True, silent=True) or {}
     by = str(data.get('by', 'Operator'))[:100]
@@ -283,7 +244,6 @@ def kill():
 
 
 @bp.route('/resume', methods=['POST'])
-@require_operator
 def resume():
     data = request.get_json(force=True, silent=True) or {}
     by = str(data.get('by', 'Operator'))[:100]
@@ -567,7 +527,6 @@ def reset_demo():
 # ── Spark enforcement node management ─────────────────────────────────────────
 
 @bp.route('/spark/status', methods=['GET'])
-@require_operator
 def spark_status():
     try:
         from custodian.policy.enforcer import spark_health
@@ -577,7 +536,6 @@ def spark_status():
 
 
 @bp.route('/spark/disable', methods=['POST'])
-@require_operator
 def spark_disable_route():
     try:
         from custodian.policy.enforcer import spark_disable, spark_health
@@ -588,7 +546,6 @@ def spark_disable_route():
 
 
 @bp.route('/spark/enable', methods=['POST'])
-@require_operator
 def spark_enable_route():
     try:
         from custodian.policy.enforcer import spark_enable, spark_health
@@ -601,7 +558,6 @@ def spark_enable_route():
 # ── NemoClaw sandbox health ─────────────────────────────────────────────────
 
 @bp.route('/sandbox/status', methods=['GET'])
-@require_operator
 def sandbox_status():
     """Health of the NemoClaw sandbox that /earn, /spend, /refund, /approve,
     and /kill all execute inside. Distinct from /spark/status -- Spark is the

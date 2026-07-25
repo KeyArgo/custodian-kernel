@@ -65,8 +65,11 @@ custodian-verify = "custodian.verify_kit:main"
 paladin = "paladin.cli:main"
 paladin-import = "paladin.cli:main_import"
 custodian-codex-guard-mcp = "custodian.codex_guard.mcp_server:main"
+custodian-codex-guard-hook = "custodian.codex_guard.hook:main"
 custodian-codex = "custodian.codex_guard.cli:main"
 custodian-opencode = "custodian.opencode_guard.cli:main"
+custodian-claude = "custodian.claude_guard.cli:main"
+custodian-claude-hook = "custodian.claude_guard.hook:main"
 
 [build-system]
 requires = ["setuptools>=64"]

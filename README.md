@@ -56,6 +56,27 @@ secrets, off-scope paths, destructive commands, network access, production
 changes, money movement, and governance changes deny or require a human.
 Decisions produce value-free HMAC hash-chained receipts.
 
+Enforcement is a Codex `PreToolUse` hook, not the opt-in MCP tool: once active it
+runs before every tool call and blocks anything the kernel denies — even under
+`approval_policy = "never"` or a trusted project, regardless of whether the model
+consults the guard. Two install postures:
+
+- `custodian-codex setup` installs a user-level hook. Codex requires a one-time
+  TUI trust approval for it (an untrusted hook is skipped in non-interactive
+  `exec`), so approve the prompt once.
+- `sudo custodian-codex setup --managed-lock` installs it as an **always-on
+  managed hook** (auto-trusted, runs in `exec`) and locks Codex to managed hooks
+  only, so neither the model nor a project config can strip it. This is the
+  "100% required" posture; the managed dir is platform-aware (`/etc/codex`,
+  `%PROGRAMDATA%\Codex`, or `CUSTODIAN_CODEX_MANAGED_DIR`).
+
+Operator escape hatch, if the guard misbehaves: `sudo custodian-codex
+hook-uninstall --managed` (or `custodian-codex hook-uninstall` for the user-level
+hook). Only someone with write access to the managed dir can disable it — never
+the model. The MCP server remains for receipt/approval visibility, and
+`custodian-codex doctor` reports whether enforcement is managed, user-level, or
+missing.
+
 **This is the contribution to the OpenAI Build Week track:** the policy
 bridge, the receipts CLI, the MCP server integration, and 104 tests
 covering the full Codex threat model. The kernel that does the work

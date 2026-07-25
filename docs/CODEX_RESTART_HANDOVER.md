@@ -28,7 +28,7 @@ Codex sandboxing and operating-system isolation.
 - Canonical checkout:
   `/mnt/homes/Development/custodian-dev-codex`
 - Repository:
-  `https://github.com/inovinlabs/custodian-dev`
+  `https://github.com/KeyArgo/custodian-kernel`
 - Branch:
   `feat/0.5.0-codex`
 - Latest completed checkpoint:

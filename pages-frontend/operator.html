@@ -197,7 +197,6 @@
         margin-top: 10px; color: #e8d9a8; font-size: 0.88em; line-height: 1.5; }
 
     #panel { display: block; }
-    #login-err { color: var(--red); font-size: 0.82em; margin-top: 8px; display: none; }
 
     /* ── step rail: sticky progress tracker, the page's signature element ──
        Operator is the one page on the site where order is load-bearing --
@@ -305,17 +304,6 @@
 <div class="page-wrap">
 <h1>Custodian <span class="h1-accent">— Operator Panel</span></h1>
 <div class="ok-banner">● Live — every action below creates a real Stripe PaymentIntent, a real Twilio SMS, and a real audit log entry. The amounts are small test charges you can verify on the public Stripe dashboard.</div>
-
-<div class="instructions" id="operator-auth">
-  <h2>Operator sign-in</h2>
-  <p>Read-only evidence is public. Actions that move test money, send SMS, reveal a pending code, or change enforcement require the operator password.</p>
-  <div class="row">
-    <input id="operator-password" type="password" autocomplete="current-password" placeholder="Operator password">
-    <button id="operator-login-btn">Unlock operator actions</button>
-  </div>
-  <div id="login-err" role="alert"></div>
-  <div id="login-ok" style="display:none;color:var(--green);font-size:0.82em;margin-top:8px">✓ Operator actions unlocked for this browser session.</div>
-</div>
 
 <div class="op-grid">
 <div class="op-main">
@@ -574,39 +562,6 @@ if (railNodes[0]) railNodes[0].classList.add('active');
 const esc = s => (s == null ? '' : String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])));
 
 document.addEventListener('DOMContentLoaded', function () {
-
-const loginButton = document.getElementById('operator-login-btn');
-const loginPassword = document.getElementById('operator-password');
-const loginError = document.getElementById('login-err');
-const loginOk = document.getElementById('login-ok');
-function showAuthenticated() {
-    loginError.style.display = 'none';
-    loginOk.style.display = 'block';
-    loginPassword.value = '';
-}
-if (getOperatorToken()) showAuthenticated();
-loginButton.addEventListener('click', async () => {
-    loginButton.disabled = true;
-    loginError.style.display = 'none';
-    try {
-        const response = await fetch(API + '/login', {
-            method: 'POST', headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({password: loginPassword.value}),
-        });
-        const data = await response.json();
-        if (!response.ok || !data.token) throw new Error(data.error || 'Sign-in failed');
-        setOperatorToken(data.token);
-        showAuthenticated();
-    } catch (error) {
-        loginError.textContent = error.message || String(error);
-        loginError.style.display = 'block';
-    } finally {
-        loginButton.disabled = false;
-    }
-});
-loginPassword.addEventListener('keydown', event => {
-    if (event.key === 'Enter') loginButton.click();
-});
 
 async function call(path, body) {
     // No error handling here used to mean any hiccup (a stray non-2xx, a
