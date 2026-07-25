@@ -127,7 +127,8 @@ def _run_clean(bin_dir: Path, args: list[str]) -> subprocess.CompletedProcess:
     env.pop("PYTHONPATH", None)
     return subprocess.run(
         [str(custodian), *args],
-        capture_output=True, text=True, timeout=30,
+        capture_output=True, text=True, encoding="utf-8", errors="replace",
+        timeout=30,
         cwd=str(bin_dir.parent.parent),
         env=env,
     )

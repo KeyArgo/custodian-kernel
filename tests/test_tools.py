@@ -596,6 +596,12 @@ class TestGitHubTools:
 # ── Per-tool egress allowlist, end to end through the real sandboxed path ──────
 
 class TestToolEgressAllowlist:
+    @pytest.fixture(autouse=True)
+    def _require_real_sandbox(self):
+        from custodian.sandbox import sandbox_available
+        if not sandbox_available():
+            pytest.skip("real egress confinement requires a supported OS sandbox")
+
     """A tool's declared allowed_hosts (SKILL.md custodian.allowed_hosts)
     must actually reach the sandboxed subprocess and be enforced there --
     not just work in EgressProxy's own unit tests. Reminder: this redirects

@@ -32,6 +32,11 @@ def isolate_host_configuration(monkeypatch, tmp_path):
     ):
         monkeypatch.delenv(name, raising=False)
     monkeypatch.setenv("CUSTODIAN_STATE_DIR", str(tmp_path / "custodian-state"))
+    # Most registry/executor tests exercise policy, redaction, ledgers, and
+    # subprocess behavior rather than sandbox construction. CI hosts and
+    # macOS/Windows do not necessarily provide Bubblewrap. Production remains
+    # fail-closed; the dedicated sandbox tests remove this explicit opt-out.
+    monkeypatch.setenv("CUSTODIAN_ALLOW_UNSANDBOXED_TOOLS", "1")
 
 DEFAULT_POLICY_YAML = """\
 version: "1.0"

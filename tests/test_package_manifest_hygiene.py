@@ -58,8 +58,20 @@ def test_no_self_nested_duplicate_package_directories():
 
 def test_built_wheel_has_no_self_nested_duplicate_paths():
     with tempfile.TemporaryDirectory() as tmp:
+        release_tree = Path(tmp) / "release-tree"
         subprocess.run(
-            [sys.executable, "-m", "build", "--wheel", "--outdir", tmp, str(REPO_ROOT)],
+            [
+                sys.executable,
+                str(REPO_ROOT / "scripts/build-kernel-release-tree.py"),
+                str(release_tree),
+            ],
+            check=True, capture_output=True, text=True,
+        )
+        subprocess.run(
+            [
+                sys.executable, "-m", "build", "--wheel",
+                "--outdir", tmp, str(release_tree),
+            ],
             check=True, capture_output=True, text=True,
         )
         wheel = next(Path(tmp).glob("*.whl"))

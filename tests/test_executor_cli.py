@@ -44,10 +44,11 @@ class TestResolveCapability:
         assert _resolve_capability(store, "abc-123") == "abc-123"
 
     def test_latest_resolves_to_most_recent_pending(self, tmp_path):
-        store = CapabilityStore(tmp_path, now=lambda: 1000.0)
+        clock = iter((1000.0, 1000.1))
+        store = CapabilityStore(tmp_path, now=lambda: next(clock))
         id1 = _make_pending(store, tool="a", requester="alice")
         id2 = _make_pending(store, tool="b", requester="alice")
-        assert _resolve_capability(store, "latest", now=1000.0) == id2
+        assert _resolve_capability(store, "latest", now=1000.1) == id2
 
     def test_latest_ignores_expired(self, tmp_path):
         clock = [1000.0]

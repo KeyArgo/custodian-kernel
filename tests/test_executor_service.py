@@ -1,7 +1,9 @@
 """Tests for the delegated executor's decision-making core (ExecutorService)
 and, at the bottom, a real socket end-to-end test proving the separation
 actually holds."""
+import os
 from pathlib import Path
+from uuid import uuid4
 
 import pytest
 
@@ -29,6 +31,13 @@ def skills_root(tmp_path) -> Path:
 
 def _service(skills_root: Path, tmp_path: Path) -> ExecutorService:
     return ExecutorService(skills_root, state_dir=tmp_path / "executor-state")
+
+
+def _short_socket_path() -> Path:
+    # Darwin's AF_UNIX path limit is only 104 bytes. pytest's tmp_path on
+    # hosted macOS runners is substantially longer than that before a filename
+    # is appended.
+    return Path("/tmp") / f"custodian-{os.getpid()}-{uuid4().hex[:8]}.sock"
 
 
 def test_l0_tool_executes_directly_no_capability_involved(skills_root, tmp_path):
@@ -231,6 +240,7 @@ def test_client_module_has_no_execution_code():
     assert "pty" not in imported_names
 
 
+@pytest.mark.skipif(os.name == "nt", reason="Unix socket transport is not available on Windows")
 def test_end_to_end_over_a_real_unix_socket(skills_root, tmp_path, monkeypatch):
     import threading
     from custodian.executor.service import ExecutorServer
@@ -246,7 +256,7 @@ print(json.dumps({{"ok": True}}))
 """)
     monkeypatch.setattr(Path, "home", lambda: tmp_path)
     service = _service(skills_root, tmp_path)
-    socket_path = tmp_path / "executor.sock"
+    socket_path = _short_socket_path()
     server = ExecutorServer(socket_path, service)
     thread = threading.Thread(target=server.serve_forever, daemon=True)
     thread.start()
@@ -258,10 +268,12 @@ print(json.dumps({{"ok": True}}))
     finally:
         server.shutdown()
         server.server_close()
+        socket_path.unlink(missing_ok=True)
 
 
 # ── CustodianTool.invoke()'s opt-in delegated mode ──────────────────────────
 
+@pytest.mark.skipif(os.name == "nt", reason="Unix socket transport is not available on Windows")
 def test_invoke_delegates_to_the_executor_when_socket_env_var_is_set(skills_root, tmp_path, monkeypatch):
     """When CUSTODIAN_EXECUTOR_SOCKET is set, invoke() must not run the
     script itself at all -- it only ever talks to the socket."""
@@ -278,7 +290,7 @@ print(json.dumps({{"ok": True}}))
 """)
     monkeypatch.setattr(Path, "home", lambda: tmp_path)
     service = _service(skills_root, tmp_path)
-    socket_path = tmp_path / "executor.sock"
+    socket_path = _short_socket_path()
     server = ExecutorServer(socket_path, service)
     thread = threading.Thread(target=server.serve_forever, daemon=True)
     thread.start()
@@ -291,6 +303,7 @@ print(json.dumps({{"ok": True}}))
     finally:
         server.shutdown()
         server.server_close()
+        socket_path.unlink(missing_ok=True)
 
 
 def test_invoke_delegated_mode_returns_structured_error_when_executor_unreachable(tmp_path, monkeypatch):

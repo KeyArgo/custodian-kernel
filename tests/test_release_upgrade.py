@@ -17,7 +17,10 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 def _checked(command: list[str], **kwargs) -> subprocess.CompletedProcess[str]:
-    result = subprocess.run(command, capture_output=True, text=True, **kwargs)
+    result = subprocess.run(
+        command, capture_output=True, text=True,
+        encoding="utf-8", errors="replace", **kwargs,
+    )
     assert result.returncode == 0, (
         f"command failed ({result.returncode}): {' '.join(command)}\n"
         f"STDOUT:\n{result.stdout}\nSTDERR:\n{result.stderr}"

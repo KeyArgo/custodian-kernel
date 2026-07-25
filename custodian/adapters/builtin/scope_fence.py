@@ -52,7 +52,10 @@ class ScopeFence(Adapter):
 
     def __init__(self, config: dict | None = None) -> None:
         super().__init__(config)
-        self.path_prefixes = [os.path.normpath(p) for p in self.config.get("path_prefixes", [])]
+        # Resolve configured prefixes through the same symlink-aware path as
+        # action arguments. On macOS, /tmp is a symlink to /private/tmp; using
+        # normpath for one side and realpath for the other denied valid paths.
+        self.path_prefixes = [resolve(p) for p in self.config.get("path_prefixes", [])]
         self.path_globs = list(self.config.get("path_globs", []))
         if self.path_globs and not self.path_prefixes:
             raise ValueError(
