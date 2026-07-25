@@ -1,4 +1,8 @@
-"""Live, dependency-free operator firewall console."""
+"""Live operator firewall console.
+
+Kernel controls work without an integration package. Harness approvals and
+receipts appear when Custodian Codex Guard is installed.
+"""
 from __future__ import annotations
 
 import os
@@ -10,10 +14,21 @@ import time
 from custodian.control.policy import ApprovalPolicy, ApprovalRule
 from custodian.control.filesystem_policy import FilesystemPolicy, FilesystemRule
 from custodian.control.ledger_access_policy import LedgerAccessPolicy, LedgerGrant
+from custodian.control.settings import ControlSettings, ControlSettingsStore
 from custodian.executor.capability import CapabilityStore
 
 _CLEAR = "\x1b[2J\x1b[H"
 _GREEN, _YELLOW, _RED, _DIM, _RESET = "\x1b[32m", "\x1b[33m", "\x1b[31m", "\x1b[2m", "\x1b[0m"
+
+
+def _guard_approval_store(state_dir: Path):
+    try:
+        from custodian.codex_guard.approvals import ApprovalStore
+    except ModuleNotFoundError as exc:
+        if exc.name == "custodian.codex_guard":
+            return None
+        raise
+    return ApprovalStore(state_dir)
 
 
 def _snooze_path(state_dir: Path) -> Path:
@@ -90,18 +105,24 @@ def _recent_blocks(state_dir: Path, limit: int = 3) -> list[dict]:
     console only ever read the receipt chain, so "operator sees everything"
     silently didn't cover that whole path.
     """
-    from custodian.codex_guard.receipts import ReceiptChain
-    chain = ReceiptChain(state_dir)
     try:
-        chain.verify()
-        records = chain._records()
-        denied = [r for r in records if r.get("verdict") == "denied"]
-    except Exception as exc:
-        denied = [{
-            "tool": "receipt-chain",
-            "reason": f"audit verification failed: {type(exc).__name__}",
-            "ts": time.time(),
-        }]
+        from custodian.codex_guard.receipts import ReceiptChain
+    except ModuleNotFoundError as exc:
+        if exc.name != "custodian.codex_guard":
+            raise
+        denied = []
+    else:
+        chain = ReceiptChain(state_dir)
+        try:
+            chain.verify()
+            records = chain._records()
+            denied = [r for r in records if r.get("verdict") == "denied"]
+        except Exception as exc:
+            denied = [{
+                "tool": "receipt-chain",
+                "reason": f"audit verification failed: {type(exc).__name__}",
+                "ts": time.time(),
+            }]
 
     try:
         from custodian.universal_ledger import UniversalLedger
@@ -133,12 +154,14 @@ def _recent_blocks(state_dir: Path, limit: int = 3) -> list[dict]:
     return denied[-limit:]
 
 
-def _draw(state_dir: Path, message: str) -> tuple[ApprovalStore, CapabilityStore, list]:
-    from custodian.codex_guard.approvals import ApprovalStore
-    approvals = ApprovalStore(state_dir)
+def _draw(state_dir: Path, message: str) -> tuple[object | None, CapabilityStore, list]:
+    approvals = _guard_approval_store(state_dir)
     capabilities = CapabilityStore(state_dir)
     hidden = _snoozes(state_dir)
-    all_records = [r for r in approvals.list_records() if r.status == "pending" and r.expires_at > time.time()]
+    all_records = [] if approvals is None else [
+        r for r in approvals.list_records()
+        if r.status == "pending" and r.expires_at > time.time()
+    ]
     all_caps = [r for r in capabilities.list_records() if r.status == "pending" and r.expires_at > time.time()]
     records = [r for r in all_records if r.approval_id not in hidden]
     caps = [r for r in all_caps if r.capability_id not in hidden]
@@ -182,6 +205,7 @@ def _draw(state_dir: Path, message: str) -> tuple[ApprovalStore, CapabilityStore
     fs_rules = FilesystemPolicy(state_dir / "filesystem-policy.json").list()
     policy_rules = ApprovalPolicy(state_dir / "approval-policy.json").list()
     ledger_grants = LedgerAccessPolicy(state_dir / "ledger-access-policy.json").list()
+    settings = ControlSettingsStore(state_dir / "control-settings.json").load()
     mode_counts: dict[str, int] = {}
     for r in policy_rules:
         mode_counts[r.mode] = mode_counts.get(r.mode, 0) + 1
@@ -190,8 +214,16 @@ def _draw(state_dir: Path, message: str) -> tuple[ApprovalStore, CapabilityStore
     print(f"  {_DIM}Policy: {active_rules} active rule(s) — {modes if modes else 'all ask (default)'}{_RESET}")
     print(f"  {_DIM}Filesystem scopes: {len(fs_rules)}{_RESET}")
     print(f"  {_DIM}Ledger access grants: {len(ledger_grants)} (no harness sees any receipts by default, not even its own){_RESET}")
+    mode_color = _RED if settings.enforcement == "open" else _GREEN
+    print(
+        f"  {mode_color}Gate mode: {settings.enforcement}; "
+        f"notifications: {settings.visibility}{_RESET}"
+    )
+    if approvals is None:
+        print(f"  {_DIM}Harness approvals: Codex Guard not installed; kernel controls remain available{_RESET}")
     print(f"  {_YELLOW}[A]{_RESET} approve once    {_YELLOW}[D]{_RESET} deny    {_YELLOW}[I]{_RESET} ignore 5m    {_YELLOW}[L]{_RESET} lease (1h/25 uses)")
-    print(f"  {_YELLOW}[F]{_RESET} filesystem scope    {_YELLOW}[G]{_RESET} ledger grant    {_YELLOW}[R]{_RESET} rules    {_YELLOW}[K]{_RESET} global stop    {_YELLOW}[Q]{_RESET} quit")
+    print(f"  {_YELLOW}[F]{_RESET} filesystem scope    {_YELLOW}[G]{_RESET} ledger grant    {_YELLOW}[R]{_RESET} rules    {_YELLOW}[M]{_RESET} gate mode    {_YELLOW}[V]{_RESET} notices")
+    print(f"  {_YELLOW}[K]{_RESET} global stop    {_YELLOW}[Q]{_RESET} quit")
     print(f"  {_DIM}Approve-once: single-use — the next matching action consumes it.{_RESET}")
     print(f"  {_DIM}Lease: temporary rule with max uses.  Permanent: no expiry or limit.{_RESET}")
     print(f"  {_DIM}Actions apply to the oldest pending request (order shown).{_RESET}")
@@ -200,11 +232,11 @@ def _draw(state_dir: Path, message: str) -> tuple[ApprovalStore, CapabilityStore
 
 
 def run(args) -> int:
-    from custodian.codex_guard.approvals import ApprovalError
     state_dir = Path(args.state_dir)
     policy = ApprovalPolicy(state_dir / "approval-policy.json")
     filesystem = FilesystemPolicy(state_dir / "filesystem-policy.json")
     ledger_access = LedgerAccessPolicy(state_dir / "ledger-access-policy.json")
+    settings_store = ControlSettingsStore(state_dir / "control-settings.json")
     message = ""
     while True:
         try:
@@ -214,6 +246,8 @@ def run(args) -> int:
             time.sleep(2)
             message = ""
             continue
+        if getattr(args, "once", False):
+            return 0
         key = _key(1.0); message = ""
         if not key: continue
         try:
@@ -229,6 +263,27 @@ def run(args) -> int:
                                     max_uses=25)
                 policy.add(rule)
                 message = "One-hour local Codex write lease added (25 uses, auto-approve)."
+            elif key == "m":
+                current = settings_store.load()
+                if current.enforcement == "open":
+                    settings_store.save(ControlSettings(
+                        enforcement="protected", visibility=current.visibility
+                    ))
+                    message = "Protected mode enabled; high-risk actions require approval."
+                elif _confirm("Open every matching gate, including high-risk actions?"):
+                    settings_store.save(ControlSettings(
+                        enforcement="open", visibility=current.visibility
+                    ))
+                    message = "DEVELOPER OPEN: matching high-risk gates may auto-pass."
+                else:
+                    message = "Gate mode unchanged."
+            elif key == "v":
+                current = settings_store.load()
+                visibility = "quiet" if current.visibility == "verbose" else "verbose"
+                settings_store.save(ControlSettings(
+                    enforcement=current.enforcement, visibility=visibility
+                ))
+                message = f"Routine gate notifications: {visibility}; receipts remain enabled."
             elif key == "f":
                 print(_CLEAR, end="")
                 print("Filesystem scope — deny always wins; blank model means every model")
@@ -300,7 +355,7 @@ def run(args) -> int:
                         else:
                             capabilities.deny(record.capability_id, denied_by=args.operator)
                     message = "Approved — single-use; consumed on next matching action." if key == "a" else "Denied."
-                except (ApprovalError, Exception) as exc:
+                except Exception as exc:
                     message = f"Not changed: {exc}"
         except Exception as exc:
             message = f"Key handler error: {exc}"
@@ -310,4 +365,5 @@ def register(sub, default_state_dir: str) -> None:
     parser = sub.add_parser("console", help="Live operator firewall for approvals and policy")
     parser.add_argument("--state-dir", default=default_state_dir)
     parser.add_argument("--operator", default=os.environ.get("USER", "operator"))
+    parser.add_argument("--once", action="store_true", help="Print one status screen and exit")
     parser.set_defaults(func=run)

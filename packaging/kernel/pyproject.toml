@@ -1,0 +1,63 @@
+[project]
+name = "custodian-kernel"
+version = "0.4.1"
+description = "Kernel-enforced authority and spend platform for AI agents"
+requires-python = ">=3.11"
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{name = "InovinLabs", email = "hello@inovinlabs.com"}]
+keywords = ["ai", "agent", "authority", "spend", "kernel", "enforcement"]
+dependencies = ["pyyaml", "requests", "cryptography>=42.0", "tzdata"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Operating System :: OS Independent",
+    "Topic :: Software Development :: Libraries",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+]
+
+[project.urls]
+Homepage = "https://getcustodian.xyz"
+Repository = "https://github.com/KeyArgo/custodian-kernel"
+Documentation = "https://getcustodian.xyz/docs"
+Issues = "https://github.com/KeyArgo/custodian-kernel/issues"
+Changelog = "https://github.com/KeyArgo/custodian-kernel/blob/main/CHANGELOG.md"
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "pytest-asyncio",
+    "pytest-cov",
+    "flask",
+    "boto3",
+    "pymongo",
+    "mongomock",
+    "twine",
+]
+
+[project.scripts]
+custodian = "custodian.cli.main:main"
+custodian-verify = "custodian.verify_kit:main"
+paladin = "paladin.cli:main"
+paladin-import = "paladin.cli:main_import"
+
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["custodian*", "paladin*"]
+
+[tool.setuptools.package-data]
+"custodian" = [
+    "bundled_skills/**/*",
+    "bundled_skills/**",
+    "packs/**/corpus/*.json",
+    "packs/**/*.yaml",
+    "packs/**/*.json",
+    "policy/presets/*.yaml",
+]

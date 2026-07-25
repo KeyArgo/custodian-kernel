@@ -1,4 +1,5 @@
-"""Builds the real wheel, installs it into an isolated venv with nothing
+"""Builds the exact public kernel wheel, installs it into an isolated venv
+with nothing
 else on sys.path, and runs every registered CLI (sub)command's --help.
 
 This is the test that would have caught the 0.4.0 incident: custodian/
@@ -62,15 +63,28 @@ def _iter_subcommand_paths() -> list[list[str]]:
 
 @pytest.fixture(scope="module")
 def clean_installed_cli(tmp_path_factory) -> Path:
-    """Build the real wheel and pip install *only* it into a bare venv.
+    """Build the filtered release tree and pip install *only* its wheel.
     Returns the venv's bin/ dir. Session-scoped-ish (module here) since
     building + installing is the slow part and every test in this file
     shares the same clean install."""
     work = tmp_path_factory.mktemp("clean-wheel-install")
+    release_tree = work / "release-tree"
     dist_dir = work / "dist"
 
+    tree_result = subprocess.run(
+        [
+            sys.executable,
+            str(REPO_ROOT / "scripts/build-kernel-release-tree.py"),
+            str(release_tree),
+        ],
+        capture_output=True, text=True, timeout=60,
+    )
+    assert tree_result.returncode == 0, (
+        "release-tree build failed:\n"
+        f"STDOUT:\n{tree_result.stdout}\nSTDERR:\n{tree_result.stderr}"
+    )
     build_result = subprocess.run(
-        [sys.executable, "-m", "build", "--wheel", "-o", str(dist_dir), str(REPO_ROOT)],
+        [sys.executable, "-m", "build", "--wheel", "-o", str(dist_dir), str(release_tree)],
         capture_output=True, text=True, timeout=300,
     )
     assert build_result.returncode == 0, (
@@ -133,6 +147,15 @@ def test_top_level_help_works_from_clean_install(clean_installed_cli):
     result = _run_clean(clean_installed_cli, ["--help"])
     assert result.returncode == 0, (
         f"`custodian --help` failed from a clean wheel install:\n{result.stderr}"
+    )
+
+
+@pytest.mark.network
+def test_console_status_works_from_clean_install(clean_installed_cli):
+    result = _run_clean(clean_installed_cli, ["console", "--once"])
+    assert result.returncode == 0, (
+        f"`custodian console --once` failed from a clean wheel install:\n"
+        f"STDOUT:\n{result.stdout}\nSTDERR:\n{result.stderr}"
     )
 
 

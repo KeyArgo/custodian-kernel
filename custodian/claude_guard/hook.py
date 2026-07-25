@@ -100,6 +100,12 @@ def decide(event: dict[str, Any]) -> tuple[str, str]:
     if verdict == "escalation_required":
         return "ask", f"Custodian requires approval: {reason}" if reason else "Custodian requires approval"
     if verdict in ("autonomous", "approved"):
+        from custodian.codex_guard.mcp_server import _state_dir
+        from custodian.control.settings import ControlSettingsStore
+        if ControlSettingsStore(
+            _state_dir() / "control-settings.json"
+        ).load().visibility == "quiet":
+            reason = ""
         return "allow", reason
     # Unknown / missing verdict: fail closed.
     return "deny", "Custodian: unrecognized guard verdict; failing closed"

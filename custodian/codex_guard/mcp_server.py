@@ -13,6 +13,7 @@ from .receipts import ReceiptChain
 from custodian.control.policy import ApprovalPolicy, Proposal
 from custodian.control.filesystem_policy import FilesystemPolicy
 from custodian.control.ledger_access_policy import LedgerAccessPolicy
+from custodian.control.settings import ControlSettingsStore
 
 
 def _state_dir() -> Path:
@@ -21,6 +22,19 @@ def _state_dir() -> Path:
 
 
 def _text_result(value: dict[str, Any], *, is_error: bool = False) -> dict[str, Any]:
+    settings = ControlSettingsStore(_state_dir() / "control-settings.json").load()
+    if (
+        settings.visibility == "quiet"
+        and value.get("verdict") in {"autonomous", "approved"}
+    ):
+        # Keep the machine-enforced decision and evidence, but omit explanatory
+        # prose that merely tells the model an ordinary gate passed. Hooks are
+        # already silent for allowed actions; this makes direct MCP use match.
+        value = {
+            key: value[key] for key in (
+                "verdict", "action_kind", "enforcement_required", "receipt",
+            ) if key in value
+        }
     return {
         "content": [{"type": "text", "text": json.dumps(value, sort_keys=True)}],
         "structuredContent": value,

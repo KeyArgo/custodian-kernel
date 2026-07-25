@@ -1,102 +1,20 @@
-name: Release
+name: Release (disabled safety sentinel)
 
-# Fires only on a version tag (v0.4.0, v0.4.1, ...) — pushing to main or
-# opening a PR never triggers this, unlike ci.yml. Nothing here runs, and
-# no artifact is signed or published, until a maintainer actually pushes a
-# tag matching this pattern.
+# Public releases are intentionally not created from the private source
+# repository. A reviewed candidate must first pass scripts/custodian-release.py
+# and be mirrored byte-for-byte into the matching KeyArgo repository. Publishing
+# remains a separate operator-approved operation.
 on:
-  push:
-    tags:
-      - "v*"
+  workflow_dispatch:
+
+permissions: {}
 
 jobs:
-  build-sign-release:
+  refuse-private-release:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write   # attach artifacts to the GitHub release
-      id-token: write   # keyless Sigstore/cosign signing via GitHub OIDC — no
-                        # long-lived signing key to store, rotate, or leak
     steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-
-      - name: Build wheel and sdist
+      - name: Explain the release boundary
         run: |
-          pip install build twine
-          python -m build
-          twine check dist/*
-
-      - name: Install the built wheel into a clean environment
-        # The SBOM must describe what a real `pip install custodian-kernel`
-        # user actually gets — installing the wheel (not `pip install -e .`)
-        # into a fresh venv is the only way to get that dependency closure
-        # exactly right, including any version resolution pip performs.
-        run: |
-          python -m venv /tmp/sbom-env
-          /tmp/sbom-env/bin/pip install dist/*.whl
-
-      - name: The installed CLI must actually run, not just install
-        # This step existed before only to install the wheel for the SBOM
-        # below -- it never once invoked the CLI it just installed. That's
-        # exactly the gap that let 0.4.0 reach PyPI broken: pip install can
-        # succeed (dependency resolution is fine) while every real
-        # invocation still crashes on a module-level import. A clean pip
-        # install succeeding proves nothing about whether the CLI runs.
-        run: /tmp/sbom-env/bin/custodian --version
-
-      - name: Every registered (sub)command must work from a clean install
-        # Same clean-wheel-install regression suite as ci.yml's build job --
-        # walks the live argparse tree (including nested subcommands) and
-        # runs --help on every leaf. This is the last gate before signing;
-        # nothing past this point should ever run against a broken wheel.
-        run: |
-          pip install pytest build
-          pytest tests/test_clean_wheel_install.py -m network -v
-
-      - name: Generate CycloneDX SBOM
-        run: |
-          pip install cyclonedx-bom
-          cyclonedx-py environment /tmp/sbom-env \
-            --output-format json \
-            --output-file sbom.cyclonedx.json
-
-      - name: Install cosign
-        uses: sigstore/cosign-installer@v3
-
-      - name: Sign every release artifact (keyless, GitHub OIDC identity)
-        run: |
-          set -euo pipefail
-          for f in dist/*.whl dist/*.tar.gz sbom.cyclonedx.json; do
-            cosign sign-blob --yes "$f" \
-              --output-signature "$f.sig" \
-              --output-certificate "$f.pem"
-          done
-
-      - name: Verify every signature before publishing
-        # Catch a broken signing step here, in CI, rather than ship an
-        # artifact whose signature silently fails for every downstream user.
-        run: |
-          set -euo pipefail
-          for f in dist/*.whl dist/*.tar.gz sbom.cyclonedx.json; do
-            cosign verify-blob "$f" \
-              --signature "$f.sig" \
-              --certificate "$f.pem" \
-              --certificate-identity-regexp "https://github.com/${{ github.repository }}/.*" \
-              --certificate-oidc-issuer "https://token.actions.githubusercontent.com"
-          done
-
-      - name: Publish release with signed artifacts
-        uses: softprops/action-gh-release@v2
-        with:
-          files: |
-            dist/*.whl
-            dist/*.tar.gz
-            dist/*.sig
-            dist/*.pem
-            sbom.cyclonedx.json
-            sbom.cyclonedx.json.sig
-            sbom.cyclonedx.json.pem
-          generate_release_notes: true
+          echo "Release refused: this is the private source repository."
+          echo "Prepare and review the immutable release manifest, then use the matching KeyArgo repository."
+          exit 1

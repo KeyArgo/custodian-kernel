@@ -2,7 +2,36 @@
 
 All notable changes to custodian-kernel are recorded here. Dates are UTC.
 
-## [0.4.0] — unreleased
+## [0.4.1] — unreleased
+
+### Installation and lifecycle recovery
+
+- The public kernel artifact is now built from a filtered release tree rather
+  than the private monorepo root. CI and the release workflow use that same
+  builder, preventing excluded agent adapters from hiding missing imports.
+- Standalone kernel commands no longer import the separately packaged Codex
+  Guard. `custodian --version`, help, the console, and every registered
+  subcommand are exercised from a clean wheel outside the source checkout.
+- Added a PEP 668-safe managed installer. It stages and health-checks a private
+  runtime before switching, keeps the prior runtime for rollback, exposes
+  ordinary commands without venv activation, and has a data-preserving managed
+  uninstall.
+- Added a real PyPI 0.4.0-to-0.4.1 upgrade regression that verifies the CLI and
+  preserves synthetic vault, ledger, Paladin, and Talaria data.
+- Fixed the developer installer creating a venv and then accidentally using
+  the caller's Python instead of the new runtime.
+- Release metadata now includes all runtime dependencies and policy presets,
+  excludes private adapters and Caduceus, and mirrors the release README,
+  license, and installer.
+
+### Gate controls
+
+- Added Open and Protected gate modes to the CLI, numbered menu, and console.
+  Open mode can notify for each automatic pass or run quietly; both modes keep
+  tamper-evident receipts. Existing `developer-open` settings migrate to
+  `open`.
+
+## [0.4.0] — 2026-07-21
 
 ### Ledger visibility now defaults to nothing, not self
 
@@ -145,8 +174,8 @@ At least 6 copies of this repo existed on this host, each with its own
 working `deploy.sh` doing a direct `wrangler pages deploy` upload to the
 same live Cloudflare Pages project — not git-triggered, no trace, whichever
 copy deployed last silently won. This was the likely real cause of repeated
-"things keep reverting" reports across sessions. `/home/dev/custodian-dev`
-is now the single source of truth; the other 5 copies' `deploy.sh` are
+"things keep reverting" reports across sessions. The canonical development
+repository is now the single source of truth; the other 5 copies' `deploy.sh` are
 disabled. See `DEPLOYMENT.md`.
 
 ### Bundled skills — 5 more bugs fixed (independent Qwen bug-hunt review)

@@ -34,9 +34,9 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 MODES = ("editable", "fresh", "upgrade", "repair")
 
 
-def _pip_install_args(mode: str, dry_run: bool) -> list[str]:
+def _pip_install_args(mode: str, dry_run: bool, python: Path | str | None = None) -> list[str]:
     spec = f"{PROJECT_ROOT}[dev]"
-    base = [sys.executable, "-m", "pip", "install"]
+    base = [str(python or sys.executable), "-m", "pip", "install"]
     if dry_run:
         base.append("--dry-run")
 
@@ -64,12 +64,13 @@ def _pip_cmd(mode: str) -> str:
     return subprocess.list2cmdline(_pip_install_args(mode, dry_run=False))
 
 
-def _run_pip(mode: str, verbose: bool, dry_run: bool) -> int:
+def _run_pip(mode: str, verbose: bool, dry_run: bool,
+             python: Path | str | None = None) -> int:
     if dry_run:
         print(f"[dry-run] Would run: {_pip_cmd(mode)}")
         return 0
 
-    args = _pip_install_args(mode, dry_run=False)
+    args = _pip_install_args(mode, dry_run=False, python=python)
     if verbose:
         print(f"Running: {subprocess.list2cmdline(args)}")
 
@@ -151,7 +152,7 @@ def main() -> int:
     else:
         py = Path(sys.executable)
 
-    exit_code = _run_pip(args.mode, args.verbose, args.dry_run)
+    exit_code = _run_pip(args.mode, args.verbose, args.dry_run, python=py)
     if exit_code != 0:
         return exit_code
 

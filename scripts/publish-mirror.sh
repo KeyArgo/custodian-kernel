@@ -30,6 +30,15 @@ case "$TARGET" in
       "custodian:custodian"
       "paladin:paladin"
       "skills:skills"
+      "packaging/kernel/pyproject.toml:pyproject.toml"
+      "packaging/kernel/MANIFEST.in:MANIFEST.in"
+      "packaging/kernel/README.md:README.md"
+      "scripts/install-custodian.py:install-custodian.py"
+      "CHANGELOG.md:CHANGELOG.md"
+      "docs/SECURITY.md:SECURITY.md"
+      "docs/CONTRIBUTING.md:CONTRIBUTING.md"
+      "docs/CODE_OF_CONDUCT.md:CODE_OF_CONDUCT.md"
+      "LICENSE:LICENSE"
     )
     RSYNC_EXCLUDES=(--exclude=codex_guard --exclude=claude_guard --exclude=opencode_guard \
                      --exclude=opencode-prompts --exclude=__pycache__ --exclude='*.pyc')
@@ -40,6 +49,13 @@ case "$TARGET" in
       "custodian/codex_guard:custodian/codex_guard"
       "plugins/custodian-codex-guard:plugins/custodian-codex-guard"
       "docs/CODEX_GUARD.md:docs/CODEX_GUARD.md"
+      "packaging/codex_guard/pyproject.toml:pyproject.toml"
+      "packaging/codex_guard/MANIFEST.in:MANIFEST.in"
+      "packaging/codex_guard/README.md:README.md"
+      "docs/SECURITY.md:SECURITY.md"
+      "docs/CONTRIBUTING.md:CONTRIBUTING.md"
+      "docs/CODE_OF_CONDUCT.md:CODE_OF_CONDUCT.md"
+      "LICENSE:LICENSE"
     )
     RSYNC_EXCLUDES=(--exclude=__pycache__ --exclude='*.pyc')
     ;;

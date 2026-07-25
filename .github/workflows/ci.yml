@@ -12,8 +12,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest]
-        python-version: ["3.11", "3.13"]
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        python-version: ["3.11", "3.12", "3.13"]
 
     steps:
       - uses: actions/checkout@v4
@@ -43,7 +43,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest]
+        os: [ubuntu-latest, windows-latest, macos-latest]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -52,7 +52,8 @@ jobs:
       - name: Build wheel
         run: |
           pip install build
-          python -m build
+          python scripts/build-kernel-release-tree.py release-tree
+          python -m build --outdir dist release-tree
       - name: Install from wheel (clean)
         run: pip install dist/*.whl
         shell: bash
@@ -86,5 +87,5 @@ jobs:
         # up automatically.
         run: |
           pip install pytest
-          pytest tests/test_clean_wheel_install.py -m network -v
+          pytest tests/test_clean_wheel_install.py tests/test_release_upgrade.py tests/test_kernel_release_artifact.py -m network -v
         shell: bash

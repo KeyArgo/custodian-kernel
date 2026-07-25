@@ -1,0 +1,71 @@
+name: Prepare Release
+
+# SAFETY: This workflow is PREPARATION ONLY. It implements the non-public
+# side of RELEASE_SAFETY_PLAN.md - it builds, hashes, installs, and tests
+# a release candidate. It NEVER commits, pushes, tags, creates GitHub
+# releases, or uploads to PyPI. No irreversible action is taken.
+#
+# Fires manually only — not on tag push, branch push, or PR. The operator
+# must explicitly dispatch this workflow from the GitHub UI or CLI with
+# the component and version to prepare.
+on:
+  workflow_dispatch:
+    inputs:
+      component:
+        description: "Component to prepare (kernel, codex-guard)"
+        required: true
+        type: choice
+        options:
+          - kernel
+          - codex-guard
+      version:
+        description: "Version string (e.g. 0.4.1)"
+        required: true
+        type: string
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install build dependencies
+        run: pip install build
+
+      - name: Run preparation
+        run: |
+          python scripts/custodian-release.py prepare \
+            "${{ github.event.inputs.component }}" \
+            "${{ github.event.inputs.version }}"
+
+      - name: Upload release manifests
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-manifests
+          path: release-manifests/
+          if-no-files-found: error
+
+      - name: Upload built artifacts (for review only — never published)
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-artifacts-${{ github.event.inputs.component }}-${{ github.event.inputs.version }}
+          path: |
+            release-manifests/${{ github.event.inputs.component }}-${{ github.event.inputs.version }}/artifacts/
+          if-no-files-found: error
+
+      - name: Final safety check
+        run: |
+          echo "=== PREPARATION COMPLETE ==="
+          echo "Component: ${{ github.event.inputs.component }}"
+          echo "Version:   ${{ github.event.inputs.version }}"
+          echo ""
+          echo "This workflow performed PREPARATION ONLY."
+          echo "No git push, tag, GitHub release, or PyPI upload occurred."
+          echo ""
+          echo "Review the uploaded release-manifests artifact."
+          echo "To publish, run 'custodian-release.py publish' locally"
+          echo "(not yet implemented) — this workflow never publishes."

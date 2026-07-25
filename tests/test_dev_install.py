@@ -85,6 +85,11 @@ def test_dry_run_fresh_mentions_venv():
     assert "venv" in result.stdout.lower()
 
 
+def test_fresh_mode_installs_with_new_venv_python():
+    source = SCRIPT.read_text(encoding="utf-8")
+    assert "_run_pip(args.mode, args.verbose, args.dry_run, python=py)" in source
+
+
 # ---------------------------------------------------------------------------
 # Output diagnostics
 # ---------------------------------------------------------------------------

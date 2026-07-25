@@ -46,6 +46,10 @@ dev = [
     "pytest-asyncio",
     "pytest-cov",
     "flask",
+    "boto3",
+    "pymongo",
+    "mongomock",
+    "twine",
 ]
 # paladin is standalone -- it has zero imports from any integration
 # package, and never will (see docs/TALARIA.md's "brand neutral" note,
