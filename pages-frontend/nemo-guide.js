@@ -114,6 +114,30 @@
         "Will Custodian support Claude or Gemini agents too?",
       ],
     },
+    '/paladin': {
+      greeting: "What is Paladin, and how is it different from just putting the API key in an env var?",
+      suggests: [
+        "What does sandboxed egress actually stop that env-var injection doesn't?",
+        "What happens if Paladin can't sandbox on this machine — does it fail open?",
+        "How does a grant limit what a resolved secret can be used for?",
+      ],
+    },
+    '/guardrails': {
+      greeting: "What's the difference between what the kernel decides and what a guard adapter decides?",
+      suggests: [
+        "What's an example of an action the kernel allows but a guard adapter blocks?",
+        "Are guard adapters optional, or always on?",
+        "What does 'hash-pinned so reviewed code is the code that runs' actually mean?",
+      ],
+    },
+    '/lie-catch': {
+      greeting: "How does the kernel check if the AI's claim is actually true?",
+      suggests: [
+        "What's an example of a lie the AI would believe but the kernel catches?",
+        "Does this replace the AI's judgment entirely, or work alongside it?",
+        "What happens when the AI's verdict and the kernel's fact-check disagree?",
+      ],
+    },
   };
 
   /* ─── Identify current page ──────────────────────────────────── */

@@ -919,9 +919,42 @@ Two integrations are LIVE today, and you should be able to explain both if asked
   (`custodian setup --profile hermes`) installs a kill switch and a tamper-evident audit trail;
   caught 5/5 live secret-leak evasion attempts in testing.
 
+Underneath both sits Paladin — the credential broker and egress vault. An agent gets a
+`paladin://` reference, never the raw secret; the kernel enforces which references may resolve
+where. It ships standalone (its own PyPI-installable CLI) and has its own page (/paladin) if the
+visitor wants the full picture.
+
 Claude, Gemini, and opencode integrations are on the ROADMAP (not built yet) — say so plainly if
-asked, don't imply they exist. Do NOT deny knowledge of Codex Guard or Talaria; they are real,
-shipped parts of this project and this page is specifically about them.
+asked, don't imply they exist. Do NOT deny knowledge of Codex Guard, Talaria, or Paladin; they are
+real, shipped parts of this project and this page is specifically about them.
+
+IMPORTANT: Do NOT use [[jump:KEY|label]] or [[entry:TS|label]] syntax here. Plain prose only.
+Do offer [[suggest:...]] questions to continue the tour.
+"""
+
+_PALADIN_GUIDANCE = """
+PAGE CONTEXT: The visitor is on the PALADIN page (/paladin). Paladin is Custodian's credential
+broker and egress vault — the piece underneath Codex Guard and Talaria that means the agent never
+holds the real API key. The agent gets a reference like `paladin://stripe_sk`, safe to log and safe
+in the model's context; the secret only resolves at egress, gated by an explicit, narrowing grant
+(deny-by-default), and every resolution is written to a tamper-evident hash-chained audit log.
+
+Flagship feature: sandboxed egress. Instead of injecting the real secret into a governed tool's
+environment (readable by anything running in that child, including a prompt-injected payload),
+Paladin runs the tool under `bwrap --unshare-all` with no network access at all; the tool's only way
+out is an unauthenticated Unix socket call, and Paladin attaches the credential host-side. The key
+is never in an env var, never in memory inside the tool, never in argv. It's built like a real
+credential system, not a config file: AES-256-GCM at rest with a scrypt-derived key, deny-by-default
+grants scoped by host/method/path/authority-band/TTL, and egress-only injection.
+
+Honest scope, worth surfacing if asked: sandboxed egress covers HTTP(S)-shaped secrets today, needs
+Linux with unprivileged user namespaces, and fails CLOSED (refuses rather than silently falling back
+to an unsandboxed env-var injection) when that isn't available. It confines the credential, not
+whatever data a call returns.
+
+Do NOT deny knowledge of Paladin — it is a real, shipped part of this project, and this page is
+specifically about it. It ships standalone (its own PyPI-installable `paladin` CLI, zero imports
+from Codex Guard or Talaria) and both of those integrations build on top of it.
 
 IMPORTANT: Do NOT use [[jump:KEY|label]] or [[entry:TS|label]] syntax here. Plain prose only.
 Do offer [[suggest:...]] questions to continue the tour.
@@ -936,6 +969,7 @@ _PAGE_GUIDANCE: dict[str, str] = {
     'triage': _TRIAGE_GUIDANCE,
     'tools': _TOOLS_GUIDANCE,
     'docs': _DOCS_GUIDANCE,
+    'paladin': _PALADIN_GUIDANCE,
 }
 
 

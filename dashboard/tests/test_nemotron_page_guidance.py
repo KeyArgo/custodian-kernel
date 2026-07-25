@@ -36,3 +36,21 @@ def test_integrations_page_has_guidance_and_knows_codex_guard_and_talaria():
     assert 'Codex Guard' in guidance
     assert 'Talaria' in guidance
     assert 'do not deny' in guidance.lower() or "don't deny" in guidance.lower()
+
+
+def test_integrations_page_also_knows_paladin():
+    """Same incident class as above, found 2026-07-23: Codex Guard and Talaria
+    got added to _INTEGRATIONS_GUIDANCE and FALLBACK_SYSTEM together, but
+    Paladin -- the credential broker underneath both -- was never added to
+    either, so a visitor asking Nemotron about Paladin got told it doesn't
+    exist, including in the degraded/fallback lane."""
+    guidance = nemotron_chat._PAGE_GUIDANCE['integrations']
+    assert 'Paladin' in guidance
+    assert 'do not deny' in guidance.lower() or "don't deny" in guidance.lower()
+
+
+def test_paladin_page_has_guidance_and_does_not_deny_itself():
+    assert 'paladin' in nemotron_chat._PAGE_GUIDANCE
+    guidance = nemotron_chat._PAGE_GUIDANCE['paladin']
+    assert 'sandboxed egress' in guidance.lower()
+    assert 'do not deny' in guidance.lower() or "don't deny" in guidance.lower()
