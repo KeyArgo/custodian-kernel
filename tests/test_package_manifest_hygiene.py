@@ -59,6 +59,7 @@ def test_no_self_nested_duplicate_package_directories():
 def test_built_wheel_has_no_self_nested_duplicate_paths():
     with tempfile.TemporaryDirectory() as tmp:
         release_tree = Path(tmp) / "release-tree"
+        dist = Path(tmp) / "dist"
         subprocess.run(
             [
                 sys.executable,
@@ -67,14 +68,15 @@ def test_built_wheel_has_no_self_nested_duplicate_paths():
             ],
             check=True, capture_output=True, text=True,
         )
-        subprocess.run(
+        result = subprocess.run(
             [
                 sys.executable, "-m", "build", "--wheel",
-                "--outdir", tmp, str(release_tree),
+                "--outdir", str(dist), str(release_tree),
             ],
-            check=True, capture_output=True, text=True,
+            capture_output=True, text=True,
         )
-        wheel = next(Path(tmp).glob("*.whl"))
+        assert result.returncode == 0, result.stdout + result.stderr
+        wheel = next(dist.glob("*.whl"))
         with zipfile.ZipFile(wheel) as zf:
             names = zf.namelist()
 

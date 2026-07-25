@@ -16,6 +16,15 @@ from custodian.executor.capability import (
 )
 
 
+def test_store_works_when_platform_has_no_o_nofollow(tmp_path, monkeypatch):
+    """Windows has no os.O_NOFOLLOW; link/junction checks remain explicit."""
+    monkeypatch.delattr(os, "O_NOFOLLOW", raising=False)
+    store = CapabilityStore(tmp_path)
+    digest = action_digest(tool="read", args={}, workspace="", requester="r")
+    record = store.request(digest=digest, requester="r")
+    assert store.get(record.capability_id).action_digest == digest
+
+
 def test_action_digest_is_stable_for_identical_inputs():
     d1 = action_digest(tool="stripe-spend", args={"amount": 5.0}, workspace="/ws", requester="r")
     d2 = action_digest(tool="stripe-spend", args={"amount": 5.0}, workspace="/ws", requester="r")
