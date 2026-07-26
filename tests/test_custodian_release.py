@@ -25,6 +25,7 @@ SCRIPT = Path(__file__).resolve().parents[1] / "scripts" / "custodian-release.py
 # Import the release module
 # ---------------------------------------------------------------------------
 
+import hashlib
 import importlib.util
 _spec = importlib.util.spec_from_file_location("custodian_release", SCRIPT)
 _mod = importlib.util.module_from_spec(_spec)
@@ -333,6 +334,26 @@ def test_prepared_kernel_wheel_is_hash_verified(tmp_path, monkeypatch):
     wheel.write_bytes(b"changed")
     with pytest.raises(SystemExit, match="hash changed"):
         _mod._prepared_kernel_wheel()
+
+
+def test_prepared_kernel_wheel_honors_explicit_dependency_version(
+    tmp_path, monkeypatch
+):
+    manifests = tmp_path / "manifests"
+    component = manifests / "kernel-9.8.7"
+    artifacts = component / "artifacts"
+    artifacts.mkdir(parents=True)
+    wheel = artifacts / "custodian_kernel-9.8.7-py3-none-any.whl"
+    wheel.write_bytes(b"candidate")
+    (component / "kernel-9.8.7.manifest.json").write_text(json.dumps({
+        "artifacts": [{
+            "name": wheel.name,
+            "sha256": hashlib.sha256(b"candidate").hexdigest(),
+        }],
+    }))
+    monkeypatch.setattr(_mod, "_RELEASE_MANIFESTS", manifests)
+    monkeypatch.setenv("CUSTODIAN_RELEASE_KERNEL_VERSION", "9.8.7")
+    assert _mod._prepared_kernel_wheel() == wheel
 
 
 def test_codex_release_builder_bundles_plugin_files(tmp_path):

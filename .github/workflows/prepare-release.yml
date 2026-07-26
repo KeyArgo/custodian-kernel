@@ -1,71 +1,181 @@
-name: Prepare Release
+name: Prepare and Qualify Release
 
-# SAFETY: This workflow is PREPARATION ONLY. It implements the non-public
-# side of RELEASE_SAFETY_PLAN.md - it builds, hashes, installs, and tests
-# a release candidate. It NEVER commits, pushes, tags, creates GitHub
-# releases, or uploads to PyPI. No irreversible action is taken.
-#
-# Fires manually only — not on tag push, branch push, or PR. The operator
-# must explicitly dispatch this workflow from the GitHub UI or CLI with
-# the component and version to prepare.
+# SAFETY: preparation and qualification only. This workflow has no publishing
+# permission and contains no commit, push, tag, GitHub-release, or PyPI-upload
+# step. A human must review the final evidence before any separate public action.
 on:
   workflow_dispatch:
     inputs:
       component:
-        description: "Component to prepare (kernel, codex-guard)"
+        description: "Component to prepare"
         required: true
         type: choice
         options:
           - kernel
           - codex-guard
       version:
-        description: "Version string (e.g. 0.4.1)"
+        description: "Exact version string (for example 0.4.1)"
         required: true
         type: string
+      kernel_version:
+        description: "Exact kernel dependency for integrations"
+        required: true
+        default: "0.4.1"
+        type: string
+
+permissions:
+  contents: read
+
+env:
+  CUSTODIAN_RELEASE_KERNEL_VERSION: ${{ inputs.kernel_version }}
 
 jobs:
+  # Do not even build a candidate when the source commit is not portable.
+  source-qualification:
+    name: source (${{ matrix.os }}, py${{ matrix.python-version }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        python-version: ["3.11", "3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install the complete development test environment
+        run: python -m pip install -e ".[dev]"
+      - name: Full source suite
+        run: python -m pytest tests/ -v --cov=custodian
+      - name: Security ratchet
+        run: >-
+          python -m pytest
+          tests/test_guard_mutation_gate.py
+          tests/test_guard_gate_corpus.py -v
+
+  # The controller builds each artifact exactly once, checks metadata, performs
+  # fresh and upgrade installs, verifies managed reinstall/uninstall preserves
+  # data, and writes immutable hashes into the manifest.
   prepare:
+    name: build immutable candidate
+    needs: source-qualification
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-
-      - name: Install build dependencies
-        run: pip install build
-
-      - name: Run preparation
-        run: |
-          python scripts/custodian-release.py prepare \
-            "${{ github.event.inputs.component }}" \
-            "${{ github.event.inputs.version }}"
-
-      - name: Upload release manifests
+      - name: Install release tooling
+        run: python -m pip install build twine
+      - name: Build exact kernel dependency for Codex Guard
+        if: inputs.component == 'codex-guard'
+        run: >-
+          python scripts/custodian-release.py prepare
+          kernel
+          "${{ inputs.kernel_version }}"
+      - name: Build, install, upgrade, preserve, and hash requested component
+        run: >-
+          python scripts/custodian-release.py prepare
+          "${{ inputs.component }}"
+          "${{ inputs.version }}"
+      - name: Upload immutable candidate and evidence
         uses: actions/upload-artifact@v4
         with:
-          name: release-manifests
-          path: release-manifests/
-          if-no-files-found: error
-
-      - name: Upload built artifacts (for review only — never published)
-        uses: actions/upload-artifact@v4
-        with:
-          name: release-artifacts-${{ github.event.inputs.component }}-${{ github.event.inputs.version }}
+          name: candidate-${{ inputs.component }}-${{ inputs.version }}
           path: |
-            release-manifests/${{ github.event.inputs.component }}-${{ github.event.inputs.version }}/artifacts/
+            release-manifests/${{ inputs.component }}-${{ inputs.version }}/
+            release-manifests/kernel-${{ inputs.kernel_version }}/artifacts/*.whl
           if-no-files-found: error
+          retention-days: 14
 
-      - name: Final safety check
+  # Download the exact files produced above. These jobs never rebuild, so this
+  # proves the reviewed hashes describe the same wheel users would install.
+  artifact-qualification:
+    name: artifact (${{ matrix.os }}, py${{ matrix.python-version }})
+    needs: prepare
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        python-version: ["3.11", "3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - uses: actions/download-artifact@v4
+        with:
+          name: candidate-${{ inputs.component }}-${{ inputs.version }}
+          path: candidate
+      - name: Locate and validate candidate artifacts
+        shell: bash
         run: |
-          echo "=== PREPARATION COMPLETE ==="
-          echo "Component: ${{ github.event.inputs.component }}"
-          echo "Version:   ${{ github.event.inputs.version }}"
-          echo ""
-          echo "This workflow performed PREPARATION ONLY."
-          echo "No git push, tag, GitHub release, or PyPI upload occurred."
-          echo ""
-          echo "Review the uploaded release-manifests artifact."
-          echo "To publish, run 'custodian-release.py publish' locally"
-          echo "(not yet implemented) — this workflow never publishes."
+          set -euo pipefail
+          test "$(find candidate -type f -name '*.whl' | wc -l)" -ge 1
+          test "$(find candidate -type f -name '*.tar.gz' | wc -l)" -eq 1
+          python -m pip install twine
+          python -m twine check --strict $(find candidate -type f \( -name '*.whl' -o -name '*.tar.gz' \))
+      - name: Install exact wheel in an isolated environment
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m venv candidate-venv
+          if [ "${{ runner.os }}" = "Windows" ]; then
+            PYTHON="candidate-venv/Scripts/python.exe"
+          else
+            PYTHON="candidate-venv/bin/python"
+          fi
+          if [ "${{ inputs.component }}" = "codex-guard" ]; then
+            KERNEL_WHEEL="$(find candidate -type f -path '*kernel-${{ inputs.kernel_version }}*' -name '*.whl' | head -1)"
+            test -n "$KERNEL_WHEEL"
+            "$PYTHON" -m pip install "$KERNEL_WHEEL"
+          fi
+          COMPONENT_WHEEL="$(find candidate -type f -path '*${{ inputs.component }}-${{ inputs.version }}*' -name '*.whl' | head -1)"
+          test -n "$COMPONENT_WHEEL"
+          "$PYTHON" -m pip install "$COMPONENT_WHEEL"
+          "$PYTHON" -m pip check
+          "$PYTHON" -c "import importlib.metadata as m; assert m.version('custodian-${{ inputs.component }}') == '${{ inputs.version }}'"
+      - name: Kernel installed-artifact smoke
+        if: inputs.component == 'kernel'
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "${{ runner.os }}" = "Windows" ]; then
+            BIN="candidate-venv/Scripts"
+          else
+            BIN="candidate-venv/bin"
+          fi
+          "$BIN/custodian" --version
+          "$BIN/custodian" tools summary
+          "$BIN/custodian" demo verify
+          "$BIN/custodian" console --once --state-dir candidate-state
+          "$BIN/paladin" --help
+      - name: Codex Guard installed-artifact and MCP smoke
+        if: inputs.component == 'codex-guard'
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "${{ runner.os }}" = "Windows" ]; then
+            BIN="candidate-venv/Scripts"
+          else
+            BIN="candidate-venv/bin"
+          fi
+          "$BIN/custodian-codex" --help
+          "$BIN/custodian-codex" status
+          printf '%s\n' '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"release-qualification","version":"1"}}}' |
+            "$BIN/custodian-codex-guard-mcp" > mcp-response.json
+          python -c "import json; d=json.load(open('mcp-response.json')); assert d['id']==1; assert d['result']['serverInfo']['name']=='custodian-codex-guard'; assert d['result']['serverInfo']['version']=='${{ inputs.version }}'"
+
+  qualified:
+    name: release review gate
+    needs: [prepare, artifact-qualification]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Record qualification boundary
+        run: |
+          echo "QUALIFICATION PASSED for ${{ inputs.component }} ${{ inputs.version }}"
+          echo "The full source matrix and exact-artifact matrix passed."
+          echo "No commit, push, tag, GitHub release, or PyPI upload occurred."
+          echo "Public release still requires explicit human review and approval."

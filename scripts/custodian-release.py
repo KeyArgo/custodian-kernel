@@ -231,11 +231,14 @@ def _record_artifacts(dist_dir: Path) -> list[dict]:
 
 def _prepared_kernel_wheel() -> Path:
     """Return the hash-verified kernel candidate required by integrations."""
-    component_dir = _RELEASE_MANIFESTS / "kernel-0.4.1"
-    manifest_path = component_dir / "kernel-0.4.1.manifest.json"
+    version = os.environ.get("CUSTODIAN_RELEASE_KERNEL_VERSION", "0.4.1")
+    if not re.fullmatch(r"\d+\.\d+\.\d+", version):
+        raise SystemExit("CUSTODIAN_RELEASE_KERNEL_VERSION must be an exact X.Y.Z version")
+    component_dir = _RELEASE_MANIFESTS / f"kernel-{version}"
+    manifest_path = component_dir / f"kernel-{version}.manifest.json"
     if not manifest_path.is_file():
         raise SystemExit(
-            "kernel 0.4.1 must be prepared before Codex Guard or Talaria"
+            f"kernel {version} must be prepared before Codex Guard or Talaria"
         )
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
     wheels = [item for item in manifest["artifacts"] if item["name"].endswith(".whl")]
