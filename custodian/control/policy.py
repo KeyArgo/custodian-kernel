@@ -93,7 +93,14 @@ class ApprovalPolicy:
         with self._thread_lock:
             self.path.parent.mkdir(parents=True, exist_ok=True)
             lock_path = self.path.parent / (self.path.name + ".lock")
-            fd = os.open(lock_path, os.O_WRONLY | os.O_CREAT | os.O_CLOEXEC, 0o600)
+            # O_CLOEXEC is POSIX-only.  Windows handles descriptor inheritance
+            # separately and does not expose the flag, so treating it as zero
+            # there preserves the lock without making every policy read fail.
+            fd = os.open(
+                lock_path,
+                os.O_WRONLY | os.O_CREAT | getattr(os, "O_CLOEXEC", 0),
+                0o600,
+            )
             try:
                 _lock_fd(fd)
                 yield

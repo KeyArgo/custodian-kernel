@@ -243,6 +243,11 @@ def run(args) -> int:
             approvals, capabilities, pending = _draw(state_dir, message)
         except Exception as exc:
             print(f"\n  {_RED}Error drawing dashboard: {exc}{_RESET}")
+            # --once is the scripted health-check form. Retrying forever hides
+            # the real error and turns an ordinary portability bug into a CI
+            # hang (and an apparently frozen command for end users).
+            if getattr(args, "once", False):
+                return 1
             time.sleep(2)
             message = ""
             continue

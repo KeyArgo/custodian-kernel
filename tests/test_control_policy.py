@@ -205,3 +205,12 @@ def test_ask_rule_does_not_increment_uses(tmp_path: Path):
     assert policy.decide(proposal()) == ("ask", rule.rule_id)
     # Second call should also match (ask doesn't consume uses)
     assert policy.decide(proposal()) == ("ask", rule.rule_id)
+
+
+def test_policy_lock_works_without_posix_cloexec_flag(tmp_path: Path, monkeypatch):
+    """Windows has no os.O_CLOEXEC; policy reads must remain portable."""
+    monkeypatch.delattr("custodian.control.policy.os.O_CLOEXEC", raising=False)
+    policy = ApprovalPolicy(tmp_path / "p.json")
+    rule = ApprovalRule(mode="ask", adapter="codex", action_kind="write")
+    policy.add(rule)
+    assert policy.list() == [rule]

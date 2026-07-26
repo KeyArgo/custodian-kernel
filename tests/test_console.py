@@ -231,6 +231,17 @@ class TestDraw:
 # ---------------------------------------------------------------------------
 
 class TestRun:
+    def test_once_reports_draw_error_instead_of_retrying_forever(self, tmp_path):
+        args = _make_args(tmp_path)
+        args.once = True
+        with patch(
+            "custodian.cli.cmd_console._draw",
+            side_effect=RuntimeError("portable failure"),
+        ) as draw:
+            rc = run(args)
+        assert rc == 1
+        draw.assert_called_once()
+
     def test_quit_returns_zero(self, tmp_path):
         with patch("custodian.cli.cmd_console._key", side_effect=["q"]):
             rc = run(_make_args(tmp_path))
