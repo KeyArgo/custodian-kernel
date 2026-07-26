@@ -6,6 +6,9 @@ commands, production changes, money movement, and governance changes stop at a
 human-approval boundary. Every decision produces a value-free HMAC hash-chained
 receipt.
 
+Watch the demo: [Custodian Codex Guard: A Safety Layer for AI Coding
+Agents](https://youtu.be/lnIwDIbzZf0).
+
 This plugin is generic. It does not know about `getcustodian.xyz`, the demo
 website, or any particular operator. A site or IDE is a client of the MCP
 boundary, never part of the kernel.

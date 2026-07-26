@@ -3,6 +3,9 @@
 For the exact entry copy, judge commands, and timed video script, see
 [`BUILD_WEEK_SUBMISSION_PLAYBOOK.md`](BUILD_WEEK_SUBMISSION_PLAYBOOK.md).
 
+Recorded demo: [Custodian Codex Guard: A Safety Layer for AI Coding
+Agents](https://youtu.be/lnIwDIbzZf0).
+
 ## What is new after July 13, 2026
 
 The existing Custodian kernel, Paladin vault, and guard-adapter framework are

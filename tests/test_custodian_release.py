@@ -382,6 +382,11 @@ def test_codex_release_builder_bundles_plugin_files(tmp_path):
         "CODE_OF_CONDUCT.md",
     ):
         assert (tree / filename).is_file()
+    video_url = "https://youtu.be/lnIwDIbzZf0"
+    assert video_url in (tree / "README.md").read_text(encoding="utf-8")
+    assert video_url in (
+        base / "plugins/custodian-codex-guard/README.md"
+    ).read_text(encoding="utf-8")
 
 
 # ---------------------------------------------------------------------------

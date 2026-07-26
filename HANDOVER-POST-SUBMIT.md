@@ -13,7 +13,7 @@
 **Elevator pitch:** "The kernel decides, Codex proposes. No prompt to talk your way past, risky actions get classified, human-approved once, and cryptographically receipted."
 
 **Submitted URLs:**
-- **YouTube video (public):** https://youtu.be/WTVrlsT0-UQ
+- **YouTube video (public):** https://youtu.be/lnIwDIbzZf0
   - 107 seconds, h264 + AAC, custom thumbnail set
   - Channel: Inovin Labs (handle @InovinLabs, ID UCKYdF1Vs79f6O-UBe5-ECHg)
   - Description: pasted from form text (includes "GPT-5.6", install path, repo links)
@@ -204,7 +204,7 @@ Untracked files:
 
 ## 9. CONTEXT SHORTCUTS
 
-- **YouTube:** https://youtu.be/WTVrlsT0-UQ
+- **YouTube:** https://youtu.be/lnIwDIbzZf0
 - **Repo:** https://github.com/KeyArgo/custodian-codex-guard
 - **Devpost:** submitted (no public link, judging happens in private)
 - **Winners announced:** ~August 12, 2026

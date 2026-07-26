@@ -48,6 +48,9 @@ wire it up yourself instead? Plain extras work exactly as before:
 Custodian is a kernel. The kernel existed before Build Week. The kernel is
 agent-agnostic — it works with any tool-calling agent.
 
+Watch the product demo: [Custodian Codex Guard: A Safety Layer for AI
+Coding Agents](https://youtu.be/lnIwDIbzZf0).
+
 What we shipped during OpenAI Build Week is the **Codex Guard adapter** — the
 piece that knows how to talk to OpenAI's Codex CLI. The adapter sits between
 Codex and the kernel. Every action Codex proposes gets classified by the

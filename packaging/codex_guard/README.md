@@ -4,6 +4,9 @@ Policy guard for Codex CLI. Evaluates every coding-agent action (read, write,
 execute, network, package, approval) before execution — fail-closed, evidence-
 preserving, and independent of the model or approval backend.
 
+Watch the demo: [Custodian Codex Guard: A Safety Layer for AI Coding
+Agents](https://youtu.be/lnIwDIbzZf0).
+
 ## Install
 
 ```bash
