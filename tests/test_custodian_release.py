@@ -43,6 +43,8 @@ _cmd_prepare = _mod._cmd_prepare
 _write_manifest = _mod._write_manifest
 _sha256 = _mod._sha256
 _extract_wheel_version = _mod._extract_wheel_version
+_test_fresh_install = _mod._test_fresh_install
+_test_upgrade_from_pypi = _mod._test_upgrade_from_pypi
 _build_artifacts = _mod._build_artifacts
 _build_public_tree = _mod._build_public_tree
 COMPONENT_REGISTRY = _mod.COMPONENT_REGISTRY
@@ -122,6 +124,52 @@ def test_release_controller_checks_mcp_version_against_installed_metadata():
     source = SCRIPT.read_text(encoding="utf-8")
     assert "MCP version matches installed distribution" in source
     assert "m.version('custodian-codex-guard')" in source
+
+
+def test_fresh_install_records_candidate_version_not_boolean_check(tmp_path):
+    wheel = tmp_path / "custodian_codex_guard-0.1.2-py3-none-any.whl"
+    wheel.write_bytes(b"candidate")
+    smoke = {
+        "passed": True,
+        "checks": {
+            "custodian-codex --help": True,
+            "MCP initialize handshake": True,
+        },
+    }
+    with patch.object(_mod.venv, "create"), \
+         patch.object(_mod, "_install_candidate"), \
+         patch.object(_mod, "_extract_wheel_version", return_value="0.1.2"), \
+         patch.object(_mod, "_smoke_test", return_value=smoke):
+        result = _test_fresh_install(
+            "codex-guard", wheel, tmp_path / "fresh-work"
+        )
+
+    assert result["passed"] is True
+    assert result["version"] == "0.1.2"
+
+
+def test_upgrade_records_candidate_version_not_boolean_check(tmp_path):
+    wheel = tmp_path / "custodian_kernel-0.4.1-py3-none-any.whl"
+    wheel.write_bytes(b"candidate")
+    smoke = {
+        "passed": True,
+        "checks": {
+            "custodian --version": "custodian 0.4.1",
+            "custodian health": True,
+        },
+    }
+    with patch.object(_mod.venv, "create"), \
+         patch.object(_mod, "_extract_wheel_version", return_value="0.4.1"), \
+         patch.object(_mod, "_discover_latest_pypi_version",
+                      return_value="0.4.0"), \
+         patch.object(_mod, "_checked"), \
+         patch.object(_mod, "_smoke_test", return_value=smoke):
+        result = _test_upgrade_from_pypi(
+            "kernel", wheel, tmp_path / "upgrade-work"
+        )
+
+    assert result["passed"] is True
+    assert result["version"] == "0.4.1"
 
 
 # ---------------------------------------------------------------------------

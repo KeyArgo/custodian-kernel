@@ -376,7 +376,7 @@ def _test_fresh_install(component: str, wheel: Path, work_dir: Path) -> dict:
 
     smoke = _smoke_test(component, bin_dir)
     if smoke["passed"]:
-        result["version"] = str(smoke["checks"].get(next(iter(smoke["checks"])), ""))
+        result["version"] = _extract_wheel_version(wheel)
         result["smoke"] = smoke
         result["passed"] = True
     return result
@@ -410,7 +410,7 @@ def _test_upgrade_from_pypi(component: str, wheel: Path, work_dir: Path) -> dict
 
     smoke = _smoke_test(component, bin_dir)
     if smoke["passed"]:
-        result["version"] = str(smoke["checks"].get(next(iter(smoke["checks"])), ""))
+        result["version"] = version_from_wheel
         result["smoke"] = smoke
         result["upgraded_from"] = prev_version
         result["passed"] = True
