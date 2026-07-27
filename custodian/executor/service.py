@@ -173,17 +173,27 @@ class _Handler(socketserver.BaseRequestHandler):
             pass
 
 
-class ExecutorServer(socketserver.ThreadingUnixStreamServer):
-    daemon_threads = True
-    allow_reuse_address = True
+if hasattr(socketserver, "ThreadingUnixStreamServer"):
+    class ExecutorServer(socketserver.ThreadingUnixStreamServer):
+        daemon_threads = True
+        allow_reuse_address = True
 
-    def __init__(self, socket_path: Path, service: ExecutorService) -> None:
-        self.executor_service = service
-        if socket_path.exists():
-            socket_path.unlink()
-        socket_path.parent.mkdir(parents=True, exist_ok=True)
-        super().__init__(str(socket_path), _Handler)
-        os.chmod(socket_path, 0o600)
+        def __init__(self, socket_path: Path, service: ExecutorService) -> None:
+            self.executor_service = service
+            if socket_path.exists():
+                socket_path.unlink()
+            socket_path.parent.mkdir(parents=True, exist_ok=True)
+            super().__init__(str(socket_path), _Handler)
+            os.chmod(socket_path, 0o600)
+else:
+    class ExecutorServer:  # pragma: no cover - exercised by Windows CI
+        """Explicit unsupported transport instead of a module import crash."""
+
+        def __init__(self, socket_path: Path, service: ExecutorService) -> None:
+            raise OSError(
+                "the delegated executor Unix-socket transport is unavailable "
+                "on Windows"
+            )
 
 
 def serve_forever(skills_root: Path, socket_path: Path, state_dir: Optional[Path] = None) -> None:

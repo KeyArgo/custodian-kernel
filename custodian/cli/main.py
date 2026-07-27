@@ -124,6 +124,9 @@ from custodian.cli import cmd_setup, cmd_doctor
 from custodian.cli import cmd_executor
 from custodian.cli import cmd_console
 from custodian.cli import cmd_codex_guard
+from custodian.cli import cmd_gates
+from custodian.cli import cmd_uninstall
+from custodian.cli import cmd_health
 from custodian.cli._version import LazyVersionAction
 from custodian.config import CustodianConfig
 from custodian.tools.registry import _state_dir as _codex_guard_state_dir
@@ -518,6 +521,9 @@ def build_parser(env_defaults: CustodianConfig | None = None) -> argparse.Argume
     # here left the console pointed at an empty directory by default, showing
     # "No actions waiting" while real pending approvals piled up elsewhere.
     cmd_console.register(sub, str(_codex_guard_state_dir()))
+    cmd_gates.register(sub, str(_codex_guard_state_dir()))
+    cmd_uninstall.register(sub)
+    cmd_health.register(sub)
 
     # ── codex-guard ───────────────────────────────────────────────────────────
     cg_parser = sub.add_parser(

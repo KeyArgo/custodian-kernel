@@ -11,6 +11,8 @@ import threading
 import time
 from uuid import uuid4
 
+from custodian.control.settings import ControlSettingsStore
+
 NEVER_AUTO = frozenset({"governance", "credential", "destructive", "production", "money"})
 MODES = frozenset({"deny", "ask", "auto"})
 
@@ -80,12 +82,25 @@ class ApprovalPolicy:
         self.path = Path(path)
         self._thread_lock = threading.Lock()
 
+    def _developer_open(self) -> bool:
+        settings = ControlSettingsStore(
+            self.path.parent / "control-settings.json"
+        ).load()
+        return settings.enforcement == "open"
+
     @contextmanager
     def _lock(self):
         with self._thread_lock:
             self.path.parent.mkdir(parents=True, exist_ok=True)
             lock_path = self.path.parent / (self.path.name + ".lock")
-            fd = os.open(lock_path, os.O_WRONLY | os.O_CREAT | os.O_CLOEXEC, 0o600)
+            # O_CLOEXEC is POSIX-only.  Windows handles descriptor inheritance
+            # separately and does not expose the flag, so treating it as zero
+            # there preserves the lock without making every policy read fail.
+            fd = os.open(
+                lock_path,
+                os.O_WRONLY | os.O_CREAT | getattr(os, "O_CLOEXEC", 0),
+                0o600,
+            )
             try:
                 _lock_fd(fd)
                 yield
@@ -129,7 +144,11 @@ class ApprovalPolicy:
     def add(self, rule: ApprovalRule) -> None:
         if rule.mode not in MODES:
             raise ValueError("mode must be deny, ask, or auto")
-        if rule.mode == "auto" and rule.action_kind in NEVER_AUTO:
+        if (
+            rule.mode == "auto"
+            and rule.action_kind in NEVER_AUTO
+            and not self._developer_open()
+        ):
             raise ValueError(f"{rule.action_kind} actions cannot be auto-approved")
         with self._lock():
             rules = self._load()
@@ -158,7 +177,11 @@ class ApprovalPolicy:
                 if rule.matches(proposal, now):
                     if rule.mode == "deny":
                         return "deny", rule.rule_id
-                    if rule.mode == "auto" and proposal.action_kind in NEVER_AUTO:
+                    if (
+                        rule.mode == "auto"
+                        and proposal.action_kind in NEVER_AUTO
+                        and not self._developer_open()
+                    ):
                         return "ask", None
                     if rule.mode == "auto":
                         rules[index] = ApprovalRule(**{**asdict(rule), "uses": rule.uses + 1})

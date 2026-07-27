@@ -15,15 +15,25 @@ def _color(verdict: str, is_tty: bool) -> str:
     return f"\x1b[{code}m{verdict}\x1b[0m" if code else verdict
 
 
-def run(args) -> None:
-    from custodian.codex_guard.receipts import ReceiptChain
+def run(args) -> int:
+    try:
+        from custodian.codex_guard.receipts import ReceiptChain
+    except ModuleNotFoundError as exc:
+        if exc.name != "custodian.codex_guard":
+            raise
+        print(
+            "Codex Guard is not installed. Install it with:\n"
+            "  pip install custodian-codex-guard",
+            file=sys.stderr,
+        )
+        return 2
     state_dir = Path(args.state_dir).resolve()
     chain = ReceiptChain(state_dir)
     path = chain.path
 
     if not path.exists():
         print("No codex-guard receipts found.")
-        return
+        return 0
 
     records_raw = path.read_text().splitlines()
     records = []
@@ -37,7 +47,7 @@ def run(args) -> None:
 
     if not records:
         print("No codex-guard receipts found.")
-        return
+        return 0
 
     if args.verify:
         try:
@@ -82,3 +92,4 @@ def run(args) -> None:
         f"approval_required={approval_required}, "
         f"denied={denied})"
     )
+    return 0

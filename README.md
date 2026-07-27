@@ -1,233 +1,66 @@
-# Custodian
+# Custodian Kernel
 
-**The kernel that decides whether an AI agent's action is allowed — with 1,346 tests, cryptographic receipts, and 60-second verification.**
+Custodian is a provider-neutral authority kernel for AI agents. It evaluates
+actions before execution, enforces approval and spend policy, records
+tamper-evident evidence, and includes the Paladin encrypted credential broker.
 
-When an AI agent can spend money, change infrastructure, or write to production, someone has to decide what's allowed. That decision can't live in the agent — the agent is the thing you're worried about. The decision has to live in a kernel that's outside the agent's process and outside the agent's own code path. Rules don't work. A smart enough model routes around rules. Prompts don't work. Prompts are soft. A model that reasons itself into approving its own refund will approve its own refund.
+## Install
 
-Custodian is that kernel. The model proposes. The kernel decides. The verifier proves. The kill switch stops. The receipt cryptographically records everything.
+Custodian Kernel 0.4.1 supports Linux and macOS with Python 3.11 through
+3.13. Windows is not a supported 0.4.1 release platform; Windows support is
+planned for 0.4.2.
 
-**Verify in 60 seconds, no credentials, no cloning:**
+For Python environments that permit application installs:
 
 ```bash
-pip install custodian-kernel
+python -m pip install custodian-kernel
+custodian
+```
+
+Linux distributions that enforce PEP 668 reject even `pip install --user`.
+Download `install-custodian.py` from the source repository or GitHub release
+and run it there. It owns the runtime so users never activate or maintain a
+virtual environment:
+
+```bash
+python install-custodian.py
+custodian
+```
+
+Running `custodian` opens the interactive menu. Useful checks:
+
+```bash
+custodian doctor
+custodian health --format json
+custodian console --once
 custodian-verify
+paladin --help
 ```
 
-`custodian-verify` runs 3 checks: a planted-lie case through the deterministic verifier (CONTRADICTED), a live audit feed pull from the production dashboard, and a checkout-or-skip proof. 0 credentials, 0 cloning, 0 setup.
+Optional integrations such as Custodian Codex Guard and Talaria are separate
+packages. Removing `custodian-kernel` does not remove `~/.custodian`,
+`~/.paladin`, or other user data.
 
-**Or, for the deeper proof — clone this repo and run the suite yourself:**
+Custodian is alpha software. It is defense in depth, not an operating-system
+sandbox. Review the threat-model boundaries in
+[SECURITY.md](SECURITY.md) before relying on it for consequential actions.
+
+Preview or perform a data-preserving package uninstall:
 
 ```bash
-git clone https://github.com/KeyArgo/custodian-kernel
-cd custodian-kernel
-pip install -e ".[dev]"
-pytest tests/
+custodian uninstall --dry-run
+custodian uninstall --yes
 ```
 
-That's the same 1,346-test suite this release shipped with, running against the exact source in this repo — no credentials needed.
-
-## What you get when the kernel runs
-
-- **`@govern` decorator** — wrap any function with implicit kernel enforcement. Band, cap, kill switch — all automatic. Zero kernel imports in user code.
-- **CustodianMiddleware** — drop-in ASGI middleware for FastAPI/Flask/Starlette. Governed routes return 402 on escalation, 403 on denial.
-- **GovernedReceipt** — SHA-256 fingerprint of every governed action. The receipt is verifiable and cannot be forged.
-- **EventBus** — pub/sub hooks for kernel lifecycle events. Wire Twilio SMS, Slack alerts, or any consumer.
-- **CustodianSession** — sub-session band inheritance. A child session cannot exceed the parent.
-- **Authority bands L0-L4** — per-action caps, daily envelopes, margin gates, no-self-dealing, all opt-in.
-- **Operator-only kill switch** — denies every request regardless of amount, band, or policy. Cannot be bypassed by the agent.
-
-## Use case
-
-A 2.0% slice fraud team at a payments company uses 14 humans to manually approve agent-initiated refunds. They do 1,200/day. Each takes 2 minutes. $36k/yr in human time. Custodian replaces all 14 humans with a deterministic kernel — same throughput, no human in the loop for 95% of cases, full audit trail, single human via Twilio for the 5% edge cases. The agent cannot approve its own refund because the kernel is outside the agent's process. The model can propose. The kernel decides.
-
-Any company running an AI agent with a Stripe account, a Modal spend, a NIM inference budget, a refund flow, or any other action that costs money or breaks something has this exact problem. Custodian is the kernel for it.
-
-## What's real
-
-- 1,346 passing tests, 0 failed, 4 deselected (network only)
-- Real Stripe test-mode PaymentIntent on record: `pi_3TkZWEPfSF4TGXT90AWlrnle`
-- Real Twilio SMS escalation path
-- Real OpenRouter API key wired in
-- Real Modal + NVIDIA NIM in the demo commands
-- 4 kernel bug fixes from adversarial review (kill switch fail-closed, fn_name in receipt, sub_session inheritance, receipt fingerprint coverage)
-- Live dashboard: [getcustodian.xyz](https://getcustodian.xyz)
-- Live operator panel: [getcustodian.xyz/operator](https://getcustodian.xyz/operator)
-
-## Links
-
-- **Repo (GitHub):** https://github.com/KeyArgo/custodian-kernel
-- **PyPI:** https://pypi.org/project/custodian-kernel/
-- **Live dashboard:** https://getcustodian.xyz
-- **Operator panel:** https://getcustodian.xyz/operator
-- **Hackathon entry:** Hermes Agent Accelerated Business Hackathon (NVIDIA x Stripe x Nous Research)
-
-
-## Features
-
-### Core
-- 1,346 tests, 0 failures (network tests excluded)
-- Deterministic claim verifier (CONTRADICTED / VERIFIED / UNVERIFIABLE)
-- Operator-only kill switch with resume logic
-- Authority bands L0-L4 with per-request caps
-- Real Stripe PaymentIntent on record (`pi_3TkZWEPfSF4TGXT90AWlrnle`)
-- Real Twilio SMS escalation
-- Self-approval regression test (proves the kernel fix)
-- 100 governed tools in `custodian/bundled_skills/`
-
-### CLI Commands
-- `custodian request` — spend decision with policy evaluation
-- `custodian audit` — full audit ledger
-- `custodian demo-verify` — 4 claim-verification scenarios (no creds)
-- `custodian earn-and-buy` — closes the economic cycle on camera (no creds)
-- `custodian status-banner` — one-screen kernel state (totals + last 5)
-- `custodian poison-tests` — 5 planted-bad-claim tests (no creds)
-- `custodian beancount` — export ledger to Beancount v2
-- `custodian confirm <id>` — post-action confirm (60s deadline)
-
-### Policy Directives (all opt-in)
-- `daily_envelope: $50` — rolling 24-hour cap per band
-- `margins: { minimum_margin: $0.10, minimum_margin_pct: 20 }` — refuse if margin too low
-- `band_after_task: L0` — auto-downgrade after a skill completes
-- `policies: { no_self_dealing: true }` — block self-paying agents
-
-### Verify Kit
-- `python3 verify_kit.py` — 4-phase self-verifying proof
-  - Regresses the self-approval bug live
-  - Pulls fresh dashboard + Stripe data
-  - Runs the full test suite
-  - Tests the kill switch end-to-end
-- `custodian demo-verify` — 4 claim-verifier scenarios
-- `custodian poison-tests` — 5 attack patterns the kernel catches
-- `custodian earn-and-buy` — full economic cycle (earn → gate → spend → verify)
-
-## What Custodian is
-
-Custodian is a kernel-enforced authority and spend platform for AI agents.
-
-An agent cannot exceed its band or approve its own escalation because the
-boundary is enforced outside the agent's own process and outside its own code
-path — not by the agent's good behavior.
-
-The agent submits a spend request. The policy engine decides: autonomous
-(within your configured band, no human needed) or escalation (over the cap,
-human approval required via Twilio Verify). The agent never holds the keys to
-both sides of that decision, so self-approval is structurally impossible, not
-just discouraged.
-
-The sections below cover the mechanism (how a request becomes an autonomous
-grant or an escalation), what's genuinely wired up versus a stub, and where
-the design still has sharp edges.
-
-## Installation
+For an installation created by `install-custodian.py`, use the same downloaded
+installer to remove its managed runtime and launchers while preserving data:
 
 ```bash
-pip install custodian-kernel
+python install-custodian.py --uninstall --dry-run
+python install-custodian.py --uninstall
 ```
 
-For development (clone first):
-
-```bash
-pip install -e ".[dev]"
-```
-
-## Quickstart
-
-```bash
-# Scaffold a workspace
-custodian init --dir myagent
-
-# Edit the generated policy.yaml to configure authority bands
-
-# Autonomous request (under the $2.00 default cap)
-custodian request --amount 1.00 --description "API credits"
-
-# Escalation request (over the cap — will warn about missing Twilio config)
-custodian request --amount 50.00 --description "Server upgrade"
-
-# Check authority state
-custodian status
-
-# View audit log
-custodian audit
-```
-
-## Tool Layer — 102 governed tools
-
-Custodian ships a governed tool library. Every tool is a Hermes-compatible
-skill (SKILL.md frontmatter) that declares a `custodian-band` from L0–L4.
-The ToolRegistry auto-discovers them — no registration code needed.
-
-```
-custodian tools list              # show all 102 tools grouped by band
-custodian tools run http-get --url https://example.com
-custodian tools summary           # JSON band breakdown
-```
-
-**Tool categories:**
-
-| Category | Count | Band | Example |
-|---|---|---|---|
-| Utilities | 8 | L0 | base64, hash-sha256, url-parse, json-transform, timezone, currency-convert |
-| Web | 5 | L0–L1 | http-get, http-post, web-scrape, web-search, news-search |
-| Files | 3 | L0–L1 | file-read, file-list, shell-exec (read-only allowlist) |
-| Memory | 5 | L0 | kv-get/set/delete/list, sqlite-query |
-| Scheduling | 5 | L1 | task-queue-add/list, cron-create/list/delete |
-| Communication | 6 | L1–L2 | email-send, sms-send, slack-message, discord-webhook, webhook-post, push-notification |
-| Docker | 4 | L1–L2 | docker-list, docker-logs, docker-start, docker-stop |
-| GitHub | 3 | L0–L1 | github-file-read, github-issue-create, github-pr-list |
-| NVIDIA NIM | 4 | L2 | nim-model-list, nim-job-submit, nim-job-status, nim-cost-estimate |
-| Stripe (extended) | 8 | L2–L3 | stripe-balance, stripe-customer-lookup, stripe-invoice, stripe-refund |
-| Financial AI | 5 | L2–L3 | modal-run, huggingface-infer, openai-complete, anthropic-complete |
-| Calendar | 5 | L1–L2 | calendar-list, calendar-create, calendar-update |
-
-Tools with missing credentials return `{"ok": false, "stub": true}` — the
-framework works without any env vars configured; stub tools show in the registry
-with their band and description so the capability surface is visible during review.
-
-### Authority bands
-
-| Band | Policy | Use case |
-|---|---|---|
-| L0 | Always autonomous, no spend | Read-only data fetching |
-| L1 | Autonomous, trivial side effects | Creating records, sending low-stakes messages |
-| L2 | Autonomous up to per-action cap | AI inference, Stripe calls under threshold |
-| L3 | Always escalates to operator | Refunds, subscription changes, payouts |
-| L4 | Always escalates, unlimited scope | Reserved for future high-stakes tools |
-
-## What's real right now
-
-- A real Stripe (test-mode) PaymentIntent is on record:
-  `pi_3TkZWEPfSF4TGXT90AWlrnle` — confirm it at Stripe's own API or dashboard.
-- A real Twilio Verify integration sends SMS approval codes to an operator's
-  phone. The code is never written to any file the agent can read.
-- A real, operator-only kill switch (`custodian kill --by <name>` / `custodian
-  resume --by <name>`) is wired into the live, authoritative `spend.py` —
-  not a separate demo path. Verified live: a real autonomous spend succeeded,
-  the kill switch was engaged, the exact same request was denied by the real
-  script running inside the live sandbox, then released, then the real spend
-  succeeded again. The full sequence is in the real audit log.
-- 1,346 passing tests (4 network-dependent tests deselected by default), tested with Python 3.11+.
-- The test suite includes `test_self_approval_regression.py` — a regression
-  test for the exact security bug this design prevents. The fix was proven
-  by deliberately reintroducing the bug, confirming the test failed, then
-  restoring the fix. That test exists so the bug can never silently return.
-- Public commit history at `github.com/KeyArgo/custodian-kernel`.
-
-**Don't take any of this on faith.** Everything verifiable from pip:
-
-```bash
-pip install custodian-kernel       # install the kernel
-custodian demo-verify              # live claim check against the running system
-pip install custodian-kernel[dev] && pytest tests/   # 1,346 tests, 0 failures
-git clone https://github.com/KeyArgo/custodian-kernel  # read every line
-```
-
-## Limitations
-
-- Only one approval backend is shipped: `twilio_verify`. Backends named other
-  than `twilio_verify` or `none` are rejected at policy validation time.
-- Only one storage backend is shipped: SQLite (via `SqliteStorage`).
-- No multi-tenant support. No plugin marketplace. No general-purpose
-  expression language in the policy DSL — the match vocabulary is a fixed,
-  small set (skill name, context flags, spend-amount threshold).
-- No third-party security audit has been performed.
+- Documentation: https://getcustodian.xyz/docs
+- Source: https://github.com/KeyArgo/custodian-kernel
+- Package: https://pypi.org/project/custodian-kernel/
+- Contributing: [CONTRIBUTING.md](CONTRIBUTING.md)

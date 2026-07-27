@@ -67,7 +67,8 @@ def _path_is_symlink_in_chain(path: Path) -> bool:
     """
     for part in [path] + list(path.parents):
         try:
-            if part.is_symlink():
+            is_junction = getattr(part, "is_junction", lambda: False)
+            if part.is_symlink() or is_junction():
                 return True
         except OSError:
             pass
@@ -160,7 +161,10 @@ class CapabilityStore:
                     stream.write(os.urandom(32))
         _ensure_private_permissions(self.state_dir, self.key_path)
         try:
-            fd = os.open(self.key_path, os.O_RDONLY | os.O_NOFOLLOW)
+            fd = os.open(
+                self.key_path,
+                os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0),
+            )
         except OSError as exc:
             raise CapabilityError("executor capability key is unreadable") from exc
         try:
@@ -216,7 +220,10 @@ class CapabilityStore:
     def _read(self, capability_id: str) -> dict[str, Any]:
         path = self._path(capability_id)
         try:
-            fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW)
+            fd = os.open(
+                path,
+                os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0),
+            )
         except OSError as exc:
             raise CapabilityError("capability record is unreadable") from exc
         try:

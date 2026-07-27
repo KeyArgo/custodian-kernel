@@ -105,6 +105,40 @@ def _act_guide() -> None:
     _run(["guide"])
 
 
+def _act_gates() -> None:
+    while True:
+        choice = _choose("Gate settings", [
+            ("status", "Show current settings"),
+            ("open", "Developer open — auto-pass matching gates"),
+            ("protect", "Protected — require approval for high-risk actions"),
+            ("verbose", "Show routine auto-approval notices"),
+            ("quiet", "Hide routine notices; keep receipts"),
+        ])
+        if choice is None:
+            return
+        if choice == "status":
+            _run(["gates", "status"])
+        elif choice == "open":
+            answer = _prompt("Type OPEN to allow high-risk auto-approval")
+            if answer == "OPEN":
+                _run(["gates", "open"])
+            else:
+                print("  (not changed)")
+        elif choice == "protect":
+            _run(["gates", "protect"])
+        else:
+            _run(["gates", "notifications", choice])
+
+
+def _act_uninstall() -> None:
+    _run(["uninstall", "--dry-run"])
+    answer = _prompt("Type UNINSTALL to remove the package and preserve all data")
+    if answer == "UNINSTALL":
+        _run(["uninstall", "--yes"])
+    else:
+        print("  (not changed)")
+
+
 _ACTIONS = [
     ("status", "Show current authority state (bands, caps, spend)"),
     ("request", "Ask the kernel to decide on a spend"),
@@ -115,12 +149,16 @@ _ACTIONS = [
     ("adapters", "List guard adapters"),
     ("init", "Scaffold a new workspace"),
     ("guide", "Guided walkthrough for first-time users"),
+    ("gates", "Gate enforcement and notification settings"),
+    ("uninstall", "Remove Custodian software but preserve vaults and history"),
 ]
 
 _DISPATCH = {
     "status": _act_status, "request": _act_request, "audit": _act_audit,
     "kill": _act_kill, "resume": _act_resume, "tools": _act_tools,
     "adapters": _act_adapters, "init": _act_init, "guide": _act_guide,
+    "gates": _act_gates,
+    "uninstall": _act_uninstall,
 }
 
 
