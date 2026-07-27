@@ -48,6 +48,8 @@ case "$TARGET" in
     MAPPINGS=(
       "custodian/codex_guard:custodian/codex_guard"
       "plugins/custodian-codex-guard:plugins/custodian-codex-guard"
+      ".agents:custodian/codex_guard/bundled_plugin/.agents"
+      "plugins/custodian-codex-guard:custodian/codex_guard/bundled_plugin/plugins/custodian-codex-guard"
       "docs/CODEX_GUARD.md:docs/CODEX_GUARD.md"
       "packaging/codex_guard/pyproject.toml:pyproject.toml"
       "packaging/codex_guard/MANIFEST.in:MANIFEST.in"

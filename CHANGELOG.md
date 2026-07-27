@@ -2,7 +2,7 @@
 
 All notable changes to custodian-kernel are recorded here. Dates are UTC.
 
-## [0.4.1] — unreleased
+## [0.4.1] — 2026-07-27
 
 ### Installation and lifecycle recovery
 

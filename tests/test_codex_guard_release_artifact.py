@@ -54,6 +54,16 @@ def test_release_tree_contains_self_contained_plugin_marketplace(tmp_path):
     ).is_file()
 
 
+def test_publish_mirror_preserves_installed_plugin_bundle():
+    mirror = (ROOT / "scripts/publish-mirror.sh").read_text(encoding="utf-8")
+    assert ".agents:custodian/codex_guard/bundled_plugin/.agents" in mirror
+    assert (
+        "plugins/custodian-codex-guard:"
+        "custodian/codex_guard/bundled_plugin/plugins/"
+        "custodian-codex-guard"
+    ) in mirror
+
+
 def test_release_metadata_declares_commands_and_supported_platforms(tmp_path):
     tree = _tree(tmp_path)
     metadata = (tree / "pyproject.toml").read_text(encoding="utf-8")
