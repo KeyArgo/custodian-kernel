@@ -4,6 +4,7 @@ from __future__ import annotations
 import json
 import os
 import sys
+from importlib import metadata
 from pathlib import Path
 from typing import Any
 
@@ -14,6 +15,16 @@ from custodian.control.policy import ApprovalPolicy, Proposal
 from custodian.control.filesystem_policy import FilesystemPolicy
 from custodian.control.ledger_access_policy import LedgerAccessPolicy
 from custodian.control.settings import ControlSettingsStore
+
+
+def _server_version() -> str:
+    """Return the version of the installed distribution serving this process."""
+    try:
+        return metadata.version("custodian-codex-guard")
+    except metadata.PackageNotFoundError:
+        # Source checkouts are useful for development handshakes, but only an
+        # installed release has authoritative package metadata.
+        return "source"
 
 
 def _state_dir() -> Path:
@@ -237,7 +248,10 @@ def handle(method: str, params: dict[str, Any]) -> dict[str, Any] | None:
         return {
             "protocolVersion": params.get("protocolVersion", "2025-06-18"),
             "capabilities": {"tools": {"listChanged": False}},
-            "serverInfo": {"name": "custodian-codex-guard", "version": "0.1.0"},
+            "serverInfo": {
+                "name": "custodian-codex-guard",
+                "version": _server_version(),
+            },
         }
     if method == "ping":
         return {}

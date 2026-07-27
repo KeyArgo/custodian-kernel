@@ -6,6 +6,10 @@ tamper-evident evidence, and includes the Paladin encrypted credential broker.
 
 ## Install
 
+Custodian Kernel 0.4.1 supports Linux and macOS with Python 3.11 through
+3.13. Windows is not a supported 0.4.1 release platform; Windows support is
+planned for 0.4.2.
+
 For Python environments that permit application installs:
 
 ```bash

@@ -10,7 +10,12 @@ from custodian.codex_guard.approvals import (
     ApprovalStore,
     action_digest,
 )
-from custodian.codex_guard.mcp_server import evaluate_guard_action, handle, list_receipts_for
+from custodian.codex_guard.mcp_server import (
+    _server_version,
+    evaluate_guard_action,
+    handle,
+    list_receipts_for,
+)
 from custodian.codex_guard.receipts import ReceiptChain
 from custodian.codex_guard.cli import main as cli_main
 from custodian.control.ledger_access_policy import LedgerAccessPolicy, LedgerGrant
@@ -688,3 +693,11 @@ def test_approval_store_list_visible_scopes_by_harness(tmp_path):
     policy.add(LedgerGrant(harness="codex", can_view=("codex",)))
     with_self_grant_too = store.list_visible(policy, harness="codex", model="*")
     assert {r.requester for r in with_self_grant_too} == {"r1", "r2", "r3"}
+
+
+def test_server_version_comes_from_installed_distribution(monkeypatch):
+    monkeypatch.setattr(
+        "custodian.codex_guard.mcp_server.metadata.version",
+        lambda name: "9.8.7" if name == "custodian-codex-guard" else "",
+    )
+    assert _server_version() == "9.8.7"

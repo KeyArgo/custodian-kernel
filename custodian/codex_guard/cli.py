@@ -28,7 +28,34 @@ def _repo_root() -> Path | None:
     for candidate in candidates:
         if (candidate / ".agents" / "plugins" / "marketplace.json").is_file():
             return candidate
+    # Wheels carry a self-contained marketplace beside this module.  Setup
+    # must work from any directory after ``pip install``, not only while the
+    # current directory happens to be the private source checkout.
+    bundled = Path(__file__).resolve().parent / "bundled_plugin"
+    if (bundled / ".agents" / "plugins" / "marketplace.json").is_file():
+        return bundled
     return None
+
+
+def _plugin_runtime_root() -> Path:
+    """Return the operator-writable copy used by the Codex plugin manager."""
+    return hook_install.codex_config_path().parent / "custodian-codex-guard-plugin"
+
+
+def _materialize_plugin_runtime(source: Path) -> Path:
+    """Copy the packaged marketplace into Codex's user configuration area.
+
+    Package directories may be root-owned or otherwise read-only.  Setup must
+    never rewrite installed wheel contents merely to pin the live interpreter.
+    """
+    destination = _plugin_runtime_root()
+    destination.mkdir(parents=True, exist_ok=True)
+    for name in (".agents", "plugins"):
+        source_dir = source / name
+        if not source_dir.is_dir():
+            raise FileNotFoundError(f"plugin bundle is incomplete: {source_dir}")
+        shutil.copytree(source_dir, destination / name, dirs_exist_ok=True)
+    return destination
 
 
 def _mcp_command() -> list[str]:
@@ -127,11 +154,16 @@ def _ensure_mcp_json(mcp_json_path: Path) -> bool:
 
 
 def cmd_setup(args: argparse.Namespace) -> int:
-    root = _repo_root()
-    if root is None:
-        print("plugin marketplace not found; run setup from the Custodian checkout", file=sys.stderr)
+    source_root = _repo_root()
+    if source_root is None:
+        print(
+            "plugin marketplace is missing from the installed package; "
+            "reinstall custodian-codex-guard",
+            file=sys.stderr,
+        )
         return 1
 
+    root = source_root
     commands = [
         ["codex", "plugin", "marketplace", "add", str(root)],
         ["codex", "plugin", "add", PLUGIN_ID],
@@ -145,6 +177,19 @@ def cmd_setup(args: argparse.Namespace) -> int:
         print(f"  command: {hook_install.hook_command()}")
         return 0
 
+    try:
+        root = _materialize_plugin_runtime(source_root)
+    except OSError as exc:
+        print(
+            f"plugin staging failed: {type(exc).__name__}: {exc}",
+            file=sys.stderr,
+        )
+        return 1
+    commands = [
+        ["codex", "plugin", "marketplace", "add", str(root)],
+        ["codex", "plugin", "add", PLUGIN_ID],
+        ["codex", "mcp", "add", "custodian-codex-guard", "--", *_mcp_command()],
+    ]
     plugin_mcp = root / "plugins" / "custodian-codex-guard" / ".mcp.json"
     if not _ensure_mcp_json(plugin_mcp):
         print("MCP server registration failed — guard is not reachable", file=sys.stderr)
@@ -432,7 +477,10 @@ def cmd_doctor(args: argparse.Namespace) -> int:
             results.append(("mcp.json", False, "parse error"))
 
     # Plugin .mcp.json interpreter freshness
-    root = _repo_root()
+    configured_root = _plugin_runtime_root()
+    root = configured_root if (
+        configured_root / ".agents/plugins/marketplace.json"
+    ).is_file() else _repo_root()
     if root is not None:
         plugin_mcp = root / "plugins" / "custodian-codex-guard" / ".mcp.json"
         if plugin_mcp.exists():

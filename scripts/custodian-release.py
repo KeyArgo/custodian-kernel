@@ -342,6 +342,13 @@ def _smoke_test(component: str, bin_dir: Path) -> dict:
             response.get("id") == 1
             and server_info.get("name") == "custodian-codex-guard"
         )
+        installed_version = _checked([
+            str(bin_dir / f"python{ext}"), "-c",
+            "import importlib.metadata as m; print(m.version('custodian-codex-guard'))",
+        ], timeout=15).stdout.strip()
+        result["checks"]["MCP version matches installed distribution"] = (
+            server_info.get("version") == installed_version
+        )
         result["passed"] = all(bool(value) for value in result["checks"].values())
 
     elif component == "talaria":

@@ -30,14 +30,15 @@ env:
   CUSTODIAN_RELEASE_KERNEL_VERSION: ${{ inputs.kernel_version }}
 
 jobs:
-  # Do not even build a candidate when the source commit is not portable.
+  # 0.4.1/0.1.2 support Linux and macOS. Windows remains in ordinary CI as a
+  # visible development target and becomes a release requirement for 0.4.2.
   source-qualification:
     name: source (${{ matrix.os }}, py${{ matrix.python-version }})
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
+        os: [ubuntu-latest, macos-latest]
         python-version: ["3.11", "3.12", "3.13"]
     steps:
       - uses: actions/checkout@v4
@@ -98,7 +99,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
+        os: [ubuntu-latest, macos-latest]
         python-version: ["3.11", "3.12", "3.13"]
     steps:
       - uses: actions/checkout@v4
@@ -155,18 +156,32 @@ jobs:
       - name: Codex Guard installed-artifact and MCP smoke
         if: inputs.component == 'codex-guard'
         shell: bash
+        env:
+          CODEX_HOME: ${{ github.workspace }}/candidate-codex-home
+          CUSTODIAN_CODEX_GUARD_STATE_DIR: ${{ github.workspace }}/candidate-state
         run: |
           set -euo pipefail
-          if [ "${{ runner.os }}" = "Windows" ]; then
-            BIN="candidate-venv/Scripts"
-          else
-            BIN="candidate-venv/bin"
-          fi
-          "$BIN/custodian-codex" --help
-          "$BIN/custodian-codex" status
+          BIN="$PWD/candidate-venv/bin"
+          cat > "$BIN/codex" <<'EOF'
+          #!/bin/sh
+          # Release fixture for the Codex CLI command contract used by setup.
+          # It has no network access and never touches a real Codex profile.
+          exit 0
+          EOF
+          chmod +x "$BIN/codex"
+          export PATH="$BIN:$PATH"
+
+          # These are the exact post-install commands in the public README and
+          # demo. Bare command lookup is intentional: this catches missing
+          # console scripts and PATH mistakes that direct Python imports miss.
+          mkdir -p candidate-codex-home
+          cd candidate-codex-home
+          custodian-codex setup
+          custodian-codex doctor
+          custodian-codex status
           printf '%s\n' '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"release-qualification","version":"1"}}}' |
-            "$BIN/custodian-codex-guard-mcp" > mcp-response.json
-          python -c "import json; d=json.load(open('mcp-response.json')); assert d['id']==1; assert d['result']['serverInfo']['name']=='custodian-codex-guard'; assert d['result']['serverInfo']['version']=='${{ inputs.version }}'"
+            custodian-codex-guard-mcp > mcp-response.json
+          "$BIN/python" -c "import json; d=json.load(open('mcp-response.json')); assert d['id']==1; assert d['result']['serverInfo']['name']=='custodian-codex-guard'; assert d['result']['serverInfo']['version']=='${{ inputs.version }}'"
 
   qualified:
     name: release review gate

@@ -118,6 +118,12 @@ def test_module_has_expected_functions():
     assert callable(_cmd_prepare)
 
 
+def test_release_controller_checks_mcp_version_against_installed_metadata():
+    source = SCRIPT.read_text(encoding="utf-8")
+    assert "MCP version matches installed distribution" in source
+    assert "m.version('custodian-codex-guard')" in source
+
+
 # ---------------------------------------------------------------------------
 # Component registry
 # ---------------------------------------------------------------------------

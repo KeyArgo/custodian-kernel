@@ -6,6 +6,9 @@ All notable changes to custodian-kernel are recorded here. Dates are UTC.
 
 ### Installation and lifecycle recovery
 
+- Custodian Kernel 0.4.1 supports Linux and macOS on Python 3.11 through 3.13.
+  Windows remains in development CI and is planned as a supported platform for
+  0.4.2.
 - The public kernel artifact is now built from a filtered release tree rather
   than the private monorepo root. CI and the release workflow use that same
   builder, preventing excluded agent adapters from hiding missing imports.
@@ -23,6 +26,9 @@ All notable changes to custodian-kernel are recorded here. Dates are UTC.
 - Release metadata now includes all runtime dependencies and policy presets,
   excludes private adapters and Caduceus, and mirrors the release README,
   license, and installer.
+- Release qualification now installs the exact immutable wheel and runs the
+  documented bare commands from clean state. Codex Guard setup also resolves
+  its bundled plugin outside a source checkout.
 
 ### Gate controls
 

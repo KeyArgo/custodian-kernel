@@ -9,6 +9,10 @@ Agents](https://youtu.be/lnIwDIbzZf0).
 
 ## Install
 
+Custodian Codex Guard 0.1.2 supports Linux and macOS with Python 3.11 through
+3.13. Windows is not supported by this release because it depends on Custodian
+Kernel 0.4.1. Windows support is planned with Custodian Kernel 0.4.2.
+
 ```bash
 python -m pip install custodian-codex-guard
 custodian-codex setup
@@ -18,6 +22,9 @@ custodian-codex doctor
 Requires `custodian-kernel` (installed automatically as a dependency).
 Users do not need to activate or manage a virtual environment when Custodian
 is installed through its managed installer.
+
+Run setup from any directory. The installed package carries the Codex plugin
+files it needs; a source checkout is not required.
 
 ## Gate behavior
 

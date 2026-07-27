@@ -12,7 +12,10 @@ import pytest
 from custodian.codex_guard.cli import (
     _diagnose_stale_registration,
     _ensure_mcp_json,
+    _materialize_plugin_runtime,
     _mcp_command,
+    _plugin_runtime_root,
+    _repo_root,
     _verify_mcp_handshake,
     main as cli_main,
 )
@@ -226,6 +229,44 @@ class TestCliSetupDryRun:
             assert cli_main(["setup", "--dry-run"]) == 0
         assert not (tmp_path / "mcp.json").exists()
         assert not (tmp_path / "plugins" / "custodian-codex-guard" / ".mcp.json").exists()
+
+    def test_installed_bundle_is_found_outside_source_checkout(
+        self, tmp_path, monkeypatch
+    ):
+        module_dir = tmp_path / "site-packages/custodian/codex_guard"
+        marketplace = module_dir / "bundled_plugin/.agents/plugins/marketplace.json"
+        marketplace.parent.mkdir(parents=True)
+        marketplace.write_text("{}\n", encoding="utf-8")
+        (tmp_path / "unrelated").mkdir()
+        monkeypatch.chdir(tmp_path / "unrelated")
+        with patch(
+            "custodian.codex_guard.cli.__file__",
+            str(module_dir / "cli.py"),
+        ):
+            assert _repo_root() == module_dir / "bundled_plugin"
+
+    def test_plugin_bundle_is_staged_without_mutating_package(
+        self, tmp_path, monkeypatch
+    ):
+        source = tmp_path / "read-only-package"
+        marketplace = source / ".agents/plugins/marketplace.json"
+        plugin = source / "plugins/custodian-codex-guard/.mcp.json"
+        marketplace.parent.mkdir(parents=True)
+        plugin.parent.mkdir(parents=True)
+        marketplace.write_text('{"name":"test"}\n', encoding="utf-8")
+        plugin.write_text('{"original":true}\n', encoding="utf-8")
+        monkeypatch.setenv("CODEX_HOME", str(tmp_path / "codex-home"))
+
+        destination = _materialize_plugin_runtime(source)
+
+        assert destination == _plugin_runtime_root()
+        assert (
+            destination / ".agents/plugins/marketplace.json"
+        ).read_text(encoding="utf-8") == '{"name":"test"}\n'
+        assert (
+            destination / "plugins/custodian-codex-guard/.mcp.json"
+        ).read_text(encoding="utf-8") == '{"original":true}\n'
+        assert plugin.read_text(encoding="utf-8") == '{"original":true}\n'
 
 
 class TestDoctorEnforcementState:
