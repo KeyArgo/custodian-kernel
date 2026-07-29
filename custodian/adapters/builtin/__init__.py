@@ -2,7 +2,8 @@
 
 money      — spend-sentinel
 security   — prompt-injection-guard, secret-leak-guard,
-             kernel-self-protection, path-fence, egress-domain-guard
+             kernel-self-protection, path-fence, egress-domain-guard,
+             memory-firewall-guard
 privacy    — pii-redactor
 guardrail  — context-anchor, repetition-breaker, tool-confabulation-guard,
              scope-fence
@@ -21,6 +22,7 @@ from custodian.adapters.builtin.scope_fence import ScopeFence
 from custodian.adapters.builtin.kernel_self_protection import KernelSelfProtection
 from custodian.adapters.builtin.path_fence import PathFence
 from custodian.adapters.builtin.egress_domain_guard import EgressDomainGuard
+from custodian.adapters.builtin.memory_firewall_guard import MemoryFirewallGuard
 
 ALL_BUILTINS = [
     SpendSentinel,
@@ -34,6 +36,7 @@ ALL_BUILTINS = [
     KernelSelfProtection,
     PathFence,
     EgressDomainGuard,
+    MemoryFirewallGuard,
 ]
 
 __all__ = [cls.__name__ for cls in ALL_BUILTINS] + ["ALL_BUILTINS"]
