@@ -26,9 +26,19 @@ from __future__ import annotations
 
 import base64
 import re
+from typing import Optional
 
 from custodian.adapters.base import ActionContext, Adapter, Verdict
 from custodian.adapters.builtin.prompt_injection_guard import _B64_BLOB, _RULES
+
+# Which skills count as a memory WRITE (gated) vs a memory RECALL (neutralized).
+# Defaults match the `memory.*` convention so nothing is disrupted out of the
+# box. A deployment pointing the firewall at a concrete backend (e.g. the
+# bundled KV store, or a terrarium resident's memory) overrides these via
+# config: {"write_skills": ["kv-set"], "recall_skills": ["kv-get", "kv-list"],
+# "require_provenance": false}.
+_DEFAULT_WRITE_SKILLS = ("memory.write",)
+_DEFAULT_RECALL_SKILLS = ("memory.recall", "memory.get", "memory.list")
 
 # An instruction aimed at the agent/self that a durable memory should not carry.
 # "always"/"never" are paired with an imperative verb so ordinary prose
@@ -68,12 +78,21 @@ class MemoryFirewallGuard(Adapter):
     category = "security"
     fail_closed = True
 
+    def __init__(self, config: Optional[dict] = None) -> None:
+        super().__init__(config)
+        self._write_skills = tuple(self.config.get("write_skills", _DEFAULT_WRITE_SKILLS))
+        self._recall_skills = tuple(self.config.get("recall_skills", _DEFAULT_RECALL_SKILLS))
+        # Provenance matters for a resident's durable memory; a generic KV store
+        # has no originSessionId, so a deployment can turn this off.
+        self._require_provenance = bool(self.config.get("require_provenance", True))
+        self._strict = bool(self.config.get("strict", False))
+
     def pre_action(self, ctx: ActionContext) -> Verdict:
-        if not ctx.skill.startswith("memory."):
+        if ctx.skill not in self._write_skills:
             return Verdict.allow(self.name)
 
         surface = ctx.text_surface()
-        strict = bool(self.config.get("strict", False))
+        strict = self._strict
 
         # 1. Known injection signatures (shared with prompt-injection-guard).
         for pattern, hard, label in _RULES:
@@ -109,14 +128,15 @@ class MemoryFirewallGuard(Adapter):
             )
 
         # 5. Provenance: a memory with no origin session is unattributable.
-        origin = str(ctx.args.get("originSessionId", "")).strip()
-        if not origin:
-            return Verdict.warn(self.name, "memory write is missing originSessionId provenance")
+        if self._require_provenance:
+            origin = str(ctx.args.get("originSessionId", "")).strip()
+            if not origin:
+                return Verdict.warn(self.name, "memory write is missing originSessionId provenance")
 
         return Verdict.allow(self.name)
 
     def post_action(self, ctx: ActionContext) -> Verdict:
-        if not ctx.skill.startswith("memory."):
+        if ctx.skill not in self._recall_skills:
             return Verdict.allow(self.name)
         if not ctx.output:
             return Verdict.allow(self.name)
