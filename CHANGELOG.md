@@ -244,7 +244,7 @@ is present. `custodian doctor --profile hermes` verifies the resulting setup.
 
 The Hermes Agent + NemoClaw integration suite, previously developed
 alongside the kernel and shipped bundled in this distribution, is now its
-own repo and PyPI package: [`custodian-talaria`](https://github.com/inovinlabs/talaria),
+own repo and PyPI package: [`custodian-talaria`](https://github.com/KeyArgo/talaria),
 depending on `custodian-kernel[paladin]` through a normal version pin
 instead of being force-versioned in lockstep with the kernel. `paladin`
 stays in this distribution — it has no Hermes-specific code.

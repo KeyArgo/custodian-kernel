@@ -20,7 +20,10 @@ def run(args):
       return {"charged": amount, "customer": customer_id, "status": "ok"}
 """)
 
-    from custodian import govern
+    # Import from the defining module. A package can expose a submodule and a
+    # callable with the same name; import order must never turn the decorator
+    # into the module object in a long-lived CLI process.
+    from custodian.govern import govern
 
     # Run in an isolated tempdir so a workspace policy.yaml with tight caps
     # doesn't interfere with the demo. The decorator's own cap=50.00 governs.

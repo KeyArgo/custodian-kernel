@@ -23,6 +23,7 @@ import hashlib
 import hmac
 import json
 import platform
+import threading
 from pathlib import Path
 import time
 from typing import Any, Optional
@@ -30,6 +31,7 @@ from uuid import uuid4
 
 from custodian.exceptions import CustodianError
 
+_KEY_LOCK = threading.Lock()
 
 
 
@@ -147,30 +149,35 @@ class CapabilityStore:
         self._now = now
 
     def _key(self) -> bytes:
-        self.state_dir.mkdir(parents=True, exist_ok=True)
-        _ensure_private_permissions(self.state_dir, self.key_path)
-        if _path_is_symlink_in_chain(self.key_path):
-            raise CapabilityError("executor capability key path compromised")
-        if not self.key_path.exists():
-            try:
-                fd = os.open(self.key_path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
-            except FileExistsError:
-                pass
-            else:
-                with os.fdopen(fd, "wb") as stream:
-                    stream.write(os.urandom(32))
-        _ensure_private_permissions(self.state_dir, self.key_path)
-        try:
-            fd = os.open(
-                self.key_path,
-                os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0),
-            )
-        except OSError as exc:
-            raise CapabilityError("executor capability key is unreadable") from exc
-        try:
-            key = os.read(fd, 64)
-        finally:
-            os.close(fd)
+        with _KEY_LOCK:
+            self.state_dir.mkdir(parents=True, exist_ok=True)
+            _ensure_private_permissions(self.state_dir, self.key_path)
+            if _path_is_symlink_in_chain(self.key_path):
+                raise CapabilityError("executor capability key path compromised")
+            if not self.key_path.exists():
+                try:
+                    fd = os.open(
+                        self.key_path,
+                        os.O_WRONLY | os.O_CREAT | os.O_EXCL,
+                        0o600,
+                    )
+                except FileExistsError:
+                    pass
+                else:
+                    with os.fdopen(fd, "wb") as stream:
+                        stream.write(os.urandom(32))
+                        stream.flush()
+                        os.fsync(stream.fileno())
+            _ensure_private_permissions(self.state_dir, self.key_path)
+            key = b""
+            for _ in range(20):
+                try:
+                    key = self.key_path.read_bytes()
+                except OSError:
+                    key = b""
+                if len(key) == 32:
+                    break
+                time.sleep(0.01)
         if len(key) != 32:
             raise CapabilityError("executor capability key is invalid")
         return key

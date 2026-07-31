@@ -35,6 +35,32 @@ def _snooze_path(state_dir: Path) -> Path:
     return state_dir / "console-snoozes.json"
 
 
+def _block_ack_path(state_dir: Path) -> Path:
+    return state_dir / "console-block-ack.json"
+
+
+def _block_acknowledged_before(state_dir: Path) -> float:
+    try:
+        value = json.loads(_block_ack_path(state_dir).read_text(encoding="utf-8"))
+        return float(value.get("acknowledged_before", 0))
+    except (FileNotFoundError, OSError, ValueError, TypeError, json.JSONDecodeError):
+        return 0
+
+
+def _acknowledge_blocks(state_dir: Path, *, before: float | None = None) -> None:
+    """Clear historical denials from the active view without deleting evidence."""
+    path = _block_ack_path(state_dir)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_suffix(".tmp")
+    tmp.write_text(
+        json.dumps({"acknowledged_before": before or time.time()}, sort_keys=True),
+        encoding="utf-8",
+    )
+    if os.name != "nt":
+        tmp.chmod(0o600)
+    os.replace(tmp, path)
+
+
 def _snoozes(state_dir: Path) -> dict[str, float]:
     try:
         value = json.loads(_snooze_path(state_dir).read_text(encoding="utf-8"))
@@ -150,6 +176,8 @@ def _recent_blocks(state_dir: Path, limit: int = 3) -> list[dict]:
             "ts": time.time(),
         })
 
+    acknowledged_before = _block_acknowledged_before(state_dir)
+    denied = [r for r in denied if float(r.get("ts", 0)) > acknowledged_before]
     denied.sort(key=lambda r: r.get("ts", 0))
     return denied[-limit:]
 
@@ -195,12 +223,12 @@ def _draw(state_dir: Path, message: str) -> tuple[object | None, CapabilityStore
         print(f"\n  {_YELLOW}{index:>2}. WAITING{_RESET}  {source:<5}  {expiry}  requester={record.requester}")
         print(f"      id={ident[:8]}…  digest={digest}…  age={age}")
     if blocks:
-        print(f"\n  {_RED}BLOCKED ACTIONS — operator attention required{_RESET}")
+        print(f"\n  {_RED}RECENT HARD DENIALS — review or clear from this view{_RESET}")
         for block in reversed(blocks):
             tool = str(block.get("tool", "unknown"))[:28]
             reason = str(block.get("reason", "denied"))[:120]
             print(f"  {_RED}✕ {tool}: {reason}{_RESET}")
-        print(f"  {_YELLOW}These are hard denials, not pending approvals. Review policy or use a trusted operator workflow.{_RESET}")
+        print(f"  {_YELLOW}Nothing is awaiting approval and nothing ran. [C] acknowledges these without deleting audit evidence.{_RESET}")
     print("\n────────────────────────────────────────────────────────────────────────────────")
     fs_rules = FilesystemPolicy(state_dir / "filesystem-policy.json").list()
     policy_rules = ApprovalPolicy(state_dir / "approval-policy.json").list()
@@ -223,7 +251,7 @@ def _draw(state_dir: Path, message: str) -> tuple[object | None, CapabilityStore
         print(f"  {_DIM}Harness approvals: Codex Guard not installed; kernel controls remain available{_RESET}")
     print(f"  {_YELLOW}[A]{_RESET} approve once    {_YELLOW}[D]{_RESET} deny    {_YELLOW}[I]{_RESET} ignore 5m    {_YELLOW}[L]{_RESET} lease (1h/25 uses)")
     print(f"  {_YELLOW}[F]{_RESET} filesystem scope    {_YELLOW}[G]{_RESET} ledger grant    {_YELLOW}[R]{_RESET} rules    {_YELLOW}[M]{_RESET} gate mode    {_YELLOW}[V]{_RESET} notices")
-    print(f"  {_YELLOW}[K]{_RESET} global stop    {_YELLOW}[Q]{_RESET} quit")
+    print(f"  {_YELLOW}[C]{_RESET} clear blocks from view    {_YELLOW}[K]{_RESET} global stop    {_YELLOW}[Q]{_RESET} quit")
     print(f"  {_DIM}Approve-once: single-use — the next matching action consumes it.{_RESET}")
     print(f"  {_DIM}Lease: temporary rule with max uses.  Permanent: no expiry or limit.{_RESET}")
     print(f"  {_DIM}Actions apply to the oldest pending request (order shown).{_RESET}")
@@ -257,6 +285,12 @@ def run(args) -> int:
         if not key: continue
         try:
             if key == "q": print(_RESET); return 0
+            if key == "c":
+                if _recent_blocks(state_dir):
+                    _acknowledge_blocks(state_dir)
+                    message = "Recent denials cleared from the active view; signed audit evidence was preserved."
+                else:
+                    message = "No recent denials to clear."
             if key == "r":
                 rules = policy.list()
                 message = f"{len(rules)} active rule(s): " + ", ".join(
@@ -368,7 +402,8 @@ def run(args) -> int:
 
 def register(sub, default_state_dir: str) -> None:
     parser = sub.add_parser("console", help="Live operator firewall for approvals and policy")
-    parser.add_argument("--state-dir", default=default_state_dir)
-    parser.add_argument("--operator", default=os.environ.get("USER", "operator"))
+    parser.add_argument("--state-dir", default=default_state_dir, help="Custodian state directory")
+    parser.add_argument("--operator", default=os.environ.get("USER", "operator"),
+                        help="operator identity recorded on decisions")
     parser.add_argument("--once", action="store_true", help="Print one status screen and exit")
     parser.set_defaults(func=run)

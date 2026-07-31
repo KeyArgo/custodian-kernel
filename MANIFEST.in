@@ -5,3 +5,4 @@ include SECURITY.md
 include CONTRIBUTING.md
 include CODE_OF_CONDUCT.md
 include install-custodian.py
+include docs/man/custodian.1

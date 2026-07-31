@@ -57,7 +57,7 @@ class FilesystemRule:
             raise ValueError("enforcement must be routed or brokered")
         if not self.allow_roots and not self.deny_roots:
             raise ValueError("at least one allow or deny root is required")
-        if any(not isinstance(root, str) or not root.strip()
+        if any(not isinstance(root, str) or not root.strip() or "\x00" in root
                for root in (*self.allow_roots, *self.deny_roots)):
             raise ValueError("filesystem roots must be non-empty strings")
 
@@ -210,7 +210,7 @@ class FilesystemPolicy:
         except ValueError:
             return {
                 "allow_paths": [],
-                "forbidden_paths": ["/"],
+                "forbidden_paths": [canonicalize(os.path.abspath(os.sep))],
                 "source": "malformed-policy",
                 "enforcement": "routed",
             }

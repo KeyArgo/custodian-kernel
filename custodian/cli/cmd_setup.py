@@ -128,7 +128,7 @@ def run(args) -> None:
             "Talaria configuration",
         )
         if shutil.which("hermes"):
-            # talaria-guard only declares pre_tool_call/transform_tool_result
+            # custodian-hermes-guard only declares pre_tool_call/transform_tool_result
             # hooks -- it never needs the separate "replace a built-in tool"
             # permission -- but `hermes plugins enable` asks about that
             # permission interactively unless told not to. Without
@@ -136,7 +136,7 @@ def run(args) -> None:
             # real terminal stops on a Y/N prompt about a permission this
             # plugin will never use.
             _run_checked(
-                ["hermes", "plugins", "enable", "talaria-guard", "--no-allow-tool-override"],
+                ["hermes", "plugins", "enable", "custodian-hermes-guard", "--no-allow-tool-override"],
                 "Hermes plugin enablement",
             )
         _run_checked(

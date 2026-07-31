@@ -4,6 +4,7 @@ import hashlib
 import inspect
 import os
 import time
+import threading
 import uuid
 from dataclasses import dataclass, field
 from typing import Any, Callable, Optional, Tuple
@@ -11,6 +12,13 @@ from typing import Any, Callable, Optional, Tuple
 from custodian.types import Band, Decision, SpendRequest, Verdict
 from custodian.bus import _bus
 
+_TAMPER_LOCKS: dict[str, threading.Lock] = {}
+_TAMPER_LOCKS_GUARD = threading.Lock()
+
+
+def _tamper_lock(path: str) -> threading.Lock:
+    with _TAMPER_LOCKS_GUARD:
+        return _TAMPER_LOCKS.setdefault(path, threading.Lock())
 
 def _source_sha(func: Callable) -> Optional[str]:
     """Return SHA-256 hex of the decorated function's source file.
@@ -114,6 +122,13 @@ def _tamper_check(
     state_dir = state_dir or _default_tamper_dir()
     bk_path = os.path.join(state_dir, f"{_tamper_key(func)}.bk.sha")
 
+    with _tamper_lock(bk_path):
+        return _tamper_check_locked(source_sha, state_dir, bk_path)
+
+
+def _tamper_check_locked(
+    source_sha: str, state_dir: str, bk_path: str
+) -> Tuple[Optional[str], Optional[str]]:
     try:
         stored = open(bk_path, "r").read().strip()
         # An empty (zero-byte or whitespace-only) snapshot is corrupt or

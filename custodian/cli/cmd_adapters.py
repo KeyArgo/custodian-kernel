@@ -133,7 +133,7 @@ def register(sub) -> None:
     asub = parser.add_subparsers(dest="adapters_command", required=True)
 
     sp = asub.add_parser("list", help="List available and enabled adapters")
-    sp.add_argument("--json", action="store_true")
+    sp.add_argument("--json", action="store_true", help="emit machine-readable JSON")
     sp.set_defaults(func=cmd_adapters_list)
 
     sp = asub.add_parser("enable", help="Enable an adapter")
@@ -143,17 +143,17 @@ def register(sub) -> None:
     sp.set_defaults(func=cmd_adapters_enable)
 
     sp = asub.add_parser("disable", help="Disable an adapter")
-    sp.add_argument("name")
+    sp.add_argument("name", help="adapter name to disable")
     sp.set_defaults(func=cmd_adapters_disable)
 
     sp = asub.add_parser("install", help="Install a local adapter file (hash-pinned)")
-    sp.add_argument("path")
+    sp.add_argument("path", help="path to an adapter package or directory")
     sp.set_defaults(func=cmd_adapters_install)
 
     sp = asub.add_parser("check", help="Dry-run the enabled pipeline against a sample action")
-    sp.add_argument("skill")
+    sp.add_argument("skill", help="skill name to evaluate")
     sp.add_argument("--args", help="JSON dict of tool arguments")
-    sp.add_argument("--band", default="L0")
-    sp.add_argument("--cost", type=float, default=0.0)
-    sp.add_argument("--description", default="")
+    sp.add_argument("--band", default="L0", help="authority band to evaluate (default: L0)")
+    sp.add_argument("--cost", type=float, default=0.0, help="proposed cost in USD")
+    sp.add_argument("--description", default="", help="human-readable action description")
     sp.set_defaults(func=cmd_adapters_check)

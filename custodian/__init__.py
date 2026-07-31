@@ -46,7 +46,7 @@ try:
     from importlib.metadata import version as _version
     __version__ = _version("custodian-kernel")
 except Exception:
-    __version__ = "0.4.0"
+    __version__ = "0.4.2"
 
 __all__ = [
     "__version__",

@@ -17,7 +17,16 @@ import sys
 import venv
 from pathlib import Path
 
-COMMANDS = ("custodian", "custodian-verify", "paladin", "paladin-import")
+DEFAULT_PACKAGES = ("custodian-kernel", "custodian-codex-guard")
+COMMANDS = (
+    "custodian",
+    "custodian-verify",
+    "paladin",
+    "paladin-import",
+    "custodian-codex",
+    "custodian-codex-guard-mcp",
+    "custodian-codex-guard-hook",
+)
 
 
 def default_runtime_root() -> Path:
@@ -48,8 +57,10 @@ def _validate_managed_paths(runtime_root: Path, bin_dir: Path) -> tuple[Path, Pa
         raise ValueError("managed runtime root must not be a symbolic link")
     runtime_root = runtime_root.expanduser().resolve()
     bin_dir = bin_dir.expanduser().resolve()
-    forbidden = {Path("/").resolve(), Path.home().resolve()}
-    if runtime_root in forbidden or bin_dir in forbidden:
+    home = os.path.normcase(os.path.abspath(os.path.expanduser("~")))
+    if (runtime_root == runtime_root.parent or bin_dir == bin_dir.parent
+            or os.path.normcase(str(runtime_root)) == home
+            or os.path.normcase(str(bin_dir)) == home):
         raise ValueError("runtime and command directories must not be / or the home directory")
     if runtime_root == bin_dir or runtime_root in bin_dir.parents:
         raise ValueError("command directory must not be inside the managed runtime")
@@ -83,7 +94,7 @@ def _expose(
         destination.symlink_to(target)
 
 
-def install(spec: str, runtime_root: Path, bin_dir: Path) -> Path:
+def install(spec: str | list[str] | tuple[str, ...], runtime_root: Path, bin_dir: Path) -> Path:
     runtime_root, bin_dir = _validate_managed_paths(runtime_root, bin_dir)
     runtime_root.mkdir(parents=True, exist_ok=True)
     active_file = runtime_root / "active-slot"
@@ -98,8 +109,11 @@ def install(spec: str, runtime_root: Path, bin_dir: Path) -> Path:
     # the final slot and never rename it; renaming a staged venv makes every
     # installed command fail with "bad interpreter".
     venv.EnvBuilder(with_pip=True, symlinks=os.name != "nt").create(candidate)
+    specs = [spec] if isinstance(spec, str) else list(spec)
+    if not specs:
+        raise ValueError("at least one package is required")
     subprocess.run(
-        [str(_runtime_python(candidate)), "-m", "pip", "install", "--upgrade", spec],
+        [str(_runtime_python(candidate)), "-m", "pip", "install", "--upgrade", *specs],
         check=True,
     )
     subprocess.run(
@@ -107,8 +121,11 @@ def install(spec: str, runtime_root: Path, bin_dir: Path) -> Path:
         check=True,
     )
     for command in COMMANDS:
+        target = _runtime_command(candidate, command)
+        if not target.is_file():
+            continue
         _expose(
-            command, _runtime_command(candidate, command), bin_dir,
+            command, target, bin_dir,
             runtime_root=runtime_root,
         )
     marker = runtime_root / "active-slot.installing"
@@ -118,8 +135,8 @@ def install(spec: str, runtime_root: Path, bin_dir: Path) -> Path:
     # Store provenance plus a digest of pip's installed RECORD. The original
     # wheel is not retained inside a venv, so claiming to re-hash it later
     # would be false verification.
-    if spec.endswith(".whl"):
-        wheel_path = Path(spec)
+    if len(specs) == 1 and specs[0].endswith(".whl"):
+        wheel_path = Path(specs[0])
         if wheel_path.is_file():
             whl_hash = hashlib.sha256(wheel_path.read_bytes()).hexdigest()
             site_roots = (
@@ -184,8 +201,11 @@ def main() -> int:
         description="Install or uninstall Custodian's managed runtime"
     )
     parser.add_argument(
-        "--package", default="custodian-kernel",
-        help="Package name, version, URL, or local wheel (default: custodian-kernel)",
+        "--package", action="append",
+        help=(
+            "Package name, version, URL, or local wheel; repeat for multiple "
+            "packages (default: custodian-kernel plus custodian-codex-guard)"
+        ),
     )
     parser.add_argument("--runtime-root", type=Path, default=default_runtime_root())
     parser.add_argument("--bin-dir", type=Path, default=default_bin_dir())
@@ -198,13 +218,14 @@ def main() -> int:
     if args.dry_run:
         print(f"managed runtime: {args.runtime_root}")
         print(f"commands: {args.bin_dir}")
-        print("action: uninstall" if args.uninstall else f"package: {args.package}")
+        packages = args.package or list(DEFAULT_PACKAGES)
+        print("action: uninstall" if args.uninstall else f"packages: {', '.join(packages)}")
         print("user data: preserved")
         return 0
     if args.uninstall:
         uninstall(args.runtime_root, args.bin_dir)
         return 0
-    runtime = install(args.package, args.runtime_root, args.bin_dir)
+    runtime = install(args.package or DEFAULT_PACKAGES, args.runtime_root, args.bin_dir)
     print(f"Custodian installed: {runtime}")
     print(f"Commands available in: {args.bin_dir}")
     print("User data was preserved.")

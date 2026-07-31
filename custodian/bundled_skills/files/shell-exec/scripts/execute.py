@@ -48,6 +48,14 @@ def main():
         if not tokens or tokens[0] not in ALLOWLIST:
             raise PermissionError(f"Command not in allowlist: {tokens[0] if tokens else '(empty)'}")
         _check_args(tokens)
+        if os.name == "nt" and tokens[0] == "echo":
+            print(json.dumps({"ok": True, "tool": "shell-exec",
+                              "stdout": " ".join(tokens[1:]) + "\n", "stderr": ""}))
+            return
+        if os.name == "nt" and tokens[0] == "pwd":
+            print(json.dumps({"ok": True, "tool": "shell-exec",
+                              "stdout": os.path.abspath(a.workdir) + "\n", "stderr": ""}))
+            return
         r = subprocess.run(tokens, capture_output=True, text=True, timeout=a.timeout, cwd=a.workdir)
         print(json.dumps({"ok":r.returncode==0,"tool":"shell-exec","stdout":r.stdout[:2000],"stderr":r.stderr[:500]}))
     except subprocess.TimeoutExpired:

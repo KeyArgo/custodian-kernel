@@ -93,7 +93,7 @@ def run(args) -> int:
         print(f"✓ Talaria import works ({talaria_version or 'source checkout'})")
 
     if require_hermes:
-        plugin = hermes_home / "plugins" / "talaria-guard" / "plugin.yaml"
+        plugin = hermes_home / "plugins" / "custodian-hermes-guard" / "plugin.yaml"
         talaria_home = Path(os.environ.get("TALARIA_HOME", str(Path.home() / ".talaria"))).expanduser()
         policy = talaria_home / "policy.yaml"
         for label, path in (("Hermes plugin", plugin), ("Talaria policy", policy)):
@@ -116,7 +116,8 @@ def run(args) -> int:
                 print(f"✗ {failures[-1]}")
             else:
                 enabled = any(
-                    line.split()[-1:] == ["talaria-guard"] and line.split()[:1] == ["enabled"]
+                    line.split()[-1:] == ["custodian-hermes-guard"]
+                    and line.split()[:1] == ["enabled"]
                     for line in check.stdout.splitlines()
                 )
                 if enabled:

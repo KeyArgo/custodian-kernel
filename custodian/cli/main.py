@@ -132,7 +132,7 @@ from custodian.config import CustodianConfig
 from custodian.tools.registry import _state_dir as _codex_guard_state_dir
 
 
-_DESCRIPTION = "Custodian — kernel-enforced authority and spend governance for AI agents."
+_DESCRIPTION = "Custodian — kernel-enforced safety and authority for AI agents."
 
 _EPILOG = """
 AUTHORITY BANDS
@@ -193,11 +193,12 @@ EXPORT
   custodian beancount                          export ledger to Beancount v2
   custodian status-banner                      one-screen kernel state summary
 
-VERIFY EVERYTHING
+VERIFY A RELEASE CANDIDATE
   python3 verify_kit.py                        5-phase self-verifying proof:
                                                re-introduces the self-approval bug,
-                                               runs 1,747 tests, pulls live Stripe
-                                               data, tests the kill switch end-to-end.
+                                               runs the current test suite, checks
+                                               configured integrations, and exercises
+                                               the kill switch end-to-end.
 
 DEMO COMMANDS (no credentials, no side effects)
   custodian demo verify                        4 claim-verification scenarios live
@@ -206,7 +207,7 @@ DEMO COMMANDS (no credentials, no side effects)
   custodian demo receipt                       @govern + SHA-256 receipt walkthrough
 
 docs:    https://getcustodian.xyz
-install: pip install custodian-codex-guard
+install: pip install custodian-kernel
 """
 
 

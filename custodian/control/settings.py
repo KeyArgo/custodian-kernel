@@ -1,7 +1,7 @@
 """Operator-owned preferences shared by every Custodian harness adapter."""
 from __future__ import annotations
 
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field
 import json
 import os
 from pathlib import Path
@@ -9,14 +9,25 @@ from pathlib import Path
 
 @dataclass(frozen=True)
 class ControlSettings:
-    enforcement: str = "protected"
+    enforcement: str = "open"
     visibility: str = "verbose"
+    harness_enforcement: dict[str, str] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
         if self.enforcement not in {"protected", "open", "developer-open"}:
             raise ValueError("enforcement must be protected or open")
         if self.visibility not in {"verbose", "quiet"}:
             raise ValueError("visibility must be verbose or quiet")
+        if any(
+            not isinstance(harness, str)
+            or not harness
+            or mode not in {"protected", "open"}
+            for harness, mode in self.harness_enforcement.items()
+        ):
+            raise ValueError("harness enforcement must map harness names to protected or open")
+
+    def enforcement_for(self, harness: str) -> str:
+        return self.harness_enforcement.get(harness, self.enforcement)
 
 
 class ControlSettingsStore:
@@ -30,7 +41,10 @@ class ControlSettingsStore:
                 raise ValueError
             settings = ControlSettings(**value)
             if settings.enforcement == "developer-open":
-                return ControlSettings(enforcement="open", visibility=settings.visibility)
+                return ControlSettings(
+                    enforcement="open", visibility=settings.visibility,
+                    harness_enforcement=settings.harness_enforcement,
+                )
             return settings
         except (FileNotFoundError, OSError, ValueError, TypeError, json.JSONDecodeError):
             return ControlSettings()

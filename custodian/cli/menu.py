@@ -105,12 +105,45 @@ def _act_guide() -> None:
     _run(["guide"])
 
 
+def _choose_harness(*, include_global: bool = True) -> str | None:
+    options = []
+    if include_global:
+        options.append(("", "All harnesses (global default)"))
+    options.extend([
+        ("codex", "Codex"),
+        ("claude", "Claude Code"),
+        ("opencode", "OpenCode"),
+        ("hermes", "Hermes"),
+        ("talaria", "Talaria"),
+    ])
+    return _choose("Which harness?", options)
+
+
+def _choose_gate() -> str | None:
+    return _choose("What should Custodian control?", [
+        ("filesystem_read", "Reading files"),
+        ("filesystem_write", "Changing files"),
+        ("outside_workspace", "Access outside the current workspace"),
+        ("shell", "Running shell commands"),
+        ("network", "Network and internet access"),
+        ("credentials", "Credentials and secrets"),
+        ("package_install", "Installing packages"),
+        ("destructive", "Deleting or overwriting data"),
+        ("git_write", "Git commits, pushes, and GitHub changes"),
+        ("production", "Production changes and deployments"),
+        ("money", "Payments and money movement"),
+        ("governance", "Changing Custodian policy or configuration"),
+    ])
+
+
 def _act_gates() -> None:
     while True:
         choice = _choose("Gate settings", [
             ("status", "Show current settings"),
-            ("open", "Developer open — auto-pass matching gates"),
+            ("open", "Monitor-only (findings recorded, not blocked)"),
             ("protect", "Protected — require approval for high-risk actions"),
+            ("granular", "Set one gate to Allow, Ask, or Block"),
+            ("capabilities", "Show gate support by harness"),
             ("verbose", "Show routine auto-approval notices"),
             ("quiet", "Hide routine notices; keep receipts"),
         ])
@@ -119,13 +152,72 @@ def _act_gates() -> None:
         if choice == "status":
             _run(["gates", "status"])
         elif choice == "open":
-            answer = _prompt("Type OPEN to allow high-risk auto-approval")
+            answer = _prompt("Type OPEN for monitor-only enforcement")
             if answer == "OPEN":
-                _run(["gates", "open"])
+                harness = _choose_harness()
+                if harness is None:
+                    continue
+                argv = ["gates", "open"]
+                if harness:
+                    argv += ["--harness", harness]
+                _run(argv)
             else:
                 print("  (not changed)")
         elif choice == "protect":
-            _run(["gates", "protect"])
+            harness = _choose_harness()
+            if harness is None:
+                continue
+            argv = ["gates", "protect"]
+            if harness:
+                argv += ["--harness", harness]
+            _run(argv)
+        elif choice == "granular":
+            harness = _choose_harness()
+            if harness is None:
+                continue
+            gate = _choose_gate()
+            if gate is None:
+                continue
+            mode = _choose("What should happen?", [
+                ("allow", "Allow and record it"),
+                ("ask", "Ask before it runs"),
+                ("block", "Block it"),
+            ])
+            if mode is None:
+                continue
+            scope = _choose("Where should this rule apply?", [
+                ("global", "Everywhere"),
+                ("project", "One project"),
+                ("path", "One directory or file"),
+                ("session", "One current session"),
+                ("action", "One exact action digest"),
+            ])
+            if scope is None:
+                continue
+            target = "*" if scope == "global" else _prompt({
+                "project": "project directory",
+                "path": "directory or file",
+                "session": "session id",
+                "action": "exact action digest",
+            }[scope])
+            if not target:
+                print("  (not changed)")
+                continue
+            argv = [
+                "gates", "set", gate, mode, "--scope", scope,
+                "--target", target,
+            ]
+            if harness:
+                argv += ["--harness", harness]
+            _run(argv)
+        elif choice == "capabilities":
+            harness = _choose_harness()
+            if harness is None:
+                continue
+            argv = ["gates", "capabilities"]
+            if harness:
+                argv.append(harness)
+            _run(argv)
         else:
             _run(["gates", "notifications", choice])
 
@@ -140,16 +232,16 @@ def _act_uninstall() -> None:
 
 
 _ACTIONS = [
-    ("status", "Show current authority state (bands, caps, spend)"),
-    ("request", "Ask the kernel to decide on a spend"),
-    ("audit", "View the audit log"),
-    ("kill", "Engage the kill switch (stop everything)"),
-    ("resume", "Release the kill switch"),
-    ("tools", "List governed tools"),
-    ("adapters", "List guard adapters"),
-    ("init", "Scaffold a new workspace"),
+    ("status", "Show safety and authority status"),
+    ("audit", "Review decisions and audit evidence"),
+    ("gates", "Configure what AI harnesses may do"),
+    ("tools", "View governed tools and capabilities"),
+    ("adapters", "View active guard adapters"),
+    ("kill", "Engage the emergency stop"),
+    ("resume", "Release the emergency stop"),
+    ("init", "Create a governed workspace"),
     ("guide", "Guided walkthrough for first-time users"),
-    ("gates", "Gate enforcement and notification settings"),
+    ("request", "Evaluate a payment or spending request"),
     ("uninstall", "Remove Custodian software but preserve vaults and history"),
 ]
 
@@ -164,7 +256,7 @@ _DISPATCH = {
 
 def run_menu() -> int:
     print("=" * 56)
-    print("  Custodian — authority & spend governance")
+    print("  Custodian — safety and authority for AI agents")
     print("=" * 56)
     while True:
         choice = _choose("What would you like to do?", _ACTIONS)

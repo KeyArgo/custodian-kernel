@@ -1,0 +1,788 @@
+.TH "CUSTODIAN" "1" "" "Custodian" "User Commands"
+.SH NAME
+custodian \- Custodian — kernel\-enforced safety and authority for AI agents.
+.SH SYNOPSIS
+.B custodian
+[OPTIONS] COMMAND [ARGS]
+.SH DESCRIPTION
+Custodian — kernel\-enforced safety and authority for AI agents.
+.SH COMMAND REFERENCE
+.SS custodian
+.nf
+usage: custodian [\-h] [\-\-version]
+                 {guide,help,menu,setup,doctor,init,validate,status,status\-banner,audit,backup,restore,request,approve,deny,kill,resume,confirm,beancount,tools,adapters,executor,console,gates,uninstall,health,codex\-guard,demo,generate\-report} ...
+
+Custodian — kernel\-enforced safety and authority for AI agents.
+
+positional arguments:
+  {guide,help,menu,setup,doctor,init,validate,status,status\-banner,audit,backup,restore,request,approve,deny,kill,resume,confirm,beancount,tools,adapters,executor,console,gates,uninstall,health,codex\-guard,demo,generate\-report}
+    guide               A friendly, step\-by\-step walkthrough for first\-time users
+    help                Show the full list of commands and what they do
+    menu                Interactive menu — no syntax to memorize
+    setup               Install the components you need (paladin/talaria) in one step
+    doctor              Check that Custodian and optional integrations are ready to use
+    init                Scaffold a new custodian workspace
+    validate            Validate a policy file
+    status              Show current authority state
+    status\-banner       One\-screen kernel state: totals + last 5 audit entries
+    audit               Show the full audit log
+    backup              Save the workspace (policy + history) to one backup file
+    restore             Restore a workspace from a `custodian backup` file
+    request             Submit a spend request for kernel evaluation
+    approve             Approve a pending escalation with the Twilio Verify code
+    deny                Deny a pending escalation
+    kill                Engage the kill switch — deny every request until released
+    resume              Release the kill switch — normal operation resumes
+    confirm             Confirm a request\-id within the 60\-second deadline
+    beancount           Export the audit ledger to Beancount v2 format
+    tools               List and invoke Custodian\-governed tools
+    adapters            Manage guard adapters (money, security, privacy, guardrail)
+    executor            Run and approve requests against the delegated executor (separate\-process
+                        execution)
+    console             Live operator firewall for approvals and policy
+    gates               View or change personal gate behavior
+    uninstall           Remove the kernel package while preserving all user data
+    health              Machine\-readable installed health confirmation
+    codex\-guard         Codex Guard receipt chain and diagnostics
+    demo                Demo commands — no credentials, no side effects, safe to run anywhere
+    generate\-report     AI generates a governance package from customer inputs
+
+options:
+  \-h, \-\-help            show this help message and exit
+  \-\-version             show program's version number and exit
+
+AUTHORITY BANDS
+  L0  Always autonomous, no spend allowed      (read\-only tools, monitoring)
+  L1  Autonomous, trivial side effects         (send messages, create records)
+  L2  Autonomous up to per\-action cap          (AI inference, Stripe calls)
+  L3  Always escalates to human operator       (refunds, subscription changes)
+  L4  Always escalates, unlimited scope        (high\-stakes, reserved)
+
+CORE WORKFLOW
+  1.  custodian init \-\-dir myagent             scaffold workspace + policy.yaml
+  2.  custodian validate policy.yaml           check policy is well\-formed
+  3.  custodian request \-\-amount 5.00 \e
+        \-\-description "API credits"            agent submits spend request
+  4a. [AUTONOMOUS]  kernel approves inline     amount within band cap
+  4b. [ESCALATION]  Twilio SMS sent to operator
+      custodian approve <code> \-\-approved\-by ops
+      custodian deny   \-\-denied\-by ops
+  5.  custodian audit                          review every decision
+  6.  custodian status                         current budget + kill\-switch state
+
+KILL SWITCH
+  custodian kill   \-\-by <operator>             deny every request until released
+  custodian resume \-\-by <operator>             release — normal operation resumes
+  The kill switch is enforced at the kernel level, not the agent level.
+
+BACKUP & MIGRATION
+  custodian backup                             workspace + history → one .zip
+  custodian restore <file>                     bring it back, here or elsewhere
+  paladin backup                               encrypted vault + audit trail
+  An engaged kill switch cannot be bypassed by the agent.
+
+POLICY DIRECTIVES (all opt\-in, set in policy.yaml)
+  autonomous_cap_usd: 2.00                     per\-action ceiling before escalation
+  daily_envelope:     50.00                    rolling 24\-hour budget across all bands
+  margins:
+    minimum_margin:     0.10                   refuse if margin below $0.10
+    minimum_margin_pct: 20                     refuse if margin below 20%%
+  band_after_task: L0                          auto\-downgrade band after skill completes
+  policies:
+    no_self_dealing: true                      block agent from paying itself
+
+CLAIM VERIFIER
+  Every factual claim an agent makes can be checked against the ledger:
+    VERIFIED       claim matches ledger evidence
+    CONTRADICTED   claim contradicts ledger (lie detected)
+    UNVERIFIABLE   insufficient evidence to decide
+  The verifier is deterministic — no AI, no probability, no hallucination.
+
+TOOLS
+  custodian tools list                         all registered tools + bands
+  custodian tools run <name> \-\-key value       invoke a governed tool
+  custodian tools summary                      JSON band breakdown
+  Tools with missing credentials return {ok: false, stub: true} — the kernel
+  works without any env vars configured.
+
+EXPORT
+  custodian beancount                          export ledger to Beancount v2
+  custodian status\-banner                      one\-screen kernel state summary
+
+VERIFY A RELEASE CANDIDATE
+  python3 verify_kit.py                        5\-phase self\-verifying proof:
+                                               re\-introduces the self\-approval bug,
+                                               runs the current test suite, checks
+                                               configured integrations, and exercises
+                                               the kill switch end\-to\-end.
+
+DEMO COMMANDS (no credentials, no side effects)
+  custodian demo verify                        4 claim\-verification scenarios live
+  custodian demo cycle                         full earn→gate→GPU spend→verify loop
+  custodian demo attacks                       5 planted attacks caught by kernel
+  custodian demo receipt                       @govern + SHA\-256 receipt walkthrough
+
+docs:    https://getcustodian.xyz
+install: pip install custodian\-kernel
+.fi
+.SS custodian guide
+.nf
+usage: custodian guide [\-h]
+
+options:
+  \-h, \-\-help  show this help message and exit
+.fi
+.SS custodian help
+.nf
+usage: custodian help [\-h]
+
+options:
+  \-h, \-\-help  show this help message and exit
+.fi
+.SS custodian menu
+.nf
+usage: custodian menu [\-h]
+
+options:
+  \-h, \-\-help  show this help message and exit
+.fi
+.SS custodian setup
+.nf
+usage: custodian setup [\-h] [\-\-with COMPONENTS] [\-\-profile PROFILE] [\-\-dry\-run] [\-\-skip\-configure]
+
+Detects a local Hermes Agent install and orchestrates `pip install` for the components you want, so
+you don't need to learn multiple package names. Bare `custodian setup` only detects and reports —
+pass \-\-with or \-\-profile to actually install something.
+
+options:
+  \-h, \-\-help         show this help message and exit
+  \-\-with COMPONENTS  Comma\-separated components to install, e.g. \-\-with talaria
+  \-\-profile PROFILE  Install a named bundle of components (choices: hermes, minimal)
+  \-\-dry\-run          Show what would be installed, do nothing
+  \-\-skip\-configure   Install packages only; do not install or enable the Hermes plugin
+.fi
+.SS custodian doctor
+.nf
+usage: custodian doctor [\-h] [\-\-profile {hermes}]
+
+options:
+  \-h, \-\-help          show this help message and exit
+  \-\-profile {hermes}  Require every component for this integration profile
+.fi
+.SS custodian init
+.nf
+usage: custodian init [\-h] [\-\-dir DIR] [\-\-session\-cap USD]
+
+Create a workspace directory with a policy.yaml, state store, and README.
+
+options:
+  \-h, \-\-help         show this help message and exit
+  \-\-dir DIR          Target directory (default: current directory)
+  \-\-session\-cap USD  Total spend allowed per session (default: $10.00). Bands in policy.yaml set the
+                     PER\-ACTION cap; the session budget has no policy field, so it is set here.
+.fi
+.SS custodian validate
+.nf
+usage: custodian validate [\-h] policy_path
+
+Parse and validate a policy YAML. Exits 0 if valid, 1 with errors if not.
+
+positional arguments:
+  policy_path  Path to policy YAML file
+
+options:
+  \-h, \-\-help   show this help message and exit
+.fi
+.SS custodian status
+.nf
+usage: custodian status [\-h] [\-\-state\-dir STATE_DIR]
+
+Print current spend totals, kill\-switch state, and active policy caps.
+
+options:
+  \-h, \-\-help            show this help message and exit
+  \-\-state\-dir STATE_DIR
+                        Path to kernel state directory
+.fi
+.SS custodian status\-banner
+.nf
+usage: custodian status\-banner [\-h] [\-\-state\-dir STATE_DIR]
+
+Compact dashboard view. Shows session spend, kill\-switch state, policy caps, and the 5 most recent
+audit entries in a single screen.
+
+options:
+  \-h, \-\-help            show this help message and exit
+  \-\-state\-dir STATE_DIR
+                        Path to kernel state directory
+.fi
+.SS custodian audit
+.nf
+usage: custodian audit [\-h] [\-\-state\-dir STATE_DIR] [\-\-limit LIMIT] [\-\-event EVENT]
+
+Print the kernel's append\-only audit trail. Every request, approval, denial, kill\-switch event, and
+claim\-verification result is recorded here.
+
+options:
+  \-h, \-\-help            show this help message and exit
+  \-\-state\-dir STATE_DIR
+                        Path to kernel state directory
+  \-\-limit LIMIT         Max entries to show (default: 50)
+  \-\-event EVENT         Filter by event type (e.g. executed, escalated, denied)
+.fi
+.SS custodian backup
+.nf
+usage: custodian backup [\-h] [\-\-force] [\-\-state\-dir STATE_DIR] [\-\-policy POLICY] [dest]
+
+Bundle policy.yaml and the state directory into a single .zip. The database is snapshotted with
+SQLite's online\-backup API, so the backup is consistent even if the kernel is mid\-write. Credentials
+are NOT in here — they live in the paladin vault (see `paladin backup`).
+
+positional arguments:
+  dest                  Destination file or directory (default: ~/custodian\-backups/custodian\-
+                        backup\-<time>.zip)
+
+options:
+  \-h, \-\-help            show this help message and exit
+  \-\-force               Overwrite the destination file if it exists
+  \-\-state\-dir STATE_DIR
+                        Path to kernel state directory
+  \-\-policy POLICY       Path to policy YAML file
+.fi
+.SS custodian restore
+.nf
+usage: custodian restore [\-h] [\-\-force] [\-\-state\-dir STATE_DIR] [\-\-policy POLICY] source
+
+Rebuild policy.yaml and the state directory from a backup .zip — here or on a brand\-new machine. An
+existing workspace is never silently replaced: without \-\-force this refuses, and with \-\-force the
+current files are first saved to a pre\-restore\-<time>.zip.
+
+positional arguments:
+  source                The backup .zip created by `custodian backup`
+
+options:
+  \-h, \-\-help            show this help message and exit
+  \-\-force               Replace the existing workspace (after saving it to a pre\-restore\-<time>.zip)
+  \-\-state\-dir STATE_DIR
+                        Path to kernel state directory
+  \-\-policy POLICY       Path to policy YAML file
+.fi
+.SS custodian request
+.nf
+usage: custodian request [\-h] \-\-amount AMOUNT \-\-description DESCRIPTION [\-\-skill SKILL]
+                         [\-\-context FLAG=true|false] [\-\-state\-dir STATE_DIR] [\-\-policy POLICY]
+
+The primary kernel entry point. The agent calls this; the kernel checks the amount against the
+policy, the daily envelope, the kill switch, and the authority band. Returns AUTONOMOUS (proceed) or
+ESCALATED (wait for human approval via Twilio Verify).
+
+options:
+  \-h, \-\-help            show this help message and exit
+  \-\-amount AMOUNT       Amount in USD to request
+  \-\-description DESCRIPTION
+                        Human\-readable description of the spend
+  \-\-skill SKILL         Skill name for policy rule matching (optional)
+  \-\-context FLAG=true|false
+                        Context flag for rule matching (repeatable, e.g. \-\-context critical=true)
+  \-\-state\-dir STATE_DIR
+                        Path to kernel state directory
+  \-\-policy POLICY       Path to policy YAML file
+.fi
+.SS custodian approve
+.nf
+usage: custodian approve [\-h] \-\-approved\-by APPROVED_BY [\-\-state\-dir STATE_DIR] code
+
+When a request exceeds the autonomous cap, the kernel sends a Twilio Verify SMS to the operator. The
+operator runs this command with the received code. The agent never sees the code.
+
+positional arguments:
+  code                  Verification code received via SMS
+
+options:
+  \-h, \-\-help            show this help message and exit
+  \-\-approved\-by APPROVED_BY
+                        Name or ID of the approving operator
+  \-\-state\-dir STATE_DIR
+                        Path to kernel state directory
+.fi
+.SS custodian deny
+.nf
+usage: custodian deny [\-h] \-\-denied\-by DENIED_BY [\-\-state\-dir STATE_DIR]
+
+Reject a pending escalation. The requesting agent receives a denial verdict.
+
+options:
+  \-h, \-\-help            show this help message and exit
+  \-\-denied\-by DENIED_BY
+                        Name or ID of the denying operator
+  \-\-state\-dir STATE_DIR
+                        Path to kernel state directory
+.fi
+.SS custodian kill
+.nf
+usage: custodian kill [\-h] \-\-by BY [\-\-reason REASON] [\-\-state\-dir STATE_DIR]
+
+Operator\-only emergency stop. Once engaged, every custodian request returns DENIED regardless of
+amount, band, or policy. The agent cannot detect or bypass the kill switch — enforcement is in the
+kernel layer, outside the agent's own process.
+
+options:
+  \-h, \-\-help            show this help message and exit
+  \-\-by BY               Name or ID of the operator engaging the kill switch
+  \-\-reason REASON       Reason for engaging (recorded in audit log)
+  \-\-state\-dir STATE_DIR
+                        Path to kernel state directory
+.fi
+.SS custodian resume
+.nf
+usage: custodian resume [\-h] \-\-by BY [\-\-state\-dir STATE_DIR]
+
+Release a previously engaged kill switch. Requests are evaluated normally again.
+
+options:
+  \-h, \-\-help            show this help message and exit
+  \-\-by BY               Name or ID of the operator releasing the kill switch
+  \-\-state\-dir STATE_DIR
+                        Path to kernel state directory
+.fi
+.SS custodian confirm
+.nf
+usage: custodian confirm [\-h] [\-\-deadline SECONDS] [\-\-state\-dir STATE_DIR] request_id
+
+Mark a completed action as VERIFIED or UNVERIFIED. Must be called within 60 seconds of the request
+being approved.
+
+positional arguments:
+  request_id            The request\-id recorded in the audit log for this action
+
+options:
+  \-h, \-\-help            show this help message and exit
+  \-\-deadline SECONDS    Confirmation window in seconds (default: 60)
+  \-\-state\-dir STATE_DIR
+                        Path to kernel state directory
+.fi
+.SS custodian beancount
+.nf
+usage: custodian beancount [\-h] [\-\-since SINCE] [\-\-state\-dir STATE_DIR]
+
+Export all kernel\-verified transactions to Beancount double\-entry accounting format. Finance teams
+can import this into Fava or any Beancount\-compatible tool for reconciliation.
+
+options:
+  \-h, \-\-help            show this help message and exit
+  \-\-since SINCE         Only export entries on or after this date (YYYY\-MM\-DD)
+  \-\-state\-dir STATE_DIR
+                        Path to kernel state directory
+.fi
+.SS custodian tools
+.nf
+usage: custodian tools [\-h] {list,run,summary} ...
+
+Custodian ships a library of governed tools. Every tool declares a custodian\-band (L0–L4) in its
+SKILL.md frontmatter. The kernel checks band, spend caps, and kill\-switch state before any tool
+executes. Tools with missing credentials return {ok: false, stub: true} — the framework runs without
+any env vars configured.
+
+positional arguments:
+  {list,run,summary}
+    list              List all registered tools grouped by authority band
+    run               Invoke a governed tool by name
+    summary           Print tool count and band breakdown as JSON
+
+options:
+  \-h, \-\-help          show this help message and exit
+.fi
+.SS custodian tools list
+.nf
+usage: custodian tools list [\-h]
+
+options:
+  \-h, \-\-help  show this help message and exit
+.fi
+.SS custodian tools run
+.nf
+usage: custodian tools run [\-h] tool ...
+
+positional arguments:
+  tool        Tool name (see: custodian tools list)
+  kwargs      \-\-key value pairs passed to the tool
+
+options:
+  \-h, \-\-help  show this help message and exit
+.fi
+.SS custodian tools summary
+.nf
+usage: custodian tools summary [\-h]
+
+options:
+  \-h, \-\-help  show this help message and exit
+.fi
+.SS custodian adapters
+.nf
+usage: custodian adapters [\-h] {list,enable,disable,install,check} ...
+
+Guard adapters run before and after every governed action. Built\-ins cover spend anomalies, prompt
+injection, secret leaks, PII, context anchoring, loop breaking, tool confabulation, and scope
+fencing. Local adapter files install hash\-pinned: if the file changes after install, it refuses to
+load.
+
+positional arguments:
+  {list,enable,disable,install,check}
+    list                List available and enabled adapters
+    enable              Enable an adapter
+    disable             Disable an adapter
+    install             Install a local adapter file (hash\-pinned)
+    check               Dry\-run the enabled pipeline against a sample action
+
+options:
+  \-h, \-\-help            show this help message and exit
+.fi
+.SS custodian adapters list
+.nf
+usage: custodian adapters list [\-h] [\-\-json]
+
+options:
+  \-h, \-\-help  show this help message and exit
+  \-\-json      emit machine\-readable JSON
+.fi
+.SS custodian adapters enable
+.nf
+usage: custodian adapters enable [\-h] [\-\-config CONFIG] [\-\-all] [name]
+
+positional arguments:
+  name             Adapter name (omit with \-\-all)
+
+options:
+  \-h, \-\-help       show this help message and exit
+  \-\-config CONFIG  JSON config object for the adapter
+  \-\-all            Enable every built\-in adapter
+.fi
+.SS custodian adapters disable
+.nf
+usage: custodian adapters disable [\-h] name
+
+positional arguments:
+  name        adapter name to disable
+
+options:
+  \-h, \-\-help  show this help message and exit
+.fi
+.SS custodian adapters install
+.nf
+usage: custodian adapters install [\-h] path
+
+positional arguments:
+  path        path to an adapter package or directory
+
+options:
+  \-h, \-\-help  show this help message and exit
+.fi
+.SS custodian adapters check
+.nf
+usage: custodian adapters check [\-h] [\-\-args ARGS] [\-\-band BAND] [\-\-cost COST]
+                                [\-\-description DESCRIPTION]
+                                skill
+
+positional arguments:
+  skill                 skill name to evaluate
+
+options:
+  \-h, \-\-help            show this help message and exit
+  \-\-args ARGS           JSON dict of tool arguments
+  \-\-band BAND           authority band to evaluate (default: L0)
+  \-\-cost COST           proposed cost in USD
+  \-\-description DESCRIPTION
+                        human\-readable action description
+.fi
+.SS custodian executor
+.nf
+usage: custodian executor [\-h] {start,approve,deny} ...
+
+The delegated executor is a separate process that holds the only code path allowed to actually run a
+governed skill script \-\- the calling agent's own process can only propose an action over a Unix
+socket and never executes anything itself. An escalated action creates a signed, single\-use, digest\-
+bound capability; approve it here, then resend the identical request to consume it.
+
+positional arguments:
+  {start,approve,deny}
+    start               Start the executor process (blocks)
+    approve             Approve a pending capability by id
+    deny                Deny a pending capability
+
+options:
+  \-h, \-\-help            show this help message and exit
+.fi
+.SS custodian executor start
+.nf
+usage: custodian executor start [\-h] [\-\-skills\-root SKILLS_ROOT] [\-\-socket SOCKET]
+
+options:
+  \-h, \-\-help            show this help message and exit
+  \-\-skills\-root SKILLS_ROOT
+                        Skills directory (default: the bundled/dev skills root)
+  \-\-socket SOCKET       Unix socket path (default: <state\-dir>/executor.sock)
+.fi
+.SS custodian executor approve
+.nf
+usage: custodian executor approve [\-h] \-\-approved\-by APPROVED_BY [\-\-digest DIGEST]
+                                  [\-\-state\-dir STATE_DIR]
+                                  capability_id
+
+positional arguments:
+  capability_id         Capability UUID, or 'latest'
+
+options:
+  \-h, \-\-help            show this help message and exit
+  \-\-approved\-by APPROVED_BY
+                        Operator identity for the audit trail
+  \-\-digest DIGEST       Full action digest (64\-char hex) for verification before approval. If
+                        provided and it does not match the capability, approval is rejected.
+  \-\-state\-dir STATE_DIR
+                        State directory (default: ~/.custodian or $CUSTODIAN_STATE_DIR)
+.fi
+.SS custodian executor deny
+.nf
+usage: custodian executor deny [\-h] [\-\-denied\-by DENIED_BY] [\-\-digest DIGEST]
+                               [\-\-state\-dir STATE_DIR]
+                               capability_id
+
+positional arguments:
+  capability_id         Capability UUID, or 'latest'
+
+options:
+  \-h, \-\-help            show this help message and exit
+  \-\-denied\-by DENIED_BY
+                        Operator identity (falls back to $USER)
+  \-\-digest DIGEST       Full action digest (64\-char hex) to verify before denying.
+  \-\-state\-dir STATE_DIR
+                        State directory (default: ~/.custodian or $CUSTODIAN_STATE_DIR)
+.fi
+.SS custodian console
+.nf
+usage: custodian console [\-h] [\-\-state\-dir STATE_DIR] [\-\-operator OPERATOR] [\-\-once]
+
+options:
+  \-h, \-\-help            show this help message and exit
+  \-\-state\-dir STATE_DIR
+                        Custodian state directory
+  \-\-operator OPERATOR   operator identity recorded on decisions
+  \-\-once                Print one status screen and exit
+.fi
+.SS custodian gates
+.nf
+usage: custodian gates [\-h] {status,open,protect,notifications,capabilities,set} ...
+
+positional arguments:
+  {status,open,protect,notifications,capabilities,set}
+    status              Show enforcement and notification settings
+    open                Monitor detector findings without blocking; granular gates still apply
+    protect             Require approval for high\-risk action classes
+    notifications       Show or hide routine auto\-approval notices
+    capabilities        Show shared and harness\-specific gate support
+    set                 Set one granular gate to allow, ask, or block
+
+options:
+  \-h, \-\-help            show this help message and exit
+.fi
+.SS custodian gates status
+.nf
+usage: custodian gates status [\-h] [\-\-state\-dir STATE_DIR]
+
+options:
+  \-h, \-\-help            show this help message and exit
+  \-\-state\-dir STATE_DIR
+                        Custodian state directory
+.fi
+.SS custodian gates open
+.nf
+usage: custodian gates open [\-h] [\-\-harness HARNESS] [\-\-state\-dir STATE_DIR]
+
+options:
+  \-h, \-\-help            show this help message and exit
+  \-\-harness HARNESS     override one harness (for example codex, claude, or opencode)
+  \-\-state\-dir STATE_DIR
+                        Custodian state directory
+.fi
+.SS custodian gates protect
+.nf
+usage: custodian gates protect [\-h] [\-\-harness HARNESS] [\-\-state\-dir STATE_DIR]
+
+options:
+  \-h, \-\-help            show this help message and exit
+  \-\-harness HARNESS     override one harness (for example codex, claude, or opencode)
+  \-\-state\-dir STATE_DIR
+                        Custodian state directory
+.fi
+.SS custodian gates notifications
+.nf
+usage: custodian gates notifications [\-h] [\-\-state\-dir STATE_DIR] {verbose,quiet}
+
+positional arguments:
+  {verbose,quiet}       whether routine gate decisions are displayed
+
+options:
+  \-h, \-\-help            show this help message and exit
+  \-\-state\-dir STATE_DIR
+                        Custodian state directory
+.fi
+.SS custodian gates capabilities
+.nf
+usage: custodian gates capabilities [\-h] [\-\-state\-dir STATE_DIR] [harness]
+
+positional arguments:
+  harness               Harness to inspect; omit to show every known harness
+
+options:
+  \-h, \-\-help            show this help message and exit
+  \-\-state\-dir STATE_DIR
+                        Custodian state directory
+.fi
+.SS custodian gates set
+.nf
+usage: custodian gates set [\-h] [\-\-scope {action,global,path,project,session}] [\-\-target TARGET]
+                           [\-\-harness HARNESS] [\-\-tool TOOL] [\-\-state\-dir STATE_DIR]
+                           {credentials,destructive,filesystem_read,filesystem_write,git_write,governance,money,network,outside_workspace,package_install,production,shell}
+                           {allow,ask,block}
+
+positional arguments:
+  {credentials,destructive,filesystem_read,filesystem_write,git_write,governance,money,network,outside_workspace,package_install,production,shell}
+                        Gate to configure
+  {allow,ask,block}     Decision mode
+
+options:
+  \-h, \-\-help            show this help message and exit
+  \-\-scope {action,global,path,project,session}
+                        Policy scope used to match this rule
+  \-\-target TARGET       Scope target or wildcard
+  \-\-harness HARNESS     Harness name or wildcard
+  \-\-tool TOOL           Tool name or wildcard
+  \-\-state\-dir STATE_DIR
+                        Custodian state directory
+.fi
+.SS custodian uninstall
+.nf
+usage: custodian uninstall [\-h] [\-\-dry\-run] [\-\-yes]
+
+options:
+  \-h, \-\-help  show this help message and exit
+  \-\-dry\-run   show what would be removed without changing the system
+  \-\-yes       Confirm package removal
+.fi
+.SS custodian health
+.nf
+usage: custodian health [\-h] [\-\-format {text,json}] [\-\-state\-dir STATE_DIR]
+
+Check installed distributions, components, and append a tamper\-evident health event to the ledger.
+No secrets are exposed.
+
+options:
+  \-h, \-\-help            show this help message and exit
+  \-\-format {text,json}  Output format (default: text)
+  \-\-state\-dir STATE_DIR
+                        Kernel state directory (default: ~/.custodian)
+.fi
+.SS custodian codex\-guard
+.nf
+usage: custodian codex\-guard [\-h] {receipts} ...
+
+Inspect the HMAC hash\-chained audit log of Codex Guard decisions.
+
+positional arguments:
+  {receipts}
+    receipts  Print the codex\-guard receipt chain
+
+options:
+  \-h, \-\-help  show this help message and exit
+.fi
+.SS custodian codex\-guard receipts
+.nf
+usage: custodian codex\-guard receipts [\-h] [\-\-state\-dir STATE_DIR] [\-\-limit LIMIT] [\-\-verify]
+
+Pretty\-print the JSONL receipt chain for Codex Guard decisions.
+
+options:
+  \-h, \-\-help            show this help message and exit
+  \-\-state\-dir STATE_DIR
+                        Path to kernel state directory
+  \-\-limit LIMIT         Max receipts to show (default: 50; 0 or negative means all)
+  \-\-verify              Run chain verification before printing
+.fi
+.SS custodian demo
+.nf
+usage: custodian demo [\-h] {verify,cycle,attacks,receipt} ...
+
+Standalone demonstration commands. Each runs against hardcoded or simulated data so no Stripe,
+Twilio, or Modal credentials are required. The kernel logic (claim verifier, policy engine,
+authority bands) is identical to production — only the input data is fixed for the demo.
+
+positional arguments:
+  {verify,cycle,attacks,receipt}
+    verify              4 claim\-verification scenarios: VERIFIED, CONTRADICTED, UNVERIFIABLE
+    cycle               Full earn→kernel gates AI→AI generates report→receipt loop
+    attacks             5 planted attack patterns — all caught by the kernel
+    receipt             @govern decorator + GovernedReceipt — kernel as fabric
+
+options:
+  \-h, \-\-help            show this help message and exit
+.fi
+.SS custodian demo verify
+.nf
+usage: custodian demo verify [\-h]
+
+Runs 4 hardcoded claims through the real verify_claims() function. Shows VERIFIED (legitimate
+spend), CONTRADICTED (phantom revenue), CONTRADICTED (self\-approval attempt), and UNVERIFIABLE
+(future claim). No credentials required.
+
+options:
+  \-h, \-\-help  show this help message and exit
+.fi
+.SS custodian demo cycle
+.nf
+usage: custodian demo cycle [\-h]
+
+Shows the complete economic cycle: customer pays $35 (real Stripe PI if STRIPE_SECRET_KEY is set),
+the kernel gates the AI inference spend, Nemotron generates a governance report from customer
+inputs, and the claim verifier proves both sides. Set OPENROUTER_API_KEY or NVIDIA_API_KEY to enable
+live inference; without them shows the kernel gate only.
+
+options:
+  \-h, \-\-help  show this help message and exit
+.fi
+.SS custodian demo attacks
+.nf
+usage: custodian demo attacks [\-h]
+
+Runs 5 adversarial claims through the verifier: self\-approval, phantom revenue, duplicate spend,
+off\-band escalation, and fraudulent refund. All 5 are caught. Shows 0 false positives.
+
+options:
+  \-h, \-\-help  show this help message and exit
+.fi
+.SS custodian demo receipt
+.nf
+usage: custodian demo receipt [\-h]
+
+Demonstrates the 0.2.0 kernel fabric: @govern wraps a charge function, the kernel evaluates
+autonomously, a SHA\-256 fingerprinted receipt is generated, and a kill\-switch denial is shown.
+
+options:
+  \-h, \-\-help  show this help message and exit
+.fi
+.SS custodian generate\-report
+.nf
+usage: custodian generate\-report [\-h] [\-\-input INPUT] [\-\-out OUT] [\-\-pi\-id PI_ID] [\-\-amount AMOUNT]
+
+Kernel gates the inference spend, then Nemotron reads the customer's tool list and produces
+policy.yaml, threat\-model.md, audit\-report.md, and a SHA\-256 delivery\-receipt.json. Requires
+OPENROUTER_API_KEY or NVIDIA_API_KEY.
+
+options:
+  \-h, \-\-help       show this help message and exit
+  \-\-input INPUT    JSON file with customer inputs
+  \-\-out OUT        Output directory (default: ./delivery)
+  \-\-pi\-id PI_ID    Stripe PaymentIntent ID
+  \-\-amount AMOUNT  Earn amount (default: 35.00)
+.fi
+.SH SEE ALSO
+.BR custodian (1),
+.BR custodian-codex (1)

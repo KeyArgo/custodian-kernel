@@ -131,7 +131,7 @@ class CustodianMiddleware:
                 "error": decision.verdict.value,
                 "reason": decision.reason,
                 "audit_id": audit_id,
-                "kernel": "custodian/0.4.0",
+                "kernel": "custodian/0.4.2",
             }
             await self._send_json(send, status, response, headers=[
                 [b"x-custodian-verdict", decision.verdict.value.encode()],

@@ -39,6 +39,11 @@ class ExecutorClient:
             "tool": tool, "args": args, "requester": requester,
             "workspace": workspace, "credential_refs": credential_refs or [],
         }
+        if not hasattr(socket, "AF_UNIX"):
+            raise ExecutorUnavailableError(
+                "the delegated executor requires Unix-domain sockets, which "
+                "are unavailable on this Windows runtime"
+            )
         try:
             with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as sock:
                 sock.settimeout(self.timeout)

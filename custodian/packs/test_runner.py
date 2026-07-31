@@ -34,6 +34,8 @@ except ImportError:  # pragma: no cover
 
 @dataclass
 class TestCase:
+    __test__ = False
+
     id: str
     description: str
     corpus_file: str
@@ -45,6 +47,8 @@ class TestCase:
 
 @dataclass
 class TestManifest:
+    __test__ = False
+
     pack: str
     version: str
     cases: list[TestCase]

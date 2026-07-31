@@ -43,6 +43,7 @@ def register(sub) -> None:
         "uninstall",
         help="Remove the kernel package while preserving all user data",
     )
-    parser.add_argument("--dry-run", action="store_true")
+    parser.add_argument("--dry-run", action="store_true",
+                        help="show what would be removed without changing the system")
     parser.add_argument("--yes", action="store_true", help="Confirm package removal")
     parser.set_defaults(func=run)
