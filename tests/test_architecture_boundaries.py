@@ -67,6 +67,21 @@ def test_custodian_never_imports_paladin_or_talaria():
     )
 
 
+def test_custodian_never_imports_a_payment_vendor_sdk():
+    # The kernel defines custodian.processors.base.PaymentProcessor as a
+    # vendor-neutral interface (custodian-stripe, a future custodian-square,
+    # etc. implement it in their own repos, depending on the kernel -- never
+    # the other way around). A direct `import stripe` here would mean the
+    # kernel itself has taken on a vendor dependency it's supposed to only
+    # ever reach through that interface.
+    violations = _check_package_forbids("custodian", {"stripe"})
+    assert not violations, (
+        "custodian/ must stay payment-vendor-neutral -- these files import "
+        "a vendor SDK directly instead of going through "
+        "custodian.processors.base.PaymentProcessor:\n" + "\n".join(violations)
+    )
+
+
 def test_paladin_never_imports_custodian_or_talaria():
     violations = _check_package_forbids("paladin", {"custodian", "talaria"})
     assert not violations, (

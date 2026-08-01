@@ -42,6 +42,75 @@ _PROFILES = {
 }
 
 
+def _discovered_components() -> dict:
+    """Component specs from the ``custodian.setup_components`` entry-point group.
+
+    Each entry point is named after the component and must load() to a dict
+    shaped like _COMPONENTS' values: {"description": str, "pip_spec": str | None}.
+    Broken or malformed entry points are skipped silently -- a broken
+    third-party package must never crash `custodian setup` for everyone else.
+    """
+    discovered: dict = {}
+    try:
+        from importlib.metadata import entry_points
+    except ImportError:
+        return discovered
+    try:
+        eps = entry_points(group="custodian.setup_components")
+    except Exception:
+        return discovered
+    for ep in eps:
+        try:
+            spec = ep.load()
+        except Exception:
+            continue
+        if not isinstance(spec, dict):
+            continue
+        discovered[ep.name] = spec
+    return discovered
+
+
+def _discovered_profiles() -> dict:
+    """Profile → component list mappings from the ``custodian.setup_profiles`` entry-point group.
+
+    Each entry point is named after the profile and must load() to a list[str]
+    of component names (the shape of _PROFILES' values). Broken or malformed
+    entry points are skipped silently.
+    """
+    discovered: dict = {}
+    try:
+        from importlib.metadata import entry_points
+    except ImportError:
+        return discovered
+    try:
+        eps = entry_points(group="custodian.setup_profiles")
+    except Exception:
+        return discovered
+    for ep in eps:
+        try:
+            names = ep.load()
+        except Exception:
+            continue
+        if not isinstance(names, list) or not all(isinstance(n, str) for n in names):
+            continue
+        discovered[ep.name] = names
+    return discovered
+
+
+def _effective_components() -> dict:
+    """Built-in components merged with entry-point-discovered ones.
+
+    Built-ins win on a name collision -- a third-party package must never be
+    able to silently redefine what "paladin" or "talaria" mean.
+    """
+    return {**_discovered_components(), **_COMPONENTS}
+
+
+def _effective_profiles() -> dict:
+    """Built-in profiles merged with entry-point-discovered ones (built-ins win)."""
+    return {**_discovered_profiles(), **_PROFILES}
+
+
 def _detect_hermes() -> bool:
     # Shares custodian.cli.cmd_doctor's HERMES_HOME-aware home resolution --
     # this used to hardcode ~/.hermes here while cmd_doctor checked
@@ -54,21 +123,23 @@ def _detect_hermes() -> bool:
 
 
 def _resolve_components(args) -> list[str]:
+    components = _effective_components()
+    profiles = _effective_profiles()
     names: set[str] = set()
     profile = getattr(args, "profile", None)
     if profile:
-        if profile not in _PROFILES:
-            print(f"error: unknown profile '{profile}' (choices: {', '.join(sorted(_PROFILES))})")
+        if profile not in profiles:
+            print(f"error: unknown profile '{profile}' (choices: {', '.join(sorted(profiles))})")
             raise SystemExit(1)
-        names.update(_PROFILES[profile])
+        names.update(profiles[profile])
     with_arg = getattr(args, "with_", None)
     if with_arg:
         for raw in with_arg.split(","):
             name = raw.strip()
             if not name:
                 continue
-            if name not in _COMPONENTS:
-                print(f"error: unknown component '{name}' (choices: {', '.join(sorted(_COMPONENTS))})")
+            if name not in components:
+                print(f"error: unknown component '{name}' (choices: {', '.join(sorted(components))})")
                 raise SystemExit(1)
             names.add(name)
     return sorted(names)
@@ -90,6 +161,7 @@ def run(args) -> None:
     print(f"Hermes Agent detected: {'yes' if hermes_detected else 'no'}")
 
     components = _resolve_components(args)
+    all_components = _effective_components()
 
     if not components:
         if hermes_detected:
@@ -105,7 +177,7 @@ def run(args) -> None:
 
     print("\nComponents:")
     for name in components:
-        spec = _COMPONENTS[name]
+        spec = all_components[name]
         status = spec["pip_spec"] or "already included, nothing to do"
         print(f"  - {name}: {spec['description']}  [{status}]")
 
@@ -114,7 +186,7 @@ def run(args) -> None:
         return
 
     for name in components:
-        pip_spec = _COMPONENTS[name]["pip_spec"]
+        pip_spec = all_components[name]["pip_spec"]
         if not pip_spec:
             continue
         _run_checked(

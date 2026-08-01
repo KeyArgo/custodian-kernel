@@ -164,6 +164,34 @@ def _is_configured(name: str, skill_meta_flag: bool,
     return all(source.get(v) for v in reqs)
 
 
+def _discovered_skill_roots() -> list[Path]:
+    """Extra skill roots from the ``custodian.skills`` entry-point group.
+
+    Each entry point must load() to a Path pointing at an existing directory
+    that holds its own SKILL.md files. Broken or malformed entry points are
+    skipped silently -- a broken third-party package must never break skill
+    discovery for everyone else.
+    """
+    roots: list[Path] = []
+    try:
+        from importlib.metadata import entry_points
+    except ImportError:
+        return roots
+    try:
+        eps = entry_points(group="custodian.skills")
+    except Exception:
+        return roots
+    for ep in eps:
+        try:
+            value = ep.load()
+            path = Path(value)
+        except Exception:
+            continue
+        if path.is_dir():
+            roots.append(path)
+    return roots
+
+
 def _state_dir() -> Path:
     """Resolve the Custodian state directory.
 
@@ -461,8 +489,12 @@ class CustodianTool:
 class ToolRegistry:
     """Discover and index all Custodian-governed skills under a root dir."""
 
-    def __init__(self, skills_root: Path):
+    def __init__(self, skills_root: Path, extra_roots: Optional[list[Path]] = None):
         self.skills_root = Path(skills_root)
+        if extra_roots is None:
+            self._extra_roots = _discovered_skill_roots()
+        else:
+            self._extra_roots = list(extra_roots)
         self._tools: dict[str, CustodianTool] = {}
         self._loaded = False
 
@@ -476,34 +508,35 @@ class ToolRegistry:
             return {}
 
     def load(self) -> "ToolRegistry":
-        """Scan skills_root for SKILL.md files with custodian metadata."""
+        """Scan skill roots for SKILL.md files with custodian metadata."""
         self._tools = {}
-        for skill_md in self.skills_root.rglob("SKILL.md"):
-            try:
-                text = skill_md.read_text()
-                meta = self._parse_frontmatter(text)
-                custodian_meta = (meta.get("metadata") or {}).get("custodian") or {}
-                band = custodian_meta.get("band")
-                if not band:
-                    continue  # not a governed skill
-                name = meta.get("name") or skill_md.parent.name
-                static_configured = bool(custodian_meta.get("configured", True))
-                execute = skill_md.parent / "scripts" / "execute.py"
-                tool = CustodianTool(
-                    name=name,
-                    description=meta.get("description", ""),
-                    band=str(band),
-                    cost_usd=float(custodian_meta.get("cost_usd", 0.0)),
-                    configured=_is_configured(name, static_configured),
-                    skill_dir=skill_md.parent,
-                    tags=list(meta.get("metadata", {}).get("hermes", {}).get("tags", [])),
-                    version=str(meta.get("version", "1.0.0")),
-                    execute_script=execute if execute.exists() else None,
-                    allowed_hosts=frozenset(custodian_meta.get("allowed_hosts") or ()),
-                )
-                self._tools[name] = tool
-            except Exception:
-                continue
+        for root in (self.skills_root, *self._extra_roots):
+            for skill_md in root.rglob("SKILL.md"):
+                try:
+                    text = skill_md.read_text()
+                    meta = self._parse_frontmatter(text)
+                    custodian_meta = (meta.get("metadata") or {}).get("custodian") or {}
+                    band = custodian_meta.get("band")
+                    if not band:
+                        continue  # not a governed skill
+                    name = meta.get("name") or skill_md.parent.name
+                    static_configured = bool(custodian_meta.get("configured", True))
+                    execute = skill_md.parent / "scripts" / "execute.py"
+                    tool = CustodianTool(
+                        name=name,
+                        description=meta.get("description", ""),
+                        band=str(band),
+                        cost_usd=float(custodian_meta.get("cost_usd", 0.0)),
+                        configured=_is_configured(name, static_configured),
+                        skill_dir=skill_md.parent,
+                        tags=list(meta.get("metadata", {}).get("hermes", {}).get("tags", [])),
+                        version=str(meta.get("version", "1.0.0")),
+                        execute_script=execute if execute.exists() else None,
+                        allowed_hosts=frozenset(custodian_meta.get("allowed_hosts") or ()),
+                    )
+                    self._tools[name] = tool
+                except Exception:
+                    continue
         self._loaded = True
         return self
 
