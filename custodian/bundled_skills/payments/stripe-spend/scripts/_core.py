@@ -42,39 +42,14 @@ DEFAULT_STATE = {
 }
 
 
-def _atomic_write(path: Path, content: str) -> None:
-    """Write content atomically: write to random-named temp file, then rename.
-
-    os.replace on the same filesystem is atomic, and unlike os.rename it also
-    replaces an existing target on Windows rather than raising FileExistsError.
-
-    fsync's fd must come from the SAME file object the whole way through (via
-    a `with` block). A previous version called
-    `os.fsync(tmp_path.open("rb").fileno())`, whose anonymous file object has
-    no reference held once .fileno() returns, so CPython's refcounting GC
-    closes it immediately and hands fsync an already-closed fd -- reproducible
-    as OSError: [Errno 9] Bad file descriptor. Because _atomic_write is the
-    last step of save_state(), and save_state() runs AFTER the charge, this
-    raised on every successful spend: money moved, budget never decremented,
-    no audit entry written. notify.py fixed this and documented it; the fix
-    was never propagated here.
-    """
-    dir_path = path.parent
-    dir_path.mkdir(parents=True, exist_ok=True)
-    tmp_name = str(path) + f".tmp.{os.getpid()}.{random.randint(100000, 999999)}"
-    tmp_path = Path(tmp_name)
-    try:
-        with open(tmp_path, "w") as f:
-            f.write(content)
-            f.flush()
-            os.fsync(f.fileno())
-        os.replace(str(tmp_path), str(path))
-    except Exception:
-        try:
-            tmp_path.unlink(missing_ok=True)
-        except OSError:
-            pass
-        raise
+# atomic_write / lock_fd / unlock_fd / state_lock / append_log now live in
+# custodian.authority.ledger -- one canonical implementation shared by every
+# processor's skill instead of a copy per skill. Wrapped under the same
+# module-level names this file has always used, so every existing call site
+# below (and every test that monkeypatches these names) is unaffected.
+from custodian.authority.ledger import atomic_write as _atomic_write
+from custodian.authority.ledger import state_lock as _state_lock_impl
+from custodian.authority.ledger import append_log as _append_log_impl
 
 
 def load_state():
@@ -89,48 +64,11 @@ def save_state(state):
     _atomic_write(STATE_FILE, json.dumps(state, indent=2))
 
 
-# -- cross-process state lock -------------------------------------------------
-#
-# The spend path is a read-modify-write on spent_this_session across a slow
-# network call, which is a classic TOCTOU: two concurrent spends both loaded
-# spent=$0 before either wrote, both charged, and the second save clobbered the
-# first's increment -- $1000 charged, $250 recorded, and the kernel then
-# believed it still had budget it had already spent. An OS advisory lock makes
-# the check-and-reserve atomic; the charge itself stays OUTSIDE the lock so
-# network latency never serializes unrelated spends.
-try:  # POSIX
-    import fcntl
-
-    def _lock_fd(fd):
-        fcntl.flock(fd, fcntl.LOCK_EX)
-
-    def _unlock_fd(fd):
-        fcntl.flock(fd, fcntl.LOCK_UN)
-except ImportError:  # Windows
-    import msvcrt
-
-    def _lock_fd(fd):
-        os.lseek(fd, 0, os.SEEK_SET)
-        msvcrt.locking(fd, msvcrt.LK_LOCK, 1)
-
-    def _unlock_fd(fd):
-        os.lseek(fd, 0, os.SEEK_SET)
-        msvcrt.locking(fd, msvcrt.LK_UNLCK, 1)
-
-
-@contextlib.contextmanager
+# Cross-process state lock: see custodian.authority.ledger.state_lock's
+# docstring/comment for the TOCTOU this guards against. Thin wrapper so
+# _state_lock() keeps its existing zero-arg call sites below unchanged.
 def _state_lock():
-    STATE_FILE.parent.mkdir(parents=True, exist_ok=True)
-    lock_path = STATE_FILE.parent / ".state.lock"
-    fd = os.open(str(lock_path), os.O_RDWR | os.O_CREAT, 0o600)
-    try:
-        _lock_fd(fd)
-        try:
-            yield
-        finally:
-            _unlock_fd(fd)
-    finally:
-        os.close(fd)
+    return _state_lock_impl(STATE_FILE.parent)
 
 
 def reserve_spend(amount, session_cap):
@@ -160,13 +98,7 @@ def release_spend(amount):
 
 
 def append_log(record):
-    LOG_FILE.parent.mkdir(parents=True, exist_ok=True)
-    record["ts"] = time.time()
-    record["iso"] = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
-    with open(LOG_FILE, "a") as f:
-        f.write(json.dumps(record) + "\n")
-        f.flush()
-        os.fsync(f.fileno())
+    return _append_log_impl(LOG_FILE, record)
 
 
 def stripe_key():

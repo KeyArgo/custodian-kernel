@@ -2,6 +2,29 @@
 
 All notable changes to custodian-kernel are recorded here. Dates are UTC.
 
+## [0.4.3] — 2026-08-02
+
+### Vendor-neutral payment processing
+
+- Added `custodian.processors.base.PaymentProcessor`, a vendor-neutral
+  interface (`charge`/`refund`/`payout`/`balance`) so a payment vendor
+  integration no longer needs to be bundled with the kernel to work with it.
+  Ships with `ManualLedgerProcessor`, an in-memory reference implementation
+  that needs no real vendor.
+- Added `custodian.authority.ledger`: the crash-safe atomic-write, file-lock,
+  and append-log primitives used by the bundled Stripe skill, now available
+  to any processor implementation.
+- The tool registry and `custodian setup` now discover externally-registered
+  skills and setup components/profiles via `importlib.metadata` entry points
+  (`custodian.skills`, `custodian.setup_components`, `custodian.setup_profiles`),
+  so a separately-installed package (e.g. a Stripe or other payment-processor
+  adapter) can register itself with zero kernel code changes. Built-in names
+  always win on a collision; a broken third-party entry point is skipped, not
+  raised.
+- `custodian/` is now mechanically forbidden from importing any payment
+  vendor SDK directly (enforced by `tests/test_architecture_boundaries.py`),
+  keeping the kernel itself vendor-neutral going forward.
+
 ## [0.4.1] — 2026-07-27
 
 ### Installation and lifecycle recovery

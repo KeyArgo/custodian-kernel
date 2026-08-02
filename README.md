@@ -31,7 +31,7 @@ tool results.
 
 ## Start here
 
-Version 0.4.2 is available as a GitHub release.
+Version 0.4.3 is available as a GitHub release.
 
 Install from PyPI:
 
@@ -137,6 +137,28 @@ blocks, gate policy, filesystem scopes, and receipt visibility. Hard blocks
 are not pending approvals. They identify actions that violated a boundary,
 such as declaring a home directory or filesystem root as the workspace.
 
+## Payment processors
+
+`custodian.processors.base.PaymentProcessor` is a vendor-neutral interface
+(`charge`/`refund`/`payout`/`balance`) for letting an agent move real money
+once the kernel's authority gate has decided to allow it. The kernel never
+imports a payment vendor's SDK directly and ships a reference
+`ManualLedgerProcessor` that needs no real vendor at all -- a payment
+integration is always a separate, opt-in package.
+
+| Processor | Package |
+|---|---|
+| Stripe | [`custodian-stripe`](https://github.com/KeyArgo/custodian-stripe) |
+
+Installing a processor package registers its skills and setup profile with
+the kernel automatically via `importlib.metadata` entry points -- no kernel
+code changes needed:
+
+```bash
+pip install custodian-stripe
+custodian setup --with stripe
+```
+
 ## Paladin credential broker
 
 The kernel distribution currently includes Paladin, an encrypted vault and
@@ -181,7 +203,7 @@ Read [SECURITY.md](SECURITY.md) before using it for consequential work.
 
 ## Release status
 
-The 0.4.2 release has passed more than 3,000 source tests, clean-wheel
+The 0.4.3 release has passed more than 3,000 source tests, clean-wheel
 installation, strict artifact validation, reproducible-build checks, and
 independent qualification on Linux and Windows. macOS qualification remains
 pending.
