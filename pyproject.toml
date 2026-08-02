@@ -51,6 +51,7 @@ dev = [
     "pymongo",
     "mongomock",
     "twine",
+    "stripe>=9.0",
 ]
 # paladin is standalone -- it has zero imports from any integration
 # package, and never will (see docs/TALARIA.md's "brand neutral" note,
@@ -81,10 +82,18 @@ requires = ["setuptools>=64"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]
-include = ["custodian*", "paladin*"]
+# custodian_stripe is included here so it's importable in this repo's own
+# editable dev install (no separate `pip install` needed to run its tests).
+# It is NOT part of the custodian-kernel release: build-kernel-release-tree.py
+# copies only custodian/ and paladin/ into the actual release tree. Its own
+# release wheel is built by build-custodian-stripe-release-tree.py against
+# packaging/custodian_stripe/pyproject.toml, which is where its real
+# `custodian-kernel` dependency is declared.
+include = ["custodian*", "paladin*", "custodian_stripe*"]
 
 [tool.setuptools.package-data]
 "custodian" = ["bundled_skills/**/*", "bundled_skills/**", "packs/**/corpus/*.json", "packs/**/*.yaml", "packs/**/*.json", "policy/presets/*.yaml"]
+"custodian_stripe" = ["skills/**/*", "skills/**"]
 
 [tool.pytest.ini_options]
 addopts = "-m 'not network'"

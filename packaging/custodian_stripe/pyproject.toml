@@ -1,0 +1,68 @@
+[project]
+name = "custodian-stripe"
+version = "0.1.0"
+description = "Stripe payment-processor adapter for the Custodian kernel"
+requires-python = ">=3.11"
+readme = "README.md"
+license = "MIT"
+authors = [
+    {name = "InovinLabs", email = "hello@inovinlabs.com"},
+]
+keywords = ["ai", "agent", "custodian", "stripe", "payments"]
+dependencies = [
+    # Pinned the same way paladin/talaria pin against the kernel: this repo
+    # depends on custodian-kernel, the kernel never depends back on this one
+    # (enforced on the kernel side by tests/test_architecture_boundaries.py).
+    "custodian-kernel>=0.4.0,<0.5",
+    "stripe>=9.0",
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Topic :: Software Development :: Libraries",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+]
+
+[project.urls]
+Homepage = "https://getcustodian.xyz"
+Repository = "https://github.com/keyargo/custodian-stripe"
+
+[project.optional-dependencies]
+dev = [
+    "build",
+    "pytest",
+    "pytest-asyncio",
+]
+
+# Registers this package's skills and setup profile with the kernel's
+# entry-point discovery (custodian/tools/registry.py's ToolRegistry and
+# custodian/cli/cmd_setup.py's _discovered_components/_discovered_profiles).
+# Shapes must match exactly what the kernel's discovery expects:
+#   - custodian.skills: loads to a Path (existing dir containing SKILL.md files)
+#   - custodian.setup_components: loads to {"description": str, "pip_spec": str|None}
+#   - custodian.setup_profiles: loads to a list[str] of component names
+[project.entry-points."custodian.skills"]
+stripe = "custodian_stripe.skills:SKILL_ROOT"
+
+[project.entry-points."custodian.setup_components"]
+stripe = "custodian_stripe.setup:COMPONENT"
+
+[project.entry-points."custodian.setup_profiles"]
+stripe = "custodian_stripe.setup:PROFILE_COMPONENTS"
+
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["custodian_stripe*"]
+
+[tool.setuptools.package-data]
+custodian_stripe = ["skills/**/*", "skills/**", "skills/.*"]
+
+[tool.setuptools.exclude-package-data]
+# Defense in depth: package-data globs above would otherwise happily bundle
+# stray bytecode left over from running/importing the skill scripts locally.
+"*" = ["__pycache__/*", "*.pyc"]
