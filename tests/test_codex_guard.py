@@ -365,6 +365,12 @@ def test_evaluate_guard_action_stamps_the_caller_supplied_harness(tmp_path, monk
     assert harnesses == {"codex", "opencode"}
 
 
+def test_guard_response_shows_kernel_receipt_number(tmp_path, monkeypatch):
+    monkeypatch.setenv("CUSTODIAN_CODEX_GUARD_STATE_DIR", str(tmp_path / "state"))
+    result = evaluate_guard_action(_guard_args(tmp_path), harness="codex")
+    assert result["receipt"]["number"] == 1
+
+
 def test_opencode_guard_wiring_is_self_protected(tmp_path, monkeypatch):
     """OpenCode's guard plugin lives under ~/.config/opencode/plugins/ (XDG
     convention, unlike Codex/Claude's direct ~/.codex, ~/.claude dotfile

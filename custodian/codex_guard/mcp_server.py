@@ -199,7 +199,8 @@ def evaluate_guard_action(args: dict[str, Any], *, harness: str = "codex") -> di
                 )
         receipt = chain.append(decision, tool=args.get("tool", ""),
                                session_id=args.get("session_id", "default"), harness=harness)
-        decision["receipt"] = {"timestamp": receipt["ts"], "chain_mac": receipt["mac"]}
+        decision["receipt"] = {"number": receipt.get("receipt_number"),
+                               "timestamp": receipt["ts"], "chain_mac": receipt["mac"]}
         return decision
     except ApprovalError as exc:
         denied = {"verdict": "denied", "reason": str(exc),
@@ -207,7 +208,8 @@ def evaluate_guard_action(args: dict[str, Any], *, harness: str = "codex") -> di
                   "band": "L4", "enforcement_required": True}
         receipt = chain.append(denied, tool=args.get("tool", ""),
                                session_id=args.get("session_id", "default"), harness=harness)
-        denied["receipt"] = {"timestamp": receipt["ts"], "chain_mac": receipt["mac"]}
+        denied["receipt"] = {"number": receipt.get("receipt_number"),
+                              "timestamp": receipt["ts"], "chain_mac": receipt["mac"]}
         return denied
     except Exception as exc:
         return {"verdict": "denied",

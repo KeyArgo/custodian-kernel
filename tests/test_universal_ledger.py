@@ -64,6 +64,14 @@ class TestAppendAndChain:
         assert rows[0]["prev_digest"] == d1  # most recent first
         assert rows[1]["prev_digest"] == ledger.genesis
 
+    def test_kernel_receipt_numbers_are_monotonic_and_digest_bound(self, ledger):
+        first = ledger.append_with_receipt(_event())
+        second = ledger.append_with_receipt(_event(lifecycle_event="decided", verdict="autonomous"))
+        assert (first.receipt_number, second.receipt_number) == (1, 2)
+        rows = ledger.tail(2)
+        assert [row["receipt_number"] for row in rows] == [2, 1]
+        ledger.verify()
+
     def test_genesis_is_installation_specific_not_a_fixed_literal(self, tmp_path):
         """GENESIS used to be a fixed "0"*64 literal -- every ledger
         anywhere started from the identical value, so nothing tied a

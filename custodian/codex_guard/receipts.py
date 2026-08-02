@@ -132,10 +132,14 @@ class ReceiptChain:
                 stream.write(json.dumps(record, sort_keys=True, separators=(",", ":")) + "\n")
                 stream.flush()
                 os.fsync(stream.fileno())
-            self._mirror_to_universal_ledger(body)
+            receipt_number = self._mirror_to_universal_ledger(body)
+            if receipt_number is not None:
+                # The number is integrity-bound by the kernel ledger. The
+                # existing local HMAC chain remains its independent evidence.
+                record["receipt_number"] = receipt_number
             return record
 
-    def _mirror_to_universal_ledger(self, body: dict[str, Any]) -> None:
+    def _mirror_to_universal_ledger(self, body: dict[str, Any]) -> int | None:
         """Best-effort fan-out into custodian's shared UniversalLedger --
         the same store Talaria's denial log now mirrors into (see
         talaria/denial_log.py), and the one `custodian console` merges
@@ -151,11 +155,11 @@ class ReceiptChain:
         this is a side-channel audit fan-out, not the enforcement itself,
         and must not make a broken/missing ledger break guard decisions."""
         if body["verdict"] not in ("autonomous", "escalation_required", "denied"):
-            return
+            return None
         try:
             from custodian.universal_ledger import UniversalLedger, LedgerEvent
             ledger = UniversalLedger(self.state_dir / "ledger.db")
-            ledger.append(LedgerEvent(
+            result = ledger.append_with_receipt(LedgerEvent(
                 correlation_id=body["session_id"],
                 requester=f"{body['harness']}:{body['session_id']}",
                 provider="codex_guard",
@@ -165,10 +169,12 @@ class ReceiptChain:
                 band=body["band"],
                 metadata={"reason": body["reason"][:200], "action_kind": body["action_kind"]},
             ))
+            return result.receipt_number
         except Exception as e:
             import warnings
             warnings.warn(f"codex guard: failed to mirror {body['verdict']!r} decision "
                           f"for tool {body['tool']!r} into universal ledger: {e}", stacklevel=2)
+            return None
 
     def verify(self) -> int:
         _private_dir(self.state_dir)

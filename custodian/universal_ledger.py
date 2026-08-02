@@ -87,6 +87,7 @@ _MAX_FIELD_LEN = {
 _SCHEMA_SQL = """
 CREATE TABLE IF NOT EXISTS ledger_events (
     id                  INTEGER PRIMARY KEY AUTOINCREMENT,
+    receipt_number      INTEGER,
     event_id            TEXT    NOT NULL UNIQUE,
     schema_version      INTEGER NOT NULL,
     ts                  REAL    NOT NULL,
@@ -267,6 +268,15 @@ class LedgerEvent:
         }
 
 
+@dataclass(frozen=True)
+class LedgerAppendResult:
+    """Kernel-issued, monotonic identifier and digest for one ledger append."""
+
+    receipt_number: int
+    event_id: str
+    digest: str
+
+
 class UniversalLedger:
     """Append-only, hash-chained ledger. One instance per SQLite file;
     safe to construct one per call the way SqliteStorage already is --
@@ -279,6 +289,20 @@ class UniversalLedger:
             conn = sqlite3.connect(str(self.path))
             conn.execute("PRAGMA journal_mode=WAL;")
             conn.executescript(_SCHEMA_SQL)
+            columns = {row[1] for row in conn.execute("PRAGMA table_info(ledger_events)")}
+            if "receipt_number" not in columns:
+                # Existing records retain their original canonical body and
+                # therefore have no number. New numbering begins on upgrade.
+                conn.execute("ALTER TABLE ledger_events ADD COLUMN receipt_number INTEGER")
+                conn.execute(
+                    "CREATE UNIQUE INDEX IF NOT EXISTS idx_ledger_receipt_number "
+                    "ON ledger_events(receipt_number) WHERE receipt_number IS NOT NULL"
+                )
+            else:
+                conn.execute(
+                    "CREATE UNIQUE INDEX IF NOT EXISTS idx_ledger_receipt_number "
+                    "ON ledger_events(receipt_number) WHERE receipt_number IS NOT NULL"
+                )
             # Origin-bound genesis: a fixed literal ("0"*64) meant every
             # ledger anywhere started from the identical value, so nothing
             # tied a chain to a specific installation -- found in review
@@ -311,6 +335,10 @@ class UniversalLedger:
         before any write if the record fails sanitization -- validation
         happens outside the transaction so a bad record never holds the
         write lock."""
+        return self.append_with_receipt(event).digest
+
+    def append_with_receipt(self, event: LedgerEvent) -> LedgerAppendResult:
+        """Append atomically and return the kernel-issued receipt identifier."""
         event._validate()
         try:
             conn = self._connect()
@@ -326,18 +354,22 @@ class UniversalLedger:
                     "SELECT digest FROM ledger_events ORDER BY id DESC LIMIT 1"
                 ).fetchone()
                 prev_digest = row["digest"] if row is not None else self.genesis
+                receipt_number = conn.execute(
+                    "SELECT COALESCE(MAX(receipt_number), 0) + 1 FROM ledger_events"
+                ).fetchone()[0]
                 body = event._body()
+                body["receipt_number"] = receipt_number
                 digest = hashlib.sha256(prev_digest.encode() + _canonical(body)).hexdigest()
                 conn.execute(
                     """INSERT INTO ledger_events (
-                        event_id, schema_version, ts, correlation_id, session_id,
+                        receipt_number, event_id, schema_version, ts, correlation_id, session_id,
                         requester, provider, action, lifecycle_event, verdict, band,
                         approver, amount, currency, cost_estimated, cost_actual,
                         external_id, credential_refs, destination_host, metadata,
                         receipt_ref, prev_digest, digest
-                    ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                    ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
                     (
-                        body["event_id"], body["schema_version"], body["ts"],
+                        receipt_number, body["event_id"], body["schema_version"], body["ts"],
                         body["correlation_id"], body["session_id"], body["requester"],
                         body["provider"], body["action"], body["lifecycle_event"],
                         body["verdict"], body["band"], body["approver"], body["amount"],
@@ -348,7 +380,8 @@ class UniversalLedger:
                     ),
                 )
                 conn.commit()
-                return digest
+                return LedgerAppendResult(receipt_number=receipt_number,
+                                          event_id=event.event_id, digest=digest)
             finally:
                 conn.close()
         except sqlite3.Error as e:
@@ -383,6 +416,8 @@ class UniversalLedger:
                 "metadata": json.loads(row["metadata"]),
                 "receipt_ref": row["receipt_ref"],
             }
+            if row["receipt_number"] is not None:
+                body["receipt_number"] = row["receipt_number"]
             if row["prev_digest"] != expected_prev:
                 raise LedgerChainBrokenError(
                     f"row {row['id']} (event {row['event_id']}): prev_digest does not "
