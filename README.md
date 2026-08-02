@@ -7,8 +7,11 @@ evaluates proposed actions against rules you own, routes consequential work to
 an operator when needed, and records each decision in a tamper-evident ledger.
 
 The kernel is not tied to one model or harness. Codex Guard brings it into
-OpenAI Codex. Hermes Guard brings it into Hermes Agent. Talaria builds a richer
-Hermes control experience on top.
+OpenAI Codex. Claude Guard brings it into Claude Code. Hermes Guard brings it
+into Hermes Agent, and Talaria builds a richer Hermes control experience on
+top of that. Every integration shares the same decision engine, receipt
+chain, and Paladin credential broker — none of them depend on each other,
+only on this package.
 
 ## What it governs
 
@@ -57,15 +60,28 @@ writing packages into the operating system's Python environment.
 
 ## Choose an integration
 
+Install the kernel first, then add the package for whichever harness you
+actually run. Each one pulls in `custodian-kernel` on its own as a
+dependency, so installing an integration package alone is enough — the
+explicit `pipx install custodian-kernel` step above is for using the bare
+`custodian` operator CLI by itself, without any harness adapter.
+
 | Environment | Package | Operator command |
 |---|---|---|
-| Kernel and Paladin only | `custodian-kernel` | `custodian` |
+| Kernel and Paladin only, no harness adapter | `custodian-kernel` | `custodian` |
 | OpenAI Codex | `custodian-codex-guard` | `custodian-codex setup` |
+| Claude Code | `custodian-claude-guard`\* | `custodian-claude setup` |
 | Hermes enforcement only | `custodian-hermes-guard` | `custodian-hermes setup` |
-| Complete Hermes experience | `custodian-talaria` | `talaria setup` |
+| Complete Hermes experience (Paladin CLI, dashboard, NemoClaw) | `custodian-talaria` | `talaria setup` |
 
-Integration packages depend on the kernel. The kernel does not import a
-harness adapter.
+\* Not yet on PyPI. Install from source until it is:
+`pip install "custodian-claude-guard @ git+https://github.com/KeyArgo/custodian-claude-guard"`
+
+Every integration package depends on the kernel only — never on another
+integration package. `custodian-codex-guard` and `custodian-claude-guard`
+can be installed side by side with no conflict; each governs its own
+harness independently through the same decision engine. The kernel itself
+never imports a harness adapter, in either direction.
 
 ## The decision path
 
@@ -174,6 +190,7 @@ pending.
 
 - [Source](https://github.com/KeyArgo/custodian-kernel)
 - [Codex Guard](https://github.com/KeyArgo/custodian-codex-guard)
+- [Claude Guard](https://github.com/KeyArgo/custodian-claude-guard)
 - [Hermes Guard](https://github.com/KeyArgo/custodian-hermes-guard)
 - [Talaria](https://github.com/KeyArgo/custodian-talaria)
 - [Documentation](https://getcustodian.xyz/docs)
