@@ -174,6 +174,14 @@ class ReceiptChain:
             warnings.warn(f"codex guard: failed to mirror {body['verdict']!r} decision "
                           f"for tool {body['tool']!r} into universal ledger: {e}", stacklevel=2)
 
+    def records(self) -> list[dict[str, Any]]:
+        """All locally stored records, oldest first, no cross-harness access
+        policy applied -- for the operator's own tooling reading its own
+        state directory directly (e.g. `custodian-codex status`'s open-gate
+        summary), the same trust level `verify()` already reads at."""
+        with self._lock, _process_lock(self.lock_path):
+            return self._records()
+
     def verify(self) -> int:
         _private_dir(self.state_dir)
         with self._lock, _process_lock(self.lock_path):

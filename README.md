@@ -31,7 +31,7 @@ tool results.
 
 ## Start here
 
-Version 0.4.3 is available as a GitHub release.
+Version 0.4.4 is available as a GitHub release.
 
 Install from PyPI:
 
@@ -203,7 +203,7 @@ Read [SECURITY.md](SECURITY.md) before using it for consequential work.
 
 ## Release status
 
-The 0.4.3 release has passed more than 3,000 source tests, clean-wheel
+The 0.4.4 release has passed more than 3,000 source tests, clean-wheel
 installation, strict artifact validation, reproducible-build checks, and
 independent qualification on Linux and Windows. macOS qualification remains
 pending.

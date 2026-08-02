@@ -2,7 +2,7 @@
 
 All notable changes to custodian-kernel are recorded here. Dates are UTC.
 
-## [0.4.3] — 2026-08-02
+## [0.4.4] — 2026-08-02
 
 ### Vendor-neutral payment processing
 
@@ -24,6 +24,32 @@ All notable changes to custodian-kernel are recorded here. Dates are UTC.
 - `custodian/` is now mechanically forbidden from importing any payment
   vendor SDK directly (enforced by `tests/test_architecture_boundaries.py`),
   keeping the kernel itself vendor-neutral going forward.
+
+### Guard adapter architecture
+
+- Moved the harness-neutral action-evaluation engine (`evaluate_guard_action`
+  and its notification/summary helpers) from `custodian.codex_guard` into
+  `custodian.guard_core.evaluation`, part of Kernel. It already served every
+  supported harness (Codex, Claude, OpenCode) via its `harness` keyword, but
+  living inside codex-guard's own package meant every other guard adapter had
+  to depend on `custodian-codex-guard` just to reach it.
+- Moved the Paladin credential-broker bridge from `custodian.codex_guard`
+  into `custodian.guard_core.paladin_bridge` for the same reason.
+- `custodian.codex_guard.mcp_server` and `custodian.codex_guard.paladin_bridge`
+  re-export these same names for backward compatibility with already-published
+  callers; behavior is unchanged, only the canonical location moved.
+- Added `tests/test_architecture_boundaries.py::test_no_guard_imports_another_guard`,
+  which enforces this permanently: no guard adapter package may import
+  another guard adapter's package, only Kernel's. Found and fixed one other
+  real violation in `opencode_guard` while adding it.
+
+## [0.4.3] — 2026-08-02
+
+Superseded by 0.4.4 above, which supersedes this tag/release for guard-core
+compatibility (custodian-codex-guard>=0.1.4 and custodian-claude-guard>=0.1.0
+both require custodian.guard_core.evaluation, which this version does not
+contain). This version's payment-processor content is carried forward
+unchanged into 0.4.4.
 
 ## [0.4.1] — 2026-07-27
 
