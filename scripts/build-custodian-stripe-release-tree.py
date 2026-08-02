@@ -33,6 +33,9 @@ def build_tree(output: Path) -> None:
     shutil.copy2(ROOT / "packaging/custodian_stripe/README.md", output / "README.md")
     shutil.copy2(ROOT / "packaging/custodian_stripe/DEPLOY-CUTOVER.md", output / "DEPLOY-CUTOVER.md")
     shutil.copy2(ROOT / "LICENSE", output / "LICENSE")
+    shutil.copy2(ROOT / "docs/SECURITY.md", output / "SECURITY.md")
+    shutil.copy2(ROOT / "docs/CONTRIBUTING.md", output / "CONTRIBUTING.md")
+    shutil.copy2(ROOT / "docs/CODE_OF_CONDUCT.md", output / "CODE_OF_CONDUCT.md")
 
 
 def main() -> int:
