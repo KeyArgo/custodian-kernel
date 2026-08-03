@@ -38,7 +38,9 @@ from paladin.errors import (
     VaultCorruptError,
     GrantDeniedError,
     UnknownRefError,
+    ExternalSecretProviderError,
 )
+from paladin.bitwarden import BitwardenSecret, BitwardenSecretProvider
 from paladin.vault import Vault
 from paladin.broker import Broker
 from paladin.grants import Grant, GrantPolicy
@@ -55,6 +57,9 @@ __all__ = [
     "VaultCorruptError",
     "GrantDeniedError",
     "UnknownRefError",
+    "ExternalSecretProviderError",
+    "BitwardenSecret",
+    "BitwardenSecretProvider",
 ]
 
 __version__ = "0.1.0"

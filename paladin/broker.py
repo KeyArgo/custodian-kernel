@@ -31,7 +31,9 @@ from typing import Mapping, Optional, Sequence
 from urllib.parse import parse_qsl, quote, quote_plus, urlencode, urlsplit, urlunsplit
 
 from paladin.audit import AuditLog
-from paladin.errors import EgressDeniedError, GrantDeniedError, UnknownRefError
+from paladin.errors import (
+    EgressDeniedError, ExternalSecretProviderError, GrantDeniedError, UnknownRefError,
+)
 from paladin.grants import GrantPolicy
 from paladin.guard import PaladinGuard
 from paladin.refs import SecretRef
@@ -102,7 +104,8 @@ class LeakSentinel:
 class Broker:
     """Grant-gated, audited egress for one vault."""
 
-    def __init__(self, vault: Vault, audit_path: Optional[Path] = None) -> None:
+    def __init__(self, vault: Vault, audit_path: Optional[Path] = None,
+                 external_provider=None) -> None:
         self.vault = vault
         self.grants = GrantPolicy(vault)
         self.audit = AuditLog(
@@ -110,12 +113,20 @@ class Broker:
         )
         self.guard = PaladinGuard(self.audit)
         self.leak_sentinel = LeakSentinel()
+        self.external_provider = external_provider
+
+    def _is_external_ref(self, name: str) -> bool:
+        return self.external_provider is not None and self.external_provider.has_ref(name)
 
     # -- internal resolution (audited, grant-gated) ---------------------------
 
     def _resolve(self, ref: SecretRef | str, requester: str, band: str) -> str:
         self.guard.require_agent_safe(requester)
         ref = SecretRef.parse(str(ref))
+        if self._is_external_ref(ref.name):
+            # External provider values are deliberately never eligible for
+            # environment injection, even from this broker API.
+            raise EgressDeniedError("external secrets are available only through brokered egress")
         try:
             grant = self.grants.check(ref.name, requester, band)
         except GrantDeniedError:
@@ -234,12 +245,16 @@ class Broker:
 
         # -- host ceiling (entry) then egress scope (grant) — deny BEFORE we
         #    ever materialize the plaintext value ------------------------------
+        external = self._is_external_ref(ref.name)
         try:
-            allowed_hosts = self.vault.meta(ref.name).get("allowed_hosts") or []
+            allowed_hosts = (self.external_provider.allowed_hosts(ref.name) if external
+                             else self.vault.meta(ref.name).get("allowed_hosts") or [])
         except UnknownRefError:
             self.audit.append("deny", ref.name, requester, band, "unknown ref")
             raise
-        if allowed_hosts and host not in allowed_hosts:
+        # External refs are strict: unlike legacy local entries, empty is not
+        # an unrestricted compatibility mode.
+        if (external and not allowed_hosts) or (allowed_hosts and host not in allowed_hosts):
             self.audit.append("deny", ref.name, requester, band,
                               f"host {host} not in entry allowed_hosts")
             raise EgressDeniedError(
@@ -253,7 +268,12 @@ class Broker:
             )
 
         # -- everything checked: resolve and inject ---------------------------
-        value = self.vault._resolve_value(ref.name)
+        try:
+            value = (self.external_provider.resolve(ref.name) if external
+                     else self.vault._resolve_value(ref.name))
+        except (UnknownRefError, ExternalSecretProviderError):
+            self.audit.append("deny", ref.name, requester, band, "secret resolution failed")
+            raise
         self.leak_sentinel.register(value)
         try:
             headers = self._safe_headers(descriptor.get("headers"))

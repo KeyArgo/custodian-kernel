@@ -51,6 +51,10 @@ class EgressDeniedError(PaladinError):
     ref outside its per-run allow-list. Value-free by construction."""
 
 
+class ExternalSecretProviderError(PaladinError):
+    """A broker-only external secret provider failed without exposing a value."""
+
+
 class SandboxUnavailableError(PaladinError):
     """The hardened, network-isolated egress sandbox cannot be built here
     (``bwrap`` missing, or unprivileged user namespaces are disabled by
