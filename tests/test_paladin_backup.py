@@ -7,6 +7,7 @@ pre_restore_safety_copy below).
 from __future__ import annotations
 
 from pathlib import Path
+import zipfile
 
 import pytest
 
@@ -34,6 +35,11 @@ def test_create_and_restore_roundtrip(tmp_path):
     v2.close()
     assert info.entry_count == 1
     assert dest.exists()
+    # v2 seals the entire archive: neither secret nor value-free operational
+    # metadata should be visible to somebody holding only the backup file.
+    raw = dest.read_bytes()
+    assert b"secret-value-1" not in raw and b"k1" not in raw
+    assert not zipfile.is_zipfile(dest)
 
     new_home = tmp_path / "restored"
     new_vault_path = new_home / "vault.paladin"
@@ -163,5 +169,22 @@ def test_restore_from_bare_vault_file_also_works(tmp_path):
     restored = Vault.open(path=new_vault_path, passphrase=PP)
     try:
         assert restored._resolve_value("k1") == "bare-file-value"
+    finally:
+        restored.close()
+
+
+def test_restore_legacy_zip_backup_remains_supported(tmp_path):
+    vault_path = tmp_path / "home" / "vault.paladin"
+    vault = _vault_with_secret(vault_path, "k1", "legacy-value")
+    vault.close()
+    legacy = tmp_path / "legacy.zip"
+    with zipfile.ZipFile(legacy, "w") as archive:
+        archive.write(vault_path, "vault.paladin")
+
+    new_vault_path = tmp_path / "restored" / "vault.paladin"
+    backup.restore_backup(legacy, new_vault_path, passphrase=PP)
+    restored = Vault.open(path=new_vault_path, passphrase=PP)
+    try:
+        assert restored._resolve_value("k1") == "legacy-value"
     finally:
         restored.close()

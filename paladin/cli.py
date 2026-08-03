@@ -26,7 +26,7 @@ Examples::
     paladin exec --profile prod -- python agent.py
     paladin audit verify
     paladin backup                              # encrypted backup, one file
-    paladin restore backups/paladin-backup-20260716-120000.zip
+    paladin restore backups/paladin-backup-20260716-120000.paladin-backup
 """
 from __future__ import annotations
 
@@ -702,7 +702,7 @@ def build_parser() -> argparse.ArgumentParser:
         "restore",
         help="restore from a backup (verified to open BEFORE anything is replaced)")
     sp.add_argument("source",
-                    help="a backup .zip from `paladin backup`, or a bare vault file")
+                    help="a sealed backup, a legacy .zip, or a bare vault file")
     sp.add_argument("--force", action="store_true",
                     help="replace an existing vault (it is saved to "
                          "<vault>.pre-restore first — nothing is ever lost)")

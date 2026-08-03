@@ -1,6 +1,6 @@
 """Backup and restore for a paladin home — vault + audit chain, one file.
 
-A backup is a single ``.zip`` archive containing:
+A current backup is a single authenticated, encrypted container. Inside it are:
 
 * ``vault.paladin`` — the encrypted vault, byte-for-byte. It never leaves
   ciphertext: an attacker with the backup learns exactly what an attacker
@@ -9,8 +9,8 @@ A backup is a single ``.zip`` archive containing:
   records are value-free (event/ref/requester metadata, never secret
   values), and losing them means losing the forensic trail of every
   credential access — so a real backup carries them.
-* ``MANIFEST.json`` — format version, creation time, entry count. Enough
-  to sanity-check a restore; nothing identifying in it.
+* ``MANIFEST.json`` — format version, creation time, entry count. It is sealed
+  with the rest of the archive rather than exposed as plaintext metadata.
 
 What a backup deliberately does NOT contain: keyfiles. A keyfile is the
 key; archiving it next to the ciphertext it opens would turn "encrypted
@@ -21,14 +21,15 @@ The vault bytes are copied under the same exclusive lock ``Vault.save``
 takes (see :func:`paladin.vault.copy_encrypted`'s locking), so a backup
 can never capture a half-written vault racing a concurrent write.
 
-Restore accepts either a backup archive or a bare ``*.paladin`` vault
-file (someone who only salvaged the vault file itself is still made
-whole). It verifies the backup decrypts BEFORE touching the destination,
+Restore accepts a sealed backup, a legacy ZIP backup, or a bare
+``*.paladin`` vault file (someone who only salvaged the vault file itself is
+still made whole). It verifies the backup decrypts BEFORE touching the destination,
 and when overwriting, the current files are saved to ``*.pre-restore``
 first — a restore can never lose data, even a botched one.
 """
 from __future__ import annotations
 
+import io
 import json
 import os
 import time
@@ -42,6 +43,7 @@ from paladin.errors import PaladinError, VaultMissingError
 from paladin.vault import (
     VAULT_FILENAME,
     Vault,
+    _load_key_material,
     _harden_permissions,
     _lock_exclusive,
     _lock_release,
@@ -50,6 +52,8 @@ from paladin.vault import (
 AUDIT_FILENAME = "audit.jsonl"  # kept in sync with paladin.broker.AUDIT_FILENAME
 MANIFEST_FILENAME = "MANIFEST.json"
 BACKUP_FORMAT = "paladin-backup/1"
+SEALED_BACKUP_FORMAT = "paladin-backup/2"
+SEALED_BACKUP_PURPOSE = b"backup-archive"
 BACKUP_PREFIX = "paladin-backup-"
 DEFAULT_BACKUP_DIR = "~/paladin-backups"
 
@@ -87,11 +91,11 @@ def default_backup_dest() -> Path:
 def resolve_backup_path(dest: Optional[str]) -> Path:
     """Turn the CLI's dest argument into a concrete archive path.
 
-    No dest → ``~/paladin-backups/paladin-backup-<ts>.zip``. A directory →
+    No dest → ``~/paladin-backups/paladin-backup-<ts>.paladin-backup``. A directory →
     a timestamped archive inside it. A file path → used as given.
     """
     stamp = time.strftime("%Y%m%d-%H%M%S", time.localtime())
-    name = f"{BACKUP_PREFIX}{stamp}.zip"
+    name = f"{BACKUP_PREFIX}{stamp}.paladin-backup"
     if dest is None:
         return default_backup_dest() / name
     p = Path(dest).expanduser()
@@ -133,11 +137,27 @@ def create_backup(vault: Vault, dest: Path) -> BackupInfo:
         # gains nothing (and a compressed-size oracle helps nobody). STORED
         # keeps the archive dead simple; the audit log is plain JSONL and
         # small, so it is not worth a mixed-compression scheme either.
-        with zipfile.ZipFile(tmp, "w", compression=zipfile.ZIP_STORED) as zf:
+        archive = io.BytesIO()
+        with zipfile.ZipFile(archive, "w", compression=zipfile.ZIP_STORED) as zf:
             zf.writestr(MANIFEST_FILENAME, json.dumps(manifest, indent=2))
             zf.writestr(VAULT_FILENAME, blob)
             if audit_bytes is not None:
                 zf.writestr(AUDIT_FILENAME, audit_bytes)
+        # The vault blob was already encrypted, but the v1 ZIP left its
+        # audit trail and manifest readable. Seal the complete archive under
+        # a purpose-bound key so the backup file itself reveals no names,
+        # requesters, counts, or timestamps.
+        outer_header = {
+            "format": SEALED_BACKUP_FORMAT,
+            "kdf": vault._params.to_header(),
+        }
+        sealed = crypto.encrypt_blob(
+            crypto.subkey(bytes(vault._key), SEALED_BACKUP_PURPOSE),
+            archive.getvalue(), outer_header)
+        with open(tmp, "wb") as out:
+            out.write(sealed)
+            out.flush()
+            os.fsync(out.fileno())
         os.replace(tmp, dest)
         _harden_permissions(dest)
     finally:
@@ -148,30 +168,56 @@ def create_backup(vault: Vault, dest: Path) -> BackupInfo:
                       audit_records=audit_records)
 
 
-def read_backup(source: Path) -> tuple[bytes, Optional[bytes]]:
+def _read_zip_backup(raw: bytes, source: Path) -> tuple[bytes, Optional[bytes]]:
+    with zipfile.ZipFile(io.BytesIO(raw)) as zf:
+        names = set(zf.namelist())
+        if VAULT_FILENAME not in names:
+            raise PaladinError(
+                f"{source} is a zip but not a paladin backup "
+                f"(no {VAULT_FILENAME} inside)")
+        blob = zf.read(VAULT_FILENAME)
+        audit = zf.read(AUDIT_FILENAME) if AUDIT_FILENAME in names else None
+    crypto.split_blob(blob)
+    return blob, audit
+
+
+def _open_sealed_backup(raw: bytes, source: Path, *, passphrase: Optional[str],
+                        keyfile: Optional[Path]) -> tuple[bytes, Optional[bytes]]:
+    _, header, _, _ = crypto.split_blob(raw)
+    if header.get("format") != SEALED_BACKUP_FORMAT:
+        raise PaladinError(f"{source} is not a recognized paladin backup")
+    try:
+        params = crypto.KdfParams.from_header(header["kdf"])
+    except (KeyError, TypeError, PaladinError) as exc:
+        raise PaladinError(f"{source} has a malformed backup header") from exc
+    master = bytearray(_load_key_material(passphrase, keyfile, params))
+    try:
+        archive = crypto.decrypt_blob(
+            crypto.subkey(master, SEALED_BACKUP_PURPOSE), raw)
+    finally:
+        crypto.wipe(master)
+    return _read_zip_backup(archive, source)
+
+
+def read_backup(source: Path, *, passphrase: Optional[str] = None,
+                keyfile: Optional[Path] = None) -> tuple[bytes, Optional[bytes]]:
     """Return ``(vault_blob, audit_bytes_or_None)`` from a backup source.
 
-    Accepts a backup archive or a bare vault file. Every returned blob is
-    validated as a well-formed AEAD container before anything downstream
-    runs, so a corrupt or wrong file fails here, loudly, with its name.
+    Accepts a sealed v2 backup, a legacy ZIP backup, or a bare vault file.
+    Every returned blob is validated as a well-formed AEAD container before
+    anything downstream runs, so a corrupt or wrong file fails loudly.
     """
     source = Path(source)
     if not source.exists():
         raise VaultMissingError(f"no backup file at {source}")
-    if zipfile.is_zipfile(source):
-        with zipfile.ZipFile(source) as zf:
-            names = set(zf.namelist())
-            if VAULT_FILENAME not in names:
-                raise PaladinError(
-                    f"{source} is a zip but not a paladin backup "
-                    f"(no {VAULT_FILENAME} inside)")
-            blob = zf.read(VAULT_FILENAME)
-            audit = zf.read(AUDIT_FILENAME) if AUDIT_FILENAME in names else None
-    else:
-        blob = source.read_bytes()
-        audit = None
-    crypto.split_blob(blob)
-    return blob, audit
+    raw = source.read_bytes()
+    if zipfile.is_zipfile(io.BytesIO(raw)):
+        return _read_zip_backup(raw, source)  # v1, kept for recovery
+    _, header, _, _ = crypto.split_blob(raw)
+    if header.get("format") == SEALED_BACKUP_FORMAT:
+        return _open_sealed_backup(raw, source, passphrase=passphrase,
+                                   keyfile=keyfile)
+    return raw, None  # a bare vault file
 
 
 def _next_safety_path(live: Path) -> Path:
@@ -206,7 +252,7 @@ def restore_backup(source: Path, vault_path: Path, *, force: bool = False,
     2. Only then touch the destination — and save every file about to be
        overwritten to ``<name>.pre-restore`` first.
     """
-    blob, audit = read_backup(source)
+    blob, audit = read_backup(source, passphrase=passphrase, keyfile=keyfile)
 
     import tempfile
     probe_fd, probe_name = tempfile.mkstemp(suffix=".paladin")
