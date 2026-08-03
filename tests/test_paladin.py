@@ -100,6 +100,22 @@ def test_rotate_value_preserves_all_metadata(vault):
     assert meta["allowed_hosts"] == ["titan"] and meta["rotations"] == 1
 
 
+def test_rejected_complete_edit_leaves_entry_and_grants_untouched(vault, broker):
+    vault.add("old/root", "old-value", kind="password", profile="infra",
+              env_var="OLD_ROOT", note="keep", allowed_hosts=["titan"])
+    broker.grant("old/root", "skill:operator", ttl_seconds=60)
+
+    with pytest.raises(PaladinError, match="invalid secret kind"):
+        vault.edit("old/root", new_name="titan/root", new_value="new-value",
+                   rotate=True, kind="not-a-kind")
+
+    assert vault._resolve_value("old/root") == "old-value"
+    assert vault.meta("old/root")["note"] == "keep"
+    assert [(g.ref_pattern, g.requester) for g in broker.grants.list()] == [
+        ("old/root", "skill:operator")]
+    assert "titan/root" not in vault.names()
+
+
 def test_integrity_guard_blocks_agent_resolution_but_keeps_owner_recovery(vault, broker):
     vault.add("k", "the-secret")
     broker.audit.append("resolve", "k", "user:cli")

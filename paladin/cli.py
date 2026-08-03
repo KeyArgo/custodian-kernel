@@ -110,15 +110,18 @@ def cmd_edit(args) -> int:
     vault = _open_vault(args)
     name = args.name
     broker = Broker(vault)
-    if args.rename:
-        broker.rename(name, args.rename, CLI_REQUESTER)
-        name = args.rename
+    value = None
     if args.rotate_value:
-        value = _read_value(f"new value for {name}: ", args.stdin)
-        vault.rotate_value(name, value)
+        value = _read_value(f"new value for {args.rename or name}: ", args.stdin)
     hosts = args.allowed_host if args.allowed_host is not None else None
-    vault.update_meta(name, profile=args.profile, env_var=args.env_var,
-                      note=args.note, kind=args.kind, allowed_hosts=hosts)
+    migrated = vault.edit(name, new_name=args.rename, new_value=value,
+                          rotate=args.rotate_value, profile=args.profile,
+                          env_var=args.env_var, note=args.note, kind=args.kind,
+                          allowed_hosts=hosts)
+    name = args.rename or name
+    if args.rename:
+        broker.audit.append("rename", name, CLI_REQUESTER, "-",
+                            f"from={args.name} grants={migrated}")
     broker.audit.append("edit", name, CLI_REQUESTER, "-", "")
     print(f"updated paladin://{name}")
     return 0

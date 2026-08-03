@@ -448,32 +448,69 @@ class Vault:
         entry.updated_at = time.time()
         self.save()
 
+    def edit(self, name: str, *, new_name: Optional[str] = None,
+             new_value: Optional[str] = None, rotate: bool = False,
+             profile: Optional[str] = None, env_var: Optional[str] = None,
+             note: Optional[str] = None, kind: Optional[str] = None,
+             allowed_hosts: Optional[list] = None) -> int:
+        """Apply a complete human edit in one validated, atomic vault save.
+
+        ``new_name`` also migrates exact-name grants. All validation happens
+        before the in-memory document is changed, so a bad field cannot leave
+        a renamed or rotated entry behind. Returns exact grants migrated.
+        """
+        entry = self._require(name)
+        target = new_name or name
+        if target != name:
+            if not valid_name(target):
+                raise PaladinError(f"invalid secret name {target!r}")
+            if target in self._entries:
+                raise PaladinError(f"entry {target!r} already exists")
+        if kind is not None and kind not in {"secret", "env", "token", "password"}:
+            raise PaladinError(f"invalid secret kind {kind!r}")
+        if rotate and new_value is None:
+            raise PaladinError("a rotated value is required")
+
+        migrated = 0
+        new_grants = self._grants
+        if target != name:
+            new_grants = []
+            for grant in self._grants:
+                copied = dict(grant)
+                if copied.get("ref_pattern") == name:
+                    copied["ref_pattern"] = target
+                    migrated += 1
+                new_grants.append(copied)
+
+        if target != name:
+            del self._entries[name]
+            entry.name = target
+            self._entries[target] = entry
+            self._grants = new_grants
+        if rotate:
+            entry.value = new_value
+            entry.rotations += 1
+        if kind is not None:
+            entry.kind = kind
+        if profile is not None:
+            entry.profile = profile
+        if env_var is not None:
+            entry.env_var = env_var
+        if note is not None:
+            entry.note = note
+        if allowed_hosts is not None:
+            entry.allowed_hosts = list(allowed_hosts)
+        entry.updated_at = time.time()
+        self.save()
+        return migrated
+
     def rename(self, name: str, new_name: str) -> int:
         """Atomically rename an entry and migrate exact-name grants.
 
         Wildcard grants are intentionally not changed: their owner expressed a
         pattern policy, not an alias that should be silently rewritten.
         """
-        entry = self._require(name)
-        if not valid_name(new_name):
-            raise PaladinError(f"invalid secret name {new_name!r}")
-        if new_name in self._entries:
-            raise PaladinError(f"entry {new_name!r} already exists")
-        migrated = 0
-        new_grants = []
-        for grant in self._grants:
-            copied = dict(grant)
-            if copied.get("ref_pattern") == name:
-                copied["ref_pattern"] = new_name
-                migrated += 1
-            new_grants.append(copied)
-        del self._entries[name]
-        entry.name = new_name
-        entry.updated_at = time.time()
-        self._entries[new_name] = entry
-        self._grants = new_grants
-        self.save()
-        return migrated
+        return self.edit(name, new_name=new_name)
 
     def delete(self, name: str) -> None:
         self._require(name)
