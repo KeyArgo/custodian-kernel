@@ -139,6 +139,14 @@ class TestValidation:
 
 
 class TestDoctor:
+    def test_confined_mode_fails_readiness_when_profile_is_unavailable(self, monkeypatch, capsys):
+        monkeypatch.setenv("CUSTODIAN_EXECUTION_MODE", "confined")
+        monkeypatch.setattr("custodian.sandbox.confined_sandbox_available", lambda: False)
+        rc = main(["doctor"])
+        out = capsys.readouterr().out
+        assert rc == 1
+        assert "Confined execution is unavailable" in out
+
     def test_base_install_is_ready_without_optional_talaria(self, monkeypatch, capsys):
         real_find_spec = __import__("importlib").util.find_spec
         monkeypatch.setattr(

@@ -2,6 +2,8 @@
 from __future__ import annotations
 
 from pathlib import Path
+import subprocess
+import sys
 
 import pytest
 
@@ -31,6 +33,12 @@ def test_confined_profile_has_kernel_network_isolation_and_minimal_mounts(tmp_pa
     )
     assert ["--ro-bind", "/", "/"] not in [argv[index:index + 3] for index in range(len(argv) - 2)]
     assert argv[argv.index("--chdir") + 1] == str(workspace.resolve())
+    assert ["--ro-bind-try", "/proc/sys", "/proc/sys"] in [
+        argv[index:index + 3] for index in range(len(argv) - 2)
+    ]
+    assert ["--ro-bind-try", "/dev/null", "/proc/sysrq-trigger"] in [
+        argv[index:index + 3] for index in range(len(argv) - 2)
+    ]
 
 
 @pytest.mark.parametrize("workspace", ["", "/"])
@@ -50,3 +58,31 @@ def test_require_confined_profile_never_has_an_unsandboxed_fallback(tmp_path, mo
     monkeypatch.setattr(sandbox, "confined_sandbox_available", lambda: False)
     with pytest.raises(ToolSandboxUnavailableError, match="cannot build a confined"):
         sandbox.require_confined_argv(["/bin/true"], workspace=str(tmp_path))
+
+
+@pytest.mark.skipif(
+    not sandbox.confined_sandbox_available(),
+    reason="confined profile requires Bubblewrap with unprivileged network namespaces",
+)
+def test_confined_profile_only_writes_its_workspace_and_has_no_network(tmp_path):
+    workspace = tmp_path / "workspace"
+    outside = tmp_path / "host-secret.txt"
+    workspace.mkdir()
+    outside.write_text("host-only")
+    script = (
+        "from pathlib import Path; import socket; "
+        f"outside = Path({str(outside)!r}); workspace = Path({str(workspace)!r}); "
+        "assert not outside.exists(); "
+        "(workspace / 'sandbox-output.txt').write_text('ok'); "
+        "sock = socket.socket(); "
+        "assert sock.connect_ex(('1.1.1.1', 443)) != 0"
+    )
+    result = subprocess.run(
+        sandbox.require_confined_argv(
+            [sys.executable, "-c", script], workspace=str(workspace),
+        ),
+        capture_output=True, text=True, timeout=15,
+    )
+    assert result.returncode == 0, result.stderr
+    assert (workspace / "sandbox-output.txt").read_text() == "ok"
+    assert outside.read_text() == "host-only"

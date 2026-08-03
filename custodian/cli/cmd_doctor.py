@@ -82,6 +82,23 @@ def run(args) -> int:
     print(f"{'✓' if hermes_detected else '•'} Hermes Agent detected: "
           f"{'yes' if hermes_detected else 'no'}")
 
+    # Confined execution is deliberately opt-in: its absence must not make a
+    # normal installation unhealthy, but someone selecting the mode needs an
+    # unambiguous readiness answer before a tool invocation is authorized.
+    confined_requested = os.environ.get("CUSTODIAN_EXECUTION_MODE", "").lower() == "confined"
+    try:
+        from custodian.sandbox import confined_sandbox_available
+        confined_ready = confined_sandbox_available()
+    except Exception:
+        confined_ready = False
+    if confined_ready:
+        print("✓ Confined execution: Bubblewrap no-network profile is ready")
+    else:
+        message = "Confined execution is unavailable (Bubblewrap or unprivileged namespaces)"
+        print(f"{'✗' if confined_requested else '•'} {message}")
+        if confined_requested:
+            failures.append(message)
+
     talaria_spec = importlib.util.find_spec("talaria")
     talaria_version = _distribution_version("custodian-talaria")
     if talaria_spec is None:

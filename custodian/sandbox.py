@@ -51,6 +51,17 @@ _DEFAULT_MASK_DIRS = (
 # overlaid.  These are the runtime directories a normal Python tool needs.
 _CONFINED_RO_DIRS = ("/usr", "/bin", "/sbin", "/lib", "/lib32", "/lib64", "/libx32", "/etc")
 
+# ``--proc`` creates a new procfs mount, but a few proc nodes expose global
+# kernel state or are unexpectedly powerful on older kernels.  Keep the
+# ordinary per-namespace proc view useful for tools while making these nodes
+# inert.  ``--ro-bind-try`` also keeps the profile portable across kernels
+# whose proc layout differs.
+_CONFINED_PROC_READONLY = ("/proc/sys",)
+_CONFINED_PROC_MASKS = (
+    "/proc/sysrq-trigger", "/proc/kcore", "/proc/kallsyms", "/proc/keys",
+    "/proc/timer_list", "/proc/sched_debug",
+)
+
 
 def bwrap_path() -> Optional[str]:
     return shutil.which("bwrap")
@@ -188,6 +199,10 @@ def build_confined_argv(
         if resolved != root:
             argv += ["--ro-bind", resolved, resolved]
     argv += ["--tmpfs", "/tmp", "--dev", "/dev", "--proc", "/proc"]
+    for proc_dir in _CONFINED_PROC_READONLY:
+        argv += ["--ro-bind-try", proc_dir, proc_dir]
+    for proc_node in _CONFINED_PROC_MASKS:
+        argv += ["--ro-bind-try", "/dev/null", proc_node]
     argv += ["--bind", root, root, "--clearenv"]
     argv += ["--setenv", "PATH", "/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"]
     argv += ["--chdir", root, "--"]
