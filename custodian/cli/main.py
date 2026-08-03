@@ -132,7 +132,7 @@ from custodian.config import CustodianConfig
 from custodian.tools.registry import _state_dir as _codex_guard_state_dir
 
 
-_DESCRIPTION = "Custodian — kernel-enforced authority and spend governance for AI agents."
+_DESCRIPTION = "Custodian — kernel-enforced safety and authority for AI agents."
 
 _EPILOG = """
 AUTHORITY BANDS

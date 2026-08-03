@@ -140,16 +140,16 @@ def _act_uninstall() -> None:
 
 
 _ACTIONS = [
-    ("status", "Show current authority state (bands, caps, spend)"),
-    ("request", "Ask the kernel to decide on a spend"),
-    ("audit", "View the audit log"),
-    ("kill", "Engage the kill switch (stop everything)"),
-    ("resume", "Release the kill switch"),
-    ("tools", "List governed tools"),
-    ("adapters", "List guard adapters"),
-    ("init", "Scaffold a new workspace"),
+    ("status", "Show safety and authority status"),
+    ("audit", "Review decisions and audit evidence"),
+    ("gates", "Configure approvals and enforcement"),
+    ("tools", "View governed tools and capabilities"),
+    ("adapters", "View active guard adapters"),
+    ("kill", "Engage the emergency stop"),
+    ("resume", "Release the emergency stop"),
+    ("init", "Create a governed workspace"),
     ("guide", "Guided walkthrough for first-time users"),
-    ("gates", "Gate enforcement and notification settings"),
+    ("request", "Evaluate a payment or spending request"),
     ("uninstall", "Remove Custodian software but preserve vaults and history"),
 ]
 
@@ -164,7 +164,7 @@ _DISPATCH = {
 
 def run_menu() -> int:
     print("=" * 56)
-    print("  Custodian — authority & spend governance")
+    print("  Custodian — safety and authority for AI agents")
     print("=" * 56)
     while True:
         choice = _choose("What would you like to do?", _ACTIONS)

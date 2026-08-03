@@ -53,6 +53,21 @@ def test_menu_subcommand_dispatches_to_menu(monkeypatch):
     assert rc == 0 and called == [True]
 
 
+@pytest.mark.parametrize("answer", ["q", "quit", "exit", "0"])
+def test_menu_quit_aliases_exit_cleanly(monkeypatch, capsys, answer):
+    _feed(monkeypatch, [answer])
+    assert m.run_menu() == 0
+    assert "bye." in capsys.readouterr().out
+
+
+def test_menu_is_authority_first_and_spend_is_secondary():
+    labels = dict(m._ACTIONS)
+    assert labels["status"] == "Show safety and authority status"
+    assert m._ACTIONS.index(("request", labels["request"])) > m._ACTIONS.index(
+        ("guide", labels["guide"])
+    )
+
+
 def test_bare_custodian_non_tty_prints_welcome(monkeypatch, capsys):
     from custodian.cli import main as cli_main
     monkeypatch.setattr("sys.stdin.isatty", lambda: False)
