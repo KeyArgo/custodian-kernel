@@ -397,6 +397,13 @@ See `docs/VERIFICATION.md` for the full manual breakdown.
 
 ## Limitations
 
+- Custodian Codex Guard is an application-layer enforcement boundary for
+  actions routed through its installed hook and MCP integration. It complements
+  the host sandbox and cannot govern a separate, unintegrated tool runner.
+- Paladin's strongest credential-isolation mode requires a ready Linux
+  Bubblewrap sandbox and fails closed when that sandbox is unavailable. The
+  legacy non-sandbox environment-injection path remains for compatibility and
+  is not appropriate for untrusted agent code.
 - Only one approval backend is shipped: `twilio_verify`. Backends named other
   than `twilio_verify` or `none` are rejected at policy validation time.
 - Only one storage backend is shipped: SQLite (via `SqliteStorage`).

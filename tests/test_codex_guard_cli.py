@@ -358,6 +358,9 @@ class TestCliDoctor:
 
         monkeypatch.setattr("custodian.codex_guard.cli.Path.cwd", lambda: tmp_path)
         monkeypatch.setattr(
+            "custodian.codex_guard.cli._plugin_runtime_root", lambda: tmp_path,
+        )
+        monkeypatch.setattr(
             "custodian.codex_guard.cli._verify_mcp_handshake",
             lambda cmd: True,
         )

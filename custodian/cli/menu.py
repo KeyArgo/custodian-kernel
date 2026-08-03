@@ -10,6 +10,7 @@ in an interactive terminal.
 """
 from __future__ import annotations
 
+import subprocess
 import sys
 
 
@@ -132,9 +133,11 @@ def _act_gates() -> None:
 
 def _act_paladin() -> None:
     """Open the separate credential console; it remains its own authority."""
-    from paladin.menu import run_menu
     print("\n  Opening Paladin credential console. Return there to come back here.")
-    run_menu()
+    # Keep the kernel import graph independent of the credential broker. In an
+    # installed distribution this resolves the same interpreter and Paladin
+    # console package; from a source checkout it remains directly runnable.
+    subprocess.run([sys.executable, "-m", "paladin.cli"], check=False)
 
 
 def _act_uninstall() -> None:

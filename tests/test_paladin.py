@@ -16,6 +16,8 @@ from paladin.errors import (
 )
 from paladin.guard import IntegrityGuardError
 from paladin.guard import PaladinGuard
+from paladin import backup as paladin_backup
+from paladin import crypto
 
 PP = "test-passphrase-123"
 
@@ -581,7 +583,7 @@ def test_cli_backup_to_directory_picks_a_name(monkeypatch, tmp_path):
     outdir = tmp_path / "backups"
     outdir.mkdir()
     assert paladin_cli.main(["--vault", str(src_vault), "backup", str(outdir)]) == 0
-    made = list(outdir.glob("paladin-backup-*.zip"))
+    made = list(outdir.glob("paladin-backup-*.paladin-backup"))
     assert len(made) == 1
 
 
@@ -589,7 +591,6 @@ def test_backup_archive_contains_vault_audit_and_manifest(monkeypatch, tmp_path)
     """The backup is one self-describing file: encrypted vault + the HMAC
     audit chain + a manifest. Losing the audit trail means losing the
     forensic record of every credential access, so it rides along."""
-    import zipfile
     monkeypatch.setenv("PALADIN_PASSPHRASE", PP)
     src_vault = tmp_path / "v.paladin"
     v = Vault.create(path=src_vault, passphrase=PP)
@@ -598,15 +599,14 @@ def test_backup_archive_contains_vault_audit_and_manifest(monkeypatch, tmp_path)
     dest = tmp_path / "b.zip"
     assert paladin_cli.main(["--vault", str(src_vault), "backup", str(dest)]) == 0
 
-    with zipfile.ZipFile(dest) as zf:
-        names = set(zf.namelist())
-        assert {"vault.paladin", "audit.jsonl", "MANIFEST.json"} <= names
-        # ciphertext in, ciphertext out — plaintext never touches the archive
-        assert b"sk_live_super_secret" not in zf.read("vault.paladin")
-        manifest = json.loads(zf.read("MANIFEST.json"))
-        assert manifest["format"] == "paladin-backup/1"
-        assert manifest["entries"] == 1
-        assert manifest["audit_records"] >= 1
+    # v2 seals the former ZIP (including its value-free audit metadata).
+    raw = dest.read_bytes()
+    _, header, _, _ = crypto.split_blob(raw)
+    assert header["format"] == paladin_backup.SEALED_BACKUP_FORMAT
+    assert b"sk_live_super_secret" not in raw and b"stripe_sk" not in raw
+    blob, audit = paladin_backup.read_backup(dest, passphrase=PP)
+    assert b"sk_live_super_secret" not in blob
+    assert audit is not None and b'"event":"add"' in audit
 
 
 def test_restore_brings_back_a_verifiable_audit_chain(monkeypatch, tmp_path):

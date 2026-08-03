@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+import shutil
 import subprocess
 import sys
 
@@ -36,9 +37,10 @@ def test_confined_profile_has_kernel_network_isolation_and_minimal_mounts(tmp_pa
     assert ["--ro-bind-try", "/proc/sys", "/proc/sys"] in [
         argv[index:index + 3] for index in range(len(argv) - 2)
     ]
-    assert ["--ro-bind-try", "/dev/null", "/proc/sysrq-trigger"] in [
-        argv[index:index + 3] for index in range(len(argv) - 2)
-    ]
+    if Path("/proc/sysrq-trigger").exists():
+        assert ["--ro-bind-try", "/dev/null", "/proc/sysrq-trigger"] in [
+            argv[index:index + 3] for index in range(len(argv) - 2)
+        ]
 
 
 @pytest.mark.parametrize("workspace", ["", "/"])
@@ -77,9 +79,11 @@ def test_confined_profile_only_writes_its_workspace_and_has_no_network(tmp_path)
         "sock = socket.socket(); "
         "assert sock.connect_ex(('1.1.1.1', 443)) != 0"
     )
+    system_python = shutil.which("python3", path="/usr/local/bin:/usr/bin:/bin")
+    assert system_python, "confined runtime requires a system python3"
     result = subprocess.run(
         sandbox.require_confined_argv(
-            [sys.executable, "-c", script], workspace=str(workspace),
+            [system_python, "-c", script], workspace=str(workspace),
         ),
         capture_output=True, text=True, timeout=15,
     )

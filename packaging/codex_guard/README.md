@@ -10,8 +10,7 @@ Agents](https://youtu.be/lnIwDIbzZf0).
 ## Install
 
 Custodian Codex Guard 0.1.2 supports Linux and macOS with Python 3.11 through
-3.13. Windows is not supported by this release because it depends on Custodian
-Kernel 0.4.1. Windows support is planned with Custodian Kernel 0.4.2.
+3.13. Windows support is not part of this package release.
 
 ```bash
 python -m pip install custodian-codex-guard
@@ -44,6 +43,10 @@ The guard evaluates routed tool calls before Codex's own approval decision.
 It supplements Codex's sandbox and permissions; it does not replace operating
 system isolation or govern tools that are not routed through the installed
 hook/MCP boundary.
+
+This is an early technical beta. Managed-hook mode provides the strongest
+supported protection against removing the hook; users should still apply normal
+host, repository, and credential isolation controls.
 
 ## Remove
 

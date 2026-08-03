@@ -201,8 +201,12 @@ def build_confined_argv(
     argv += ["--tmpfs", "/tmp", "--dev", "/dev", "--proc", "/proc"]
     for proc_dir in _CONFINED_PROC_READONLY:
         argv += ["--ro-bind-try", proc_dir, proc_dir]
+    # bwrap cannot create an arbitrary absent node inside a procfs mount. Mask
+    # only nodes that exist on this kernel; the reduced procfs still omits the
+    # rest, and this keeps the profile portable across proc layouts.
     for proc_node in _CONFINED_PROC_MASKS:
-        argv += ["--ro-bind-try", "/dev/null", proc_node]
+        if Path(proc_node).exists():
+            argv += ["--ro-bind-try", "/dev/null", proc_node]
     argv += ["--bind", root, root, "--clearenv"]
     argv += ["--setenv", "PATH", "/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"]
     argv += ["--chdir", root, "--"]
