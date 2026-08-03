@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Card Template</title>
+<style>
+  /* ============================================================
+     Design system — reuse this CSS verbatim across every Custodian
+     / Talaria / Paladin video card. This repetition is what makes
+     separate product videos still read as one brand. Do not
+     restyle the palette or background per-video; only the content
+     inside .container should change.
+     ============================================================ */
+  * { margin:0; padding:0; box-sizing:border-box; }
+  html,body {
+    width:1920px; height:1080px; background:#060604; overflow:hidden;
+    font-family:'DejaVu Sans', sans-serif; /* not a Google Font on purpose —
+      headless Chrome has no network guarantee here; fc-list check the font
+      before using anything else. */
+  }
+
+  /* Palette reference:
+       bg            #060604
+       amber accent  #ffb000
+       teal accent   #2ee6a6
+       danger red    #ff4d4d
+       body text     #e8e8ee
+       muted text    rgba(255,255,255,0.5-0.55)
+     Headline font: DejaVu Sans (bold)
+     Code/label font: DejaVu Sans Mono
+  */
+
+  .bg {
+    position:absolute; inset:0;
+    background:
+      radial-gradient(circle at 50% 115%, rgba(255,176,0,0.16) 0%, transparent 55%),
+      radial-gradient(circle at 50% -15%, rgba(46,230,166,0.08) 0%, transparent 55%),
+      #060604;
+  }
+
+  .grid-wrap {
+    position:absolute; inset:0;
+    perspective:700px;
+    perspective-origin:50% 20%;
+    opacity:0.55;
+  }
+  .grid {
+    position:absolute; width:250%; height:250%; left:-75%; top:15%;
+    background-image:
+      linear-gradient(rgba(255,255,255,0.06) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.06) 1px, transparent 1px);
+    background-size:54px 54px;
+    transform:rotateX(78deg) translateZ(0px);
+  }
+
+  .vignette {
+    position:absolute; inset:0;
+    background:radial-gradient(circle at 50% 46%, transparent 35%, #060604 100%);
+  }
+
+  .container {
+    position:relative; z-index:10;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    height:100%; text-align:center;
+  }
+
+  h1 {
+    font-size:7.2rem; font-weight:800; letter-spacing:-2px;
+    background:linear-gradient(180deg, #fff 0%, #9aa0b3 100%);
+    -webkit-background-clip:text; -webkit-text-fill-color:transparent;
+    text-shadow:0 40px 70px rgba(0,0,0,0.9);
+  }
+
+  .subtitle {
+    font-family:'DejaVu Sans Mono', monospace; font-size:1.5rem; letter-spacing:0.12rem;
+    color:#2ee6a6; text-transform:uppercase; margin-top:14px; margin-bottom:70px;
+    text-shadow:0 0 26px rgba(46,230,166,0.5);
+  }
+
+  .footer-link {
+    margin-top:56px; font-family:'DejaVu Sans Mono', monospace; font-size:1.1rem;
+    color:rgba(255,255,255,0.55); letter-spacing:0.04rem;
+    padding-top:22px; border-top:1px solid rgba(255,255,255,0.12); width:640px;
+  }
+
+  /* Reveal-animation helper: elements fade/rise/pop in on a per-element
+     delay+duration set via data attributes, driven by the JS below.
+     Add data-reveal + data-delay (ms) + data-dur (ms) + data-kind
+     ("pop" | "rise" | "fadeUp" | "scan") to any element you want animated. */
+  [data-reveal] { opacity:0; will-change:opacity,transform; }
+</style>
+</head>
+<body>
+  <div class="bg"></div>
+  <div class="grid-wrap"><div class="grid" id="grid"></div></div>
+  <div class="vignette"></div>
+
+  <div class="container">
+    <h1 data-reveal data-delay="300" data-dur="900" data-kind="rise">YOUR TITLE</h1>
+    <div class="subtitle" data-reveal data-delay="800" data-dur="800" data-kind="fadeUp">Your subtitle here</div>
+    <div class="footer-link" data-reveal data-delay="1300" data-dur="800" data-kind="fadeUp">your-link-or-cta-here</div>
+  </div>
+
+  <script>
+    const easeOutCubic = p => 1 - Math.pow(1 - p, 3);
+    const easeOutBack = p => { const c1=1.70158, c3=c1+1; return 1 + c3*Math.pow(p-1,3) + c1*Math.pow(p-1,2); };
+
+    const revealEls = Array.from(document.querySelectorAll('[data-reveal]')).map(el => ({
+      el,
+      delay: +el.dataset.delay,
+      dur: +el.dataset.dur,
+      kind: el.dataset.kind
+    }));
+
+    const grid = document.getElementById('grid');
+
+    const TICK_MS = 33;
+    let elapsed = 0;
+    function frame() {
+      elapsed += TICK_MS;
+      const t = elapsed;
+
+      for (const r of revealEls) {
+        const p = Math.max(0, Math.min(1, (t - r.delay) / r.dur));
+        if (p <= 0) { r.el.style.opacity = 0; continue; }
+        r.el.style.opacity = String(p);
+        if (r.kind === 'pop') {
+          const e = easeOutBack(p);
+          r.el.style.transform = `scale(${0.7 + 0.3 * e})`;
+        } else if (r.kind === 'rise') {
+          const e = easeOutCubic(p);
+          r.el.style.transform = `translateY(${30 * (1 - e)}px)`;
+        } else if (r.kind === 'fadeUp') {
+          const e = easeOutCubic(p);
+          r.el.style.transform = `translateY(${16 * (1 - e)}px)`;
+        } else if (r.kind === 'scan') {
+          r.el.style.transform = `translateY(${p * 1080}px)`;
+          r.el.style.opacity = String(0.9 * (1 - p));
+        }
+      }
+
+      // grid drift (continuous)
+      const driftY = (t / 14000) * 540 % 540;
+      grid.style.backgroundPosition = `0 ${driftY}px`;
+    }
+    setInterval(frame, TICK_MS);
+    frame();
+  </script>
+</body>
+</html>

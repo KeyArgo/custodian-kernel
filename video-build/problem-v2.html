@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Custodian Problem v2</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  html,body { width:1920px; height:1080px; background:#060604; overflow:hidden; font-family:'DejaVu Sans', sans-serif; }
+
+  .bg {
+    position:absolute; inset:0;
+    background:
+      radial-gradient(circle at 50% 8%, rgba(255,77,77,0.10) 0%, transparent 55%),
+      radial-gradient(circle at 50% 100%, rgba(255,176,0,0.08) 0%, transparent 55%),
+      #060604;
+  }
+  .grid-wrap { position:absolute; inset:0; perspective:700px; perspective-origin:50% 20%; opacity:0.28; }
+  .grid {
+    position:absolute; width:250%; height:250%; left:-75%; top:15%;
+    background-image:
+      linear-gradient(rgba(255,255,255,0.06) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.06) 1px, transparent 1px);
+    background-size:54px 54px;
+    transform:rotateX(78deg);
+  }
+  .vignette { position:absolute; inset:0; background:radial-gradient(circle at 50% 46%, transparent 38%, #060604 100%); }
+
+  .stage { position:relative; z-index:10; height:100%; display:flex; flex-direction:column; align-items:center; padding-top:96px; }
+
+  .eyebrow {
+    font-size:2.6rem; font-weight:800; letter-spacing:0.06rem; color:#fff;
+    margin-bottom:64px;
+  }
+
+  .boxrow { display:flex; align-items:center; gap:40px; margin-bottom:56px; }
+  .box {
+    width:520px; height:170px; display:flex; align-items:center; justify-content:center;
+    border:2px solid; border-radius:6px; font-size:2.6rem; font-weight:800; letter-spacing:0.02rem;
+  }
+  .box.agent { border-color:#e8e8ee; color:#e8e8ee; }
+  .box.tools { border-color:#ff4d4d; color:#ff4d4d; }
+  .dash { width:64px; height:3px; background:#ffb000; }
+
+  .cmds { font-family:'DejaVu Sans Mono', monospace; font-size:1.9rem; color:#ff4d4d; text-align:center; line-height:2.1; min-height:170px; }
+  .cmds .cmdline { white-space:pre; }
+
+  .footer { margin-top:52px; text-align:center; }
+  .noboundary { font-size:1.6rem; font-weight:700; color:rgba(255,255,255,0.45); margin-bottom:14px; }
+  .untilnow { font-size:2.1rem; font-weight:800; color:#ffb000; text-shadow:0 0 0 rgba(255,176,0,0); }
+
+  #zoomwrap { transform-origin:50% 50%; }
+</style>
+</head>
+<body>
+  <div class="bg"></div>
+  <div class="grid-wrap"><div class="grid"></div></div>
+  <div class="vignette"></div>
+
+  <div class="stage">
+    <div id="zoomwrap" style="display:flex;flex-direction:column;align-items:center;">
+      <div class="eyebrow" id="eyebrow" style="opacity:0;">THE PROBLEM</div>
+
+      <div class="boxrow">
+        <div class="box agent" id="boxAgent" style="opacity:0;">AI AGENT</div>
+        <div class="dash" id="dash" style="opacity:0;"></div>
+        <div class="box tools" id="boxTools" style="opacity:0;">REAL TOOLS</div>
+      </div>
+
+      <div class="cmds" id="cmds"></div>
+
+      <div class="footer">
+        <div class="noboundary" id="noboundary" style="opacity:0;">No boundary. No audit. No recourse.</div>
+        <div class="untilnow" id="untilnow" style="opacity:0;">Until now.</div>
+      </div>
+    </div>
+  </div>
+
+<script>
+const easeOutCubic = p => 1 - Math.pow(1 - p, 3);
+const easeOutBack = p => { const c1=1.70158, c3=c1+1; return 1 + c3*Math.pow(p-1,3) + c1*Math.pow(p-1,2); };
+
+function fadeUp(el, delay, dur, dist) {
+  schedule2(delay, dur, p => {
+    el.style.opacity = String(p);
+    el.style.transform = `translateY(${dist*(1-easeOutCubic(p))}px)`;
+  });
+}
+function popIn(el, delay, dur) {
+  schedule2(delay, dur, p => {
+    el.style.opacity = String(p);
+    el.style.transform = `scale(${0.85 + 0.15*easeOutBack(p)})`;
+  });
+}
+
+let animQueue = [];
+function schedule2(delay, dur, fn) {
+  animQueue.push({delay, dur, fn, done:false});
+}
+
+const CMDS = ["$ rm -rf /", "$ cat ~/.aws/credentials", "$ kubectl apply -f prod.yaml"];
+const cmdsEl = document.getElementById("cmds");
+const cmdLines = CMDS.map(() => {
+  const d = document.createElement("div");
+  d.className = "cmdline";
+  cmdsEl.appendChild(d);
+  return d;
+});
+
+let typeQueue = [];
+function scheduleType(lineIdx, text, startDelay, charMs) {
+  for (let i = 0; i < text.length; i++) {
+    const when = startDelay + i * charMs;
+    typeQueue.push({ when, fn: () => { cmdLines[lineIdx].textContent = text.slice(0, i+1) + (i < text.length-1 ? "█" : ""); } });
+  }
+  typeQueue.push({ when: startDelay + text.length*charMs + 120, fn: () => { cmdLines[lineIdx].textContent = text; } });
+}
+
+fadeUp(document.getElementById("eyebrow"), 250, 700, 20);
+popIn(document.getElementById("boxAgent"), 900, 650);
+schedule2(1350, 400, p => { document.getElementById("dash").style.opacity = String(p); });
+popIn(document.getElementById("boxTools"), 1500, 650);
+
+scheduleType(0, CMDS[0], 2500, 42);
+scheduleType(1, CMDS[1], 3500, 34);
+scheduleType(2, CMDS[2], 4900, 30);
+
+fadeUp(document.getElementById("noboundary"), 6300, 700, 16);
+schedule2(6950, 550, p => {
+  const el = document.getElementById("untilnow");
+  el.style.opacity = String(p);
+  const e = easeOutBack(p);
+  el.style.transform = `scale(${0.7 + 0.3*e})`;
+  el.style.textShadow = `0 0 ${28*p}px rgba(255,176,0,${0.55*p})`;
+});
+
+let start = performance.now();
+function pump() {
+  const now = performance.now() - start;
+  for (const a of animQueue) {
+    const p = Math.max(0, Math.min(1, (now - a.delay) / a.dur));
+    if (p > 0) a.fn(p);
+  }
+  while (typeQueue.length && typeQueue[0].when <= now) {
+    typeQueue.shift().fn();
+  }
+  requestAnimationFrame(pump);
+}
+pump();
+
+// gentle hold-phase zoom once the reveal has settled (starts ~7.6s in, very subtle)
+const zoomwrap = document.getElementById("zoomwrap");
+const ZOOM_START = 7600, ZOOM_DUR = 3800;
+function zoomTick() {
+  const now = performance.now() - start;
+  const p = Math.max(0, Math.min(1, (now - ZOOM_START) / ZOOM_DUR));
+  zoomwrap.style.transform = `scale(${1 + 0.018*p})`;
+  requestAnimationFrame(zoomTick);
+}
+requestAnimationFrame(zoomTick);
+</script>
+</body>
+</html>

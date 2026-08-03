@@ -1,0 +1,22 @@
+[Script Info]
+ScriptType: v4.00+
+PlayResX: 1920
+PlayResY: 1080
+ScaledBorderAndShadow: yes
+
+[V4+ Styles]
+Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
+Style: Cover,DejaVu Sans Mono,28,&H00040102,&H00040102,&H00040102,&H00040102,0,0,0,0,100,100,0,0,1,0,0,7,0,0,0,1
+Style: SubFix,DejaVu Sans Mono,29,&H00847E80,&H00847E80,&H00040102,&H00000000,1,0,0,0,100,100,0,0,1,0,0,5,0,0,0,1
+Style: AllowedLabel,DejaVu Sans Mono,26,&H007E7A7B,&H007E7A7B,&H00040102,&H00000000,0,0,0,0,100,100,0,0,1,0,0,1,0,0,0,1
+Style: AllowedValue,DejaVu Sans Mono,26,&H0094C235,&H0094C235,&H00040102,&H00000000,1,0,0,0,100,100,0,0,1,0,0,1,0,0,0,1
+Style: Border,DejaVu Sans Mono,26,&H00A8EB1E,&H00A8EB1E,&H00A8EB1E,&H00A8EB1E,0,0,0,0,100,100,0,0,1,0,0,7,0,0,0,1
+
+[Events]
+Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
+Dialogue: 0,0:01:12.20,0:01:30.80,Cover,,0,0,0,,{\an7\pos(0,0)\p1}m 695 148 l 1225 148 l 1225 192 l 695 192{\p0}
+Dialogue: 1,0:01:12.20,0:01:30.80,SubFix,,0,0,0,,{\an5\pos(959,171)}Three test cases. All correct.
+Dialogue: 0,0:01:12.20,0:01:30.80,Cover,,0,0,0,,{\an7\pos(0,0)\p1}m 1285 815 l 1715 815 l 1715 882 l 1285 882{\p0}
+Dialogue: 1,0:01:12.20,0:01:30.80,AllowedLabel,,0,0,0,,{\an1\pos(1291,842)}Baseline:
+Dialogue: 1,0:01:12.20,0:01:30.80,AllowedValue,,0,0,0,,{\an1\pos(1291,871)}correctly classified safe
+Dialogue: 2,0:01:12.20,0:01:30.80,Border,,0,0,0,,{\an7\pos(0,0)\p1}m 1285 877 l 1715 877 l 1715 880 l 1285 880{\p0}

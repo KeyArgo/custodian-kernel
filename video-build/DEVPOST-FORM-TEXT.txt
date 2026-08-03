@@ -22,7 +22,7 @@ kernel sits between any agent and its tools: it classifies every
 proposed action, denies the destructive ones, escalates the
 ambiguous ones, and writes a tamper-evident HMAC receipt for
 every decision. The kernel is agent-agnostic and works with any
-tool-calling agent (Codex, Claude, Gemini, and others). Prompts
+tool-calling agent (Codex, Gemini, and others). Prompts
 are soft. A smart enough model routes around soft instructions.
 Custodian moves the decision outside the agent's process — into a
 kernel the agent cannot modify, cannot inspect, and cannot
@@ -56,13 +56,15 @@ kernel. Codex + GPT-5.6 implemented:
   approves — replay fails).
 - The MCP server integration for the in-protocol escalation
   channel.
-- 110 tests across 7 files: kernel, policy wiring, self-approval
+- 106 tests across 7 files: kernel, policy wiring, self-approval
   regression, gate fail-closed, classifier adversarial cases,
   receipts CLI, end-to-end demo.
 
-GPT-5.6 powered the contextual risk analysis. Every proposal gets
-a written reason. The deterministic rules keep final control
-over what is prohibited. GPT-5.6 explains; the rules decide.
+GPT-5.6 does not run inside the enforcement path. Classification
+is deterministic, typed rules over the tool name and arguments,
+checked on every request — there is nothing here a model could
+talk its way around. That was a deliberate design choice made
+with Codex during development, not a limitation.
 
 Codex also attacked its own classifier: it generated adversarial
 cases (actions whose declared type understates their actual risk —
@@ -106,12 +108,12 @@ BUILT WITH
 - Pydantic (typed action model)
 - HMAC-SHA256 (receipt chain)
 - MCP (human-in-the-loop escalation channel)
-- pytest (110 tests)
+- pytest (106 tests)
 
 ================================================================
 VIDEO URL
 ================================================================
-[paste the YouTube URL here, e.g. https://youtu.be/XXXXXXXXXXX]
+https://youtu.be/lnIwDIbzZf0
 
 ================================================================
 CODEX SESSION IDS
@@ -147,7 +149,7 @@ custodian codex-guard receipts --verify
 
 Two-repo split:
 - custodian-kernel (parent, pre-existing, agent-agnostic):
-  https://github.com/KeyArgo/custodian-codex-guard
+  https://github.com/KeyArgo/custodian-kernel
 - custodian-codex-guard (Build Week contribution):
   https://github.com/KeyArgo/custodian-codex-guard
 
@@ -155,8 +157,8 @@ Two-repo split:
 LINKS
 ================================================================
 - Build Week contribution: https://github.com/KeyArgo/custodian-codex-guard
-- Parent kernel: https://github.com/KeyArgo/custodian-codex-guard
-- Video: https://youtu.be/WTVrlsT0-UQ
+- Parent kernel: https://github.com/KeyArgo/custodian-kernel
+- Video: https://youtu.be/lnIwDIbzZf0
 - Demo script: scripts/codex-guard-demo.py
 - Test suite: tests/test_codex_guard_cli.py (37 tests)
             tests/test_codex_guard.py
@@ -189,7 +191,7 @@ was tampered with after the fact.
 Codex ran the build. It implemented the policy bridge, the
 typed action risk model, the value-free HMAC-chained receipts,
 the single-use human-approval protocol, and seven dedicated
-test files. 110 tests covering the guard, the policy wiring,
+test files. 106 tests covering the guard, the policy wiring,
 the self-approval regression, the gate fail-closed path, and
 bypass attempts.
 
@@ -200,11 +202,11 @@ grant requests that look autonomous but aren't) — confirmed
 the kernel catches them, and shipped the regression tests.
 The demo in the video is one of those cases.
 
-GPT-5.6 powered the contextual risk analysis. Every proposal
-gets a written reason. The deterministic rules (path fence,
-secret-leak guard, prompt-injection guard, kernel self-protection)
-keep final control over what is prohibited. GPT-5.6 explains;
-the rules decide.
+GPT-5.6 does not run inside the enforcement path. Classification
+runs through deterministic, typed rules (path fence, secret-leak
+guard, prompt-injection guard, kernel self-protection) checked on
+every request. GPT-5.6's role was in building and stress-testing
+those rules with Codex, not in deciding at request time.
 
 The architectural decision we made: enforcement lives outside
 the acting agent. The model never approves its own exception.

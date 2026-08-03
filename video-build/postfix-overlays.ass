@@ -1,0 +1,22 @@
+[Script Info]
+ScriptType: v4.00+
+PlayResX: 1920
+PlayResY: 1080
+ScaledBorderAndShadow: yes
+
+[V4+ Styles]
+Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
+Style: Cover,DejaVu Sans Mono,28,&H00040102,&H00040102,&H00040102,&H00040102,0,0,0,0,100,100,0,0,1,0,0,7,0,0,0,1
+Style: PaladinFix,DejaVu Sans Mono,26,&H00A5A0A0,&H00A5A0A0,&H00040102,&H00000000,0,0,0,0,100,100,0,0,1,0,0,3,0,0,0,1
+Style: GPTCaption,DejaVu Sans Mono,30,&H0067B8DB,&H0067B8DB,&H00040102,&H00000000,1,0,0,0,100,100,0,0,1,1,0,2,0,0,0,1
+Style: PytestLabel,DejaVu Sans Mono,26,&H00959495,&H00959495,&H00040102,&H00000000,0,0,0,0,100,100,0,0,1,0,0,1,0,0,0,1
+Style: PytestValue,DejaVu Sans Mono,26,&H00ABCF63,&H00ABCF63,&H00040102,&H00000000,1,0,0,0,100,100,0,0,1,0,0,1,0,0,0,1
+
+[Events]
+Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
+Dialogue: 0,0:00:25.50,0:00:44.30,Cover,,0,0,0,,{\an7\pos(0,0)\p1}m 1258 545 l 1682 545 l 1682 588 l 1258 588{\p0}
+Dialogue: 1,0:00:25.50,0:00:44.30,PaladinFix,,0,0,0,,{\an3\pos(1670,553)}flags paladin:// references
+Dialogue: 0,0:00:48.00,0:00:53.50,GPTCaption,,0,0,0,,{\an2\pos(960,1010)}CODEX + GPT-5.6 POWERED THE RISK ANALYSIS
+Dialogue: 0,0:00:55.50,0:01:04.50,Cover,,0,0,0,,{\an7\pos(0,0)\p1}m 1288 818 l 1712 818 l 1712 875 l 1288 875{\p0}
+Dialogue: 1,0:00:55.50,0:01:04.50,PytestLabel,,0,0,0,,{\an1\pos(1291,823)}Baseline check:
+Dialogue: 1,0:00:55.50,0:01:04.50,PytestValue,,0,0,0,,{\an1\pos(1291,853)}normal regression test

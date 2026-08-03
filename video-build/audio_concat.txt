@@ -1,0 +1,6 @@
+file 'audio-silence-half.wav'
+file 'audio-clip-1.wav'
+file 'audio-silence-1s.wav'
+file 'audio-clip-2.wav'
+file 'audio-silence-1s.wav'
+file 'audio-clip-3.wav'

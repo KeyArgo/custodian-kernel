@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Custodian CTA v2</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  html,body { width:1920px; height:1080px; background:#060604; overflow:hidden; font-family:'DejaVu Sans', sans-serif; }
+
+  .bg {
+    position:absolute; inset:0;
+    background:
+      radial-gradient(circle at 50% -10%, rgba(255,176,0,0.14) 0%, transparent 55%),
+      radial-gradient(circle at 50% 110%, rgba(46,230,166,0.08) 0%, transparent 55%),
+      #060604;
+  }
+  .grid-wrap { position:absolute; inset:0; perspective:700px; perspective-origin:50% 85%; opacity:0.35; }
+  .grid {
+    position:absolute; width:250%; height:250%; left:-75%; top:-165%;
+    background-image:
+      linear-gradient(rgba(255,255,255,0.06) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.06) 1px, transparent 1px);
+    background-size:54px 54px;
+    transform:rotateX(-78deg);
+  }
+  .vignette { position:absolute; inset:0; background:radial-gradient(circle at 50% 50%, transparent 40%, #060604 100%); }
+
+  .container {
+    position:relative; z-index:10; height:100%;
+    display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center;
+    padding:0 40px;
+  }
+
+  .eyebrow {
+    font-family:'DejaVu Sans Mono', monospace; font-size:1rem; letter-spacing:0.35rem; text-transform:uppercase;
+    color:#2ee6a6; margin-bottom:22px;
+    text-shadow:0 0 22px rgba(46,230,166,.45);
+  }
+  h1 {
+    font-size:4.6rem; font-weight:800; letter-spacing:-1px; margin-bottom:16px;
+    background:linear-gradient(180deg, #fff 0%, #b7bcca 100%);
+    -webkit-background-clip:text; -webkit-text-fill-color:transparent;
+  }
+  .sub {
+    font-size:1.35rem; color:rgba(255,255,255,0.55); margin-bottom:48px;
+  }
+
+  .term {
+    width:1100px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,176,0,0.35);
+    border-radius:10px; padding:34px 40px; text-align:left;
+    box-shadow:0 30px 80px rgba(0,0,0,0.6), 0 0 60px rgba(255,176,0,0.08) inset;
+    backdrop-filter:blur(6px);
+  }
+  .term .line { font-family:'DejaVu Sans Mono', monospace; font-size:1.5rem; margin:10px 0; white-space:pre; }
+  .term .prompt { color:#ffb000; }
+  .term .cmd { color:#7cd4f5; }
+  .cursor { display:inline-block; width:12px; height:1.4rem; background:#7cd4f5; vertical-align:-4px; }
+
+  .cta-link {
+    margin-top:46px; font-family:'DejaVu Sans Mono', monospace; font-size:1.3rem;
+    color:rgba(255,255,255,0.7); letter-spacing:0.03rem;
+  }
+  .get-it {
+    margin-top:38px; display:flex; align-items:baseline; gap:14px;
+  }
+  .get-it-label {
+    font-size:1.15rem; color:rgba(255,255,255,0.55);
+  }
+  .get-it-url {
+    font-family:'DejaVu Sans Mono', monospace; font-size:1.6rem; font-weight:700;
+    color:#2ee6a6; text-shadow:0 0 22px rgba(46,230,166,0.45); letter-spacing:0.02rem;
+  }
+  .tagline {
+    margin-top:30px; font-size:1.15rem; color:#ffb000; font-weight:700;
+  }
+
+  [data-reveal] { opacity:0; will-change:opacity,transform; }
+</style>
+</head>
+<body>
+  <div class="bg"></div>
+  <div class="grid-wrap"><div class="grid"></div></div>
+  <div class="vignette"></div>
+
+  <div class="container">
+    <div class="eyebrow" data-reveal data-delay="150" data-dur="700" data-kind="fadeUp">Try It Yourself</div>
+    <h1 data-reveal data-delay="350" data-dur="800" data-kind="rise">One pip install.</h1>
+    <div class="sub" data-reveal data-delay="650" data-dur="700" data-kind="fadeUp">The kernel and Paladin come with it.</div>
+
+    <div class="term" data-reveal data-delay="900" data-dur="800" data-kind="riseScale">
+      <div class="line"><span class="prompt">$</span> <span class="cmd">pip install custodian-codex-guard</span></div>
+      <div class="line"><span class="prompt">$</span> <span class="cmd">custodian-codex setup &amp;&amp; custodian-codex doctor</span><span class="cursor" id="cursor"></span></div>
+    </div>
+
+    <div class="cta-link" data-reveal data-delay="1300" data-dur="700" data-kind="fadeUp">github.com/KeyArgo/custodian-codex-guard</div>
+
+    <div class="get-it" data-reveal data-delay="1650" data-dur="700" data-kind="fadeUp">
+      <span class="get-it-label">Get it for yourself at</span>
+      <span class="get-it-url">getcustodian.xyz</span>
+    </div>
+    <div class="tagline" data-reveal data-delay="2000" data-dur="700" data-kind="fadeUp">You stay in full control of the agent. Always.</div>
+  </div>
+
+  <script>
+    const easeOutCubic = p => 1 - Math.pow(1 - p, 3);
+    const revealEls = Array.from(document.querySelectorAll('[data-reveal]')).map(el => ({
+      el, delay: +el.dataset.delay, dur: +el.dataset.dur, kind: el.dataset.kind
+    }));
+    const cursor = document.getElementById('cursor');
+
+    const TICK_MS = 33;
+    let elapsed = 0;
+    function frame() {
+      elapsed += TICK_MS;
+      const t = elapsed;
+      for (const r of revealEls) {
+        const p = Math.max(0, Math.min(1, (t - r.delay) / r.dur));
+        if (p <= 0) { r.el.style.opacity = 0; continue; }
+        r.el.style.opacity = String(p);
+        const e = easeOutCubic(p);
+        if (r.kind === 'rise') {
+          r.el.style.transform = `translateY(${24 * (1 - e)}px)`;
+        } else if (r.kind === 'fadeUp') {
+          r.el.style.transform = `translateY(${14 * (1 - e)}px)`;
+        } else if (r.kind === 'riseScale') {
+          r.el.style.transform = `translateY(${20 * (1 - e)}px) scale(${0.98 + 0.02 * e})`;
+        }
+      }
+      cursor.style.opacity = (Math.floor(t / 500) % 2 === 0) ? '1' : '0';
+    }
+    setInterval(frame, TICK_MS);
+    frame();
+  </script>
+</body>
+</html>

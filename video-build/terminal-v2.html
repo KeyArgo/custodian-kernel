@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Custodian Terminal v2</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  html,body { width:1920px; height:1080px; background:#060604; overflow:hidden; font-family:'DejaVu Sans', sans-serif; }
+
+  .bg {
+    position:absolute; inset:0;
+    background:
+      radial-gradient(circle at 50% -10%, rgba(255,176,0,0.12) 0%, transparent 55%),
+      radial-gradient(circle at 50% 110%, rgba(46,230,166,0.07) 0%, transparent 55%),
+      #060604;
+  }
+  .grid-wrap { position:absolute; inset:0; perspective:700px; perspective-origin:50% 85%; opacity:0.28; }
+  .grid {
+    position:absolute; width:250%; height:250%; left:-75%; top:-165%;
+    background-image:
+      linear-gradient(rgba(255,255,255,0.06) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.06) 1px, transparent 1px);
+    background-size:54px 54px;
+    transform:rotateX(-78deg);
+  }
+  .vignette { position:absolute; inset:0; background:radial-gradient(circle at 50% 50%, transparent 42%, #060604 100%); }
+
+  .stage {
+    position:relative; z-index:10; height:100%;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+  }
+
+  .headline {
+    font-size:2.6rem; font-weight:800; letter-spacing:-0.5px; margin-bottom:36px;
+    background:linear-gradient(180deg, #fff 0%, #b7bcca 100%);
+    -webkit-background-clip:text; -webkit-text-fill-color:transparent;
+  }
+
+  .live-pill {
+    position:absolute; top:60px; right:96px;
+    font-family:'DejaVu Sans Mono', monospace; font-size:0.85rem; letter-spacing:0.25rem;
+    text-transform:uppercase; color:#ff4d4d;
+    display:flex; align-items:center; gap:10px; z-index:20;
+  }
+  .live-dot { width:9px; height:9px; background:#ff4d4d; border-radius:50%; animation:pulse 1.1s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.25} }
+
+  #zoomwrap { transform-origin:50% 46%; }
+
+  .term {
+    width:1500px; background:rgba(10,10,14,0.72); border:1px solid rgba(255,176,0,0.32);
+    border-radius:14px; overflow:hidden;
+    box-shadow:0 40px 100px rgba(0,0,0,0.65), 0 0 70px rgba(255,176,0,0.07) inset;
+    backdrop-filter:blur(6px);
+  }
+  .titlebar {
+    display:flex; align-items:center; gap:10px;
+    padding:16px 22px; background:rgba(255,255,255,0.035);
+    border-bottom:1px solid rgba(255,255,255,0.08);
+  }
+  .dot { width:13px; height:13px; border-radius:50%; }
+  .dot.r { background:#ff5f57; } .dot.y { background:#febc2e; } .dot.g { background:#28c840; }
+  .filename {
+    margin-left:14px; font-family:'DejaVu Sans Mono', monospace; font-size:0.85rem;
+    color:rgba(255,255,255,0.4); letter-spacing:0.04rem;
+  }
+
+  .termbody {
+    padding:38px 44px 46px; font-family:'DejaVu Sans Mono', monospace; font-size:1.28rem;
+    line-height:1.85; min-height:560px;
+  }
+  .row { white-space:pre; }
+  .row.blank { height:1.85em; }
+  .prompt { color:#ffb000; }
+  .cmd { color:#7cd4f5; }
+  .hdr { color:#e8e8ee; font-weight:700; }
+  .ok { color:#2ee6a6; }
+  .deny { color:#ff4d4d; }
+  .esc { color:#ffb000; }
+  .valid { color:#2ee6a6; font-weight:700; }
+
+  .cursor {
+    display:inline-block; width:11px; height:1.5rem; background:#7cd4f5;
+    vertical-align:-4px; margin-left:2px;
+  }
+  .cursor.hidden { visibility:hidden; }
+</style>
+</head>
+<body>
+  <div class="bg"></div>
+  <div class="grid-wrap"><div class="grid"></div></div>
+  <div class="vignette"></div>
+  <div class="live-pill"><span class="live-dot"></span>Live</div>
+
+  <div class="stage">
+    <div class="headline">Real output. Unedited.</div>
+    <div id="zoomwrap">
+      <div class="term">
+        <div class="titlebar">
+          <span class="dot r"></span><span class="dot y"></span><span class="dot g"></span>
+          <span class="filename">codex-guard-demo.py</span>
+        </div>
+        <div class="termbody" id="body"></div>
+      </div>
+    </div>
+  </div>
+
+<script>
+// Real, unedited output from `python scripts/codex-guard-demo.py`,
+// run fresh in the custodian-codex-guard repo.
+const CMD = "python scripts/codex-guard-demo.py";
+const LINES = [
+  {t:"hdr",  s:"Custodian Guard for Codex — capability-firewall demo"},
+  {t:"blank"},
+  {t:"ok",   s:"Safe test           claimed=test   → autonomous          classified=test        receipt=dcab19a0c000…"},
+  {t:"ok",   s:"Workspace edit      claimed=write  → autonomous          classified=write       receipt=baf72b9e9ae5…"},
+  {t:"deny", s:"Secret read         claimed=read   → denied              classified=read        receipt=43599ae19b16…"},
+  {t:"esc",  s:"Disguised delete    claimed=read   → escalation_required classified=destructive receipt=75bd82f063d5…"},
+  {t:"esc",  s:"Production deploy   claimed=read   → escalation_required classified=production  receipt=ca33b7e86ac9…"},
+  {t:"blank"},
+  {t:"valid",s:"Receipt chain: VALID (5 value-free, HMAC-linked decisions)"},
+];
+
+const body = document.getElementById("body");
+
+function row(cls) {
+  const d = document.createElement("div");
+  d.className = "row" + (cls === "blank" ? " blank" : "");
+  return d;
+}
+
+// -- command line, typed character by character --
+const cmdRow = row();
+const promptSpan = document.createElement("span");
+promptSpan.className = "prompt"; promptSpan.textContent = "$ ";
+const cmdSpan = document.createElement("span");
+cmdSpan.className = "cmd";
+const cursor = document.createElement("span");
+cursor.className = "cursor";
+cmdRow.appendChild(promptSpan);
+cmdRow.appendChild(cmdSpan);
+cmdRow.appendChild(cursor);
+body.appendChild(cmdRow);
+
+let queue = [];
+let qi = 0;
+function schedule(fn, delay) { queue.push({fn, delay}); }
+
+// deterministic pseudo-random jitter (no Math.random -> reproducible captures)
+function jitter(i, spread) { return (Math.sin(i * 12.9898) * 43758.5453 % 1) * spread; }
+
+let cursorT = 0;
+function tickCursor() {
+  cursorT += 1;
+  cursor.classList.toggle("hidden", Math.floor(cursorT / 15) % 2 === 1);
+}
+setInterval(tickCursor, 33);
+
+let acc = 500; // small lead-in before typing starts
+for (let i = 0; i < CMD.length; i++) {
+  const ch = CMD[i];
+  acc += 62 + Math.abs(jitter(i, 48));
+  ((idx, when) => schedule(() => { cmdSpan.textContent = CMD.slice(0, idx + 1); }, when))(i, acc);
+}
+acc += 800; // "enter pressed, program starting" beat
+
+// move cursor to a fresh line once command is submitted
+schedule(() => { cursor.classList.add("hidden"); }, acc);
+
+for (const line of LINES) {
+  if (line.t === "blank") {
+    acc += 160;
+    ((when) => schedule(() => { body.appendChild(row("blank")); }, when))(acc);
+    continue;
+  }
+  acc += 520 + jitter(acc, 260);
+  ((line, when) => schedule(() => {
+    const r = row();
+    r.innerHTML = `<span class="${line.t}">${line.s.replace(/&/g,"&amp;").replace(/</g,"&lt;")}</span>`;
+    body.appendChild(r);
+  }, when))(line, acc);
+}
+
+const holdStart = acc + 300;
+
+queue.sort((a, b) => a.delay - b.delay);
+let start = performance.now();
+function pump() {
+  const now = performance.now() - start;
+  while (queue.length && queue[0].delay <= now) {
+    queue.shift().fn();
+  }
+  requestAnimationFrame(pump);
+}
+pump();
+
+// slow continuous zoom on the whole stage, ~matches the rest of the deck's Ken Burns feel
+const zoomwrap = document.getElementById("zoomwrap");
+const ZOOM_DUR = 21500;
+function zoomTick() {
+  const now = performance.now() - start;
+  const p = Math.min(1, now / ZOOM_DUR);
+  const scale = 1 + 0.035 * p;
+  zoomwrap.style.transform = `scale(${scale})`;
+  if (p < 1) requestAnimationFrame(zoomTick);
+}
+requestAnimationFrame(zoomTick);
+</script>
+</body>
+</html>
