@@ -108,13 +108,19 @@ def cmd_add(args) -> int:
 
 def cmd_edit(args) -> int:
     vault = _open_vault(args)
+    name = args.name
+    broker = Broker(vault)
+    if args.rename:
+        broker.rename(name, args.rename, CLI_REQUESTER)
+        name = args.rename
     if args.rotate_value:
-        value = _read_value(f"new value for {args.name}: ", args.stdin)
-        vault.add(args.name, value, overwrite=True)
-    vault.update_meta(args.name, profile=args.profile, env_var=args.env_var,
-                      note=args.note)
-    Broker(vault).audit.append("edit", args.name, CLI_REQUESTER, "-", "")
-    print(f"updated paladin://{args.name}")
+        value = _read_value(f"new value for {name}: ", args.stdin)
+        vault.rotate_value(name, value)
+    hosts = args.allowed_host if args.allowed_host is not None else None
+    vault.update_meta(name, profile=args.profile, env_var=args.env_var,
+                      note=args.note, kind=args.kind, allowed_hosts=hosts)
+    broker.audit.append("edit", name, CLI_REQUESTER, "-", "")
+    print(f"updated paladin://{name}")
     return 0
 
 
@@ -536,10 +542,14 @@ def build_parser() -> argparse.ArgumentParser:
 
     sp = sub.add_parser("edit", help="update an entry's metadata and/or value")
     sp.add_argument("name")
+    sp.add_argument("--rename", default=None, help="new entry name; exact grants migrate")
     sp.add_argument("--rotate-value", action="store_true", help="prompt for a new value")
+    sp.add_argument("--kind", choices=["secret", "env", "token", "password"], default=None)
     sp.add_argument("--profile", default=None)
     sp.add_argument("--env-var", default=None)
     sp.add_argument("--note", default=None)
+    sp.add_argument("--allowed-host", action="append", default=None,
+                    help="replace host ceiling; repeat for multiple hosts")
     sp.add_argument("--stdin", action="store_true")
     sp.set_defaults(fn=cmd_edit)
 

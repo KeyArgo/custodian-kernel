@@ -423,8 +423,12 @@ class Vault:
 
     def update_meta(self, name: str, profile: Optional[str] = None,
                     env_var: Optional[str] = None, note: Optional[str] = None,
-                    allowed_hosts: Optional[list] = None) -> None:
+                    kind: Optional[str] = None, allowed_hosts: Optional[list] = None) -> None:
         entry = self._require(name)
+        if kind is not None:
+            if kind not in {"secret", "env", "token", "password"}:
+                raise PaladinError(f"invalid secret kind {kind!r}")
+            entry.kind = kind
         if profile is not None:
             entry.profile = profile
         if env_var is not None:
@@ -435,6 +439,41 @@ class Vault:
             entry.allowed_hosts = list(allowed_hosts)
         entry.updated_at = time.time()
         self.save()
+
+    def rotate_value(self, name: str, value: str) -> None:
+        """Replace only the secret value, preserving all metadata."""
+        entry = self._require(name)
+        entry.value = value
+        entry.rotations += 1
+        entry.updated_at = time.time()
+        self.save()
+
+    def rename(self, name: str, new_name: str) -> int:
+        """Atomically rename an entry and migrate exact-name grants.
+
+        Wildcard grants are intentionally not changed: their owner expressed a
+        pattern policy, not an alias that should be silently rewritten.
+        """
+        entry = self._require(name)
+        if not valid_name(new_name):
+            raise PaladinError(f"invalid secret name {new_name!r}")
+        if new_name in self._entries:
+            raise PaladinError(f"entry {new_name!r} already exists")
+        migrated = 0
+        new_grants = []
+        for grant in self._grants:
+            copied = dict(grant)
+            if copied.get("ref_pattern") == name:
+                copied["ref_pattern"] = new_name
+                migrated += 1
+            new_grants.append(copied)
+        del self._entries[name]
+        entry.name = new_name
+        entry.updated_at = time.time()
+        self._entries[new_name] = entry
+        self._grants = new_grants
+        self.save()
+        return migrated
 
     def delete(self, name: str) -> None:
         self._require(name)

@@ -408,3 +408,11 @@ class Broker:
         removed = self.grants.revoke(ref_pattern, requester)
         self.audit.append("revoke", ref_pattern, requester, "-", f"removed={removed}")
         return removed
+
+    def rename(self, name: str, new_name: str, requester: str) -> int:
+        """Rename an entry and refresh this broker's in-memory grant policy."""
+        migrated = self.vault.rename(name, new_name)
+        self.grants = GrantPolicy(self.vault)
+        self.audit.append("rename", name, requester, "-",
+                          f"to={new_name} exact_grants_migrated={migrated}")
+        return migrated

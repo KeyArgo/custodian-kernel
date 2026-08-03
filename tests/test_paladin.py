@@ -71,6 +71,33 @@ def test_roundtrip(vault):
     assert reopened._resolve_value("k") == "the-secret-value"
 
 
+def test_rename_preserves_value_metadata_and_migrates_only_exact_grants(vault, broker):
+    vault.add("old/root", "the-secret", kind="password", profile="infra",
+              env_var="OLD_ROOT", note="keep", allowed_hosts=["titan"])
+    broker.grant("old/root", "skill:operator", ttl_seconds=60)
+    broker.grant("old/*", "skill:wildcard", ttl_seconds=60)
+    assert broker.rename("old/root", "titan/root", "user:cli") == 1
+    assert vault._resolve_value("titan/root") == "the-secret"
+    meta = vault.meta("titan/root")
+    assert meta["kind"] == "password" and meta["profile"] == "infra"
+    assert meta["env_var"] == "OLD_ROOT" and meta["allowed_hosts"] == ["titan"]
+    assert [(g.ref_pattern, g.requester) for g in broker.grants.list()] == [
+        ("titan/root", "skill:operator"), ("old/*", "skill:wildcard")]
+    with pytest.raises(PaladinError):
+        vault.rename("titan/root", "bad name")
+
+
+def test_rotate_value_preserves_all_metadata(vault):
+    vault.add("titan/root", "old", kind="password", profile="infra",
+              env_var="TITAN_ROOT", note="host", allowed_hosts=["titan"])
+    vault.rotate_value("titan/root", "new")
+    assert vault._resolve_value("titan/root") == "new"
+    meta = vault.meta("titan/root")
+    assert meta["kind"] == "password" and meta["profile"] == "infra"
+    assert meta["env_var"] == "TITAN_ROOT" and meta["note"] == "host"
+    assert meta["allowed_hosts"] == ["titan"] and meta["rotations"] == 1
+
+
 def test_nothing_readable_at_rest(vault):
     vault.add("stripe_sk", "sk_live_supersecretzzz")
     raw = vault.path.read_bytes()

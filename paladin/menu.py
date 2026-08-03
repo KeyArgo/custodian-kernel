@@ -73,6 +73,28 @@ def _act_show() -> None:
         _run(["show", name])
 
 
+def _act_edit() -> None:
+    name = _prompt("secret name to edit")
+    if not name:
+        return
+    rename = _prompt("new name (blank keeps current)")
+    kind = _prompt("new kind (blank keeps current)")
+    profile = _prompt("new profile (blank keeps current)")
+    env = _prompt("new environment variable (blank keeps current)")
+    note = _prompt("new note (blank keeps current)")
+    rotate = _prompt("replace the secret value? (y/N)", "n").lower().startswith("y")
+    argv = ["edit", name]
+    if rename: argv += ["--rename", rename]
+    if kind: argv += ["--kind", kind]
+    if profile: argv += ["--profile", profile]
+    if env: argv += ["--env-var", env]
+    if note: argv += ["--note", note]
+    if rotate:
+        print("  (you'll be prompted for the replacement value — it is never shown)")
+        argv.append("--rotate-value")
+    _run(argv)
+
+
 def _act_add() -> None:
     name = _prompt("name for the new secret (e.g. stripe_key)")
     if not name:
@@ -189,6 +211,7 @@ _ACTIONS = [
     ("run", "Run a command with a secret injected"),
     ("import", "Import credentials in bulk"),
     ("show", "Show one secret's details (never the value)"),
+    ("edit", "Edit or rename a secret"),
     ("delete", "Delete a secret"),
     ("grants", "Manage who can use which secret"),
     ("backup", "Back up the vault (encrypted, one file)"),
@@ -199,7 +222,7 @@ _ACTIONS = [
 
 _DISPATCH = {
     "list": _act_list, "add": _act_add, "run": _act_run_with_secret,
-    "import": _act_import, "show": _act_show, "delete": _act_delete,
+    "import": _act_import, "show": _act_show, "edit": _act_edit, "delete": _act_delete,
     "grants": _act_grants, "backup": _act_backup, "restore": _act_restore,
     "audit": _act_audit, "doctor": _act_doctor,
 }
