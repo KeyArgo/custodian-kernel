@@ -205,6 +205,10 @@ def _act_doctor() -> None:
     _run(["doctor"])
 
 
+def _act_guard() -> None:
+    _run(["guard"])
+
+
 _ACTIONS = [
     ("list", "List my secrets (names only)"),
     ("add", "Add a secret"),
@@ -218,6 +222,7 @@ _ACTIONS = [
     ("restore", "Restore from a backup"),
     ("audit", "Inspect / verify the audit log"),
     ("doctor", "Check this environment (sandbox, etc.)"),
+    ("guard", "Paladin Guard — audit integrity and recovery status"),
 ]
 
 _DISPATCH = {
@@ -225,6 +230,7 @@ _DISPATCH = {
     "import": _act_import, "show": _act_show, "edit": _act_edit, "delete": _act_delete,
     "grants": _act_grants, "backup": _act_backup, "restore": _act_restore,
     "audit": _act_audit, "doctor": _act_doctor,
+    "guard": _act_guard,
 }
 
 

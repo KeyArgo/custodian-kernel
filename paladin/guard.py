@@ -2,6 +2,10 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import hashlib
+import re
+import zipfile
+from pathlib import Path
 
 from paladin.audit import AuditLog
 from paladin.errors import PaladinError
@@ -17,6 +21,7 @@ class IntegrityStatus:
     healthy: bool
     valid_records: int
     problem: str = ""
+    audit_sha256: str = ""
 
 
 class PaladinGuard:
@@ -29,12 +34,28 @@ class PaladinGuard:
         self.audit = audit
 
     def status(self) -> IntegrityStatus:
+        digest = hashlib.sha256(self.audit.path.read_bytes()).hexdigest() if self.audit.path.exists() else ""
         try:
-            return IntegrityStatus(True, self.audit.verify())
+            return IntegrityStatus(True, self.audit.verify(), audit_sha256=digest)
         except Exception as exc:
             # Audit errors are intentionally summarized; records themselves
             # remain inspectable through the value-free audit command.
-            return IntegrityStatus(False, 0, str(exc))
+            match = re.search(r"record (\d+)", str(exc))
+            return IntegrityStatus(False, int(match.group(1)) if match else 0,
+                                   str(exc), digest)
+
+    def backup_audit_hashes(self, directory: str | Path) -> list[tuple[str, str]]:
+        """Return value-free audit hashes from Paladin backup archives."""
+        found: list[tuple[str, str]] = []
+        for archive in sorted(Path(directory).expanduser().glob("*.zip")):
+            try:
+                with zipfile.ZipFile(archive) as bundle:
+                    with bundle.open("audit.jsonl") as stream:
+                        digest = hashlib.sha256(stream.read()).hexdigest()
+            except (OSError, KeyError, zipfile.BadZipFile):
+                continue
+            found.append((archive.name, digest))
+        return found
 
     def require_agent_safe(self, requester: str) -> None:
         if requester in OWNER_REQUESTERS:

@@ -128,9 +128,20 @@ def cmd_guard(args) -> int:
     status = _broker(args).guard.status()
     if status.healthy:
         print(f"Paladin Guard: OK — {status.valid_records} audit records verified")
+        print(f"  audit SHA-256: {status.audit_sha256}")
         return 0
     print("Paladin Guard: AUDIT INTEGRITY FAILED")
     print(f"  problem: {status.problem}")
+    print(f"  first invalid record: {status.valid_records}")
+    print(f"  audit SHA-256: {status.audit_sha256}")
+    if args.backups:
+        matches = _broker(args).guard.backup_audit_hashes(args.backups)
+        if not matches:
+            print("  backup comparison: no readable audit trails found")
+        else:
+            for name, digest in matches:
+                state = "MATCHES CURRENT" if digest == status.audit_sha256 else "different"
+                print(f"  backup {name}: {state} ({digest})")
     print("  AI credential authority is blocked; operator recovery remains available")
     return 2
 
@@ -668,6 +679,7 @@ def build_parser() -> argparse.ArgumentParser:
     sp.set_defaults(fn=cmd_audit)
 
     sp = sub.add_parser("guard", help="show Paladin Guard integrity status")
+    sp.add_argument("--backups", default=None, help="read-only directory of Paladin backup zip files")
     sp.set_defaults(fn=cmd_guard)
 
     sp = sub.add_parser("rotate-master", help="re-encrypt the vault under a new passphrase")

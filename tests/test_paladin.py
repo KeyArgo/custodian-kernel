@@ -15,6 +15,7 @@ from paladin.errors import (
     PaladinError,
 )
 from paladin.guard import IntegrityGuardError
+from paladin.guard import PaladinGuard
 
 PP = "test-passphrase-123"
 
@@ -108,6 +109,18 @@ def test_integrity_guard_blocks_agent_resolution_but_keeps_owner_recovery(vault,
     with pytest.raises(IntegrityGuardError):
         broker._resolve("k", "skill:agent", "L0")
     assert broker._resolve("k", "user:cli", "L0") == "the-secret"
+
+
+def test_guard_reports_value_free_audit_fingerprint_and_backup_hash(vault, broker, tmp_path):
+    broker.audit.append("resolve", "safe-ref", "user:cli")
+    guard = PaladinGuard(broker.audit)
+    status = guard.status()
+    assert status.healthy and len(status.audit_sha256) == 64
+    import zipfile
+    archive = tmp_path / "backup.zip"
+    with zipfile.ZipFile(archive, "w") as out:
+        out.writestr("audit.jsonl", broker.audit.path.read_bytes())
+    assert guard.backup_audit_hashes(tmp_path) == [("backup.zip", status.audit_sha256)]
 
 
 def test_nothing_readable_at_rest(vault):
