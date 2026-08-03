@@ -2,17 +2,17 @@ Custodian Release Preparation Report
 ====================================
 Component: codex-guard
 Version:   0.1.2
-Time:      2026-07-25T18:53:58Z
+Time:      2026-07-27T08:35:37Z
 
 Artifacts:
   custodian_codex_guard-0.1.2-py3-none-any.whl
     path: custodian_codex_guard-0.1.2-py3-none-any.whl
-    size: 48621
-    SHA-256: a8ee5dbb3070885904286778e9c61221206e2f6ea01f77446cf21889619528e9
+    size: 49580
+    SHA-256: a89d6ebe64035740fc89e2dc13247a5f60f6345614d08b2fc54aa61c37eb23b0
   custodian_codex_guard-0.1.2.tar.gz
     path: custodian_codex_guard-0.1.2.tar.gz
-    size: 47460
-    SHA-256: d3349ade8a207835dfca582e0ace5215a2874431ba846ac2200cca27e9315a76
+    size: 48632
+    SHA-256: c9f3f284ff2cd3e6f3e21a1c0bf832ab6801911ca5fcbc40368323ed165794b4
 
 Test Results:
   [PASS] fresh-install

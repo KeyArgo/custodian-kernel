@@ -4,24 +4,24 @@
     {
       "name": "custodian_codex_guard-0.1.2-py3-none-any.whl",
       "path": "custodian_codex_guard-0.1.2-py3-none-any.whl",
-      "sha256": "a8ee5dbb3070885904286778e9c61221206e2f6ea01f77446cf21889619528e9",
-      "size": 48621
+      "sha256": "a89d6ebe64035740fc89e2dc13247a5f60f6345614d08b2fc54aa61c37eb23b0",
+      "size": 49580
     },
     {
       "name": "custodian_codex_guard-0.1.2.tar.gz",
       "path": "custodian_codex_guard-0.1.2.tar.gz",
-      "sha256": "d3349ade8a207835dfca582e0ace5215a2874431ba846ac2200cca27e9315a76",
-      "size": 47460
+      "sha256": "c9f3f284ff2cd3e6f3e21a1c0bf832ab6801911ca5fcbc40368323ed165794b4",
+      "size": 48632
     }
   ],
   "component": "codex-guard",
-  "content_digest": "e7365b1da955d5d7632dc719a57fc694b55c9701bbc6ddd90fe264ae6b5a71c4",
+  "content_digest": "15129f406c83dcf4c24ccdee99eeffedc4ead376e1a1d5ef6f7aa51b8e79eeb3",
   "intended_tag": "v0.1.2",
   "note": "PREPARATION ONLY. This manifest describes a candidate that has NOT been published.",
   "package": "custodian-codex-guard",
-  "prepared_at": 1785005638.2467828,
-  "prepared_at_iso": "2026-07-25T18:53:58Z",
-  "private_source_commit": "b6e3f8df7a3724f30f15db7e39001aae4d15185e",
+  "prepared_at": 1785141337.9564636,
+  "prepared_at_iso": "2026-07-27T08:35:37Z",
+  "private_source_commit": "7eb20ea12deab638b6d953e54886546945011af7",
   "public_repo": "KeyArgo/custodian-codex-guard",
   "test_results": [
     {
@@ -29,6 +29,7 @@
       "smoke": {
         "checks": {
           "MCP initialize handshake": true,
+          "MCP version matches installed distribution": true,
           "custodian-codex --help": true
         },
         "passed": true,
@@ -42,6 +43,7 @@
       "smoke": {
         "checks": {
           "MCP initialize handshake": true,
+          "MCP version matches installed distribution": true,
           "custodian-codex --help": true
         },
         "passed": true,
@@ -64,6 +66,7 @@
     {
       "checks": {
         "MCP initialize handshake": true,
+        "MCP version matches installed distribution": true,
         "custodian-codex --help": true
       },
       "passed": true,
