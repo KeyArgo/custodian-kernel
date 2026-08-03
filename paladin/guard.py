@@ -34,15 +34,16 @@ class PaladinGuard:
         self.audit = audit
 
     def status(self) -> IntegrityStatus:
-        digest = hashlib.sha256(self.audit.path.read_bytes()).hexdigest() if self.audit.path.exists() else ""
         try:
+            digest = (hashlib.sha256(self.audit.path.read_bytes()).hexdigest()
+                      if self.audit.path.exists() else "")
             return IntegrityStatus(True, self.audit.verify(), audit_sha256=digest)
         except Exception as exc:
             # Audit errors are intentionally summarized; records themselves
             # remain inspectable through the value-free audit command.
             match = re.search(r"record (\d+)", str(exc))
             return IntegrityStatus(False, int(match.group(1)) if match else 0,
-                                   str(exc), digest)
+                                   str(exc), "")
 
     def backup_audit_hashes(self, directory: str | Path) -> list[tuple[str, str]]:
         """Return value-free audit hashes from Paladin backup archives."""

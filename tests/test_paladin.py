@@ -139,6 +139,14 @@ def test_guard_reports_value_free_audit_fingerprint_and_backup_hash(vault, broke
     assert guard.backup_audit_hashes(tmp_path) == [("backup.zip", status.audit_sha256)]
 
 
+def test_guard_fails_closed_when_audit_path_cannot_be_read(vault, broker):
+    broker.audit.path.mkdir()
+    status = PaladinGuard(broker.audit).status()
+    assert not status.healthy
+    assert status.valid_records == 0
+    assert status.audit_sha256 == ""
+
+
 def test_nothing_readable_at_rest(vault):
     vault.add("stripe_sk", "sk_live_supersecretzzz")
     raw = vault.path.read_bytes()
