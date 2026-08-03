@@ -124,6 +124,17 @@ def cmd_edit(args) -> int:
     return 0
 
 
+def cmd_guard(args) -> int:
+    status = _broker(args).guard.status()
+    if status.healthy:
+        print(f"Paladin Guard: OK — {status.valid_records} audit records verified")
+        return 0
+    print("Paladin Guard: AUDIT INTEGRITY FAILED")
+    print(f"  problem: {status.problem}")
+    print("  AI credential authority is blocked; operator recovery remains available")
+    return 2
+
+
 def cmd_rm(args) -> int:
     vault = _open_vault(args)
     vault.delete(args.name)
@@ -655,6 +666,9 @@ def build_parser() -> argparse.ArgumentParser:
     sp.add_argument("action", nargs="?", default="tail", choices=["tail", "verify"])
     sp.add_argument("--tail", type=int, default=20)
     sp.set_defaults(fn=cmd_audit)
+
+    sp = sub.add_parser("guard", help="show Paladin Guard integrity status")
+    sp.set_defaults(fn=cmd_guard)
 
     sp = sub.add_parser("rotate-master", help="re-encrypt the vault under a new passphrase")
     sp.set_defaults(fn=cmd_rotate_master)

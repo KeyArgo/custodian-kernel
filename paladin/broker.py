@@ -33,6 +33,7 @@ from urllib.parse import parse_qsl, quote, quote_plus, urlencode, urlsplit, urlu
 from paladin.audit import AuditLog
 from paladin.errors import EgressDeniedError, GrantDeniedError, UnknownRefError
 from paladin.grants import GrantPolicy
+from paladin.guard import PaladinGuard
 from paladin.refs import SecretRef
 from paladin.vault import Vault
 
@@ -107,11 +108,13 @@ class Broker:
         self.audit = AuditLog(
             audit_path or vault.path.parent / AUDIT_FILENAME, vault.audit_key()
         )
+        self.guard = PaladinGuard(self.audit)
         self.leak_sentinel = LeakSentinel()
 
     # -- internal resolution (audited, grant-gated) ---------------------------
 
     def _resolve(self, ref: SecretRef | str, requester: str, band: str) -> str:
+        self.guard.require_agent_safe(requester)
         ref = SecretRef.parse(str(ref))
         try:
             grant = self.grants.check(ref.name, requester, band)

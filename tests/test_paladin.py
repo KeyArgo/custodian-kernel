@@ -14,6 +14,7 @@ from paladin.errors import (
     GrantDeniedError, UnknownRefError, VaultLockedError, VaultMissingError,
     PaladinError,
 )
+from paladin.guard import IntegrityGuardError
 
 PP = "test-passphrase-123"
 
@@ -96,6 +97,17 @@ def test_rotate_value_preserves_all_metadata(vault):
     assert meta["kind"] == "password" and meta["profile"] == "infra"
     assert meta["env_var"] == "TITAN_ROOT" and meta["note"] == "host"
     assert meta["allowed_hosts"] == ["titan"] and meta["rotations"] == 1
+
+
+def test_integrity_guard_blocks_agent_resolution_but_keeps_owner_recovery(vault, broker):
+    vault.add("k", "the-secret")
+    broker.audit.append("resolve", "k", "user:cli")
+    raw = vault.path.parent / "audit.jsonl"
+    raw.write_text(raw.read_text().replace('"event":"resolve"', '"event":"tampered"'))
+    broker.grant("k", "skill:agent")  # owner creates the grant for this test
+    with pytest.raises(IntegrityGuardError):
+        broker._resolve("k", "skill:agent", "L0")
+    assert broker._resolve("k", "user:cli", "L0") == "the-secret"
 
 
 def test_nothing_readable_at_rest(vault):
