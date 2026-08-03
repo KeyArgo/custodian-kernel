@@ -130,6 +130,13 @@ def _act_gates() -> None:
             _run(["gates", "notifications", choice])
 
 
+def _act_paladin() -> None:
+    """Open the separate credential console; it remains its own authority."""
+    from paladin.menu import run_menu
+    print("\n  Opening Paladin credential console. Return there to come back here.")
+    run_menu()
+
+
 def _act_uninstall() -> None:
     _run(["uninstall", "--dry-run"])
     answer = _prompt("Type UNINSTALL to remove the package and preserve all data")
@@ -143,6 +150,7 @@ _ACTIONS = [
     ("status", "Show safety and authority status"),
     ("audit", "Review decisions and audit evidence"),
     ("gates", "Configure approvals and enforcement"),
+    ("paladin", "Credentials / Paladin — grants, rotation, and audit"),
     ("tools", "View governed tools and capabilities"),
     ("adapters", "View active guard adapters"),
     ("kill", "Engage the emergency stop"),
@@ -158,6 +166,7 @@ _DISPATCH = {
     "kill": _act_kill, "resume": _act_resume, "tools": _act_tools,
     "adapters": _act_adapters, "init": _act_init, "guide": _act_guide,
     "gates": _act_gates,
+    "paladin": _act_paladin,
     "uninstall": _act_uninstall,
 }
 
