@@ -430,27 +430,48 @@ class CustodianTool:
             cmd += [f"--{k.replace('_', '-')}", str(v)]
 
         from custodian.exceptions import ToolSandboxUnavailableError
-        from custodian.sandbox import require_sandboxed_argv
+        from custodian.sandbox import require_confined_argv, require_sandboxed_argv
+        confined = os.environ.get("CUSTODIAN_EXECUTION_MODE", "").lower() == "confined"
         rw_dirs = [str(_state_dir())]
         if self.skill_dir:
             rw_dirs.append(str(self.skill_dir))
         try:
-            argv = require_sandboxed_argv(
-                cmd, rw_dirs=rw_dirs,
-                allow_unsandboxed=os.environ.get("CUSTODIAN_ALLOW_UNSANDBOXED_TOOLS") == "1",
-            )
+            if confined:
+                # Strict mode never exposes the Custodian state directory or
+                # grants an unsandboxed fallback.  The skill code itself is
+                # available read-only; all tool output must land in the
+                # explicitly selected project workspace.
+                argv = require_confined_argv(
+                    cmd,
+                    workspace=os.environ.get("CUSTODIAN_CONFINED_WORKSPACE", ""),
+                    ro_dirs=[str(self.skill_dir)] if self.skill_dir else (),
+                )
+            else:
+                argv = require_sandboxed_argv(
+                    cmd, rw_dirs=rw_dirs,
+                    allow_unsandboxed=os.environ.get("CUSTODIAN_ALLOW_UNSANDBOXED_TOOLS") == "1",
+                )
         except ToolSandboxUnavailableError as e:
             return {"ok": False, "error": str(e), "tool": self.name}
 
         egress_proxy = None
         try:
             tool_env = _tool_environment(self.name, _env)
+            if confined:
+                # A confined child gets no ambient credentials.  Future
+                # egress-broker work may inject a grant-bound secret at the
+                # executor boundary; this beta intentionally refuses to make
+                # existing host environment credentials available.
+                tool_env = {
+                    key: value for key, value in tool_env.items()
+                    if key not in _ENV_REQUIREMENTS.get(self.name, [])
+                }
             # Opt-in per-tool destination allowlist (see
             # custodian/egress_proxy.py for exactly what this does and does
             # not guarantee -- it redirects cooperative HTTP clients, it
             # does not isolate the network namespace). No-op for the ~all
             # existing tools that haven't declared allowed_hosts yet.
-            if self.allowed_hosts:
+            if self.allowed_hosts and not confined:
                 from custodian.egress_proxy import EgressProxy
                 egress_proxy = EgressProxy(allowed_hosts=self.allowed_hosts)
                 egress_proxy.start()
@@ -458,7 +479,8 @@ class CustodianTool:
 
             result = subprocess.run(
                 argv, capture_output=True, text=True, timeout=30,
-                cwd=str(self.skill_dir) if self.skill_dir else None,
+                cwd=(os.environ.get("CUSTODIAN_CONFINED_WORKSPACE") if confined
+                     else str(self.skill_dir) if self.skill_dir else None),
                 env=tool_env,
             )
             stdout = _redact_credential_values(result.stdout, tool_env, self.name)

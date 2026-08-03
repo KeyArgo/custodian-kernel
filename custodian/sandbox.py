@@ -44,6 +44,13 @@ _DEFAULT_MASK_DIRS = (
     "~/.ssh", "~/.aws", "~/.gnupg", "~/.config/gcloud", "~/.paladin",
 )
 
+# A confined run intentionally exposes a much smaller host surface than the
+# backwards-compatible sandbox above.  In particular it does not ro-bind `/`:
+# a read-only bind still lets a compromised child read every host secret that
+# its parent can read unless each sensitive directory is remembered and
+# overlaid.  These are the runtime directories a normal Python tool needs.
+_CONFINED_RO_DIRS = ("/usr", "/bin", "/sbin", "/lib", "/lib32", "/lib64", "/libx32", "/etc")
+
 
 def bwrap_path() -> Optional[str]:
     return shutil.which("bwrap")
@@ -70,6 +77,30 @@ def sandbox_available() -> bool:
         return False
 
 
+@functools.lru_cache(maxsize=1)
+def confined_sandbox_available() -> bool:
+    """True only when the stricter no-network profile can start.
+
+    A host can allow the legacy mount namespace but reject network namespaces.
+    Confined mode must test the boundary it actually promises rather than
+    silently discovering the difference after a tool has been authorized.
+    """
+    bw = bwrap_path()
+    if not bw:
+        return False
+    try:
+        result = subprocess.run(
+            [bw, "--unshare-user", "--unshare-pid", "--unshare-uts",
+             "--unshare-ipc", "--unshare-cgroup", "--unshare-net",
+             "--die-with-parent", "--ro-bind", "/", "/", "--dev", "/dev",
+             "--proc", "/proc", "--clearenv", "--", "/bin/true"],
+            capture_output=True, timeout=10,
+        )
+        return result.returncode == 0
+    except (OSError, subprocess.SubprocessError):
+        return False
+
+
 def _existing_dirs(paths: Sequence[str]) -> list[str]:
     seen = set()
     out = []
@@ -79,6 +110,25 @@ def _existing_dirs(paths: Sequence[str]) -> list[str]:
             seen.add(resolved)
             out.append(resolved)
     return out
+
+
+def _confined_workspace(workspace: str) -> str:
+    """Validate the sole write capability for a confined child.
+
+    A broad workspace turns a mount boundary into a no-op.  This is kept here
+    rather than in a CLI caller so every future confined execution path shares
+    the same fail-closed check.
+    """
+    if not workspace:
+        raise ToolSandboxUnavailableError(
+            "confined execution requires CUSTODIAN_CONFINED_WORKSPACE"
+        )
+    path = Path(workspace).expanduser().resolve()
+    if not path.is_dir() or path == path.parent or path == Path.home().resolve():
+        raise ToolSandboxUnavailableError(
+            "confined workspace must be an existing project directory, not / or the home directory"
+        )
+    return str(path)
 
 
 def build_sandboxed_argv(cmd: Sequence[str], *, rw_dirs: Sequence[str] = (),
@@ -108,6 +158,56 @@ def build_sandboxed_argv(cmd: Sequence[str], *, rw_dirs: Sequence[str] = (),
     argv += ["--"]
     argv += list(cmd)
     return argv
+
+
+def build_confined_argv(
+    cmd: Sequence[str], *, workspace: str, ro_dirs: Sequence[str] = (),
+) -> list[str]:
+    """Build Custodian's strict, no-network Bubblewrap profile.
+
+    The child receives only a minimal read-only runtime, explicitly supplied
+    skill code, and one declared read-write workspace.  It inherits neither
+    the host network nor the parent environment.  This is opt-in because
+    networked and ambient-credential tools must be redesigned around an egress
+    broker before they can run safely in this profile.
+    """
+    root = _confined_workspace(workspace)
+    bw = bwrap_path()
+    if not bw:
+        raise ToolSandboxUnavailableError("bubblewrap is not installed")
+    argv = [
+        bw,
+        "--unshare-user", "--unshare-pid", "--unshare-uts",
+        "--unshare-ipc", "--unshare-cgroup", "--unshare-net",
+        "--die-with-parent", "--new-session",
+    ]
+    for directory in _existing_dirs(_CONFINED_RO_DIRS):
+        argv += ["--ro-bind", directory, directory]
+    for directory in _existing_dirs(ro_dirs):
+        resolved = str(Path(directory).expanduser().resolve())
+        if resolved != root:
+            argv += ["--ro-bind", resolved, resolved]
+    argv += ["--tmpfs", "/tmp", "--dev", "/dev", "--proc", "/proc"]
+    argv += ["--bind", root, root, "--clearenv"]
+    argv += ["--setenv", "PATH", "/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"]
+    argv += ["--chdir", root, "--"]
+    argv += list(cmd)
+    return argv
+
+
+def require_confined_argv(
+    cmd: Sequence[str], *, workspace: str, ro_dirs: Sequence[str] = (),
+) -> list[str]:
+    """Return a strict sandbox argv or fail closed.
+
+    Unlike :func:`require_sandboxed_argv`, confined execution deliberately has
+    no environment-variable escape hatch for an unsandboxed fallback.
+    """
+    if not confined_sandbox_available():
+        raise ToolSandboxUnavailableError(
+            "cannot build a confined execution sandbox (bubblewrap missing or user namespaces disabled)"
+        )
+    return build_confined_argv(cmd, workspace=workspace, ro_dirs=ro_dirs)
 
 
 def require_sandboxed_argv(cmd: Sequence[str], *, rw_dirs: Sequence[str] = (),
