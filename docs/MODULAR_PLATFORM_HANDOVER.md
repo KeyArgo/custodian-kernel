@@ -28,10 +28,9 @@ Prepare the 0.4.0 modular-platform foundation:
 4. Preserve all 0.4.0 behavior and public imports.
 
 Before designing the ledger, read
-`docs/CYBERWARE_SECURITY_COMPARISON.md`. Its P0 ledger requirements are
-mandatory acceptance criteria, derived from a source review of Cyberware's
-durability and provenance implementation. Do not claim parity or superiority
-without passing those criteria.
+the security hardening roadmap. Its P0 ledger requirements are mandatory
+acceptance criteria. Do not make security parity or superiority claims without
+passing those criteria.
 
 Work in a separate Git worktree created from `main`, on branch:
 
@@ -105,7 +104,7 @@ Future providers follow the `custodian-<provider>` pattern.
 
 ## Skill-pack/cartridge decision
 
-Cyberware separates its engine from `rhCat/skillChip`. Adopt the security
+Separate the engine from integrations. Adopt the security
 property, not its exact file format or L++/perk abstraction.
 
 Custodian's equivalent is `KeyArgo/custodian-skills`. A pack manifest—not
@@ -133,7 +132,7 @@ skills through the same manifest contract.
 
 For 0.4.0 compatibility, retain `custodian/bundled_skills/`. Design the signed
 pack format and a compatibility adapter in 0.5.x before moving content. Do not
-copy Cyberware's offensive skill corpus or implementation; this is an
+copy another project's offensive skill corpus or implementation; this is an
 independent design using Custodian's existing registry and security model.
 
 ## Dependency rules
@@ -192,7 +191,7 @@ Security properties:
 - Define a provider-emission protocol so `custodian-stripe` can record Stripe
   events without kernel imports from Stripe.
 - Meet every P0 ledger acceptance criterion in
-  `docs/CYBERWARE_SECURITY_COMPARISON.md`, including short-write handling,
+  the security hardening roadmap, including short-write handling,
   torn-tail recovery, one-lock link+append, origin-bound genesis, explicit
   schema migration, and concurrency/crash torture tests.
 
@@ -297,7 +296,7 @@ and rollback model are reviewed.
    installation side effects in the first checkpoint.
 6. Architecture-boundary tests preventing Stripe/provider imports in Custodian.
 7. A concise checkpoint report listing tests and unresolved migration risks.
-8. A completed Cyberware comparison checklist that distinguishes implemented,
+8. A completed security-hardening checklist that distinguishes implemented,
    tested, designed-only, and out-of-scope controls.
 
 ## Verification

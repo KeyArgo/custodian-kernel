@@ -1,6 +1,6 @@
 """Value-free governance client — API-boundary that never sees secrets.
 
-Pattern adapted from cyberware's **value-free protocol** (exod.py / govd.py):
+Pattern adapted from a value-free control-plane protocol:
 only the *schema* of inputs crosses the governance wire — skill name, perk
 name, and variable *keys* (never their values, secrets, or source code).
 Values are injected by a local blessed executor after the kernel authorizes.
@@ -80,7 +80,7 @@ class ValueFreeClient:
     and returns an authorized plan that the local executor uses to bind and
     run the actual function.
 
-    Mirrors cyberware's value-free protocol (exod.py / govd.py): the governance
+    Uses a value-free protocol: the governance
     plane never sees secrets, code, or values; it only authorizes the schema.
     """
 

@@ -8,7 +8,7 @@ not prove a receipt was issued by *your* kernel.
 This module adds the missing authenticity layer. The kernel holds an Ed25519
 private key; each receipt's fingerprint is signed with it. A receipt can then
 be verified against the kernel's *public* key, and cannot be forged by anyone
-who does not hold the private key. This is the same guarantee cyberware.systems
+who does not hold the private key. This is the standard signature guarantee
 provides with Ed25519-signed execution results.
 
 It is intentionally additive and optional: unsigned receipts keep working

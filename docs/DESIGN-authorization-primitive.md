@@ -1,6 +1,6 @@
 # Design: the single-use authorization primitive
 
-Status: **draft for review.** Targets ROADMAP-cyberware.md §2.3, reused by
+Status: **draft for review.** Targets the signed-authority roadmap, reused by
 §1.1 (egress) and §3.3 (quote binding).
 
 ## 0. Correction to the roadmap's baseline

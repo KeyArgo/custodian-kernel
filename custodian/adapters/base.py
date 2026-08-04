@@ -15,7 +15,7 @@ An adapter implements two hooks:
   (rewrite the output), WARN, or ALLOW.
 
 Adapters are deliberately synchronous, dependency-free, and small —
-the same shape as cyberware's oversight scans, but composable and
+the same shape as prior-art oversight scans, but composable and
 category-tagged (money / security / privacy / guardrail) so a site can
 enable exactly the risk surface it cares about.
 """

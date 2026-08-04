@@ -10,7 +10,7 @@ Usage::
     python -m custodian.packs.test_runner [pack_name ...]
     python -m custodian.packs.test_runner  # runs all packs
 
-Pattern: cyberware's per-perk self-tests (test/case.json), adapted to
+Pattern: per-capability self-tests (test/case.json), adapted to
 the pack-level policy-as-code model.  The manifest is hashed alongside
 the pack source so the kernel can verify the pack+tests have not
 changed between audit and execution (tamper-snapshot).

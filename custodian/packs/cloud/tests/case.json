@@ -1,7 +1,7 @@
 # Self-test manifest for the cloud provisioning pack.
 # Pinned alongside the corpus manifest so the kernel can verify the pack
 # has not been modified between policy audit and execution.
-# Pattern from cyberware's executor.py self-tests.
+# Pattern from executor self-tests.
 ---
 pack: cloud
 version: "0.2.1"

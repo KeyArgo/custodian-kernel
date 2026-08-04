@@ -62,7 +62,7 @@ _(anything stopping a claimed workstream. Owner + what's blocked + what's needed
 - feat/a13-sillytavern-adapter @9a86d80 — integrations/sillytavern/DESIGN.md (907 lines, persona-session data-model → Contract mapping; unblocks the privacy adapter)
 - feat/a5-silo-tests @37cb579 — tests/unit/silo/** (5 files; off-track worker copy stripped -82, real tests added; silo imports clean)
 - feat/video-shot-script @b705365 — docs/video/shot-script.md (12 shots, REAL working features only)
-- feat/positioning @d56e55f — docs/positioning/{sovereignty,cyberware-comparison}.md
+- feat/positioning @d56e55f — docs/positioning/sovereignty.md and an archived comparison brief
 main untouched, gate still blocks merge.
 
 ## Push status (2026-07-05)
@@ -73,14 +73,14 @@ New pre-gate breadth dispatch (4 workers, all pushed):
 - feat/a13-sillytavern-adapter @9a86d80 · integrations/sillytavern/DESIGN.md (persona-session data-model research)
 - feat/a5-silo-tests @37cb579 · tests/unit/silo/** (5 test files, 1173 insertions — Silo/Pointer/Policy/Security/Integration)
 - feat/video-shot-script @b705365 · docs/video/shot-script.md (narration for real features, 8-12 shots)
-- feat/positioning @d56e55f · docs/positioning/sovereignty.md + docs/positioning/cyberware-comparison.md
+- feat/positioning @d56e55f · docs/positioning/sovereignty.md plus an archived comparison brief
 
 ## Paladin + adapters + hermes-bridge dispatch (2026-07-14)
 `feat/paladin-adapters-hermes` — three-part capability build, all tests green (1527 passed, +80 new):
 - **Paladin** (`paladin/**`): standalone AES-256-GCM credential broker — encrypted vault, scrypt KDF, password-manager CLI (`paladin` entry point), env profiles, `paladin://` SecretRefs, deny-by-default grants, hash-chained HMAC audit, egress-only injection (agent never sees values). Optional receipt co-signing.
 - **Adapters** (`custodian/adapters/**`): guard-adapter framework (pre/post/handle hooks) + 9 built-ins (spend-sentinel, prompt-injection-guard, secret-leak-guard, kernel-self-protection, pii-redactor, context-anchor, repetition-breaker, tool-confabulation-guard, scope-fence); registry with hash-pinned local installs; `custodian adapters` CLI.
 - **Hermes bridge** (`integrations/hermes/**`): one governed invoke() surface (adapters → kernel → Paladin egress → post-scan), SessionCapsule for context-loss re-anchoring, session-policy YAML for granular tool/file/host/spend control, soul compiler, introspection meta-skills, NemoClaw governed egress.
-- Docs: PALADIN.md, ADAPTERS.md, HERMES-BRIDGE.md, SECURITY-HARDENING.md, positioning/cyberware-head-to-head.md.
+- Docs: PALADIN.md, ADAPTERS.md, HERMES-BRIDGE.md, and SECURITY-HARDENING.md.
 - _2026-07-14 update: the Hermes bridge was promoted to a top-level suite named **Talaria** (`integrations/hermes/**` → `talaria/**`, HERMES-BRIDGE.md → TALARIA.md, test_hermes_bridge → test_talaria) and gained a unified `talaria` CLI (vault/adapters/session/init). Broker remains `paladin` pending its final name._
 - _2026-07-14 update: the Hermes bridge was promoted to a top-level suite named **Talaria** (`integrations/hermes/**` → `talaria/**`, HERMES-BRIDGE.md → TALARIA.md, test_hermes_bridge → test_talaria) and gained a unified `talaria` CLI (vault/adapters/session/init). Broker remains `warden` pending its final name._
 

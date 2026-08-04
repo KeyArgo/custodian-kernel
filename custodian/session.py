@@ -87,7 +87,7 @@ class CustodianSession:
 
         # Upstream step ordering check: if this session has a step label,
         # every parent audit_id must have succeeded (autonomous) in the
-        # parent session.  Pattern from cyberware's upstream_step_gate.
+        # parent session.
         if self._step is not None and self.parent is not None:
             for parent_audit in self._parents_audit:
                 parent_ok = any(

@@ -9,7 +9,7 @@
 ## The Problem
 
 Right now Custodian is **opt-in**: every tool must call `custodian request --amount 5.00` explicitly.  
-Competitors (Headgate, cyberware) are **opt-out**: every action passes through the kernel automatically.  
+Some authority systems are **opt-out**: every action passes through the kernel automatically.
 A judge reading the code sees a CLI dispatcher, not middleware.
 
 ## The Solution

@@ -10,7 +10,7 @@ denies only when it FINDS something bad treats "found nothing" as ALLOW. So any
 input shape the matcher fails to parse is not a missed warning — it is a silent
 allow. Three of the six below were exactly that.
 
-This is docs/ROADMAP-cyberware.md §1.3 ("tested, not asserted") in miniature:
+This is the "tested, not asserted" principle in miniature:
 the claim "deterministic pre-execution scanning" is only worth as much as the
 corpus behind it.
 """

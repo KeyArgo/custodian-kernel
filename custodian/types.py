@@ -76,7 +76,7 @@ class Verdict(str, Enum):
     DENIED = "denied"               # explicitly denied by a human
 
 
-# Secret-key sentinel patterns adapted from cyberware's value-free protocol:
+# Secret-key sentinel patterns adapted from established value-free protocols:
 # any dict key matching one of these is treated as a secret and stripped
 # unless suffixed with _FILE, _DIR, or _PATH (which conventionally point to
 # a filesystem path containing the secret rather than the secret itself).
@@ -111,7 +111,7 @@ def sanitize_dict(d: Optional[dict]) -> dict:
 
     Scans to arbitrary depth, including dicts nested inside lists/tuples
     (e.g. ``{"headers": [{"authorization": ...}]}``).  This implements the
-    value-free protocol's **secret-key filtering** (cyberware pattern):
+    value-free protocol's **secret-key filtering** pattern:
     only var *names* cross the governance wire — values are never logged
     or audited.
     """

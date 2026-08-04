@@ -282,10 +282,10 @@ own suite: **71 passed**, incl. its Paladin egress).
   stability decision for managed hooks; Phase 3 release (HARD STOP, needs go).
 
 ## Security mutation gate — the guard graded against itself (2026-07-23)
-Prompted by the operator asking whether to adopt cyberware's "we dogfood our own
+Prompted by the operator asking whether to adopt a "we dogfood our own
 governance / gates are mutation-tested / caught once -> permanent gate" pitch.
 Decision: adopt the *substance* in Custodian's OWN true voice, and EARN the
-mutation-testing claim rather than borrow cyberware's model-checking/L++ wording
+mutation-testing claim rather than borrow model-checking wording
 (which Custodian does not have — asserting it would repeat the "judges DID use
 it" overclaim we corrected earlier this session). So we built the real thing.
 
@@ -315,20 +315,20 @@ out-of-band option only. Wired as its own named CI step ("Security mutation gate
 (the guard graded against itself)") and `make mutation-gate`, so it reads as a
 distinct line in the build log. Full suite after adding it: green (see run).
 
-What Custodian can now TRUTHFULLY say (vs cyberware): "every security decision in
+What Custodian can now truthfully say: "every security decision in
 the guard is mutation-tested; a caught bug-class becomes a standing gate" — and
 LINK the files (`test_guard_bypass_regressions.py`, `test_architecture_boundaries.py`,
-`test_guard_mutation_gate.py`). We SHOW it; cyberware asserts it. Do NOT claim
+`test_guard_mutation_gate.py`). We show it. Do not claim
 model-checking / L++ blueprints — Custodian has neither.
 
 ## Self-hardening gate corpus — "the code improves itself" (2026-07-23)
 Operator's follow-up: not a marketing card — build the actual "improves itself"
-capability cyberware claims. Clarified first what that claim really is: NOT code
+capability claims. Clarified first what that claim really is: NOT code
 that autonomously rewrites its own logic, but a **ratcheting, self-grading
 build** — "caught once -> permanent gate; can never silently return." So we
 built the honest mechanism: the guard's *coverage* grows itself and can only get
 stricter, while the decision logic stays human-authored (a security boundary
-must not silently self-edit — and cyberware doesn't claim that either).
+must not silently self-edit).
 
 Pieces:
 - `custodian/codex_guard/corpus.py` — the ratchet. A gate corpus is append-only

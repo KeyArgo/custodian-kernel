@@ -86,9 +86,8 @@ the value out of the *proposing agent*, but any code running in the child
 — including a prompt-injected tool payload — can read its own
 `os.environ` / `/proc/self/environ` and exfiltrate it. Every downstream
 control (grants, audit, leak-sentinel) is moot once the child holds the
-value. Cyberware has the same class of exposure: its README documents
-execution reading secrets from `*_FILE` references in the exec
-environment.
+value. This exposure class appears whenever an execution environment receives
+plaintext credentials through environment variables or files.
 
 Fixed with **sandboxed egress** (`paladin/egress.py`, `paladin/sandbox.py`,
 `paladin/egress_client.py`): the child runs under `bwrap --unshare-all`
@@ -125,10 +124,9 @@ same separate concern as the vault's save lock.
 
 ### The agent never holds a credential — even transitively
 
-Cyberware's model is "value-free: data and secrets never transit the
-governance layer; they stay in the execution substrate." That keeps
-secrets off the *control plane*, but the secrets still live wherever the
-agent runs. Paladin goes further: the secret is **encrypted at rest**
+Keeping data and secrets out of the governance layer protects the control
+plane, but secrets can still live wherever the
+agent runs. Paladin stores the secret **encrypted at rest**
 (AES-256-GCM, scrypt), and materializes **only inside the skill
 subprocess's environment**, built by the broker at egress. The agent
 process that proposes the action never has the value in its address

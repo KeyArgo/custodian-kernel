@@ -1,0 +1,36 @@
+name: Bug report
+description: Report a reproducible problem in Custodian.
+title: "bug: "
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: Do not include credentials, vault data, approval codes, or private receipts.
+  - type: textarea
+    id: summary
+    attributes:
+      label: What happened?
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Minimal reproduction
+      description: Include the command, expected behavior, and actual behavior.
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version or commit
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Core policy and receipts
+        - Codex Guard
+        - Paladin
+        - Sandbox or egress
+        - Documentation
+        - Packaging or installation

@@ -116,11 +116,10 @@ the CLI writes to; `spend.py` has no write access to that table.
 | Agent bypasses `check_response()` and writes approval audit entry directly | Requires a separate privileged process; the agent only has the request CLI |
 | Agent engages/clears its own kill switch | No code path from the agent's request CLI writes `kill_switch`; only `custodian kill`/`custodian resume` do, both requiring a human name |
 
-## Security posture vs. a signed-execution governor (cyberware.systems)
+## Security posture and known limits
 
-Custodian and cyberware.systems share the same core idea — the agent proposes,
-a governor outside the agent's process decides — and Custodian implements the
-same building blocks:
+Custodian applies an authority boundary outside the proposing agent's process.
+Its controls and their current limits are:
 
 | Guarantee | Custodian | Notes |
 |---|---|---|
@@ -131,13 +130,12 @@ same building blocks:
 | **Unforgeable receipts (authenticity)** | Yes | `custodian.signing`: Ed25519-signed receipts — a receipt cannot be forged by anyone without the kernel's private key. Verify against the kernel's public key. |
 | Cross-platform reproducibility | Yes | Receipt hashing is byte-identical on Linux/Windows/macOS (`json` `ensure_ascii`, pinned by a determinism test); CI runs the suite + a clean wheel install on Ubuntu **and** Windows |
 | Kill switch cannot be bypassed | Yes | Enforced fail-closed locally on every surface (CLI, `@govern`, tool registry); a configured remote enforcement node can never override an engaged kill switch |
-| Confined signed-execution principal (delegated mode) | No | cyberware's `exod` (Ed25519-signed step results from a confined Linux process) has no direct Custodian equivalent; Custodian governs in-process + optional remote enforcement |
+| Confined signed-execution principal (delegated mode) | No | Custodian has no general distinct signing executor; it governs in-process plus optional remote enforcement |
 | Formal model-checking (TLA+/Apalache/TLAPS) | No | Custodian relies on a large regression suite and a self-approval regression test, not machine-checked proofs |
 
 **Honest bottom line.** For the guarantees most deployments depend on — secrets
 never crossing the wire, an encrypted vault, a kill switch that truly can't be
 bypassed, and receipts that are both tamper-evident and (when signed)
-unforgeable — Custodian is on par. cyberware goes further on two axes Custodian
-does not yet claim: a confined signed-execution principal and machine-checked
-formal proofs. Custodian does not fake either; both are listed as limitations
-above rather than advertised.
+unforgeable — Custodian provides a useful application-layer boundary. It does
+not claim a general confined signing executor or machine-checked formal proofs;
+both remain explicit limitations rather than advertised guarantees.

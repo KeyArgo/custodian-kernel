@@ -98,7 +98,7 @@ def _tamper_check(
     """Tamper-snapshot: on first run, take SHA-256 of the source file.
     On subsequent runs, verify it matches. Returns (snapshot_sha, verdict).
 
-    Pattern from cyberware's executor.py .bk: the source is hashed on first
+    The source is hashed on first
     run and stored in <state_dir>/<key>.bk.sha. Subsequent runs re-read the
     source and compare — a drift means the function's source changed between
     the policy check and execution (agent editing source between audit and
@@ -228,7 +228,7 @@ def govern(
     The kernel is the call path.
 
     New in 0.2.1: tamper_check — source file SHA-256 snapshot on first run,
-    verified on subsequent runs. Pattern from cyberware's executor.py .bk.
+    verified on subsequent runs.
     Set tamper_check=False to disable (e.g. when the function is dynamically
     generated or source is unavailable).
     """
