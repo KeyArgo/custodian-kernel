@@ -196,7 +196,11 @@ def _install_hermes_guard_plugin(args) -> None:
 
     if dest.exists():
         shutil.rmtree(dest)
-    shutil.copytree(str(plugin_src), str(dest))
+    try:
+        shutil.copytree(str(plugin_src), str(dest))
+    except OSError as exc:
+        print(f"warning: cannot copy Hermes guard plugin to {dest}: {exc}")
+        return
     print(f"\nInstalled Hermes guard plugin to {dest}")
 
     if args.enable and shutil.which("hermes"):
@@ -257,6 +261,8 @@ def run(args) -> None:
                 raise SystemExit(1)
 
     if args.dry_run:
+        if "hermes-guard" in components and not args.skip_configure:
+            _install_hermes_guard_plugin(args)
         print("\n(--dry-run: nothing installed)")
         return
 
