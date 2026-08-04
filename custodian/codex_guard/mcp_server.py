@@ -132,8 +132,15 @@ def evaluate_guard_action(args: dict[str, Any], *, harness: str = "codex") -> di
             # self-disable risk applies there too. This literal doesn't
             # follow a custom $XDG_CONFIG_HOME override, matching the other
             # entries here, which are also plain literals.
+            # Hermes' guard plugin, profile config, SOUL.md, and skills live
+            # under `~/.hermes` (config, profiles, plugins, memories) -- the
+            # same bash-redirect self-disable risk: fencing it stops
+            # `echo ... >> ~/.hermes/profiles/dev/config.yaml` from
+            # disabling the guard the way only a write_file was already
+            # caught. Self-protection, not user data.
             inherited_deny=["~/.ssh", "~/.aws", "~/.config/gcloud", "~/.kube",
-                            "~/.codex", "~/.claude", "~/.config/opencode"],
+                            "~/.codex", "~/.claude", "~/.config/opencode",
+                            "~/.hermes"],
         )
         decision = evaluate_action(
             tool=args.get("tool", ""), action_kind=requested_kind,

@@ -76,6 +76,7 @@ custodian-codex = "custodian.codex_guard.cli:main"
 custodian-opencode = "custodian.opencode_guard.cli:main"
 custodian-claude = "custodian.claude_guard.cli:main"
 custodian-claude-hook = "custodian.claude_guard.hook:main"
+custodian-hermes = "custodian.hermes_guard.cli:main"
 
 [build-system]
 requires = ["setuptools>=64"]
@@ -92,7 +93,7 @@ build-backend = "setuptools.build_meta"
 include = ["custodian*", "paladin*", "custodian_stripe*"]
 
 [tool.setuptools.package-data]
-"custodian" = ["bundled_skills/**/*", "bundled_skills/**", "packs/**/corpus/*.json", "packs/**/*.yaml", "packs/**/*.json", "policy/presets/*.yaml"]
+"custodian" = ["bundled_skills/**/*", "bundled_skills/**", "packs/**/corpus/*.json", "packs/**/*.yaml", "packs/**/*.json", "policy/presets/*.yaml", "hermes_guard/plugin/*.yaml"]
 "custodian_stripe" = ["skills/**/*", "skills/**"]
 
 [tool.pytest.ini_options]
