@@ -21,7 +21,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-from custodian.cli.cmd_doctor import _hermes_home
+from custodian.cli.cmd_doctor import _hermes_home, _hermes_interpreter, _venv_prefix
 
 # pip_spec is None for components already bundled in custodian-kernel's own
 # base install -- nothing to pip install, `setup` just confirms it's there.
@@ -130,6 +130,13 @@ def _resolve_components(args) -> list[str]:
     components = _effective_components()
     profiles = _effective_profiles()
     names: set[str] = set()
+    if getattr(args, "guard_only", False):
+        # --guard-only: install exactly the guard plugin, nothing else.
+        # Overrides any --profile / --with selection.
+        if "hermes-guard" not in components:
+            print("error: hermes-guard component not available")
+            raise SystemExit(1)
+        return ["hermes-guard"]
     profile = getattr(args, "profile", None)
     if profile:
         if profile not in profiles:
@@ -232,6 +239,23 @@ def run(args) -> None:
         status = spec["pip_spec"] or "already included, nothing to do"
         print(f"  - {name}: {spec['description']}  [{status}]")
 
+    hermes_components_requested = bool({"talaria", "hermes-guard"} & set(components))
+    if hermes_detected and hermes_components_requested:
+        hermes_interpreter = _hermes_interpreter()
+        hermes_prefix = _venv_prefix(hermes_interpreter) if hermes_interpreter else None
+        if hermes_interpreter and hermes_prefix and hermes_prefix != sys.prefix:
+            print(
+                f"\nerror: this interpreter ({sys.prefix}) is not the one Hermes "
+                f"Agent runs under ({hermes_prefix}). Installing here would copy "
+                f"plugin files that Hermes can never actually import -- every "
+                f"check would look fine while the guard silently does nothing. "
+                f"Re-run with Hermes's own interpreter:\n"
+                f"  {hermes_interpreter} -m pip install custodian-kernel\n"
+                f"  {hermes_interpreter} -m custodian.cli.main setup --profile hermes --enable"
+            )
+            if not args.dry_run:
+                raise SystemExit(1)
+
     if args.dry_run:
         print("\n(--dry-run: nothing installed)")
         return
@@ -255,13 +279,19 @@ def run(args) -> None:
                 ["hermes", "plugins", "enable", "talaria-guard", "--no-allow-tool-override"],
                 "Hermes plugin enablement",
             )
+
+    if "hermes-guard" in components and not args.skip_configure:
+        _install_hermes_guard_plugin(args)
+
+    # Health check runs last, once every requested component is in place --
+    # running it after just "talaria" failed --profile hermes unconditionally,
+    # since hermes-guard (a separate component in the same profile) hadn't
+    # been installed yet when doctor checked for it.
+    if ("talaria" in components or "hermes-guard" in components) and not args.skip_configure:
         _run_checked(
             [sys.executable, "-m", "custodian.cli.main", "doctor", "--profile", "hermes"],
             "post-install health check",
         )
-
-    if "hermes-guard" in components and not args.skip_configure:
-        _install_hermes_guard_plugin(args)
 
     print("\nDone. Next steps:")
     print("  custodian init                   # if you haven't already — scaffolds policy.yaml + state")
