@@ -17,6 +17,10 @@ def no_real_hermes(monkeypatch, tmp_path):
     """Detection must not pick up the real host's Hermes install/PATH."""
     monkeypatch.setattr("custodian.cli.cmd_setup.shutil.which", lambda name: None)
     monkeypatch.setattr("custodian.cli.cmd_setup.Path.home", lambda: tmp_path)
+    # _hermes_home() honors HERMES_HOME (shared with cmd_doctor); an exported
+    # HERMES_HOME (e.g. inside a Hermes agent session) would make detection
+    # see a real install that only exists on the host, not in the fixture.
+    monkeypatch.delenv("HERMES_HOME", raising=False)
 
 
 @pytest.fixture
