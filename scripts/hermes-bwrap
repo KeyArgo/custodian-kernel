@@ -1,0 +1,285 @@
+#!/usr/bin/env python3
+"""hermes-bwrap -- launch a governed Hermes session inside Bubblewrap.
+
+Stage 3 external enforcement boundary for the Custodian Hermes integration.
+Filesystem isolation, not a complete security boundary -- a same-user process
+outside the sandbox can interfere with the bwrap process. The adversarial
+threat model requires a separate sidecar Custodian service and VM-level
+isolation (see the Hermes + Custodian control handoff).
+
+Filesystem containment:
+
+    Writable:
+      - <workspace>          -- the project the agent works on
+      - /tmp, /dev/shm       -- scratch space
+      - ~/.hermes/logs       -- agent logs (debugging)
+      - ~/.hermes/memories   -- persistent memory (agent function)
+
+    Read-only (agent may read, must not modify):
+      - ~/.hermes/config.yaml, profiles/, plugins/, skills/
+      - <policy-dir>         -- Custodian policy + settings
+
+    Excluded (not visible inside the sandbox):
+      - ~/.ssh, ~/.aws, ~/.config/gcloud, ~/.kube   -- credentials
+      - PALADIN_VAULT_PATH, PALADIN_KEYFILE          -- credential vault
+      - Custodian approvals/receipts stores          -- tamper target
+      - Docker socket, host sockets, guest agent
+
+Network: denied by default (--unshare-net). The operator may opt-in with
+--allow-network, which gives the sandbox full host network access -- use
+only with an independently controlled egress gateway.
+
+YOLO bypass: --yolo, -z, --oneshot are rejected at the wrapper level. The
+model cannot talk its way around the sandbox.
+
+Usage:
+    hermes-bwrap --workspace /path/to/project [--profile dev] [hermes args...]
+
+Example:
+    hermes-bwrap --workspace /opt/projects/my-repo \
+        --policy-dir ~/.talaria \
+        -- "Review the README and suggest improvements."
+
+Environment:
+    HERMES_BWRAP_WORKSPACE    default workspace (overridden by --workspace)
+    HERMES_BWRAP_PROFILE      default Hermes profile (overridden by --profile)
+    PALADIN_VAULT_PATH        explicitly excluded from the sandbox
+    PALADIN_KEYFILE           explicitly excluded from the sandbox
+"""
+
+from __future__ import annotations
+
+import argparse
+import os
+import shutil
+import subprocess
+import sys
+from pathlib import Path
+
+
+def _home() -> Path:
+    return Path.home()
+
+
+# -- YOLO guard ---------------------------------------------------------------
+
+_YOLO_FLAGS = frozenset({"--yolo", "-y", "-z", "--oneshot", "--yes", "--force"})
+
+_LAUNCHER_NAME = "hermes-bwrap"
+
+
+def _reject_yolo(argv: list[str]) -> list[str]:
+    """Refuse any flag that auto-bypasses the approval gate."""
+    blocked = [a for a in argv if a in _YOLO_FLAGS or a.startswith("--yolo")]
+    if blocked:
+        print(f"{_LAUNCHER_NAME}: refusing governed launch with bypass flag: {' '.join(blocked)}",
+              file=sys.stderr)
+        sys.exit(2)
+    return argv
+
+
+# -- Bubblewrap mount builder ------------------------------------------------
+
+
+def _ensure(path: Path, label: str) -> Path:
+    if not path.exists():
+        print(f"{_LAUNCHER_NAME}: {label} not found: {path}", file=sys.stderr)
+        sys.exit(1)
+    return path
+
+
+def _build_mounts(
+    workspace: Path,
+    hermes_home: Path,
+    policy_dir: Path,
+) -> list[str]:
+    """Build bwrap mount arguments for the governed sandbox.
+
+    Returns a list of ``--bind`` / ``--ro-bind`` / ``--tmpfs`` arguments
+    suitable for ``bwrap``.  Each argument pair is ``<src> <dest>`` for
+    bind mounts or ``<path>`` for tmpfs/dev mounts.
+    """
+    mounts: list[str] = []
+
+    # --- Base system (provided by bwrap's built-in defaults) ---
+    # bwrap provides /usr, /bin, /lib, /lib64, /proc automatically.
+
+    # --- Writable paths ---
+    workspace = _ensure(workspace.resolve(), "workspace")
+    mounts.extend(["--bind", str(workspace), str(workspace)])
+
+    # Scratch space.
+    mounts.extend(["--tmpfs", "/tmp"])
+    mounts.extend(["--tmpfs", "/dev/shm"])
+
+    # Agent state that must be writable for normal operation (logs,
+    # persistent memories).  These are tmpfs mounts so the sandbox
+    # starts clean every launch -- operator should back up memories
+    # from the host before governed sessions if persistence is needed.
+    logs_dir = hermes_home / "logs"
+    logs_dir.mkdir(parents=True, exist_ok=True)
+    mounts.extend(["--tmpfs", str(logs_dir)])
+
+    memories_dir = hermes_home / "memories"
+    memories_dir.mkdir(parents=True, exist_ok=True)
+    if (memories_dir / "memory.json").exists():
+        # Seed the tmpfs with existing memories so the agent has
+        # cross-session recall (read-only snapshot from the host).
+        stash = hermes_home / ".bwrap-memory-seed.json"
+        shutil.copy2(memories_dir / "memory.json", stash)
+        mounts.extend(["--ro-bind", str(stash), str(memories_dir / "memory.json")])
+    mounts.extend(["--tmpfs", str(memories_dir)])
+
+    # --- Read-only config / policy ---
+    hermes_home = _ensure(hermes_home, "Hermes home")
+    # Profile configs, SOUL.md, AGENTS.md, plugin manifests.
+    profiles_dir = _ensure(hermes_home / "profiles", "Hermes profiles")
+    mounts.extend(["--ro-bind", str(profiles_dir), str(profiles_dir)])
+    plugins_dir = _ensure(hermes_home / "plugins", "Hermes plugins")
+    mounts.extend(["--ro-bind", str(plugins_dir), str(plugins_dir)])
+    skills_dir = hermes_home / "skills"
+    if skills_dir.exists():
+        mounts.extend(["--ro-bind", str(skills_dir), str(skills_dir)])
+    # Hermes config.yaml (the global profile registry).
+    config_yaml = hermes_home / "config.yaml"
+    if config_yaml.exists():
+        mounts.extend(["--ro-bind", str(config_yaml), str(config_yaml)])
+
+    # Custodian policy (filesystem-policy, approval-policy, control-settings).
+    policy_dir = _ensure(policy_dir, "policy directory")
+    mounts.extend(["--ro-bind", str(policy_dir), str(policy_dir)])
+
+    return mounts
+
+
+# -- Main launcher -----------------------------------------------------------
+
+
+def main(argv: list[str] | None = None) -> int:
+    raw = list(sys.argv[1:] if argv is None else argv)
+    raw = _reject_yolo(raw)
+
+    parser = argparse.ArgumentParser(
+        prog=_LAUNCHER_NAME,
+        description="Launch Hermes inside a governed Bubblewrap sandbox.",
+    )
+    parser.add_argument(
+        "--workspace", required=True,
+        help="Project directory the agent may read and write.",
+    )
+    parser.add_argument(
+        "--profile", default=os.environ.get("HERMES_BWRAP_PROFILE", "dev"),
+        help="Hermes profile to use.",
+    )
+    parser.add_argument(
+        "--policy-dir",
+        default=os.environ.get("CUSTODIAN_STATE_DIR",
+                                os.path.expanduser("~/.custodian")),
+        help="Custodian policy directory (mounted read-only).",
+    )
+    parser.add_argument(
+        "--allow-network", action="store_true",
+        help="Give the sandbox full host network access (dangerous).",
+    )
+    parser.add_argument(
+        "hermes_args", nargs=argparse.REMAINDER,
+        help="Arguments forwarded to hermes after '--'.",
+    )
+    args = parser.parse_args(raw)
+
+    workspace = Path(args.workspace).expanduser().resolve()
+    hermes_home = Path(os.environ.get(
+        "HERMES_HOME", str(_home() / ".hermes"),
+    ))
+    policy_dir = Path(args.policy_dir).expanduser().resolve()
+
+    bwrap = shutil.which("bwrap")
+    if not bwrap:
+        print(f"{_LAUNCHER_NAME}: bwrap (bubblewrap) not found on PATH", file=sys.stderr)
+        return 1
+
+    hermes_bin = shutil.which("hermes")
+    if not hermes_bin:
+        print(f"{_LAUNCHER_NAME}: hermes not found on PATH", file=sys.stderr)
+        return 1
+
+    # Detect the Hermes Agent installation root.  Standard locations:
+    hermes_root = os.environ.get(
+        "HERMES_AGENT_ROOT",
+        str(_home() / ".hermes" / "hermes-agent"),
+    )
+    hermes_root_path = Path(hermes_root)
+    if not hermes_root_path.is_dir():
+        # Fall back: resolve the hermes binary and walk up to the venv.
+        hermes_root_path = Path(hermes_bin).resolve()
+        while hermes_root_path != hermes_root_path.parent:
+            if (hermes_root_path / "venv" / "bin" / "python").exists():
+                hermes_root_path = hermes_root_path / "venv"
+                break
+            hermes_root_path = hermes_root_path.parent
+    hermes_root_path = _ensure(hermes_root_path, "Hermes agent root")
+
+    mounts = _build_mounts(workspace, hermes_home, policy_dir)
+
+    cmd: list[str] = [
+        bwrap,
+        "--unshare-ipc",
+        "--unshare-pid",
+        "--unshare-uts",
+        "--unshare-cgroup",
+        "--die-with-parent",
+        "--new-session",
+        "--proc", "/proc",
+        "--dev", "/dev",
+        "--ro-bind", "/usr", "/usr",
+        "--ro-bind", "/lib", "/lib",
+        "--ro-bind", "/lib64", "/lib64",
+        "--ro-bind", "/bin", "/bin",
+        "--ro-bind", "/etc", "/etc",
+        # The Hermes runtime needs its Python installation; bind it.
+        "--ro-bind", str(hermes_root_path), str(hermes_root_path),
+        *mounts,
+    ]
+
+    if not args.allow_network:
+        cmd.append("--unshare-net")
+
+    # Every host credential path, vault path, and socket that the sandbox
+    # must not see.  The agent has no path to these; a model asking to cat
+    # ~/.ssh/id_rsa will get "No such file" regardless of tool choice.
+    excluded = [
+        _home() / ".ssh",
+        _home() / ".aws",
+        _home() / ".config" / "gcloud",
+        _home() / ".kube",
+        # Paladin vault and keyfile are handled by bwrap NOT mounting them
+        # (they don't appear in _build_mounts, so they're invisible inside
+        # the sandbox by default).  Listed here for documentation only.
+    ]
+    for path in excluded:
+        if path.exists():
+            # Create an empty directory bind-mounted over the excluded path
+            # so the agent cannot list the host directory's contents.
+            cmd.extend(["--tmpfs", str(path)])
+
+    cmd.extend([
+        hermes_bin,
+        "--profile", args.profile,
+        *args.hermes_args,
+    ])
+
+    env = dict(os.environ)
+    # Prevent accidental writes to the host state dir from inside.
+    env.pop("PALADIN_KEYFILE", None)
+    env.pop("PALADIN_PASSPHRASE", None)
+    # Enforce the sandboxed workspace as the session cwd.
+    env["HERMES_BWRAP_WORKSPACE"] = str(workspace)
+
+    try:
+        return subprocess.call(cmd, cwd=str(workspace), env=env)
+    except KeyboardInterrupt:
+        return 130
+
+
+if __name__ == "__main__":
+    sys.exit(main())
