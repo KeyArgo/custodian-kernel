@@ -326,6 +326,16 @@ class Vault:
         """Unlock using PALADIN_KEYFILE / PALADIN_PASSPHRASE, optionally
         falling back to an interactive prompt (CLI use only).
 
+        PALADIN_KEYFILE takes priority — but when it is set AND a passphrase
+        is also available, a VaultLockedError from the keyfile attempt will
+        fall back to the passphrase.  This handles the common case where an
+        operator has KEYFILE configured for their regular vault but is
+        working with a disposable passphrase-created vault in a different
+        PALADIN_HOME.  Fallback does NOT occur when the keyfile itself is
+        missing or unreadable (those are configuration errors that should be
+        corrected in the env), only when the keyfile was read successfully
+        but the vault it unlocks is a different one.
+
         A PALADIN_KEYFILE that doesn't exist (or can't be read) is a
         configuration error, not a signal to quietly try the passphrase
         instead — silently falling back could unlock a *different* vault
@@ -340,7 +350,15 @@ class Vault:
         keyfile = _env(KEYFILE_ENV, LEGACY_KEYFILE_ENV)
         passphrase = _env(PASSPHRASE_ENV, LEGACY_PASSPHRASE_ENV)
         if keyfile:
-            return cls.open(path, keyfile=Path(keyfile))
+            try:
+                return cls.open(path, keyfile=Path(keyfile))
+            except VaultLockedError:
+                # The keyfile was read successfully but the vault doesn't
+                # unlock with it (e.g. a different vault at this path).
+                # If a passphrase is also available, give it a chance.
+                if passphrase:
+                    return cls.open(path, passphrase=passphrase)
+                raise
         if passphrase is None and interactive:
             from paladin._prompt import read_secret
             passphrase = read_secret("vault passphrase: ")
