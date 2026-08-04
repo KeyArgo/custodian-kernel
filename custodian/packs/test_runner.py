@@ -34,6 +34,11 @@ except ImportError:  # pragma: no cover
 
 @dataclass
 class TestCase:
+    # pytest collects classes named Test*. This is a runtime dataclass for
+    # the pack self-test runner, not a test class itself -- quiet the
+    # collection warning.
+    __test__ = False
+
     id: str
     description: str
     corpus_file: str
@@ -45,6 +50,8 @@ class TestCase:
 
 @dataclass
 class TestManifest:
+    __test__ = False
+
     pack: str
     version: str
     cases: list[TestCase]

@@ -65,6 +65,7 @@ def test_http_get_blocks_direct_loopback_request():
         assert "destination not allowed" in out["error"]
     finally:
         server.shutdown()
+        server.server_close()
 
 
 def test_http_get_blocks_redirect_to_loopback():
@@ -85,6 +86,7 @@ def test_http_get_blocks_redirect_to_loopback():
         assert "destination not allowed" in out["error"]
     finally:
         server.shutdown()
+        server.server_close()
 
 
 def test_http_get_blocks_cloud_metadata_literal():
@@ -124,6 +126,7 @@ def test_http_post_blocks_loopback_destination():
         assert "destination not allowed" in out["error"]
     finally:
         server.shutdown()
+        server.server_close()
 
 
 def test_http_post_blocks_cloud_metadata_literal():
@@ -145,3 +148,4 @@ def test_web_scrape_blocks_loopback_destination():
         assert "destination not allowed" in out["error"]
     finally:
         server.shutdown()
+        server.server_close()
