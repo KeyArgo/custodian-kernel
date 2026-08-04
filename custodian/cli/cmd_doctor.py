@@ -16,6 +16,15 @@ def _distribution_version(name: str) -> str | None:
         return None
 
 
+def _plugin_enabled(lines: list[str], name: str) -> bool:
+    """Return True if ``name`` appears as an enabled plugin in the output
+    of ``hermes plugins list --plain --no-bundled``."""
+    return any(
+        line.split()[-1:] == [name] and line.split()[:1] == ["enabled"]
+        for line in lines
+    )
+
+
 def _hermes_home() -> Path:
     """Resolve the active Hermes profile dir (where plugins actually live).
 
@@ -110,10 +119,13 @@ def run(args) -> int:
         print(f"✓ Talaria import works ({talaria_version or 'source checkout'})")
 
     if require_hermes:
-        plugin = hermes_home / "plugins" / "talaria-guard" / "plugin.yaml"
+        talaria_plugin = hermes_home / "plugins" / "talaria-guard" / "plugin.yaml"
+        hermes_guard_plugin = hermes_home / "plugins" / "custodian-hermes-guard" / "plugin.yaml"
         talaria_home = Path(os.environ.get("TALARIA_HOME", str(Path.home() / ".talaria"))).expanduser()
         policy = talaria_home / "policy.yaml"
-        for label, path in (("Hermes plugin", plugin), ("Talaria policy", policy)):
+        for label, path in (("Hermes plugin (talaria)", talaria_plugin),
+                             ("Hermes guard plugin (custodian)", hermes_guard_plugin),
+                             ("Talaria policy", policy)):
             if path.exists():
                 print(f"✓ {label}: {path}")
             else:
@@ -132,15 +144,20 @@ def run(args) -> int:
                 )
                 print(f"✗ {failures[-1]}")
             else:
-                enabled = any(
-                    line.split()[-1:] == ["talaria-guard"] and line.split()[:1] == ["enabled"]
-                    for line in check.stdout.splitlines()
-                )
-                if enabled:
-                    print("✓ Hermes plugin is enabled")
+                lines = check.stdout.splitlines()
+                _guard_enabled = _plugin_enabled(lines, "custodian-hermes-guard")
+                _talaria_enabled = _plugin_enabled(lines, "talaria-guard")
+                if _talaria_enabled:
+                    print("✓ Hermes plugin (talaria) is enabled")
                 else:
-                    failures.append("Hermes plugin is installed but not enabled")
+                    failures.append("Hermes plugin (talaria) is installed but not enabled")
                     print(f"✗ {failures[-1]}")
+                if _guard_enabled:
+                    print("✓ Hermes guard plugin (custodian) is enabled")
+                elif hermes_guard_plugin.exists():
+                    failures.append("Hermes guard plugin (custodian) is installed but not enabled")
+                    print(f"✗ {failures[-1]}")
+                # else: plugin missing — already reported above
 
     if failures:
         print("\nNot ready:")

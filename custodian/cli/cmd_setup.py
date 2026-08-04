@@ -30,6 +30,10 @@ _COMPONENTS = {
         "description": "Credential broker — vault, grants, egress (already included)",
         "pip_spec": None,
     },
+    "hermes-guard": {
+        "description": "Hermes guard plugin — pre/post-tool governance (already included, needs enablement)",
+        "pip_spec": None,
+    },
     "talaria": {
         "description": "Hermes Agent + NemoClaw integration — guard plugin, vault, dashboard",
         "pip_spec": "custodian-talaria[dashboard]>=0.1.0,<0.2",
@@ -37,7 +41,7 @@ _COMPONENTS = {
 }
 
 _PROFILES = {
-    "hermes": ["talaria"],
+    "hermes": ["talaria", "hermes-guard"],
     "minimal": [],
 }
 
@@ -153,6 +157,53 @@ def _run_checked(command: list[str], label: str) -> None:
         raise SystemExit(1)
 
 
+def _install_hermes_guard_plugin(args) -> None:
+    """Copy the bundled custodian-hermes-guard plugin into the Hermes home
+    directory.  The kernel ships the plugin inside its own package;
+    installation copies it into the operator's Hermes profile so Hermes
+    discovers it on the next session.  Does not auto-enable unless
+    ``--enable`` is passed — installing must never silently activate
+    enforcement (see the Hermes + Custodian control handoff).
+
+    The operation is best-effort: a missing kernel package, read-only
+    filesystem, or absent Hermes home prints a warning rather than
+    aborting the whole setup.
+    """
+    try:
+        from importlib.resources import files
+        plugin_src = files("custodian").joinpath("hermes_guard", "plugin")
+        if not (plugin_src / "plugin.yaml").is_file():
+            print("warning: bundled Hermes guard plugin not found in installed package")
+            return
+    except Exception as exc:
+        print(f"warning: cannot locate bundled Hermes guard plugin: {exc}")
+        return
+
+    hermes_home = _hermes_home()
+    dest = hermes_home / "plugins" / "custodian-hermes-guard"
+    if args.dry_run:
+        print(f"\nWould install Hermes guard plugin: {plugin_src} -> {dest}")
+        if args.enable:
+            print("Would enable the plugin (--enable)")
+        return
+
+    if dest.exists():
+        shutil.rmtree(dest)
+    shutil.copytree(str(plugin_src), str(dest))
+    print(f"\nInstalled Hermes guard plugin to {dest}")
+
+    if args.enable and shutil.which("hermes"):
+        _run_checked(
+            ["hermes", "plugins", "enable", "custodian-hermes-guard", "--no-allow-tool-override"],
+            "Hermes guard plugin enablement",
+        )
+    elif args.enable:
+        print("warning: hermes not found on PATH; plugin copied but not enabled")
+    else:
+        print("(plugin copied but not enabled; pass --enable or run")  # no trailing paren — continued below
+        print(" `hermes plugins enable custodian-hermes-guard` to activate)")
+
+
 def run(args) -> None:
     hermes_detected = _detect_hermes()
 
@@ -200,13 +251,6 @@ def run(args) -> None:
             "Talaria configuration",
         )
         if shutil.which("hermes"):
-            # talaria-guard only declares pre_tool_call/transform_tool_result
-            # hooks -- it never needs the separate "replace a built-in tool"
-            # permission -- but `hermes plugins enable` asks about that
-            # permission interactively unless told not to. Without
-            # --no-allow-tool-override, a one-command installer run from a
-            # real terminal stops on a Y/N prompt about a permission this
-            # plugin will never use.
             _run_checked(
                 ["hermes", "plugins", "enable", "talaria-guard", "--no-allow-tool-override"],
                 "Hermes plugin enablement",
@@ -215,6 +259,9 @@ def run(args) -> None:
             [sys.executable, "-m", "custodian.cli.main", "doctor", "--profile", "hermes"],
             "post-install health check",
         )
+
+    if "hermes-guard" in components and not args.skip_configure:
+        _install_hermes_guard_plugin(args)
 
     print("\nDone. Next steps:")
     print("  custodian init                   # if you haven't already — scaffolds policy.yaml + state")

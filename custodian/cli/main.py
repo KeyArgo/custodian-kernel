@@ -272,6 +272,10 @@ def build_parser(env_defaults: CustodianConfig | None = None) -> argparse.Argume
         "--skip-configure", action="store_true",
         help="Install packages only; do not install or enable the Hermes plugin",
     )
+    p.add_argument(\
+        "--enable", action="store_true",\
+        help="Activate the guard plugin after copying (requires Hermes restart)",\
+    )
     p.set_defaults(func=cmd_setup.run)
 
     p = sub.add_parser(
