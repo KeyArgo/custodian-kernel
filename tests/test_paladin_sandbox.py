@@ -147,3 +147,24 @@ def test_fails_closed_when_sandbox_unavailable(broker, monkeypatch):
     monkeypatch.setattr(sb, "sandbox_available", lambda: False)
     with pytest.raises(SandboxUnavailableError):
         spawn_sandboxed(["true"], broker, requester="sandbox:t")
+
+
+def test_allow_unsandboxed_prints_deprecation_banner(broker, monkeypatch, capsys):
+    """allow_unsandboxed=True prints a DEPRECATED banner to stderr."""
+    import paladin.sandbox as sb
+    monkeypatch.setattr(sb, "sandbox_available", lambda: False)
+    spawn_sandboxed(["true"], broker, requester="test",
+                    allow_unsandboxed=True, capture_output=True)
+    captured = capsys.readouterr()
+    assert "DEPRECATED" in captured.err
+
+
+def test_allow_unsandboxed_acknowledged_suppresses_banner(broker, monkeypatch, capsys):
+    """PALADIN_UNSAFE_ACKNOWLEDGED=1 suppresses the deprecation banner."""
+    import paladin.sandbox as sb
+    monkeypatch.setattr(sb, "sandbox_available", lambda: False)
+    monkeypatch.setenv("PALADIN_UNSAFE_ACKNOWLEDGED", "1")
+    spawn_sandboxed(["true"], broker, requester="test",
+                    allow_unsandboxed=True, capture_output=True)
+    captured = capsys.readouterr()
+    assert "DEPRECATED" not in captured.err

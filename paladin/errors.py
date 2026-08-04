@@ -60,4 +60,6 @@ class SandboxUnavailableError(PaladinError):
     (``bwrap`` missing, or unprivileged user namespaces are disabled by
     the kernel). Paladin refuses rather than silently falling back to
     plaintext-env injection — pass ``allow_unsandboxed=True`` to opt into
-    the weaker path explicitly."""
+    the **deprecated** unsandboxed path. Migrate to ``paladin exec --sandbox``
+    for full network isolation; the degraded fallback will be removed in a
+    future release."""

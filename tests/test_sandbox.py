@@ -126,3 +126,22 @@ def test_require_sandboxed_argv_allows_opt_out_when_unavailable(monkeypatch):
     monkeypatch.setattr(sandbox_mod, "sandbox_available", lambda: False)
     argv = require_sandboxed_argv(["/bin/true"], allow_unsandboxed=True)
     assert argv == ["/bin/true"]
+
+
+def test_unsandboxed_prints_deprecation_banner(monkeypatch, capsys):
+    """allow_unsandboxed=True prints a DEPRECATED banner to stderr."""
+    import custodian.sandbox as sandbox_mod
+    monkeypatch.setattr(sandbox_mod, "sandbox_available", lambda: False)
+    require_sandboxed_argv(["/bin/true"], allow_unsandboxed=True)
+    captured = capsys.readouterr()
+    assert "DEPRECATED" in captured.err
+
+
+def test_unsandboxed_acknowledged_suppresses_banner(monkeypatch, capsys):
+    """PALADIN_UNSAFE_ACKNOWLEDGED=1 suppresses the deprecation banner."""
+    import custodian.sandbox as sandbox_mod
+    monkeypatch.setattr(sandbox_mod, "sandbox_available", lambda: False)
+    monkeypatch.setenv("PALADIN_UNSAFE_ACKNOWLEDGED", "1")
+    require_sandboxed_argv(["/bin/true"], allow_unsandboxed=True)
+    captured = capsys.readouterr()
+    assert "DEPRECATED" not in captured.err

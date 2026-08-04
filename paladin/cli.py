@@ -42,6 +42,7 @@ from paladin._prompt import read_secret
 from paladin.broker import Broker
 from paladin.errors import PaladinError
 from paladin.refs import SecretRef, valid_name
+from paladin.sandbox import _warn_unsafe_deprecated
 from paladin.vault import Vault
 
 CLI_REQUESTER = "user:cli"
@@ -397,17 +398,27 @@ def cmd_doctor(args) -> int:
     available here — so operators know when the strong 'credential never
     enters the process' guarantee applies vs. when Paladin will fail
     closed."""
-    from paladin.sandbox import bwrap_path, sandbox_available
+    from paladin.sandbox import bwrap_path, sandbox_available, unsafe_acknowledged
     bw = bwrap_path()
     ok = sandbox_available()
+    acked = unsafe_acknowledged()
     print(f"bwrap:              {bw or '(not found)'}")
     print(f"sandbox available:  {'yes' if ok else 'no'}")
     if ok:
         print("→ `paladin exec --sandbox` gives a network-isolated child that "
               "reaches nothing but the Paladin egress gateway.")
+        print("→ Unsandboxed (legacy) execution is DEPRECATED — migrate to --sandbox.")
     else:
         print("→ sandboxed egress will FAIL CLOSED (install bubblewrap and "
               "enable unprivileged user namespaces to use --sandbox).")
+        print("→ Unsandboxed fallback (--allow-unsandboxed) is DEPRECATED and "
+              "will be removed in a future release.")
+    if acked:
+        print(f"→ Operator has acknowledged unsandboxed risk "
+              f"(PALADIN_UNSAFE_ACKNOWLEDGED=1).")
+    else:
+        print("→ Unsandboxed paths print a deprecation banner each run; "
+              "set PALADIN_UNSAFE_ACKNOWLEDGED=1 to acknowledge and suppress.")
     return 0 if ok else 1
 
 

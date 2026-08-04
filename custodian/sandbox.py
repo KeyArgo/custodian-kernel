@@ -32,6 +32,7 @@ import functools
 import os
 import shutil
 import subprocess
+import sys
 from pathlib import Path
 from typing import Optional, Sequence
 
@@ -61,6 +62,37 @@ _CONFINED_PROC_MASKS = (
     "/proc/sysrq-trigger", "/proc/kcore", "/proc/kallsyms", "/proc/keys",
     "/proc/timer_list", "/proc/sched_debug",
 )
+
+# ---------------------------------------------------------------------------
+# Deprecation of unsandboxed tool execution
+# ---------------------------------------------------------------------------
+
+_CUSTODIAN_UNSAFE_ACK_ENV = "PALADIN_UNSAFE_ACKNOWLEDGED"
+
+_CUSTODIAN_UNSAFE_BANNER = (
+    "╔══════════════════════════════════════════════════════════════════════════╗\n"
+    "║  DEPRECATED: unsandboxed governed skill execution                       ║\n"
+    "║                                                                         ║\n"
+    "║  Running a governed skill script WITHOUT filesystem confinement is      ║\n"
+    "║  deprecated.  Migrate to confined skill profiles for full isolation.    ║\n"
+    "║                                                                         ║\n"
+    "║  This escape hatch will be removed in a future release.                  ║\n"
+    "║  Set %s=1 to acknowledge and suppress this banner.                      ║\n"
+    "╚══════════════════════════════════════════════════════════════════════════╝"
+) % _CUSTODIAN_UNSAFE_ACK_ENV
+
+
+def _warn_unsafe_skill_deprecated() -> None:
+    """Print the unsandboxed-tool deprecation banner to stderr, unless
+    ``PALADIN_UNSAFE_ACKNOWLEDGED=1`` is set."""
+    if os.environ.get(_CUSTODIAN_UNSAFE_ACK_ENV) != "1":
+        print(f"\n[custodian] governed skill — unsandboxed fallback:",
+              file=sys.stderr)
+        print(_CUSTODIAN_UNSAFE_BANNER, file=sys.stderr)
+        sys.stderr.flush()
+
+
+# ---------------------------------------------------------------------------
 
 
 def bwrap_path() -> Optional[str]:
@@ -241,11 +273,12 @@ def require_sandboxed_argv(cmd: Sequence[str], *, rw_dirs: Sequence[str] = (),
     if sandbox_available():
         return build_sandboxed_argv(cmd, rw_dirs=rw_dirs)
     if allow_unsandboxed:
+        _warn_unsafe_skill_deprecated()
         return list(cmd)
     raise ToolSandboxUnavailableError(
         "cannot build a filesystem/exec-isolated sandbox for this skill "
         "(bwrap missing or unprivileged user namespaces disabled). Install "
-        "bubblewrap / enable unprivileged user namespaces, or set "
-        "CUSTODIAN_ALLOW_UNSANDBOXED_TOOLS=1 to run governed skill scripts "
-        "without filesystem confinement (not recommended)."
+        "bubblewrap / enable unprivileged user namespaces.  "
+        "Unsandboxed tool execution is deprecated and will be removed in a "
+        "future release — migrate to confined skill profiles."
     )

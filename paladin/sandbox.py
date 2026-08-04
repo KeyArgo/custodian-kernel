@@ -23,10 +23,15 @@ would hand the child the very secrets we protect:
 
 Fail-closed: if bwrap or unprivileged user namespaces are unavailable, this
 raises :class:`SandboxUnavailableError` rather than silently running the
-child unconfined. ``allow_unsandboxed=True`` opts into a degraded mode that
-still routes secrets only through the gateway (never into the child's env)
-but does NOT network-isolate the child — use only where the strong claim is
-not required, and it warns.
+child unconfined. ``allow_unsandboxed=True`` opts into a **deprecated**
+degraded mode that still routes secrets only through the gateway (never into
+the child's env) but does NOT network-isolate the child.
+
+**Deprecation (security beta):** unsandboxed egress execution is deprecated
+and will be removed in a future release.  Setting ``allow_unsandboxed=True``
+now prints a prominent stderr banner; to acknowledge the risk and suppress
+the banner, set ``PALADIN_UNSAFE_ACKNOWLEDGED=1`` in the environment.
+Migrate to ``paladin exec --sandbox`` for full network isolation.
 """
 from __future__ import annotations
 
@@ -34,6 +39,7 @@ import functools
 import os
 import shutil
 import subprocess
+import sys
 import warnings
 from pathlib import Path
 from typing import Optional, Sequence
@@ -47,6 +53,45 @@ from paladin.errors import SandboxUnavailableError
 # are added dynamically on top of this.
 DEFAULT_MASK_DIRS = ("~/.ssh", "~/.aws", "~/.gnupg", "~/.config/gcloud",
                      "~/.custodian", "~/.talaria")
+
+# ---------------------------------------------------------------------------
+# Deprecation of unsandboxed execution paths
+# ---------------------------------------------------------------------------
+
+UNSAFE_ACKNOWLEDGEMENT_ENV = "PALADIN_UNSAFE_ACKNOWLEDGED"
+
+_UNSAFE_DEPRECATION_BANNER = (
+    "╔══════════════════════════════════════════════════════════════════════════╗\n"
+    "║  DEPRECATED: unsandboxed egress execution                              ║\n"
+    "║                                                                         ║\n"
+    "║  Running a Paladin child WITHOUT network isolation is deprecated.       ║\n"
+    "║  The child can see your network and operating environment even though   ║\n"
+    "║  secrets stay out of its env.  Migrate to `paladin exec --sandbox` to  ║\n"
+    "║  get full network isolation (the child sees nothing but the Paladin    ║\n"
+    "║  egress gateway).                                                      ║\n"
+    "║                                                                         ║\n"
+    "║  This degraded path will be removed in a future release.                ║\n"
+    "║  Set %s=1 to acknowledge and suppress this banner.                      ║\n"
+    "╚══════════════════════════════════════════════════════════════════════════╝"
+) % UNSAFE_ACKNOWLEDGEMENT_ENV
+
+
+def unsafe_acknowledged() -> bool:
+    """True when the operator has explicitly acknowledged the risks of
+    unsandboxed execution by setting ``PALADIN_UNSAFE_ACKNOWLEDGED=1``."""
+    return os.environ.get(UNSAFE_ACKNOWLEDGEMENT_ENV) == "1"
+
+
+def _warn_unsafe_deprecated(caller: str = "") -> None:
+    """Print the unsandboxed-deprecation banner to stderr, unless the
+    operator has set the acknowledgement env var."""
+    if not unsafe_acknowledged():
+        print(f"\n[paladin] {caller}:", file=sys.stderr)
+        print(_UNSAFE_DEPRECATION_BANNER, file=sys.stderr)
+        sys.stderr.flush()
+
+
+# ---------------------------------------------------------------------------
 
 
 def bwrap_path() -> Optional[str]:
@@ -127,15 +172,21 @@ def spawn_sandboxed(cmd: Sequence[str], broker: Broker, requester: str,
     Under a real sandbox the child also has no network at all except the
     gateway socket. Raises :class:`SandboxUnavailableError` if that can't be
     built and ``allow_unsandboxed`` is False.
+
+    ``allow_unsandboxed=True`` is **deprecated** — it opts into a degraded path
+    where secrets stay out of the child env but the child is not network-confined.
+    Migrate to ``paladin exec --sandbox`` instead.  Set
+    ``PALADIN_UNSAFE_ACKNOWLEDGED=1`` to acknowledge and suppress the
+    deprecation banner.
     """
     sandboxed = sandbox_available()
     if not sandboxed and not allow_unsandboxed:
         raise SandboxUnavailableError(
             "cannot build a network-isolated egress sandbox here "
             "(bwrap missing or unprivileged user namespaces disabled). "
-            "Install bubblewrap / enable userns, or pass allow_unsandboxed=True "
-            "to run the child without network isolation (secrets still never "
-            "enter its environment)."
+            "Install bubblewrap / enable userns to use the sandbox, or "
+            "pass allow_unsandboxed=True to run the child without network "
+            "isolation (deprecated — see the paladin sandbox docs)."
         )
 
     vault_home = Path(broker.vault.path).parent
@@ -148,10 +199,12 @@ def spawn_sandboxed(cmd: Sequence[str], broker: Broker, requester: str,
             sock_dir = Path(gw.socket_path).parent
             argv = build_bwrap_argv(sock_dir, cmd, vault_home)
         else:
+            _warn_unsafe_deprecated("spawn_sandboxed(allow_unsandboxed=True)")
             warnings.warn(
                 "paladin: running egress child WITHOUT network isolation "
                 "(sandbox unavailable, allow_unsandboxed=True). Secrets stay "
-                "out of the child env, but it is not network-confined.",
+                "out of the child env, but it is not network-confined — this "
+                "mode is deprecated and will be removed in a future release.",
                 RuntimeWarning, stacklevel=2,
             )
             argv = list(cmd)
