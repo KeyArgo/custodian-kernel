@@ -56,6 +56,100 @@ _RESERVED_REQUEST_HEADERS = frozenset({
     "proxy-connection", "upgrade", "trailer", "te",
 })
 
+# ---------------------------------------------------------------------------
+# Hostname validation (SSRF / redirect / rebinding hardening)
+# ---------------------------------------------------------------------------
+
+# Networks a credential egress request may NEVER reach, regardless of
+# allowed_hosts.  RFC 1918 / 6598 / 6890 private + special blocks plus
+# loopback — an SSRF against a local service is a critical
+# credential-exfiltration primitive.
+_BLOCKED_NETWORKS = (
+    ipaddress.IPv4Network("10.0.0.0/8"),
+    ipaddress.IPv4Network("127.0.0.0/8"),
+    ipaddress.IPv4Network("169.254.0.0/16"),
+    ipaddress.IPv4Network("172.16.0.0/12"),
+    ipaddress.IPv4Network("192.168.0.0/16"),
+    ipaddress.IPv4Network("100.64.0.0/10"),     # RFC 6598 CGN
+    ipaddress.IPv4Network("0.0.0.0/8"),          # "this network"
+    ipaddress.IPv6Network("::1/128"),
+    ipaddress.IPv6Network("fc00::/7"),
+    ipaddress.IPv6Network("fe80::/10"),
+)
+
+
+def _normalize_host(host: str) -> str:
+    """Lowercase and strip the redundant trailing dot from FQDN forms
+    like ``api.example.com.`` so they compare equal."""
+    return host.lower().rstrip(".")
+
+
+def _host_is_ip_address(host: str) -> bool:
+    """True when *host* is a valid IP address, not a DNS name."""
+    try:
+        ipaddress.ip_address(host)
+        return True
+    except ValueError:
+        return False
+
+
+def _host_is_blocked(host: str) -> bool:
+    """Reject any host that is, or resolves to, a private / special /
+    loopback address — credential egress to internal networks is a
+    critical SSRF primitive.
+
+    For DNS names this does a single gethostbyname check, which is
+    NOT safe against DNS rebinding.  A rebinding-safe implementation
+    would resolve to an IP at connect time and set the Host header
+    independently (see KRA-14 in the threat model).
+    """
+    try:
+        addr = ipaddress.ip_address(host)
+    except ValueError:
+        try:
+            import socket
+            addr = ipaddress.ip_address(socket.gethostbyname(host))
+        except (OSError, ValueError):
+            return False
+    for net in _BLOCKED_NETWORKS:
+        if addr.version == net.version and addr in net:
+            return True
+    return False
+
+
+def _validate_egress_host(host: str, allowed_hosts: list) -> None:
+    """Full host validation for a sandboxed egress request.
+
+    Blocks:  IP-literal hosts (unless explicitly in allowed_hosts),
+    private / loopback / link-local destinations (unless explicitly
+    in allowed_hosts — the operator may choose to allow these),
+    hostnames not in allowed_hosts (with case-normalized comparison).
+    """
+    normalized = _normalize_host(host)
+
+    if _host_is_ip_address(normalized):
+        if normalized not in allowed_hosts:
+            raise EgressDeniedError(
+                f"host {host!r} is an IP address not listed "
+                f"in allowed_hosts for this credential"
+            )
+
+    # SSRF gate: block private/loopback/link-local, but only when the
+    # operator has NOT explicitly listed the host in allowed_hosts.
+    if _host_is_blocked(host) and normalized not in allowed_hosts:
+        raise EgressDeniedError(
+            f"host {host!r} resolves to a private, loopback, or "
+            f"link-local address — credential egress to internal "
+            f"networks is forbidden"
+        )
+
+    norm_allowed = [_normalize_host(h) for h in allowed_hosts]
+    if norm_allowed and normalized not in norm_allowed:
+        raise EgressDeniedError(
+            f"host {host!r} is not in the allowed_hosts "
+            f"for this credential"
+        )
+
 
 def _is_loopback_host(host: str) -> bool:
     if host.lower() == "localhost":
@@ -254,12 +348,18 @@ class Broker:
             raise
         # External refs are strict: unlike legacy local entries, empty is not
         # an unrestricted compatibility mode.
-        if (external and not allowed_hosts) or (allowed_hosts and host not in allowed_hosts):
+        if external and not allowed_hosts:
             self.audit.append("deny", ref.name, requester, band,
-                              f"host {host} not in entry allowed_hosts")
+                              "external ref has no allowed_hosts")
             raise EgressDeniedError(
-                f"host {host!r} is not in the allowed_hosts for {ref.name!r}"
+                f"external ref {ref.name!r} must declare allowed_hosts"
             )
+        if allowed_hosts:
+            try:
+                _validate_egress_host(host, allowed_hosts)
+            except EgressDeniedError as e:
+                self.audit.append("deny", ref.name, requester, band, str(e))
+                raise
         if not grant.scope_allows(host, method, path):
             self.audit.append("deny", ref.name, requester, band,
                               f"grant scope forbids {method} {host}{path}")
@@ -382,7 +482,12 @@ class Broker:
     def _perform(self, method: str, url: str, headers: dict, body,
                  timeout: float) -> dict:
         """Make the outbound call with stdlib http.client (no new dep) and
-        return a bounded {status, headers, body}."""
+        return a bounded {status, headers, body}.
+
+        3xx redirects are blocked: following them without re-validating
+        the destination against allowed_hosts and grant scope is a
+        credential-exfiltration primitive.
+        """
         parts = urlsplit(url)
         path_q = parts.path or "/"
         if parts.query:
@@ -398,6 +503,11 @@ class Broker:
         try:
             conn.request(method, path_q, body=body_bytes, headers=headers)
             resp = conn.getresponse()
+            if 300 <= resp.status < 400:
+                raise EgressDeniedError(
+                    f"redirect to {resp.getheader('Location', '(none)')} blocked — "
+                    f"credential egress does not follow redirects"
+                )
             raw = resp.read(MAX_RESPONSE_BYTES + 1)
             truncated = len(raw) > MAX_RESPONSE_BYTES
             raw = raw[:MAX_RESPONSE_BYTES]
