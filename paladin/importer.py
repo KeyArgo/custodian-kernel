@@ -102,6 +102,7 @@ class Candidate:
     name: str
     value: str
     env_var: Optional[str] = None
+    username: Optional[str] = None
     kind: Optional[str] = None          # None → infer at import time
     note: str = ""
     source: str = ""                    # "env:.../.env", "bitwarden:item-name", ...
@@ -266,6 +267,7 @@ _CSV_NAME_COLUMNS = [
     "name", "title", "label", "item", "account", "service", "site", "url",
     "login_uri", "key", "username", "user",
 ]
+_CSV_USERNAME_COLUMNS = ["login_username", "username", "user"]
 
 
 def _pick_column(header: list[str], aliases: list[str]) -> Optional[int]:
@@ -351,6 +353,7 @@ def parse_csv_text(text: str, source: str) -> list[Candidate]:
     header = rows[0]
     value_idx = _pick_column(header, _CSV_VALUE_COLUMNS)
     name_idx = _pick_column(header, _CSV_NAME_COLUMNS)
+    username_idx = _pick_column(header, _CSV_USERNAME_COLUMNS)
 
     if value_idx is None:
         raise PaladinError(
@@ -377,7 +380,10 @@ def parse_csv_text(text: str, source: str) -> list[Candidate]:
         name = _safe_name(raw_name) or _safe_name(f"secret_{len(out) + 1}")
         if name is None:
             continue
-        out.append(Candidate(name=name, value=value, source=source))
+        username = (row[username_idx].strip()
+                    if username_idx is not None and username_idx < len(row) else "")
+        out.append(Candidate(name=name, value=value, username=username or None,
+                             source=source))
     return out
 
 
@@ -430,13 +436,15 @@ def parse_json_text(text: str, source: str) -> list[Candidate]:
                        if isinstance(v, (str, int, float)) and not isinstance(v, bool)}
             value = next((str(lowered[a]) for a in _CSV_VALUE_COLUMNS if a in lowered), None)
             raw_name = next((str(lowered[a]) for a in _CSV_NAME_COLUMNS if a in lowered), None)
+            username = next((str(lowered[a]) for a in _CSV_USERNAME_COLUMNS if a in lowered), None)
             if value is None:
                 continue
             value = value.strip()
             name = _safe_name(raw_name or f"secret_{i + 1}")
             if not value or name is None:
                 continue
-            out.append(Candidate(name=name, value=value, source=source))
+            out.append(Candidate(name=name, value=value, username=username,
+                                 source=source))
         return out
 
     raise PaladinError("JSON must be an object of name→value or an array of "
@@ -515,6 +523,7 @@ def bitwarden_candidates(search: Optional[str] = None,
         login = item.get("login") or {}
         if login.get("password"):
             out.append(Candidate(name=base, value=login["password"],
+                                 username=login.get("username") or None,
                                  note=note, source=f"bitwarden:{title}"))
         for f in item.get("fields") or []:
             fname, fval = f.get("name"), f.get("value")
@@ -580,6 +589,9 @@ def onepassword_candidates(vault: Optional[str] = None,
         if base is None:
             continue
         note = f"imported from 1Password item '{title}'"
+        username = next((str(f.get("value")) for f in item.get("fields") or []
+                         if (f.get("label") or "").strip().lower() == "username"
+                         and f.get("value")), None)
         for f in item.get("fields") or []:
             label = (f.get("label") or f.get("id") or "").strip()
             value = f.get("value")
@@ -593,7 +605,8 @@ def onepassword_candidates(vault: Optional[str] = None,
                     continue
                 kind = "password" if purpose == "PASSWORD" else None
                 out.append(Candidate(name=sub, value=value, kind=kind,
-                                     note=note, source=f"1password:{title}"))
+                                     username=username, note=note,
+                                     source=f"1password:{title}"))
     return out
 
 
@@ -743,7 +756,7 @@ def import_candidates(vault: Vault, candidates: Iterable[Candidate],
                                    "flags": cand.flags})
         if not dry_run:
             vault.add(name, cand.value, kind=kind, profile=profile,
-                      env_var=cand.env_var, note=cand.note,
+                      env_var=cand.env_var, username=cand.username, note=cand.note,
                       overwrite=not skip_existing)
         report.imported.append(entry)
     return report

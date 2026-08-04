@@ -206,6 +206,7 @@ def test_bitwarden_candidates_parse_items(monkeypatch):
     cands = imp.bitwarden_candidates(search="api")
     by_name = {c.name: c for c in cands}
     assert by_name["openai_api_key"].value == "sk-abc123"
+    assert by_name["openai_api_key"].username == "me"
     assert by_name["openai_api_key/org_id"].value == "org-42"
     assert all(c.source.startswith("bitwarden:") for c in cands)
 
@@ -240,6 +241,7 @@ def test_onepassword_candidates_parse_fields(monkeypatch):
     cands = imp.onepassword_candidates(vault="Main")
     by_name = {c.name: c for c in cands}
     assert by_name["stripe_live"].value == "hunter2"          # purpose=PASSWORD
+    assert by_name["stripe_live"].username == "me@example.com"
     assert by_name["stripe_live/secret_key"].value == "sk_live_xyz"
     assert "username" not in json.dumps([c.name for c in cands])
 
@@ -406,6 +408,8 @@ class TestCsvImport:
                 ",,login,GitHub,,,https://github.com,me,ghp_XYZ\n")
         got = {c.name: c.value for c in imp.parse_csv_text(text, "csv:t")}
         assert got == {"stripe": "sk_live_ABC", "github": "ghp_XYZ"}
+        users = {c.name: c.username for c in imp.parse_csv_text(text, "csv:t")}
+        assert users == {"stripe": "me@x.com", "github": "me"}
 
     def test_chrome_layout(self):
         text = ("name,url,username,password\n"
