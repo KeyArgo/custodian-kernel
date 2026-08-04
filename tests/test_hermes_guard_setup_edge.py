@@ -6,6 +6,7 @@ and the --enable flag's effect on subprocess calls.
 from __future__ import annotations
 
 import subprocess
+from pathlib import Path
 
 import pytest
 
@@ -71,7 +72,7 @@ def test_doctor_both_enabled(monkeypatch, tmp_path, capsys):
     )
     (tmp_path / "hermes" / "plugins" / "custodian-hermes-guard").mkdir(parents=True)
     (tmp_path / "hermes" / "plugins" / "custodian-hermes-guard" / "plugin.yaml").write_text(
-        "name: custodian-hermes-guard\n"
+        (Path(__file__).resolve().parent.parent / "custodian" / "hermes_guard" / "plugin" / "plugin.yaml").read_text()
     )
     (tmp_path / "talaria").mkdir()
     (tmp_path / "talaria" / "policy.yaml").write_text("{}\n")

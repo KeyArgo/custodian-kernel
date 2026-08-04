@@ -702,3 +702,18 @@ def test_cli_restore_rejects_backup_that_wont_open(monkeypatch, tmp_path):
     rc = paladin_cli.main(["--vault", str(live), "restore", str(backup), "--force"])
     assert rc == 1  # could not open the backup → aborted
     assert Vault.open(path=live, passphrase=PP).names() == ["keep"]  # untouched
+
+
+def test_dashboard_renders_without_error(vault, monkeypatch, tmp_path):
+    """Smoke test: dashboard produces ANSI output for a live vault."""
+    from paladin.broker import Broker
+    from paladin.dashboard import render
+    broker = Broker(vault)
+    broker.grant("e2e/*", "sandbox:test", max_band="L1")
+    output = render(broker, backups_dir=None)
+    assert "Guard" in output
+    assert "Sandbox" in output
+    assert "Vault" in output
+    assert "Grants" in output
+    assert "e2e/*" in output or "no grants" in output.lower()
+
