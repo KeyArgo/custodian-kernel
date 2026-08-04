@@ -179,11 +179,11 @@ class TestCmdSetupEntryPointDiscovery:
             ],
         })
         eff = cmd_setup._effective_profiles()
-        assert eff["hermes"] == ["talaria"]
+        assert eff["hermes"] == ["talaria", "hermes-guard"]
         assert eff["minimal"] == []
         assert cmd_setup._resolve_components(
             SimpleNamespace(profile="hermes", with_=None)
-        ) == ["talaria"]
+        ) == ["hermes-guard", "talaria"]
 
     def test_malformed_setup_entry_points_are_skipped(self, monkeypatch):
         _install_fake_entry_points(monkeypatch, {
@@ -205,7 +205,7 @@ class TestCmdSetupEntryPointDiscovery:
         assert "raises-too" not in profiles
         assert cmd_setup._resolve_components(
             SimpleNamespace(profile="hermes", with_=None)
-        ) == ["talaria"]
+        ) == ["hermes-guard", "talaria"]
         assert cmd_setup._resolve_components(
             SimpleNamespace(profile=None, with_="paladin")
         ) == ["paladin"]
@@ -217,4 +217,4 @@ class TestCmdSetupEntryPointDiscovery:
         ) == []
         assert cmd_setup._resolve_components(
             SimpleNamespace(profile="hermes", with_=None)
-        ) == ["talaria"]
+        ) == ["hermes-guard", "talaria"]
