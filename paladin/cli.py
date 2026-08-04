@@ -150,7 +150,9 @@ def cmd_guard(args) -> int:
     print(f"  first invalid record: {status.valid_records}")
     print(f"  audit SHA-256: {status.audit_sha256}")
     if args.backups:
-        matches = _broker(args).guard.backup_audit_hashes(args.backups)
+        passphrase = os.environ.get("PALADIN_PASSPHRASE")
+        matches = _broker(args).guard.backup_audit_hashes(
+            args.backups, passphrase=passphrase)
         if not matches:
             print("  backup comparison: no readable audit trails found")
         else:
