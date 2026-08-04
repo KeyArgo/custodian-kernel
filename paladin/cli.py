@@ -163,6 +163,16 @@ def cmd_guard(args) -> int:
     return 2
 
 
+def cmd_dashboard(args) -> int:
+    """Render an ANSI operator dashboard: guard, sandbox, grants, backups."""
+    from paladin.dashboard import render
+    broker = _broker(args)
+    print(render(broker, backups_dir=args.backups))
+    return 0
+
+
+
+
 def cmd_rm(args) -> int:
     vault = _open_vault(args)
     vault.delete(args.name)
@@ -712,6 +722,10 @@ def build_parser() -> argparse.ArgumentParser:
     sp = sub.add_parser("guard", help="show Paladin Guard integrity status")
     sp.add_argument("--backups", default=None, help="read-only directory of Paladin backup zip files")
     sp.set_defaults(fn=cmd_guard)
+
+    sp = sub.add_parser("dashboard", help="ANSI operator dashboard — guard, sandbox, grants, backups")
+    sp.add_argument("--backups", default=None, help="read-only directory of Paladin backup archives")
+    sp.set_defaults(fn=cmd_dashboard)
 
     sp = sub.add_parser("rotate-master", help="re-encrypt the vault under a new passphrase")
     sp.set_defaults(fn=cmd_rotate_master)
