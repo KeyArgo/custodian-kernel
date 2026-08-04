@@ -29,11 +29,18 @@ def test_list_builds_list_argv(captured, monkeypatch):
     assert captured == [["list"]]
 
 
-def test_add_builds_add_argv_with_kind_and_env(captured, monkeypatch):
-    _feed(monkeypatch, ["stripe_key", "secret", "STRIPE_KEY"])
+def test_add_builds_add_argv_with_kind_env_and_optional_username(captured, monkeypatch):
+    _feed(monkeypatch, ["stripe_key", "billing@example.test", "secret", "STRIPE_KEY"])
     m._act_add()
     assert captured == [["add", "stripe_key", "--kind", "secret",
-                         "--env-var", "STRIPE_KEY"]]
+                         "--env-var", "STRIPE_KEY", "--username", "billing@example.test"]]
+
+
+def test_add_explains_invalid_secret_id_before_value_prompt(captured, monkeypatch, capsys):
+    _feed(monkeypatch, ["mikrotik-europa harbor"])
+    m._act_add()
+    assert captured == []
+    assert "cannot contain spaces" in capsys.readouterr().out
 
 
 def test_run_with_secret_builds_exec_argv(captured, monkeypatch):

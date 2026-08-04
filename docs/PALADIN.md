@@ -36,7 +36,8 @@ a *reference*, never the secret.
 
 ```bash
 paladin init                                   # create the vault
-paladin add stripe_sk --profile prod --env-var STRIPE_SECRET_KEY
+paladin add stripe_sk --profile prod --env-var STRIPE_SECRET_KEY \
+  --username billing@example.com
 paladin import-env ./.env --profile dev        # bulk import, then shred the file
 paladin list                                   # names + metadata, never values
 paladin show stripe_sk                          # one entry's metadata

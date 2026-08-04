@@ -14,6 +14,8 @@ from __future__ import annotations
 
 import sys
 
+from paladin.refs import valid_name
+
 
 def _prompt(label: str, default: str = "") -> str:
     suffix = f" [{default}]" if default else ""
@@ -81,6 +83,7 @@ def _act_edit() -> None:
     kind = _prompt("new kind (blank keeps current)")
     profile = _prompt("new profile (blank keeps current)")
     env = _prompt("new environment variable (blank keeps current)")
+    username = _prompt("new account/login name (blank keeps current)")
     note = _prompt("new note (blank keeps current)")
     rotate = _prompt("replace the secret value? (y/N)", "n").lower().startswith("y")
     argv = ["edit", name]
@@ -88,6 +91,7 @@ def _act_edit() -> None:
     if kind: argv += ["--kind", kind]
     if profile: argv += ["--profile", profile]
     if env: argv += ["--env-var", env]
+    if username: argv += ["--username", username]
     if note: argv += ["--note", note]
     if rotate:
         print("  (you'll be prompted for the replacement value — it is never shown)")
@@ -96,14 +100,21 @@ def _act_edit() -> None:
 
 
 def _act_add() -> None:
-    name = _prompt("name for the new secret (e.g. stripe_key)")
+    name = _prompt("secret ID (e.g. mikrotik_europa; letters/numbers/._-/ only)")
     if not name:
         return
+    if not valid_name(name):
+        print("  Secret IDs cannot contain spaces. Use letters, numbers, . _ - /; "
+              "store the account/login name separately below.")
+        return
+    username = _prompt("account/login name (optional, e.g. harbor)")
     kind = _prompt("kind (secret / token / password)", "secret")
     env = _prompt("environment variable name to expose it as (optional)")
     argv = ["add", name, "--kind", kind]
     if env:
         argv += ["--env-var", env]
+    if username:
+        argv += ["--username", username]
     print("  (you'll be prompted for the value — it is never shown)")
     _run(argv)
 

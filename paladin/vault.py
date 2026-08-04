@@ -94,6 +94,7 @@ class Entry:
     kind: str = "secret"          # secret | env | token | password
     profile: str = "default"      # env-manager grouping (dev/staging/prod/...)
     env_var: Optional[str] = None  # default env var name at injection time
+    username: Optional[str] = None  # optional login/account name; never a secret value
     note: str = ""
     created_at: float = field(default_factory=time.time)
     updated_at: float = field(default_factory=time.time)
@@ -111,6 +112,7 @@ class Entry:
             "kind": self.kind,
             "profile": self.profile,
             "env_var": self.env_var,
+            "username": self.username,
             "note": self.note,
             "created_at": self.created_at,
             "updated_at": self.updated_at,
@@ -402,15 +404,22 @@ class Vault:
     # -- entry management (human/CLI surface) --------------------------------
 
     def add(self, name: str, value: str, kind: str = "secret", profile: str = "default",
-            env_var: Optional[str] = None, note: str = "", overwrite: bool = False,
+            env_var: Optional[str] = None, username: Optional[str] = None,
+            note: str = "", overwrite: bool = False,
             allowed_hosts: Optional[list] = None) -> SecretRef:
         if not valid_name(name):
-            raise PaladinError(f"invalid secret name {name!r}")
+            raise PaladinError(
+                f"invalid secret name {name!r}: use 1-128 letters, numbers, "
+                "dots, underscores, hyphens, or slashes; spaces are not allowed. "
+                "Store the account/login name separately with --username."
+            )
+        _validate_username(username)
         if name in self._entries and not overwrite:
             raise PaladinError(f"entry {name!r} already exists (use overwrite/edit)")
         prior = self._entries.get(name)
         entry = Entry(name=name, value=value, kind=kind, profile=profile,
-                      env_var=env_var or _default_env_var(name), note=note,
+                      env_var=env_var or _default_env_var(name), username=username,
+                      note=note,
                       allowed_hosts=list(allowed_hosts or []))
         if prior is not None:
             entry.created_at = prior.created_at
@@ -422,7 +431,8 @@ class Vault:
         return SecretRef(name)
 
     def update_meta(self, name: str, profile: Optional[str] = None,
-                    env_var: Optional[str] = None, note: Optional[str] = None,
+                    env_var: Optional[str] = None, username: Optional[str] = None,
+                    note: Optional[str] = None,
                     kind: Optional[str] = None, allowed_hosts: Optional[list] = None) -> None:
         entry = self._require(name)
         if kind is not None:
@@ -433,6 +443,9 @@ class Vault:
             entry.profile = profile
         if env_var is not None:
             entry.env_var = env_var
+        if username is not None:
+            _validate_username(username)
+            entry.username = username or None
         if note is not None:
             entry.note = note
         if allowed_hosts is not None:
@@ -451,7 +464,8 @@ class Vault:
     def edit(self, name: str, *, new_name: Optional[str] = None,
              new_value: Optional[str] = None, rotate: bool = False,
              profile: Optional[str] = None, env_var: Optional[str] = None,
-             note: Optional[str] = None, kind: Optional[str] = None,
+             username: Optional[str] = None, note: Optional[str] = None,
+             kind: Optional[str] = None,
              allowed_hosts: Optional[list] = None) -> int:
         """Apply a complete human edit in one validated, atomic vault save.
 
@@ -468,6 +482,7 @@ class Vault:
                 raise PaladinError(f"entry {target!r} already exists")
         if kind is not None and kind not in {"secret", "env", "token", "password"}:
             raise PaladinError(f"invalid secret kind {kind!r}")
+        _validate_username(username)
         if rotate and new_value is None:
             raise PaladinError("a rotated value is required")
 
@@ -496,6 +511,8 @@ class Vault:
             entry.profile = profile
         if env_var is not None:
             entry.env_var = env_var
+        if username is not None:
+            entry.username = username or None
         if note is not None:
             entry.note = note
         if allowed_hosts is not None:
@@ -573,6 +590,16 @@ class Vault:
     def set_raw_grants(self, grants: list[dict]) -> None:
         self._grants = grants
         self.save()
+
+
+def _validate_username(username: Optional[str]) -> None:
+    """Keep optional login metadata safe for terminal and JSON display."""
+    if username is None:
+        return
+    if len(username) > 256:
+        raise PaladinError("username must be 256 characters or fewer")
+    if any(ord(ch) < 32 or ord(ch) == 127 for ch in username):
+        raise PaladinError("username cannot contain control characters")
 
 
 def _default_env_var(name: str) -> str:

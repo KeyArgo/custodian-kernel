@@ -41,7 +41,7 @@ from pathlib import Path
 from paladin._prompt import read_secret
 from paladin.broker import Broker
 from paladin.errors import PaladinError
-from paladin.refs import SecretRef
+from paladin.refs import SecretRef, valid_name
 from paladin.vault import Vault
 
 CLI_REQUESTER = "user:cli"
@@ -96,10 +96,20 @@ def cmd_init(args) -> int:
 
 
 def cmd_add(args) -> int:
+    # Validate the reference name before opening the vault or prompting for a
+    # value. A human should never type a password only to learn that spaces in
+    # the display/account name belong in --username instead.
+    if not valid_name(args.name):
+        raise PaladinError(
+            f"invalid secret name {args.name!r}: use 1-128 letters, numbers, "
+            "dots, underscores, hyphens, or slashes; spaces are not allowed. "
+            "Store the account/login name separately with --username."
+        )
     vault = _open_vault(args)
     value = _read_value(f"value for {args.name}: ", args.stdin)
     ref = vault.add(args.name, value, kind=args.kind, profile=args.profile,
-                    env_var=args.env_var, note=args.note or "", overwrite=args.force)
+                    env_var=args.env_var, username=args.username,
+                    note=args.note or "", overwrite=args.force)
     Broker(vault).audit.append("add", args.name, CLI_REQUESTER, "-",
                                f"profile={args.profile}")
     print(f"stored {ref} (profile={args.profile})")
@@ -116,7 +126,8 @@ def cmd_edit(args) -> int:
     hosts = args.allowed_host if args.allowed_host is not None else None
     migrated = vault.edit(name, new_name=args.rename, new_value=value,
                           rotate=args.rotate_value, profile=args.profile,
-                          env_var=args.env_var, note=args.note, kind=args.kind,
+                          env_var=args.env_var, username=args.username,
+                          note=args.note, kind=args.kind,
                           allowed_hosts=hosts)
     name = args.rename or name
     if args.rename:
@@ -560,6 +571,8 @@ def build_parser() -> argparse.ArgumentParser:
     sp.add_argument("--profile", default="default")
     sp.add_argument("--env-var", default=None,
                     help="env var name used at injection (default: NAME uppercased)")
+    sp.add_argument("--username", default=None,
+                    help="optional account/login name stored with this credential")
     sp.add_argument("--note", default=None)
     sp.add_argument("--stdin", action="store_true", help="read value from stdin")
     sp.add_argument("--force", action="store_true", help="overwrite existing entry")
@@ -572,6 +585,8 @@ def build_parser() -> argparse.ArgumentParser:
     sp.add_argument("--kind", choices=["secret", "env", "token", "password"], default=None)
     sp.add_argument("--profile", default=None)
     sp.add_argument("--env-var", default=None)
+    sp.add_argument("--username", default=None,
+                    help="optional account/login name (pass an empty value to clear)")
     sp.add_argument("--note", default=None)
     sp.add_argument("--allowed-host", action="append", default=None,
                     help="replace host ceiling; repeat for multiple hosts")

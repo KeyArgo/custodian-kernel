@@ -504,6 +504,22 @@ def test_entry_allowed_hosts_stored(vault):
     assert reopened.meta("stripe_sk")["allowed_hosts"] == ["api.stripe.com"]
 
 
+def test_optional_username_is_encrypted_metadata_and_can_be_edited(vault):
+    vault.add("mikrotik_europa", "password-value", kind="password",
+              username="harbor")
+    assert vault.meta("mikrotik_europa")["username"] == "harbor"
+    raw = vault.path.read_bytes()
+    assert b"harbor" not in raw
+    vault.edit("mikrotik_europa", username="harbor-admin")
+    assert vault.meta("mikrotik_europa")["username"] == "harbor-admin"
+
+
+def test_invalid_name_explains_allowed_characters_and_username(vault):
+    with pytest.raises(PaladinError, match="spaces are not allowed") as exc:
+        vault.add("mikrotik-europa harbor", "password-value")
+    assert "--username" in str(exc.value)
+
+
 def test_old_vault_without_allowed_hosts_loads(vault):
     # Simulate an OLD vault: entries whose JSON predates the allowed_hosts
     # field. The dataclass default must fill it in, not crash on load.
