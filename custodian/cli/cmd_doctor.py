@@ -88,6 +88,24 @@ def _verify_guard_enforcement(hermes_home: Path) -> tuple[bool, str]:
     missing = required - set(ctx.hooks)
     if missing:
         return False, f"guard plugin is missing hooks: {', '.join(sorted(missing))}"
+
+    # Detect stale deployment: the plugin.yaml in ~/.hermes/plugins/ must
+    # match the version shipped inside the kernel package.  An operator
+    # who upgraded custodian-kernel without re-running setup would have
+    # a stale plugin copy that doesn't match the current runtime.
+    deployed_yaml = hermes_home / "plugins" / "custodian-hermes-guard" / "plugin.yaml"
+    try:
+        from importlib.resources import files
+        shipped_yaml = files("custodian").joinpath("hermes_guard", "plugin", "plugin.yaml")
+        if deployed_yaml.read_text() != shipped_yaml.read_text():
+            return False, (
+                "deployed plugin.yaml differs from the shipped version — "
+                "rerun `custodian setup --profile hermes` to update the "
+                "plugin to match the installed kernel"
+            )
+    except Exception:
+        pass  # best-effort; the import/register check above is the primary gate
+
     return True, "guard plugin hooks are wired and importable"
 
 
