@@ -352,11 +352,15 @@ class Vault:
         if keyfile:
             try:
                 return cls.open(path, keyfile=Path(keyfile))
-            except VaultLockedError:
-                # The keyfile was read successfully but the vault doesn't
-                # unlock with it (e.g. a different vault at this path).
-                # If a passphrase is also available, give it a chance.
-                if passphrase:
+            except VaultLockedError as e:
+                # Only fall back when the keyfile was *read successfully*
+                # but the vault didn't unlock with it (e.g. a different
+                # vault at this path).  A missing/unreadable/corrupt
+                # keyfile is still a configuration error — don't silently
+                # switch to passphrase in that case.
+                msg = str(e)
+                if passphrase and "could not be read" not in msg and \
+                   "must be exactly" not in msg and "no passphrase" not in msg:
                     return cls.open(path, passphrase=passphrase)
                 raise
         if passphrase is None and interactive:
