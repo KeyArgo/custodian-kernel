@@ -1,0 +1,7 @@
+name: custodian-hermes-guard
+version: "0.1.0"
+description: "Governs every Hermes Agent tool call through the Custodian guard pipeline: blocks secret leaks, prompt injection, and forbidden tools/paths (read AND write) declared in operator policy, waits for digest-bound operator approval on escalations, and logs every decision to a tamper-evident receipt chain. Enforced mechanically — the model cannot talk its way around the rules. Contains no operator configuration; policy comes from the shared Custodian state directory."
+author: "InovinLabs"
+hooks:
+  - pre_tool_call
+  - transform_tool_result
