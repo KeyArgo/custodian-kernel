@@ -44,12 +44,39 @@ surfaced to the model by this adapter.
 
 from __future__ import annotations
 
+import os
 from dataclasses import dataclass, field
 from typing import Any, Optional
 
 #: Breaking changes to the payload/decision schema, classification, or
 #: directive mapping must bump this and ship the plugin/runtime together.
 HERMES_GUARD_CONTRACT_VERSION = "1.0"
+
+
+def approval_wait_seconds(raw=None) -> int:
+    """Resolve the approval-wait window from the environment.
+
+    Order of precedence: explicit ``raw`` argument (for tests) > the
+    brand-neutral ``CUSTODIAN_APPROVAL_WAIT_SECONDS`` > the legacy
+    ``TALARIA_APPROVAL_WAIT_SECONDS`` (kept as a compatibility shim for
+    operators who haven't migrated their environment yet) > 300.
+
+    The window is clamped to the same ``[_MIN_WAIT_SECONDS,
+    _MAX_WAIT_SECONDS]`` bounds as the runtime, so a typo'd "0" or "9999"
+    never pins or skips a session.
+    """
+    from .runtime import _MAX_WAIT_SECONDS, _MIN_WAIT_SECONDS  # late import: no cycle
+
+    if raw is None:
+        raw = os.environ.get(
+            "CUSTODIAN_APPROVAL_WAIT_SECONDS",
+            os.environ.get("TALARIA_APPROVAL_WAIT_SECONDS", "300"),
+        )
+    try:
+        value = float(raw)
+    except (TypeError, ValueError):
+        value = 300.0
+    return int(max(_MIN_WAIT_SECONDS, min(_MAX_WAIT_SECONDS, value)))
 
 #: Verdicts the shared engine may return. Anything else is a guard failure
 #: and must be treated as a denial (fail closed).
@@ -213,7 +240,7 @@ def verdict_to_directive(
         # Allowed actions still carry no directive -- Hermes proceeds
         # silently; explanatory prose for an ordinary passing gate is noise.
         return None
-    message = decision.notification or f"Talaria blocked this {decision.action_kind}: {decision.reason}"
+    message = decision.notification or f"Custodian blocked this {decision.action_kind}: {decision.reason}"
     if decision.approval_id:
         message += f" Approval: {decision.approval_id}"
     return {"action": "block", "message": f"[hermes-guard] {message}"}

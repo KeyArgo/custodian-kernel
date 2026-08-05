@@ -81,7 +81,7 @@ def test_copytree_failure_warns_not_aborts(
         raise OSError("Read-only filesystem")
 
     monkeypatch.setattr(
-        "custodian.cli.cmd_setup.shutil.copytree", _failing_copytree,
+        "shutil.copytree", _failing_copytree,
     )
 
     rc = main(["setup", "--with", "hermes-guard"])

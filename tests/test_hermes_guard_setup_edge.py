@@ -91,7 +91,13 @@ _HG_ENABLE_CMD = ["hermes", "plugins", "enable",
 
 @pytest.fixture
 def _hg_mocks(monkeypatch, tmp_path):
-    """Mock environment so hermes-guard plugin install + enable can run."""
+    """Mock environment so hermes-guard plugin install + enable can run.
+
+    CRITICAL: HERMES_HOME must point at the test sandbox, never the real
+    host home. Before this was added, the plugin-install path resolved the
+    real ``~/.hermes/profiles/dev`` and clobbered the operator's deployed
+    plugin with the test fixture's plugin.yaml.
+    """
     calls = []
 
     def _fake_run(cmd, **kwargs):
@@ -103,6 +109,7 @@ def _hg_mocks(monkeypatch, tmp_path):
         "custodian.cli.cmd_setup.shutil.which",
         lambda name: "/usr/bin/hermes" if name == "hermes" else None,
     )
+    monkeypatch.setenv("HERMES_HOME", str(tmp_path / "hermes"))
 
     plugin_dir = tmp_path / "plugin"
     plugin_dir.mkdir()

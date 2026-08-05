@@ -32,6 +32,8 @@ import os
 import sys
 from typing import Any, Dict, Optional
 
+from custodian.hermes_guard.contract import HERMES_GUARD_CONTRACT_VERSION, approval_wait_seconds
+
 try:
     from custodian.hermes_guard.runtime import HermesGuardRuntime
     _IMPORT_ERROR: Optional[Exception] = None
@@ -63,12 +65,21 @@ def _pipeline():
 
 
 def _wait_seconds() -> float:
+    """Resolve the approval-wait window.
+
+    Operator policy (from the loaded ``policy.yaml``) wins over the
+    environment. The environment fallback is delegated to
+    :func:`custodian.hermes_guard.contract.approval_wait_seconds`, which
+    honors the brand-neutral ``CUSTODIAN_APPROVAL_WAIT_SECONDS`` and
+    keeps the legacy ``TALARIA_APPROVAL_WAIT_SECONDS`` as a compat shim.
+    """
     policy = _runtime().policy.get("operator") or {}
-    configured = policy.get(
-        "approval_wait_seconds",
-        os.environ.get("TALARIA_APPROVAL_WAIT_SECONDS", "300"),
-    ) if isinstance(policy, dict) else 300
-    return max(0.0, min(3600.0, float(configured)))
+    if isinstance(policy, dict) and "approval_wait_seconds" in policy:
+        try:
+            return max(0.0, min(3600.0, float(policy["approval_wait_seconds"])))
+        except (TypeError, ValueError):
+            pass
+    return float(approval_wait_seconds())
 
 
 def _on_pre_tool_call(tool_name: str = "", args: Any = None, **_: Any) -> Optional[Dict[str, str]]:
@@ -100,7 +111,7 @@ def _on_pre_tool_call(tool_name: str = "", args: Any = None, **_: Any) -> Option
                 workspace=_.get("workspace"),
                 correlation_id=str(_.get("correlation_id", "") or ""),
                 session_id=str(_.get("session_id", "") or ""),
-                timeout_seconds=_wait_seconds(),
+                timeout_seconds=approval_wait_seconds(),
             )
     except Exception as exc:
         print(f"[hermes-guard] BLOCKED — guard evaluation failed: {exc}", file=sys.stderr)
@@ -110,7 +121,7 @@ def _on_pre_tool_call(tool_name: str = "", args: Any = None, **_: Any) -> Option
         }
     if decision.allowed:
         return None
-    message = decision.notification or f"Talaria blocked this {decision.action_kind}: {decision.reason}"
+    message = decision.notification or f"Custodian blocked this {decision.action_kind}: {decision.reason}"
     if decision.approval_id:
         message += f" Approval: {decision.approval_id}"
     return {"action": "block", "message": f"[hermes-guard] {message}"}

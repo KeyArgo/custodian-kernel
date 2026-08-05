@@ -177,18 +177,28 @@ class HermesGuardRuntime:
         workspace: Optional[str] = None,
         correlation_id: str = "",
         session_id: str = "",
+        task_id: str = "",
         timeout_seconds: float = 300.0,
     ) -> HermesDecision:
         """Wait (bounded) for an operator decision on a pending approval.
 
         The approval is bound to the exact action digest the operator
-        approved; this method only ever consumes an approval for the exact
-        action + requester that the record names. Any mismatch, expiry,
-        denial, timeout, or store failure resolves to ``denied``.
+        approved; this method only ever authorizes the exact action +
+        requester that the record names. Any mismatch, expiry, denial,
+        timeout, or store failure resolves to ``denied``.
+
+        To enforce that binding, this method does NOT consume the record
+        using the digest stored *on* the record. It re-runs the shared
+        engine with the exact current invocation (tool, args, workspace,
+        requester, session) so the engine recomputes the action digest
+        from what the model is about to do. If any execution-relevant
+        field changed since the operator approved, the recomputed digest
+        won't match and the engine fails closed -- the approval cannot be
+        replayed against a different action.
 
         ``escalation_required`` from :meth:`evaluate_pre` is *not*
-        permission; the plugin must call this (or otherwise obtain the exact
-        approval) before the tool executes.
+        permission; the plugin must call this (or otherwise obtain the
+        exact approval) before the tool executes.
         """
         if not isinstance(approval_id, str) or not approval_id:
             return self._denied("missing approval id; failing closed")
@@ -203,29 +213,40 @@ class HermesGuardRuntime:
             except Exception as exc:  # pragma: no cover - store tamper etc.
                 return self._denied(f"approval store failure ({type(exc).__name__})")
             if record.status == "approved" and record.consumed_at is None:
-                try:
-                    store.consume(
-                        approval_id,
-                        digest=record.action_digest,
-                        requester=record.requester,
-                    )
-                except ApprovalError as exc:
-                    return self._denied(f"approval could not be consumed ({exc})")
-                except Exception as exc:  # pragma: no cover - e.g. read-only store
-                    return self._denied(f"approval store failure ({type(exc).__name__})")
-                self.notifier(f"approved {approval_id}")
-                return HermesDecision(
-                    verdict="approved", allowed=True,
-                    action_kind="unknown",
-                    reason="exact action approved once by the human operator",
-                    notification="",
+                # Re-evaluate the exact current action through the shared
+                # engine. The engine recomputes the digest from the current
+                # invocation and consumes the approval only if it binds to
+                # this exact action + requester. A changed tool, argument,
+                # workspace, requester, or session fails closed here.
+                decision = self.evaluate_pre(
+                    tool_name=tool_name,
+                    args=args,
                     approval_id=approval_id,
-                    action_digest=record.action_digest,
-                    approval_expires_at=record.expires_at,
+                    requester=requester,
+                    workspace=workspace,
+                    correlation_id=correlation_id,
+                    session_id=session_id,
+                    task_id=task_id,
+                )
+                if decision.verdict == "approved":
+                    self.notifier(f"approved {approval_id}")
+                    return decision
+                return self._denied(
+                    f"approval {approval_id} could not be bound to the "
+                    f"current action ({decision.reason}); failing closed"
                 )
             if record.status == "denied":
                 return self._denied("operator denied the approval")
-            if record.status == "approved":  # consumed -> replay attempt
+            if record.status == "consumed":
+                # consume() atomically flips status to "consumed" and stamps
+                # consumed_at; the old "approved" replay branch below is
+                # dead for consumed records, so deny immediately instead of
+                # silently polling until the wait window elapses.
+                return self._denied("approval already consumed; replay denied")
+            if record.status == "approved":
+                # Unconsumed approval that was observed after the check
+                # above -- only reachable in a race between get() and the
+                # operator's consume(). Fail closed either way.
                 return self._denied("approval already consumed; replay denied")
             # pending: keep waiting until the bounded deadline.
             if time.monotonic() >= deadline:

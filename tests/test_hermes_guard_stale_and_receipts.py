@@ -129,4 +129,174 @@ def test_consume_failure_fails_closed(monkeypatch, tmp_path):
         timeout_seconds=0.5,
     )
     assert decision.verdict == "denied"
-    assert "store failure" in decision.reason or "ApprovalError" in decision.reason
+    # The exact reason depends on which fail-closed path the runtime
+    # takes: a store failure during get() reports "store failure",
+    # a failure during the re-evaluation that attempts consume() reports
+    # "guard evaluation failed closed". Both are correct fail-closed
+    # behavior; the assertion is that the verdict is denied.
+    assert (
+        "store failure" in decision.reason
+        or "ApprovalError" in decision.reason
+        or "failing closed" in decision.reason
+        or "guard evaluation failed" in decision.reason
+    )
+
+
+def test_brand_neutrality_no_talaria_in_user_facing_strings():
+    """The OSS package must not surface 'Talaria' in any *user-facing*
+    string. The legacy env-var name TALARIA_APPROVAL_WAIT_SECONDS is
+    intentionally retained as a compatibility shim and is allowed in
+    the *code* that implements the shim, but never in any message a
+    model or operator might see.
+    """
+    import custodian.hermes_guard.contract as contract_mod
+    import custodian.hermes_guard.plugin as plugin_mod
+    import custodian.hermes_guard.runtime as runtime_mod
+
+    for mod, name in [
+        (contract_mod, "contract"),
+        (plugin_mod, "plugin"),
+        (runtime_mod, "runtime"),
+    ]:
+        if not (hasattr(mod, "__file__") and mod.__file__):
+            continue
+        # Strip out docstring regions before checking for "talaria" -- any
+        # user-facing brand leakage must be a *code* occurrence, not a
+        # comment explaining the rename history.
+        text = open(mod.__file__).read()
+        # Walk the file and drop lines that are inside any triple-quoted
+        # block ("..." or '...'). Good enough for these small modules.
+        in_doc = False
+        quote_chars = ('"""', "'''")
+        cleaned: list[str] = []
+        for line in text.splitlines():
+            stripped = line.strip()
+            if in_doc:
+                cleaned.append("")
+                if any(q in stripped for q in quote_chars):
+                    in_doc = False
+                continue
+            if any(stripped.startswith(q) for q in quote_chars) and any(
+                q in stripped[len(q):] for q in quote_chars
+            ):
+                # Single-line docstring -- skip it entirely.
+                cleaned.append("")
+                continue
+            if any(stripped.startswith(q) for q in quote_chars):
+                in_doc = True
+                cleaned.append("")
+                continue
+            cleaned.append(line)
+        for line in cleaned:
+            if "TALARIA_APPROVAL_WAIT_SECONDS" in line:
+                # Only the os.environ.get compat shim may reference it.
+                assert "os.environ.get" in line, (
+                    f"{name}.py mentions TALARIA_APPROVAL_WAIT_SECONDS "
+                    f"outside an os.environ.get shim: {line!r}"
+                )
+                continue
+            if "talaria" in line.lower():
+                # Any remaining mention is brand leakage.
+                raise AssertionError(
+                    f"{name}.py: code line mentions 'talaria': {line!r}"
+                )
+
+    # The brand-neutral env var is the primary, not the legacy one.
+    import os
+    os.environ.pop("CUSTODIAN_APPROVAL_WAIT_SECONDS", None)
+    os.environ.pop("TALARIA_APPROVAL_WAIT_SECONDS", None)
+    os.environ["CUSTODIAN_APPROVAL_WAIT_SECONDS"] = "77"
+    try:
+        assert contract_mod.approval_wait_seconds() == 77
+    finally:
+        os.environ.pop("CUSTODIAN_APPROVAL_WAIT_SECONDS", None)
+    # Legacy env var still honored as a shim.
+    os.environ["TALARIA_APPROVAL_WAIT_SECONDS"] = "42"
+    try:
+        assert contract_mod.approval_wait_seconds() == 42
+    finally:
+        os.environ.pop("TALARIA_APPROVAL_WAIT_SECONDS", None)
+
+
+def test_consumed_approval_replay_fast_denies(monkeypatch, tmp_path):
+    """A consumed approval must be denied immediately, not hung for the
+    full wait window. consume() atomically sets status='consumed' and
+    stamps consumed_at, so a replayed id never matches the 'approved'
+    branch; without the explicit consumed-status check it would silently
+    poll until the timeout.
+    """
+    from custodian.hermes_guard.runtime import HermesGuardRuntime
+    from custodian.codex_guard.approvals import ApprovalStore
+
+    runtime = HermesGuardRuntime()
+    store = ApprovalStore(runtime._state_dir)
+
+    digest = "c" * 64
+    rec = store.request(
+        digest=digest, requester="hermes:test", ttl_seconds=60, harness="hermes"
+    )
+    store.approve(rec.approval_id, approved_by="operator")
+    # Consume via the same path the engine does, so status flips to
+    # 'consumed' and consumed_at is set.
+    from custodian.codex_guard.approvals import action_digest as _ad
+    store.consume(rec.approval_id, digest=digest, requester="hermes:test")
+
+    # Now a replay with a very short timeout must return quickly with
+    # the fast-deny reason, not the timeout reason.
+    import time as _time
+    t0 = _time.monotonic()
+    decision = runtime.wait_for_approval(
+        tool_name="write_file",
+        args={"path": str(tmp_path / "x.md")},
+        approval_id=rec.approval_id,
+        requester="hermes:test",
+        timeout_seconds=30.0,
+    )
+    elapsed = _time.monotonic() - t0
+    assert decision.verdict == "denied"
+    assert "replay denied" in decision.reason or "already consumed" in decision.reason
+    assert elapsed < 2.0, (
+        f"replay should fast-deny, but it took {elapsed:.2f}s (polled for 30s)"
+    )
+
+
+def test_changed_action_after_approval_fails_closed(monkeypatch, tmp_path):
+    """An approval minted for action A must not authorize action B.
+
+    The runtime must re-run the shared engine with the *current* invocation
+    (tool, args, workspace, requester, session) so the action digest is
+    recomputed and matched against the record. A model that hands back a
+    previously-approved id but changes the args/workspace/requester must
+    be denied, not silently authorized.
+    """
+    from custodian.hermes_guard.runtime import HermesGuardRuntime
+    from custodian.codex_guard.approvals import ApprovalStore
+
+    runtime = HermesGuardRuntime()
+    store = ApprovalStore(runtime._state_dir)
+
+    digest = "b" * 64
+    rec = store.request(
+        digest=digest, requester="hermes:test", ttl_seconds=60, harness="hermes"
+    )
+    store.approve(rec.approval_id, approved_by="operator")
+
+    # Different action: changed file, different content, different requester.
+    decision = runtime.wait_for_approval(
+        tool_name="write_file",
+        args={"path": "/etc/passwd", "content": "pwned"},
+        approval_id=rec.approval_id,
+        requester="hermes:different-session",  # different from "hermes:test"
+        workspace=str(tmp_path),
+        session_id="different-session",
+        timeout_seconds=0.5,
+    )
+    assert decision.verdict == "denied", (
+        f"changed action must fail closed, got: {decision}"
+    )
+    # And the record must NOT be consumed; replay should be possible.
+    post = store.get(rec.approval_id)
+    assert post.consumed_at is None, (
+        "the original record must remain unconsumed so the operator can "
+        "still revoke it / see that nothing authorized it"
+    )
