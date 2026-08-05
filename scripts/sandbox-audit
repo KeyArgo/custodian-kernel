@@ -1,0 +1,222 @@
+#!/usr/bin/env python3
+"""sandbox-audit -- containment leak watchdog for every confined boundary.
+
+Checks the same security property three independent ways, so a leak like
+the old hermes-bwrap whole-state-dir bind (which exposed the receipt chain
+and the receipt HMAC keys read-only inside the sandbox) is caught at build
+time, at runtime, and empirically:
+
+  sandbox-audit [check]   static: audit the mount specs the real launchers
+                          (hermes-bwrap + the paladin egress sandbox) would
+                          build with the CURRENT environment. No sandbox run.
+  sandbox-audit live      runtime: parse /proc/<pid>/mountinfo of every live
+                          bwrap process on this host and flag any bind whose
+                          source is a sensitive path. Watches what is ACTUALLY
+                          mounted, even for sandboxes built by other code.
+  sandbox-audit probe     empirical: plant fake secrets, run a real probe
+                          through hermes-bwrap, verify none are visible.
+
+Exit code: 0 = clean, 1 = critical/high findings (or probe failure),
+2 = usage error.  Suitable for a pre-flight gate or a cron watchdog.
+"""
+from __future__ import annotations
+
+import importlib.machinery
+import importlib.util
+import os
+import shutil
+import sys
+import tempfile
+from pathlib import Path
+
+_HERE = Path(__file__).resolve().parent
+_REPO = _HERE.parent
+# Allow running from a repo checkout without installation.
+if str(_REPO) not in sys.path:
+    sys.path.insert(0, str(_REPO))
+
+
+def _load_launcher():
+    loader = importlib.machinery.SourceFileLoader(
+        "hermes_bwrap_audit_mod", str(_HERE / "hermes-bwrap"))
+    spec = importlib.util.spec_from_loader("hermes_bwrap_audit_mod", loader)
+    mod = importlib.util.module_from_spec(spec)
+    loader.exec_module(mod)
+    return mod
+
+
+def audit_hermes_bwrap(workspace: Path) -> tuple[list, list]:
+    """Audit the real hermes-bwrap mount builder; return (findings, warnings).
+
+    The launcher refuses to build mounts when HERMES_HOME points at a profile
+    dir (agent-session env quirk); on refusal we retry with the launcher's own
+    documented default so the operator still gets the policy-bind audit.
+    """
+    from custodian.containment_audit import Finding, audit_mount_spec
+
+    mod = _load_launcher()
+    warnings: list[str] = []
+    policy_dir = Path(os.environ.get(
+        "CUSTODIAN_STATE_DIR", os.path.expanduser("~/.custodian")))
+    hermes_home = Path(os.environ.get(
+        "HERMES_HOME", str(Path.home() / ".hermes")))
+    try:
+        mounts = mod._build_mounts(workspace, hermes_home, policy_dir)
+    except SystemExit as e:
+        warnings.append(
+            f"launcher refused with HERMES_HOME={hermes_home} ({e}); "
+            f"retrying with default HERMES_HOME={Path.home() / '.hermes'}")
+        hermes_home = Path.home() / ".hermes"
+        try:
+            mounts = mod._build_mounts(workspace, hermes_home, policy_dir)
+        except SystemExit as e2:
+            return ([Finding("high", "<launcher>", "<launcher>", "-", False,
+                             f"launcher cannot build mounts: {e2}")], warnings)
+    full = [shutil.which("bwrap") or "bwrap", "--unshare-user", *mounts]
+    return audit_mount_spec(full), warnings
+
+
+def audit_paladin_sandbox() -> list:
+    from custodian.containment_audit import Finding, audit_mount_spec
+    from paladin.sandbox import build_bwrap_argv
+
+    sock_dir = Path(tempfile.mkdtemp(prefix="sandbox-audit-"))
+    try:
+        vault_home = Path.home() / ".paladin"
+        argv = build_bwrap_argv(sock_dir, ["true"], vault_home)
+        return audit_mount_spec(argv)
+    finally:
+        import shutil
+        shutil.rmtree(sock_dir, ignore_errors=True)
+
+
+def cmd_check(args) -> int:
+    workspace = (Path(args.workspace).resolve()
+                 if args.workspace else Path.cwd())
+    if not workspace.is_dir():
+        print(f"sandbox-audit: workspace not found: {workspace}", file=sys.stderr)
+        return 2
+    findings, warnings = audit_hermes_bwrap(workspace)
+    findings += audit_paladin_sandbox()
+    for w in warnings:
+        print(f"sandbox-audit: warning: {w}", file=sys.stderr)
+    # De-duplicate identical findings.
+    seen, unique = set(), []
+    for f in findings:
+        key = (f.severity, f.source, f.exposed)
+        if key in seen:
+            continue
+        seen.add(key)
+        unique.append(f)
+    if not unique:
+        print("sandbox-audit check: CLEAN "
+              "(hermes-bwrap + paladin sandbox expose no sensitive paths)")
+        return 0
+    for f in unique:
+        print(f"sandbox-audit: {f}")
+    bad = [f for f in unique if f.severity in ("critical", "high")]
+    return 1 if bad else 0
+
+
+def cmd_live() -> int:
+    from custodian.containment_audit import scan_live_sandboxes
+
+    out = scan_live_sandboxes()
+    if not out:
+        print("sandbox-audit live: CLEAN (no live bwrap sandbox leaks sensitive paths)")
+        return 0
+    for pid in sorted(out):
+        # Dedupe per pid: the same exposed path may be reached via multiple
+        # ancestor binds (e.g. "/" and "/home"); report the worst once.
+        seen, unique = set(), []
+        for f in sorted(out[pid], key=lambda f: -_RANK.get(f.severity, 0)):
+            key = (f.severity, f.exposed)
+            if key in seen:
+                continue
+            seen.add(key)
+            unique.append(f)
+        for f in unique:
+            print(f"sandbox-audit: pid {pid}: {f}")
+    return 1
+
+
+_RANK = {"critical": 3, "high": 2, "info": 1}
+
+
+def cmd_probe(args) -> int:
+    from custodian.containment_audit import probe_containment
+
+    if shutil.which("bwrap") is None:
+        print("sandbox-audit probe: needs bwrap on PATH", file=sys.stderr)
+        return 2
+    with tempfile.TemporaryDirectory(prefix="sandbox-audit-probe-") as td:
+        root = Path(td)
+        ws = root / "ws"
+        ws.mkdir()
+        # Minimal Hermes home + Custodian state so hermes-bwrap builds mounts.
+        hermes_home = root / "hermes-home"
+        (hermes_home / "profiles" / "dev").mkdir(parents=True)
+        (hermes_home / "plugins").mkdir()
+        (hermes_home / "skills").mkdir()
+        (hermes_home / "logs").mkdir()
+        (hermes_home / "memories").mkdir()
+        (hermes_home / "hermes-agent").mkdir()
+        (hermes_home / "config.yaml").write_text("")
+        state = root / "state"
+        state.mkdir()
+        for name in ("approval-policy.json", "gate-policy.json",
+                     "filesystem-policy.json", "control-settings.json"):
+            (state / name).write_text("{}")
+        launcher = [
+            sys.executable, str(_HERE / "hermes-bwrap"),
+            "--workspace", str(ws),
+            "--policy-dir", str(state),
+        ]
+        extra_env = {
+            "HERMES_HOME": str(hermes_home),
+            "HERMES_AGENT_ROOT": str(hermes_home / "hermes-agent"),
+            "CUSTODIAN_STATE_DIR": str(state),
+        }
+        rc, out = probe_containment(launcher, ws, extra_env=extra_env)
+        leaks = [ln for ln in out.splitlines() if ln.startswith("LEAK:")]
+        if out.strip():
+            print(out.strip())
+        if leaks:
+            for ln in leaks:
+                print(f"sandbox-audit: {ln}", file=sys.stderr)
+            return 1
+        print("sandbox-audit probe: CLEAN (all markers invisible)")
+        return 0 if rc == 0 else 1
+
+
+def main(argv=None) -> int:
+    import argparse
+
+    parser = argparse.ArgumentParser(
+        prog="sandbox-audit",
+        description="Containment leak watchdog: static, live, and empirical "
+                    "checks that no sandbox exposes sensitive host paths.",
+    )
+    sub = parser.add_subparsers(dest="cmd")
+    p_check = sub.add_parser("check", help="static audit of real launcher mount specs")
+    p_check.add_argument("--workspace", help="workspace dir (default: cwd)")
+    sub.add_parser("live", help="scan live bwrap processes for leaks")
+    p_probe = sub.add_parser(
+        "probe", help="run a real containment probe through hermes-bwrap")
+    p_probe.add_argument("--workspace", help="workspace dir (default: temp)")
+    args = parser.parse_args(argv)
+
+    if args.cmd == "check":
+        return cmd_check(args)
+    if args.cmd == "live":
+        return cmd_live()
+    if args.cmd == "probe":
+        return cmd_probe(args)
+    # Default: static + live.
+    rc = cmd_check(args)
+    rc_live = cmd_live()
+    return 1 if (rc or rc_live) else 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
