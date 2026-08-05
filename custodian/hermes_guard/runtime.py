@@ -211,6 +211,8 @@ class HermesGuardRuntime:
                     )
                 except ApprovalError as exc:
                     return self._denied(f"approval could not be consumed ({exc})")
+                except Exception as exc:  # pragma: no cover - e.g. read-only store
+                    return self._denied(f"approval store failure ({type(exc).__name__})")
                 self.notifier(f"approved {approval_id}")
                 return HermesDecision(
                     verdict="approved", allowed=True,

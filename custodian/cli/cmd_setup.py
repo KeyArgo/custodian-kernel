@@ -16,12 +16,68 @@ project.
 """
 from __future__ import annotations
 
+import json
+import os
 import shutil
 import subprocess
 import sys
+import time
 from pathlib import Path
 
 from custodian.cli.cmd_doctor import _hermes_home, _hermes_interpreter, _venv_prefix
+
+_INSTALL_RECEIPT_NAME = "install-receipt.json"
+_INSTALL_RECEIPT_SCHEMA = "custodian.install-receipt.v1"
+
+
+def _state_dir() -> Path:
+    """Resolve the operator state directory for receipts and receipts.
+
+    Order of precedence: ``CUSTODIAN_STATE_DIR`` (explicit), then the
+    default ``~/.custodian`` -- matching the codex_guard/approvals and
+    codex_guard/receipts layout so a single directory holds every
+    kernel-managed artifact.
+    """
+    configured = os.environ.get("CUSTODIAN_STATE_DIR")
+    return Path(configured).expanduser() if configured else Path.home() / ".custodian"
+
+
+def _kernel_version() -> str:
+    """Return the installed custodian-kernel version (or 'unknown' for
+    source checkouts where importlib.metadata has no entry)."""
+    try:
+        return __import__("importlib").metadata.version("custodian-kernel")
+    except Exception:
+        return "unknown"
+
+
+def _receipt_path(state_dir: Path) -> Path:
+    return state_dir / _INSTALL_RECEIPT_NAME
+
+
+def _write_install_receipt(state_dir: Path, components: list[str]) -> Path:
+    """Write a tamper-evident install receipt to ``state_dir``.
+
+    The receipt is plain JSON containing the kernel version, the
+    components installed, the interpreter path, and a wall-clock timestamp.
+    On the next ``custodian setup`` (or any future ``doctor`` call) the
+    kernel version is compared with the currently-running one and a
+    mismatch is reported as a clear upgrade reminder, instead of letting
+    the user wonder why new features don't work after ``pip install``.
+    """
+    state_dir.mkdir(parents=True, exist_ok=True)
+    payload = {
+        "schema": _INSTALL_RECEIPT_SCHEMA,
+        "kernel_version": _kernel_version(),
+        "components": sorted(components),
+        "interpreter": sys.executable,
+        "installed_at": time.time(),
+    }
+    target = _receipt_path(state_dir)
+    tmp = target.with_suffix(".json.tmp")
+    tmp.write_text(json.dumps(payload, indent=2, sort_keys=True))
+    tmp.replace(target)
+    return target
 
 # pip_spec is None for components already bundled in custodian-kernel's own
 # base install -- nothing to pip install, `setup` just confirms it's there.
@@ -298,6 +354,17 @@ def run(args) -> None:
             [sys.executable, "-m", "custodian.cli.main", "doctor", "--profile", "hermes"],
             "post-install health check",
         )
+
+    # Write a tamper-evident install receipt so future ``custodian setup``
+    # and ``custodian doctor`` calls can detect kernel drift (operator
+    # upgraded custodian-kernel without rerunning setup) and the doctor
+    # can warn the operator clearly instead of letting new features fail
+    # silently.
+    try:
+        receipt = _write_install_receipt(_state_dir(), components)
+        print(f"  install receipt: {receipt}")
+    except OSError as exc:
+        print(f"warning: could not write install receipt ({exc})")
 
     print("\nDone. Next steps:")
     print("  custodian init                   # if you haven't already — scaffolds policy.yaml + state")

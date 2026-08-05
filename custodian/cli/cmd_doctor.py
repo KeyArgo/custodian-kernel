@@ -293,5 +293,31 @@ def run(args) -> int:
         print("Run `custodian setup --profile hermes` to repair a Hermes installation.")
         return 1
 
+    # Install-receipt kernel-version check.  An operator who upgraded
+    # ``custodian-kernel`` via ``pip install -U`` without rerunning
+    # ``custodian setup`` will have an old receipt recording the previous
+    # version.  Without this check, new features and the version-pinned
+    # sub-packages can silently disagree about what the kernel *is*; the
+    # receipt gives a one-line, hard-to-ignore nudge.
+    try:
+        from custodian.cli import cmd_setup as _cmd_setup
+        receipt_path = _cmd_setup._receipt_path(_cmd_setup._state_dir())
+        if receipt_path.exists():
+            data = json.loads(receipt_path.read_text())
+            installed = data.get("kernel_version", "unknown")
+            running = _cmd_setup._kernel_version()
+            if (
+                installed != "unknown"
+                and running != "unknown"
+                and installed != running
+            ):
+                print(
+                    f"⚠️  Kernel version drift: install receipt is {installed}, "
+                    f"running {running}. Rerun `custodian setup --profile hermes` "
+                    f"to refresh the deployed plugin to match the upgraded kernel."
+                )
+    except Exception:
+        pass  # receipt is best-effort; absence of one is not a failure.
+
     print("\nReady. Custodian's installed components passed their health checks.")
     return 0
