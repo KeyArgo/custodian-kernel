@@ -17,12 +17,17 @@ Filesystem containment:
 
     Read-only (agent may read, must not modify):
       - ~/.hermes/config.yaml, profiles/, plugins/, skills/
-      - <policy-dir>         -- Custodian policy + settings
+      - <policy-dir> policy files  -- Custodian policy + settings (only the
+        policy JSONs; the approval/receipt/ledger stores and key material in
+        the same directory are NOT mounted -- the agent must never see the
+        evidence chain or the receipt HMAC keys)
 
     Excluded (not visible inside the sandbox):
       - ~/.ssh, ~/.aws, ~/.config/gcloud, ~/.kube   -- credentials
       - PALADIN_VAULT_PATH, PALADIN_KEYFILE          -- credential vault
       - Custodian approvals/receipts stores          -- tamper target
+      - Custodian *.key files (receipt/approval HMAC keys) -- forge target
+      - ledger.db, bus_events.log, tamper/           -- evidence + telemetry
       - Docker socket, host sockets, guest agent
 
 Network: denied by default (--unshare-net). The operator may opt-in with
@@ -88,6 +93,19 @@ def _ensure(path: Path, label: str) -> Path:
     return path
 
 
+# Custodian policy files (filesystem-policy, approval-policy, control-settings,
+# gate-policy).  Bound individually so the rest of the state directory --
+# approval stores, receipt chain, ledger, and *.key HMAC material -- never
+# becomes visible inside the sandbox.  The agent must not be able to read the
+# evidence chain or forge receipts.
+POLICY_FILES = (
+    "approval-policy.json",
+    "control-settings.json",
+    "filesystem-policy.json",
+    "gate-policy.json",
+)
+
+
 def _build_mounts(
     workspace: Path,
     hermes_home: Path,
@@ -105,8 +123,10 @@ def _build_mounts(
     # bwrap provides /usr, /bin, /lib, /lib64, /proc automatically.
 
     # --- Writable paths ---
+    # NOTE: the workspace bind is appended LAST, after every --tmpfs mount,
+    # so a workspace living under /tmp (or any tmpfs-covered path) is not
+    # shadowed by the scratch-space tmpfs.
     workspace = _ensure(workspace.resolve(), "workspace")
-    mounts.extend(["--bind", str(workspace), str(workspace)])
 
     # Scratch space.
     mounts.extend(["--tmpfs", "/tmp"])
@@ -145,9 +165,18 @@ def _build_mounts(
     if config_yaml.exists():
         mounts.extend(["--ro-bind", str(config_yaml), str(config_yaml)])
 
-    # Custodian policy (filesystem-policy, approval-policy, control-settings).
+    # Custodian policy: bind ONLY the policy files read-only.  The rest of
+    # the state dir (approvals/, receipts, ledger.db, *.key, tamper/) is
+    # deliberately NOT mounted -- the sandboxed agent must never see it.
     policy_dir = _ensure(policy_dir, "policy directory")
-    mounts.extend(["--ro-bind", str(policy_dir), str(policy_dir)])
+    for name in POLICY_FILES:
+        policy_file = policy_dir / name
+        if policy_file.exists():
+            mounts.extend(["--ro-bind", str(policy_file), str(policy_file)])
+
+    # Workspace RW bind goes last: it must not be shadowed by the /tmp
+    # scratch tmpfs when the workspace itself lives under /tmp.
+    mounts.extend(["--bind", str(workspace), str(workspace)])
 
     return mounts
 
@@ -223,6 +252,7 @@ def main(argv: list[str] | None = None) -> int:
 
     cmd: list[str] = [
         bwrap,
+        "--unshare-user",
         "--unshare-ipc",
         "--unshare-pid",
         "--unshare-uts",
