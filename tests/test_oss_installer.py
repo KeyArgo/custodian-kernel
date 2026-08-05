@@ -16,6 +16,66 @@ def _module():
     return module
 
 
+def test_uninstall_refuses_unowned_runtime_root(tmp_path: Path):
+    """Uninstall must never rename/remove a dir without the active-slot marker."""
+    m = _module()
+    root = tmp_path / "not-managed"
+    root.mkdir()
+    (root / "user-file.txt").write_text("keep me", encoding="utf-8")
+    try:
+        m.uninstall(root, tmp_path / "bin")
+        raise AssertionError("uninstall should have refused")
+    except RuntimeError as e:
+        assert "not a Custodian-managed runtime" in str(e)
+    assert root.exists(), "unowned runtime root must not be touched"
+    assert (root / "user-file.txt").read_text(encoding="utf-8") == "keep me"
+
+
+def test_uninstall_uses_unique_quarantine_and_keeps_prior(tmp_path: Path):
+    """Uninstall quarantines to a unique name and never deletes a prior one."""
+    m = _module()
+    root = tmp_path / "runtime"
+    root.mkdir()
+    (root / "active-slot").write_text("runtime-a\n", encoding="utf-8")
+    (root / "runtime-a").mkdir()
+    prior = root.with_name("runtime.removed-12345")
+    prior.mkdir()
+    (prior / "previous-runtime-file").write_text("keep", encoding="utf-8")
+    m.uninstall(root, tmp_path / "bin")
+    assert not root.exists()
+    quarantines = [p for p in tmp_path.iterdir() if p.name.startswith("runtime.removed")]
+    assert len(quarantines) == 2, "prior quarantine must survive alongside the new one"
+    assert (prior / "previous-runtime-file").read_text(encoding="utf-8") == "keep"
+
+
+def test_windows_default_layout_is_allowed_by_validation():
+    """Windows' default bin dir lives inside the runtime root; the nesting
+    guard must exempt exactly that layout (source-level, since WindowsPath
+    cannot be instantiated on this host)."""
+    source = INSTALLER.read_text(encoding="utf-8")
+    assert 'os.name == "nt" and bin_dir == runtime_root / "bin"' in source
+    # POSIX default bin dir is NOT inside the runtime root, so the rejection
+    # still applies to every other nesting (covered behaviorally by
+    # test_managed_paths_reject_home_root_and_nested_command_dir).
+
+
+def test_python_version_preflight_rejected(monkeypatch, capsys):
+    """Installer must refuse to run on Python < 3.11 with a clean message."""
+    m = _module()
+    monkeypatch.setattr("sys.version_info", (3, 10, 0))
+    monkeypatch.setattr("sys.argv", ["install-custodian.py"])
+    rc = m.main()
+    assert rc == 1
+    assert "Python 3.11" in capsys.readouterr().err
+
+
+def test_empty_xdg_data_home_falls_back_to_home(monkeypatch):
+    """An empty (set-but-blank) XDG_DATA_HOME must fall back, not resolve to cwd."""
+    m = _module()
+    monkeypatch.setenv("XDG_DATA_HOME", "")
+    assert m.default_runtime_root() == Path.home() / ".local/share" / "custodian"
+
+
 def test_installer_uses_managed_venv_not_system_pip():
     source = INSTALLER.read_text(encoding="utf-8")
     assert "venv.EnvBuilder" in source
@@ -121,6 +181,7 @@ def test_managed_uninstall_removes_only_owned_runtime_and_restores_launcher(
     target = runtime / "bin/custodian"
     target.parent.mkdir(parents=True)
     target.write_text("installed")
+    (root / "active-slot").write_text("runtime\n", encoding="utf-8")
     commands = tmp_path / "bin"
     commands.mkdir()
     launcher = commands / "custodian"
@@ -133,7 +194,7 @@ def test_managed_uninstall_removes_only_owned_runtime_and_restores_launcher(
     module.uninstall(root, commands)
 
     assert not root.exists()
-    assert root.with_name("managed.removed").exists()
+    assert root.with_name(f"managed.removed-{os.getpid()}").exists()
     assert launcher.read_text() == "old launcher"
     assert unrelated.read_text() == "keep"
 
@@ -143,6 +204,7 @@ def test_managed_uninstall_does_not_remove_unowned_launcher(tmp_path, monkeypatc
     monkeypatch.setattr(module.os, "name", "posix")
     root = tmp_path / "managed"
     (root / "runtime").mkdir(parents=True)
+    (root / "active-slot").write_text("runtime\n", encoding="utf-8")
     commands = tmp_path / "bin"
     commands.mkdir()
     external = tmp_path / "someone-elses-custodian"

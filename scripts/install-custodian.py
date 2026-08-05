@@ -22,8 +22,14 @@ COMMANDS = ("custodian", "custodian-verify", "paladin", "paladin-import")
 
 def default_runtime_root() -> Path:
     if os.name == "nt":
-        return Path(os.environ.get("LOCALAPPDATA", Path.home() / "AppData/Local")) / "Custodian"
-    return Path(os.environ.get("XDG_DATA_HOME", Path.home() / ".local/share")) / "custodian"
+        base = os.environ.get("LOCALAPPDATA")
+        if not base:  # XDG-style: empty value means unset
+            base = Path.home() / "AppData/Local"
+        return Path(base) / "Custodian"
+    base = os.environ.get("XDG_DATA_HOME")
+    if not base:
+        base = Path.home() / ".local/share"
+    return Path(base) / "custodian"
 
 
 def default_bin_dir() -> Path:
@@ -46,12 +52,20 @@ def _validate_managed_paths(runtime_root: Path, bin_dir: Path) -> tuple[Path, Pa
     """Reject broad or aliased paths before any recursive operation."""
     if runtime_root.expanduser().is_symlink():
         raise ValueError("managed runtime root must not be a symbolic link")
+    if bin_dir.expanduser().is_symlink():
+        raise ValueError("command directory must not be a symbolic link")
     runtime_root = runtime_root.expanduser().resolve()
     bin_dir = bin_dir.expanduser().resolve()
     forbidden = {Path("/").resolve(), Path.home().resolve()}
     if runtime_root in forbidden or bin_dir in forbidden:
         raise ValueError("runtime and command directories must not be / or the home directory")
-    if runtime_root == bin_dir or runtime_root in bin_dir.parents:
+    # On Windows the default bin dir lives inside the runtime root
+    # (%LOCALAPPDATA%/Custodian/bin); that layout is intentional. Any other
+    # nesting is rejected so uninstall can never swallow a user directory.
+    if runtime_root == bin_dir or (
+        runtime_root in bin_dir.parents
+        and not (os.name == "nt" and bin_dir == runtime_root / "bin")
+    ):
         raise ValueError("command directory must not be inside the managed runtime")
     return runtime_root, bin_dir
 
@@ -75,7 +89,18 @@ def _expose(
             destination.unlink()
         else:
             backup = destination.with_name(destination.name + ".previous")
-            backup.unlink(missing_ok=True)
+            if backup.exists() or backup.is_symlink():
+                # Never destroy an existing backup (it may be the user's
+                # original binary preserved from a previous install). Keep
+                # the first one; move later non-owned launchers aside under
+                # numbered names instead.
+                i = 2
+                while True:
+                    alt = destination.with_name(f"{destination.name}.previous-{i}")
+                    if not (alt.exists() or alt.is_symlink()):
+                        backup = alt
+                        break
+                    i += 1
             destination.replace(backup)
     if os.name == "nt":
         destination.write_text(f'@echo off\r\n"{target}" %*\r\n', encoding="utf-8")
@@ -93,6 +118,10 @@ def install(spec: str, runtime_root: Path, bin_dir: Path) -> Path:
     slot_name = "runtime-b" if active_name == "runtime-a" else "runtime-a"
     candidate = runtime_root / slot_name
     if candidate.exists():
+        if not (candidate / ("Scripts/python.exe" if os.name == "nt" else "bin/python")).exists():
+            raise RuntimeError(
+                f"stale slot {candidate} is not a venv; refusing to remove it"
+            )
         shutil.rmtree(candidate)
     # A venv's generated scripts contain absolute interpreter paths. Build in
     # the final slot and never rename it; renaming a staged venv makes every
@@ -106,11 +135,31 @@ def install(spec: str, runtime_root: Path, bin_dir: Path) -> Path:
         [str(_runtime_python(candidate)), "-m", "custodian.cli.main", "doctor"],
         check=True, timeout=300,
     )
-    for command in COMMANDS:
-        _expose(
-            command, _runtime_command(candidate, command), bin_dir,
-            runtime_root=runtime_root,
-        )
+    try:
+        for command in COMMANDS:
+            _expose(
+                command, _runtime_command(candidate, command), bin_dir,
+                runtime_root=runtime_root,
+            )
+    except Exception:
+        # Self-heal: a partial launcher switch must never leave commands
+        # pointing at an uncommitted slot. Re-point anything that moved at
+        # the previous active slot, then let the failure propagate.
+        old = (runtime_root / active_name) if active_name else None
+        if old is not None and old.exists():
+            for command in COMMANDS:
+                dest = bin_dir / (f"{command}.cmd" if os.name == "nt" else command)
+                try:
+                    if (dest.exists() or dest.is_symlink()) and dest.resolve(
+                        strict=False
+                    ).is_relative_to(candidate):
+                        _expose(
+                            command, _runtime_command(old, command), bin_dir,
+                            runtime_root=runtime_root,
+                        )
+                except OSError:
+                    pass
+        raise
     marker = runtime_root / "active-slot.installing"
     marker.write_text(slot_name + "\n", encoding="utf-8")
     marker.replace(active_file)
@@ -171,10 +220,24 @@ def uninstall(runtime_root: Path, bin_dir: Path) -> None:
             if backup.exists() or backup.is_symlink():
                 backup.replace(destination)
     if runtime_root.exists():
-        removed = runtime_root.with_name(runtime_root.name + ".removed")
-        if removed.exists():
-            shutil.rmtree(removed)
+        # Ownership gate: never rename or remove a directory that is not a
+        # Custodian-managed runtime. The active-slot marker is the proof.
+        if not (runtime_root / "active-slot").is_file():
+            raise RuntimeError(
+                f"{runtime_root} is not a Custodian-managed runtime "
+                "(no active-slot marker); refusing to remove it"
+            )
+        # Unique quarantine name; never delete a pre-existing quarantine
+        # (it may be the user's only copy of the previous runtime).
+        removed = runtime_root.with_name(f"{runtime_root.name}.removed-{int(os.getpid())}")
+        i = 1
+        while removed.exists() or removed.is_symlink():
+            removed = runtime_root.with_name(
+                f"{runtime_root.name}.removed-{int(os.getpid())}-{i}"
+            )
+            i += 1
         runtime_root.replace(removed)
+        print(f"Managed Custodian runtime moved to: {removed}")
     print("Managed Custodian runtime removed.")
     print("User data was preserved.")
 
@@ -195,16 +258,26 @@ def main() -> int:
         help="Remove the managed runtime and its launchers; preserve all user data",
     )
     args = parser.parse_args()
+    if sys.version_info < (3, 11):
+        print(
+            "custodian installer: Python 3.11 or newer is required",
+            file=sys.stderr,
+        )
+        return 1
     if args.dry_run:
         print(f"managed runtime: {args.runtime_root}")
         print(f"commands: {args.bin_dir}")
         print("action: uninstall" if args.uninstall else f"package: {args.package}")
         print("user data: preserved")
         return 0
-    if args.uninstall:
-        uninstall(args.runtime_root, args.bin_dir)
-        return 0
-    runtime = install(args.package, args.runtime_root, args.bin_dir)
+    try:
+        if args.uninstall:
+            uninstall(args.runtime_root, args.bin_dir)
+            return 0
+        runtime = install(args.package, args.runtime_root, args.bin_dir)
+    except (OSError, ValueError, RuntimeError, subprocess.CalledProcessError) as e:
+        print(f"custodian installer: {e}", file=sys.stderr)
+        return 1
     print(f"Custodian installed: {runtime}")
     print(f"Commands available in: {args.bin_dir}")
     print("User data was preserved.")
