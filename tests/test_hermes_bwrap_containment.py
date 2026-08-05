@@ -133,6 +133,35 @@ def test_sandbox_contains_all_secrets_and_state(tmp_path: Path) -> None:
         assert ok in out, f"{ok} missing:\n{out}"
 
 
+def test_real_hermes_runs_inside_sandbox(tmp_path: Path) -> None:
+    """The actual hermes binary must exec inside the sandbox.
+
+    Guards the integration fix: the resolved hermes binary (often a
+    ~/.local/bin wrapper outside hermes_root) is bound into the sandbox, so
+    `hermes version` runs with network denied.  Skipped where hermes is not
+    installed.
+    """
+    if shutil.which("hermes") is None:
+        pytest.skip("hermes not installed")
+    if not Path.home().joinpath(".hermes", "hermes-agent").is_dir():
+        pytest.skip("hermes-agent root not found")
+
+    ws = tmp_path / "ws"
+    ws.mkdir()
+    env = dict(os.environ)
+    # Simulate an operator shell: the launcher uses its own defaults for
+    # HERMES_HOME (~/.hermes) and the state dir (~/.custodian).
+    for var in ("HERMES_HOME", "HERMES_AGENT_ROOT", "CUSTODIAN_STATE_DIR"):
+        env.pop(var, None)
+    r = subprocess.run(
+        [sys.executable, str(_SCRIPT), "--workspace", str(ws),
+         "--profile", "dev", "--", "version"],
+        capture_output=True, text=True, timeout=120, env=env,
+    )
+    assert r.returncode == 0, f"hermes failed inside sandbox:\n{r.stderr}"
+    assert "Python:" in r.stdout, f"unexpected output:\n{r.stdout}"
+
+
 def test_policy_bind_is_per_file_not_whole_dir(tmp_path: Path) -> None:
     """Without bwrap: the mount builder must never bind the whole state dir."""
     import importlib.machinery

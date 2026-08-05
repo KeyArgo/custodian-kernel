@@ -271,6 +271,13 @@ def main(argv: list[str] | None = None) -> int:
         *mounts,
     ]
 
+    # The resolved hermes binary may be a wrapper living OUTSIDE hermes_root
+    # (e.g. ~/.local/bin/hermes -> venv/bin/hermes).  Bind the resolved file
+    # so exec succeeds inside the sandbox.
+    hermes_real = Path(hermes_bin).resolve()
+    if not str(hermes_real).startswith(str(hermes_root_path) + os.sep):
+        cmd.extend(["--ro-bind", str(hermes_real), str(hermes_real)])
+
     if not args.allow_network:
         cmd.append("--unshare-net")
 
@@ -305,10 +312,50 @@ def main(argv: list[str] | None = None) -> int:
     # Enforce the sandboxed workspace as the session cwd.
     env["HERMES_BWRAP_WORKSPACE"] = str(workspace)
 
+    # Pre-flight containment gate: refuse to launch if the mount set exposes
+    # a sensitive host path (credentials, vault, receipts, HMAC keys, ...).
+    # The audit is the same engine as `sandbox-audit check`; a leak here
+    # means the launch itself is unsafe.
+    leaks = _audit_mounts(cmd)
+    if leaks:
+        print(f"{_LAUNCHER_NAME}: REFUSING launch: containment audit found "
+              f"{len(leaks)} leak(s):", file=sys.stderr)
+        for leak in leaks:
+            print(f"  {leak}", file=sys.stderr)
+        print("Run `sandbox-audit check` for the full report.", file=sys.stderr)
+        return 3
+
     try:
         return subprocess.call(cmd, cwd=str(workspace), env=env)
     except KeyboardInterrupt:
         return 130
+
+
+def _audit_mounts(cmd: list[str]) -> list[str]:
+    """Return critical/high containment findings for a bwrap argv ([] = clean).
+
+    Uses ``custodian.containment_audit`` when importable (installed package or
+    repo checkout); fail closed with a refusal string when it is not.
+
+    The repo root is prepended to sys.path BEFORE the first import: the
+    editable-install finder in this venv can map ``custodian`` to a DIFFERENT
+    worktree (stale MAPPING), and a first failed import leaves that package
+    partially loaded in sys.modules where a later path fix cannot override it.
+    """
+    sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+    try:
+        from custodian.containment_audit import audit_mount_spec
+    except ImportError:
+        # Also drop any partially-loaded package from another worktree so a
+        # retry against a clean path resolution is possible.
+        for name in ("custodian", "custodian.containment_audit"):
+            sys.modules.pop(name, None)
+        try:
+            from custodian.containment_audit import audit_mount_spec
+        except ImportError:
+            return ["containment audit unavailable — refusing governed launch"]
+    return [str(f) for f in audit_mount_spec(cmd)
+            if f.severity in ("critical", "high")]
 
 
 if __name__ == "__main__":
