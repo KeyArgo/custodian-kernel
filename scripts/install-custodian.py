@@ -100,11 +100,11 @@ def install(spec: str, runtime_root: Path, bin_dir: Path) -> Path:
     venv.EnvBuilder(with_pip=True, symlinks=os.name != "nt").create(candidate)
     subprocess.run(
         [str(_runtime_python(candidate)), "-m", "pip", "install", "--upgrade", spec],
-        check=True,
+        check=True, timeout=300,
     )
     subprocess.run(
         [str(_runtime_python(candidate)), "-m", "custodian.cli.main", "doctor"],
-        check=True,
+        check=True, timeout=300,
     )
     for command in COMMANDS:
         _expose(

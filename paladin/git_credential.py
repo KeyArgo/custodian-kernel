@@ -112,9 +112,9 @@ def setup(host: str, ref: str, scope: str = "global") -> int:
     try:
         # Reset first so re-running doesn't stack duplicate helpers.
         subprocess.run(["git", "config", scope_flag, "--unset-all", key],
-                       capture_output=True)
+                       capture_output=True, timeout=10)
         subprocess.run(["git", "config", scope_flag, key, value],
-                       check=True, capture_output=True, text=True)
+                       check=True, capture_output=True, text=True, timeout=10)
     except (subprocess.CalledProcessError, OSError) as e:
         sys.stderr.write(f"paladin git-setup: git config failed ({e})\n")
         return 1

@@ -250,6 +250,7 @@ def run(args) -> int:
                 [hermes_command, "plugins", "list", "--plain", "--no-bundled"],
                 capture_output=True,
                 text=True,
+                timeout=10,
             )
             if check.returncode != 0:
                 failures.append(

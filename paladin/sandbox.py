@@ -50,8 +50,12 @@ from paladin.errors import SandboxUnavailableError
 
 # Directories masked (tmpfs-overlaid to read empty) inside the sandbox even
 # though the base is a read-only bind of /. The vault home and keyfile dir
-# are added dynamically on top of this.
+# are added dynamically on top of this.  .kube and .docker were added after
+# the containment watchdog (sandbox-audit) flagged them: on hosts where they
+# exist, kubeconfig and docker registry credentials would otherwise be
+# visible read-only to the egress child.
 DEFAULT_MASK_DIRS = ("~/.ssh", "~/.aws", "~/.gnupg", "~/.config/gcloud",
+                     "~/.kube", "~/.docker",
                      "~/.custodian", "~/.talaria")
 
 # ---------------------------------------------------------------------------

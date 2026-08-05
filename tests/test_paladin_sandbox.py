@@ -126,6 +126,20 @@ def test_child_can_call_through_gateway(broker, http_server):
     assert _EchoHandler.seen_auth == f"Bearer {SECRET}"
 
 
+def test_default_mask_dirs_cover_credential_dirs():
+    """The egress sandbox masks every credential dir, including kube/docker.
+
+    Regression for the containment-watchdog finding: ~/.kube (kubeconfig) and
+    ~/.docker (registry creds) must be masked on hosts where they exist.
+    """
+    from paladin.sandbox import DEFAULT_MASK_DIRS
+
+    required = ("~/.ssh", "~/.aws", "~/.gnupg", "~/.config/gcloud",
+                "~/.kube", "~/.docker", "~/.custodian", "~/.talaria")
+    for d in required:
+        assert d in DEFAULT_MASK_DIRS, f"{d} missing from DEFAULT_MASK_DIRS"
+
+
 def test_child_cannot_read_vault_files(broker):
     # The vault + keyfile dir are masked; the child sees them empty.
     vault_dir = str(broker.vault.path.parent)
