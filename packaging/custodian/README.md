@@ -1,14 +1,17 @@
-# Custodian
+# Custodian Suite
 
 One install for the whole Custodian governance suite.
 
 ```bash
-pip install custodian
+pip install custodian-suite
 custodian setup --profile hermes --enable
 custodian doctor --profile hermes
 ```
 
-Installing `custodian` pulls in the full suite:
+(Note: the PyPI package is `custodian-suite`, not `custodian` — the bare
+`custodian` name is taken on PyPI by an unrelated JIT job framework.)
+
+Installing `custodian-suite` pulls in the full suite:
 
 | Package | What it provides |
 |---------|------------------|
@@ -18,8 +21,8 @@ Installing `custodian` pulls in the full suite:
 
 This package itself contains no code — it exists so a new user only has to
 remember one name. The individual packages keep their own names, version
-lines, and release cadences; `custodian` simply ties them together and is
-re-released whenever any component's floor moves.
+lines, and release cadences; `custodian-suite` simply ties them together
+and is re-released whenever any component's floor moves.
 
 ## Why not rename `custodian-kernel`?
 
