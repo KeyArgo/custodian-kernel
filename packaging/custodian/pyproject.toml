@@ -1,6 +1,6 @@
 [project]
 name = "custodian-suite"
-version = "0.5.0b1"
+version = "0.5.0"
 description = "Custodian — one install for the whole governance suite (kernel + guards + talaria)"
 requires-python = ">=3.11"
 readme = "README.md"
@@ -14,7 +14,7 @@ keywords = ["ai", "agent", "authority", "spend", "governance", "guard", "suite"]
 # this is a *convenience* meta-package; the individual packages pin their
 # own versions and a fresh 0.5.x kernel is expected to ship together.
 dependencies = [
-    "custodian-kernel>=0.5.0b1",
+    "custodian-kernel>=0.5.0",
     "custodian-codex-guard>=0.1.2",
     "custodian-talaria>=0.2.0",
 ]

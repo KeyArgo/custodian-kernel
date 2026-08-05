@@ -2,7 +2,7 @@
 
 All notable changes to custodian-kernel are recorded here. Dates are UTC.
 
-## [0.5.0-beta1] — 2026-08-05
+## [0.5.0] — 2026-08-05
 
 ### Sandbox containment (hermes-bwrap)
 

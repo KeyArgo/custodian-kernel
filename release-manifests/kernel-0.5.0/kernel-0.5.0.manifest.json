@@ -1,0 +1,86 @@
+{
+  "all_tests_passed": true,
+  "artifacts": [
+    {
+      "name": "custodian_kernel-0.5.0-py3-none-any.whl",
+      "path": "custodian_kernel-0.5.0-py3-none-any.whl",
+      "sha256": "6980fa14beca2c913b15236c512fffd4e7a655ca1b44d7d78d962620ad3ca736",
+      "size": 614547
+    },
+    {
+      "name": "custodian_kernel-0.5.0.tar.gz",
+      "path": "custodian_kernel-0.5.0.tar.gz",
+      "sha256": "9d2748cb8cb48759a4c0c5f63c4e24883f13b898211b27b85c1e329c8b9b8b32",
+      "size": 430960
+    }
+  ],
+  "component": "kernel",
+  "content_digest": "531a32c7aabf93444b0b07089aff004476f5d9124003cc2e307e99dc61a5ab1c",
+  "intended_tag": "v0.5.0",
+  "note": "PREPARATION ONLY. This manifest describes a candidate that has NOT been published.",
+  "package": "custodian-kernel",
+  "prepared_at": 1785926245.68242,
+  "prepared_at_iso": "2026-08-05T10:37:25Z",
+  "private_source_commit": "d74e3f244e67b8e8cb12c3465fad31ee9cdf3ee3",
+  "public_repo": "KeyArgo/custodian-kernel",
+  "test_results": [
+    {
+      "passed": true,
+      "smoke": {
+        "checks": {
+          "custodian --version": "custodian 0.5.0",
+          "custodian health": true,
+          "paladin --help": true
+        },
+        "passed": true,
+        "test": "smoke"
+      },
+      "test": "fresh-install",
+      "version": "0.5.0"
+    },
+    {
+      "passed": true,
+      "smoke": {
+        "checks": {
+          "custodian --version": "custodian 0.5.0",
+          "custodian health": true,
+          "paladin --help": true
+        },
+        "passed": true,
+        "test": "smoke"
+      },
+      "test": "upgrade-from-pypi",
+      "upgraded_from": "0.4.4",
+      "version": "0.5.0"
+    },
+    {
+      "data-preserved": true,
+      "installation-proof-valid": true,
+      "passed": true,
+      "test": "managed-install",
+      "uninstall-done": true,
+      "version": "custodian 0.5.0",
+      "version-after-reinstall": "custodian 0.5.0",
+      "wheel-hash-stored": "6980fa14beca2c913b15236c512fffd4e7a655ca1b44d7d78d962620ad3ca736",
+      "wheel-hash-verified": true
+    },
+    {
+      "managed-installer-succeeded-under-pip-require-virtualenv": true,
+      "managed-uninstall-succeeded": true,
+      "no-break-system-packages-flag": true,
+      "no-user-flag": true,
+      "passed": true,
+      "test": "pep668-compliance"
+    },
+    {
+      "checks": {
+        "custodian --version": "custodian 0.5.0",
+        "custodian health": true,
+        "paladin --help": true
+      },
+      "passed": true,
+      "test": "smoke"
+    }
+  ],
+  "version": "0.5.0"
+}
