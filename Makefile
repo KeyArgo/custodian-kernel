@@ -23,6 +23,12 @@ lint:
 	@echo "  pip install ruff && ruff check custodian/"
 	@echo "  pip install flake8 && flake8 custodian/"
 
+# Containment leak watchdog: static audit of the real launcher mount specs +
+# live scan of every running bwrap process. Exit 1 on any critical/high leak.
+audit:
+	python3 scripts/sandbox-audit check
+	python3 scripts/sandbox-audit live
+
 build:
 	python -m build
 	@echo "Note: install the 'build' package first: pip install build"
