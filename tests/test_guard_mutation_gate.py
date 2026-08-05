@@ -223,8 +223,12 @@ MUTATIONS = [
     Mutation(
         name="claude hook: denied verdict flipped to allow (fails open)",
         dotted="custodian.claude_guard.hook", package="custodian.claude_guard",
-        old='if verdict == "denied":\n        return "deny", f"Custodian denied this action',
-        new='if verdict == "denied":\n        return "allow", f"Custodian denied this action',
+        old='if verdict == "denied":\n'
+            '        return "deny", f"Custodian denied this action: {reason}" '
+            'if reason else "Custodian denied this action"',
+        new='if verdict == "denied":\n'
+            '        return "allow", f"Custodian denied this action: {reason}" '
+            'if reason else "Custodian denied this action"',
         probe=lambda m: _claude_decide(m, _claude_event(
             tool_name="Write",
             tool_input={"file_path": "~/.ssh/authorized_keys", "content": "k"})),
@@ -234,8 +238,12 @@ MUTATIONS = [
     Mutation(
         name="claude hook: escalation_required flipped to allow",
         dotted="custodian.claude_guard.hook", package="custodian.claude_guard",
-        old='if verdict == "escalation_required":\n        return "ask"',
-        new='if verdict == "escalation_required":\n        return "allow"',
+        old='if verdict == "escalation_required":\n'
+            '        return "ask", f"Custodian requires approval: {reason}" '
+            'if reason else "Custodian requires approval"',
+        new='if verdict == "escalation_required":\n'
+            '        return "allow", f"Custodian requires approval: {reason}" '
+            'if reason else "Custodian requires approval"',
         probe=lambda m: _claude_decide(m, _claude_event(
             tool_name="WebFetch", tool_input={"url": "http://example"})),
         safe="ask",

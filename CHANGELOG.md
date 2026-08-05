@@ -2,7 +2,51 @@
 
 All notable changes to custodian-kernel are recorded here. Dates are UTC.
 
-## [0.5.0-beta1] — 2026-08-04
+## [0.5.0-beta1] — 2026-08-05
+
+### Sandbox containment (hermes-bwrap)
+
+The governed-launch wrapper that runs Hermes inside Bubblewrap gained its
+first real security pass, driven by a containment test that runs real
+bubblewrap:
+
+- **Critical leak fixed.** The launcher previously mounted the entire
+  Custodian state dir read-only inside the sandbox — the receipt chain
+  (`codex-guard-receipts.jsonl`), approval store, ledger, kill-switch state,
+  and the `*.key` HMAC material used to sign receipts were all visible to a
+  sandboxed agent (and could be used to forge the evidence that governs it).
+  Only the four policy files (`approval-policy.json`, `control-settings.json`,
+  `filesystem-policy.json`, `gate-policy.json`) are mounted now, read-only.
+- **Self-auditing pre-flight gate.** The launcher audits its own mount set
+  before exec and refuses to start (exit 3) on any critical/high leak — a
+  leak becomes un-launchable, not just detectable.
+- **Hardening defaults.** `--unshare-user` (user namespace) added; the
+  workspace bind moved after the `/tmp` scratch tmpfs so a workspace under
+  `/tmp` is no longer shadowed; the resolved `hermes` binary (often a
+  `~/.local/bin` wrapper) is bound so real sessions run inside the sandbox —
+  verified end-to-end (`hermes version`/`doctor` inside, network denied).
+- Containment is regression-tested with real bubblewrap: planted fake
+  credentials, vault, and receipt markers are proven invisible.
+
+### sandbox-audit — containment leak watchdog
+
+New sidecar (also `make audit`) that checks the boundary three independent
+ways: `check` (static audit of the mount specs the real launchers would
+build), `live` (parses `/proc/<pid>/mountinfo` of every running bwrap process
+and flags sensitive binds — catches leaks in sandboxes built by any code),
+and `probe` (plants fake secrets and verifies none are visible). Exit 1 on
+any critical/high finding; suitable as a pre-flight gate or cron watchdog.
+
+### Paladin egress sandbox
+
+The egress child's credential mask now also covers `~/.kube` and
+`~/.docker` (kubeconfig + registry credentials) on hosts where they exist.
+
+### Robustness
+
+Subprocess timeouts added in paladin git-credential setup, the OSS installer
+(pip install + doctor), and hermes doctor's plugin check — a hung subprocess
+can no longer block the caller indefinitely.
 
 ### Paladin egress hardening (bubblewrap beta)
 
