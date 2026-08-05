@@ -2,6 +2,96 @@
 
 All notable changes to custodian-kernel are recorded here. Dates are UTC.
 
+## [0.5.0-beta1] — 2026-08-04
+
+### Paladin egress hardening (bubblewrap beta)
+
+The constrained egress path — the one operators use to let AI agents call
+external APIs with broker-injected secrets — has been hardened against
+three classes of credential exfiltration attack that the previous version
+allowed a sufficiently determined child to mount:
+
+- **SSRF protection.** Resolved hostnames are now checked against 11
+  private, loopback, link-local, and reserved IP ranges (RFC 1918, 6598,
+  6890, plus IPv6 equivalents). A child can no longer coerce the broker
+  into placing a secret on a request to an internal service that never
+  appeared in the grant. Hosts explicitly listed in `allowed_hosts` are
+  exempt; operators can opt into internal endpoints intentionally.
+- **IP-literal bypass closed.** A grant for `api.example.com` can no
+  longer be used to make a request to `https://1.2.3.4/` by quoting the
+  address. IP literals are rejected unless that exact IP is in the grant's
+  `allowed_hosts`.
+- **Redirect rejection.** 3xx responses are no longer transparently
+  followed. A child can no longer use a one-time redirect to send the
+  injected credential to a destination that wasn't part of the original
+  grant.
+
+DNS rebinding (resolve-time vs. connect-time race) is a known residual
+risk in this beta; the threat model already labels external egress as
+"trusted broker" and this is acceptable for the 0.5 beta. The hostname
+allowlist is now normalized case-insensitively with trailing-dot
+insensitivity.
+
+### Unsandboxed execution is now visibly deprecated
+
+Every code path that runs a child process without bubblewrap network
+isolation now prints a framed DEPRECATED banner to stderr:
+
+- `paladin exec` without `--sandbox`
+- `paladin --allow-unsandboxed` / `spawn_sandboxed(allow_unsandboxed=True)`
+- `custodian.sandbox.require_sandboxed_argv(allow_unsandboxed=True)`
+- `CUSTODIAN_ALLOW_UNSANDBOXED_TOOLS=1` env escape hatch
+
+Operators can acknowledge the deprecation and silence the banner by
+exporting `PALADIN_UNSAFE_ACKNOWLEDGED=1`. The `paladin doctor` command
+now reports the acknowledgement status and shows migration guidance
+toward `paladin exec --sandbox`. Nothing is removed yet — this is the
+"prominent warning" phase, not the "breakage" phase.
+
+### Operator dashboard
+
+New `paladin dashboard` command renders a color-coded ANSI terminal
+snapshot covering every subsystem an operator cares about:
+
+- Guard status, audit record count, audit SHA-256
+- Sandbox availability and unsafe-mode acknowledgement state
+- Vault path, entry count, profile count
+- Active grants with TTLs and scope (`ref → requester ≤band [host/method/path]`)
+- Backup audit comparison when `--backups DIR` is given
+- Deprecation footer when unsafe mode is unacknowledged
+
+Read-only, no credential materialization, no new dependencies.
+
+### Sealed backup audit in `paladin guard --backups`
+
+`PaladinGuard.backup_audit_hashes()` now reads both legacy `*.zip`
+backups (v1, plaintext audit) and sealed `*.paladin-backup` archives
+(v2, AEAD-encrypted). The vault blob is discarded after audit
+extraction; no secret value is ever exposed. Locked backups (wrong
+passphrase) are listed with a status marker rather than failing the
+scan. `paladin guard --backups DIR` now needs `PALADIN_PASSPHRASE` in
+the env to open sealed archives.
+
+### Paladin vault passphrase fallback fix
+
+When `PALADIN_KEYFILE` is set in the environment (a system-wide
+configuration) but a disposable vault was initialized with
+`PALADIN_PASSPHRASE`, subsequent commands failed with "wrong
+passphrase". `Vault.open_from_env` now distinguishes "keyfile file
+could not be read" (a configuration error, still raised) from
+"keyfile was read successfully but the vault didn't unlock" (a
+disposable-vs-real-vault mismatch; falls back to `PALADIN_PASSPHRASE`
+if set).
+
+### Hermes guard component (concurrent workstream)
+
+The hermes-guard installer and detection are now part of the
+`custodian-hermes setup` and `custodian-hermes doctor` surface:
+`--guard-only` standalone install, enforcement verification, restart
+advisory, and stale plugin detection. This work shipped on the same
+branch as a parallel workstream; see the commit log for the
+hermes-doctor / hermes-setup entries.
+
 ## [0.4.1] — 2026-07-27
 
 ### Installation and lifecycle recovery
