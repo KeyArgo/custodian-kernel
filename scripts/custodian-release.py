@@ -275,9 +275,15 @@ def _discover_latest_pypi_version(package: str, current_version: str) -> str | N
         if any(rel.get("packagetype") in ("bdist_wheel", "sdist") for rel in releases[v])
     ]
     def version_key(value: str) -> tuple[int, ...]:
-        if not re.fullmatch(r"\d+(?:\.\d+)*", value):
+        # Strip a pre-release/local suffix ("0.5.0-beta1" -> "0.5.0") so
+        # alpha/beta/rc candidates still compare against published numeric
+        # releases. re.match (prefix) rather than fullmatch: the numeric
+        # part leads the string. An empty tuple means "not a numeric
+        # version".
+        m = re.match(r"(\d+(?:\.\d+)*)", value)
+        if not m:
             return ()
-        return tuple(int(part) for part in value.split("."))
+        return tuple(int(part) for part in m.group(1).split("."))
 
     current_key = version_key(current_version)
     lower = [v for v in published if version_key(v) and version_key(v) < current_key]
@@ -703,7 +709,16 @@ def _cmd_prepare(component: str, version: str) -> int:
     print("[2/9] PyPI metadata/rendering check: PASS")
 
     wheel_version = _extract_wheel_version(wheel)
-    if wheel_version != version:
+    # Compare under PEP 440 normalization: the build tooling rewrites
+    # pre-release spellings (e.g. "0.5.0-beta1" -> "0.5.0b1") in the wheel
+    # METADATA. A raw string compare would reject every alpha/beta/rc
+    # release as a mismatch.
+    try:
+        from packaging.version import Version as _V
+        _matches = _V(wheel_version) == _V(version)
+    except Exception:
+        _matches = wheel_version == version
+    if not _matches:
         print(f"ERROR: requested version {version} does not match built wheel version {wheel_version}", file=sys.stderr)
         shutil.rmtree(work_dir)
         return 1

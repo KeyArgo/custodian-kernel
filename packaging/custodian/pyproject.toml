@@ -1,0 +1,39 @@
+[project]
+name = "custodian"
+version = "0.5.0b1"
+description = "Custodian — one install for the whole governance suite (kernel + guards + talaria)"
+requires-python = ">=3.11"
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{name = "InovinLabs"}]
+keywords = ["ai", "agent", "authority", "spend", "governance", "guard", "suite"]
+dependencies = [
+    "custodian-kernel>=0.5.0b1",
+    "custodian-codex-guard>=0.1.2",
+    "custodian-talaria>=0.2.0",
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Operating System :: POSIX :: Linux",
+    "Operating System :: MacOS",
+    "Topic :: Software Development :: Libraries",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+]
+
+[project.urls]
+Homepage = "https://getcustodian.xyz"
+Repository = "https://github.com/KeyArgo/custodian"
+Documentation = "https://getcustodian.xyz/docs"
+Issues = "https://github.com/KeyArgo/custodian/issues"
+
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = []

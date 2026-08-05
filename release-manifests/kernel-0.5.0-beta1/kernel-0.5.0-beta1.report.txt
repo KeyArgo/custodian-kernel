@@ -1,0 +1,28 @@
+Custodian Release Preparation Report
+====================================
+Component: kernel
+Version:   0.5.0-beta1
+Time:      2026-08-05T05:59:32Z
+
+Artifacts:
+  custodian_kernel-0.5.0b1-py3-none-any.whl
+    path: custodian_kernel-0.5.0b1-py3-none-any.whl
+    size: 607650
+    SHA-256: ab87719378ec34237b0793fb92e7992aea3cbbeae558bf3b65cd34f022c5770c
+  custodian_kernel-0.5.0b1.tar.gz
+    path: custodian_kernel-0.5.0b1.tar.gz
+    size: 426355
+    SHA-256: 26b153ef8b1d5a6ae9d576ba5d9068de1d82db8359212420bfc13bef4609b8c8
+
+Test Results:
+  [PASS] fresh-install
+  [PASS] upgrade-from-pypi
+  [PASS] managed-install
+  [PASS] pep668-compliance
+  [PASS] smoke
+
+Overall: ALL TESTS PASSED
+
+Manifest: /mnt/homes/Development/custodian-dev/release-manifests/kernel-0.5.0-beta1/kernel-0.5.0-beta1.manifest.json
+
+This is a PREPARATION report. No packages were published.
