@@ -6,9 +6,8 @@ tamper-evident evidence, and includes the Paladin encrypted credential broker.
 
 ## Install
 
-Custodian Kernel 0.4.1 supports Linux and macOS with Python 3.11 through
-3.13. Windows is not a supported 0.4.1 release platform; Windows support is
-planned for 0.4.2.
+Custodian Kernel 0.5.0 supports Linux and macOS with Python 3.11 through
+3.13; Windows installs are supported through the managed installer below.
 
 For Python environments that permit application installs:
 
@@ -19,13 +18,25 @@ custodian
 
 Linux distributions that enforce PEP 668 reject even `pip install --user`.
 Download `install-custodian.py` from the source repository or GitHub release
-and run it there. It owns the runtime so users never activate or maintain a
-virtual environment:
+and run it. It owns the runtime so users never activate or maintain a
+virtual environment — it creates a private two-slot managed runtime, installs
+the package, and exposes `custodian` (and friends) in `~/.local/bin`:
 
 ```bash
-python install-custodian.py
+python install-custodian.py            # or: ./install-custodian.py
 custodian
 ```
+
+Upgrades reuse the same installer (`python install-custodian.py` again swaps
+to the second slot); uninstall preserves all user data:
+
+```bash
+python install-custodian.py --uninstall --dry-run
+python install-custodian.py --uninstall
+```
+
+The installer refuses to touch directories it does not own (no
+`active-slot` marker), never deletes user data, and requires Python 3.11+.
 
 Running `custodian` opens the interactive menu. Useful checks:
 

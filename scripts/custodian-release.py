@@ -490,7 +490,12 @@ def _test_managed_install(component: str, wheel: Path, work_dir: Path) -> dict:
     result["data-preserved"] = True
 
     wheel_hash = _sha256(wheel)
-    runtime_hash_file = managed.with_name(managed.name + ".removed") / "release-artifact.sha256"
+    # The installer quarantines the runtime under a unique name
+    # (<root>.removed-<pid>[-N]); find it rather than assuming a fixed name.
+    quarantine_candidates = sorted(managed.parent.glob(managed.name + ".removed-*"))
+    if not quarantine_candidates:
+        return result
+    runtime_hash_file = quarantine_candidates[0] / "release-artifact.sha256"
     if not runtime_hash_file.exists():
         return result
     stored_hash = runtime_hash_file.read_text(encoding="utf-8").strip()
