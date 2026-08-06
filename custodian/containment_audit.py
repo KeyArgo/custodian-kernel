@@ -145,11 +145,13 @@ def _classify(source: str) -> tuple[str, str]:
     for deny in deny_paths():
         if _is_under(src, _norm(deny)):
             return "deny", src
-    # Inside the Custodian state dir: only the named policy files are allowed.
+    # Inside the Custodian state dir: only the named TOP-LEVEL policy files
+    # are allowed; a nested file sharing an allowed basename must not be
+    # misclassified (e.g. <state>/codex-approvals/approval-policy.json).
     if _is_under(src, st):
         if src == st:
             return "ancestor", src  # whole dir: enumerate its denied children
-        if Path(src).name in ALLOWED_STATE_FILES:
+        if Path(src).parent == Path(st) and Path(src).name in ALLOWED_STATE_FILES:
             return "allowed", ""
         return "deny", src
     # Ancestor of sensitive paths (e.g. binding $HOME or /).
@@ -162,8 +164,12 @@ def _classify(source: str) -> tuple[str, str]:
 
 
 def _masked(exposed: str, masks: Sequence[str]) -> bool:
-    """True when a tmpfs mask covers ``exposed`` (mask is a path prefix)."""
-    return any(_is_under(exposed, m) or _is_under(m, exposed) for m in masks)
+    """True when a mask covers ``exposed`` (mask is an ancestor-or-equal path).
+
+    A mask nested INSIDE the exposed path does not cover it: masking
+    ``/home/u/.ssh/nested`` leaves ``/home/u/.ssh/id_rsa`` fully exposed.
+    """
+    return any(_is_under(exposed, m) for m in masks)
 
 
 # ---------------------------------------------------------------------------
@@ -181,26 +187,60 @@ class MountEntry:
     masked: bool = False  # tmpfs: hides whatever was there
 
 
+# bwrap option arity map: option -> number of value arguments it consumes.
+# Everything after the child executable is the child's own argv (inert text as
+# far as bwrap is concerned) and MUST NOT be scanned for mount tokens -- a
+# trailing "--tmpfs /home/x/.ssh" could otherwise erase a leak finding while
+# the real sandbox still exposes the path.  Unknown "--" options are skipped
+# without consuming values (conservative).
+_BWRAP_OPT_ARITY = {
+    "--bind": 2, "--ro-bind": 2, "--bind-try": 2, "--ro-bind-try": 2,
+    "--bind-data": 2, "--ro-bind-data": 2, "--setenv": 2, "--symlink": 2,
+    "--file": 3, "--lock-file": 1, "--remount-ro": 1,
+    "--tmpfs": 1, "--dir": 1, "--dev": 1, "--proc": 1,
+    "--uid": 1, "--gid": 1, "--hostname": 1, "--chdir": 1, "--unsetenv": 1,
+    "--seccomp": 1, "--size": 1, "--exec-label": 1, "--args": 1,
+}
+
+
 def _bwrap_argv_to_entries(argv: Sequence[str]) -> list[MountEntry]:
     """Convert a bwrap argv list into ordered MountEntry objects.
 
     Handles ``--bind``, ``--ro-bind``, ``--bind-try``, ``--ro-bind-try``
-    (source + dest pairs) and ``--tmpfs`` (mask).  Everything else is ignored.
+    (source + dest pairs) and ``--tmpfs`` (mask).  Parsing stops at the
+    child-command boundary (the first bare token that is not consumed as an
+    option value), matching bwrap's own semantics: everything after the
+    executable belongs to the child and must never be interpreted as mounts.
     """
     entries: list[MountEntry] = []
     i = 0
-    while i < len(argv):
+    n = len(argv)
+    # argv[0] may be the bwrap program name (a bare token that is neither an
+    # option nor the child executable); skip it so parsing starts at the
+    # first option.  Callers that pass a pure option list (no program name)
+    # are unaffected because their first token starts with "--".
+    if i < n and not argv[i].startswith("--"):
+        i += 1
+    while i < n:
         a = argv[i]
-        if a in ("--bind", "--ro-bind", "--bind-try", "--ro-bind-try") and i + 2 < len(argv):
+        if a in ("--bind", "--ro-bind", "--bind-try", "--ro-bind-try",
+                 "--bind-data", "--ro-bind-data") and i + 2 < n:
             src, dest = argv[i + 1], argv[i + 2]
             entries.append(MountEntry(src=src, dest=dest, rw=not a.startswith("--ro-")))
             i += 3
             continue
-        if a == "--tmpfs" and i + 1 < len(argv):
+        if a == "--tmpfs" and i + 1 < n:
             entries.append(MountEntry(src="", dest=argv[i + 1], rw=True, masked=True))
             i += 2
             continue
-        i += 1
+        arity = _BWRAP_OPT_ARITY.get(a)
+        if arity is not None:
+            i += 1 + arity
+            continue
+        if a.startswith("--"):
+            i += 1  # unknown option: skip without consuming values
+            continue
+        break  # first bare token = child executable: mount parsing ends
     return entries
 
 

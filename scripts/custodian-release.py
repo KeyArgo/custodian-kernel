@@ -90,7 +90,13 @@ def _git_tree_hash(path: Path) -> str:
 
 
 def _git_is_dirty(path: Path) -> bool:
-    return bool(_checked(["git", "status", "--porcelain"], cwd=path).stdout.strip())
+    # Tracked changes only: untracked build junk (__pycache__, .pytest_cache,
+    # scratch files) is never pushed and must not block a prepare.
+    return bool(
+        _checked(
+            ["git", "status", "--porcelain", "--untracked-files=no"], cwd=path
+        ).stdout.strip()
+    )
 
 
 def _content_digest(tree: Path) -> str:
@@ -229,9 +235,25 @@ def _record_artifacts(dist_dir: Path) -> list[dict]:
     return artifacts
 
 
+def _current_kernel_version() -> str:
+    """Read the kernel version from packaging/kernel/pyproject.toml.
+
+    The old hardcoded fallback ("0.4.1") silently pinned dependent components
+    to a stale kernel when CUSTODIAN_RELEASE_KERNEL_VERSION was unset.
+    """
+    pyproject = _PRIVATE_ROOT / "packaging/kernel/pyproject.toml"
+    m = re.search(r'^version\s*=\s*"([^"]+)"', pyproject.read_text(encoding="utf-8"), re.M)
+    if not m:
+        raise SystemExit(
+            "could not read kernel version from packaging/kernel/pyproject.toml; "
+            "set CUSTODIAN_RELEASE_KERNEL_VERSION explicitly"
+        )
+    return m.group(1)
+
+
 def _prepared_kernel_wheel() -> Path:
     """Return the hash-verified kernel candidate required by integrations."""
-    version = os.environ.get("CUSTODIAN_RELEASE_KERNEL_VERSION", "0.4.1")
+    version = os.environ.get("CUSTODIAN_RELEASE_KERNEL_VERSION") or _current_kernel_version()
     if not re.fullmatch(r"\d+\.\d+\.\d+", version):
         raise SystemExit("CUSTODIAN_RELEASE_KERNEL_VERSION must be an exact X.Y.Z version")
     component_dir = _RELEASE_MANIFESTS / f"kernel-{version}"
@@ -653,6 +675,13 @@ def _write_report(
 def _cmd_prepare(component: str, version: str) -> int:
     if component not in COMPONENT_REGISTRY:
         print(f"Unknown component: {component}. Choices: {', '.join(_COMPONENT_NAMES)}", file=sys.stderr)
+        return 1
+    if not re.fullmatch(r"\d+\.\d+\.\d+", version):
+        print(
+            f"ERROR: version must be an exact X.Y.Z string, got {version!r} "
+            "(prevents path traversal through release-manifests/)",
+            file=sys.stderr,
+        )
         return 1
 
     info = COMPONENT_REGISTRY[component]

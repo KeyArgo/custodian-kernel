@@ -142,13 +142,16 @@ def _build_mounts(
 
     memories_dir = hermes_home / "memories"
     memories_dir.mkdir(parents=True, exist_ok=True)
+    # tmpfs FIRST, then the seed bind: a later mount shadows an earlier one
+    # on the same destination, so binding the seed before the parent tmpfs
+    # would silently cover it (mount order matters).
+    mounts.extend(["--tmpfs", str(memories_dir)])
     if (memories_dir / "memory.json").exists():
         # Seed the tmpfs with existing memories so the agent has
         # cross-session recall (read-only snapshot from the host).
         stash = hermes_home / ".bwrap-memory-seed.json"
         shutil.copy2(memories_dir / "memory.json", stash)
         mounts.extend(["--ro-bind", str(stash), str(memories_dir / "memory.json")])
-    mounts.extend(["--tmpfs", str(memories_dir)])
 
     # --- Read-only config / policy ---
     hermes_home = _ensure(hermes_home, "Hermes home")
@@ -246,6 +249,14 @@ def main(argv: list[str] | None = None) -> int:
                 hermes_root_path = hermes_root_path / "venv"
                 break
             hermes_root_path = hermes_root_path.parent
+    if str(hermes_root_path) == "/":
+        # The walk exhausted without finding a venv. Binding "/" would
+        # collapse the default-deny model into --ro-bind / /; refuse loudly.
+        raise SystemExit(
+            f"{_LAUNCHER_NAME}: cannot locate the Hermes Agent install "
+            "(no venv/bin/python under the resolved hermes binary and "
+            "HERMES_AGENT_ROOT not set); refusing to bind the filesystem root"
+        )
     hermes_root_path = _ensure(hermes_root_path, "Hermes agent root")
 
     mounts = _build_mounts(workspace, hermes_home, policy_dir)
@@ -308,6 +319,7 @@ def main(argv: list[str] | None = None) -> int:
     env = dict(os.environ)
     # Prevent accidental writes to the host state dir from inside.
     env.pop("PALADIN_KEYFILE", None)
+    env.pop("PALADIN_VAULT_PATH", None)
     env.pop("PALADIN_PASSPHRASE", None)
     # Enforce the sandboxed workspace as the session cwd.
     env["HERMES_BWRAP_WORKSPACE"] = str(workspace)

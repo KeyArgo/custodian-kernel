@@ -14,10 +14,16 @@ import os
 import shutil
 import subprocess
 import sys
+import time
 import venv
 from pathlib import Path
 
 COMMANDS = ("custodian", "custodian-verify", "paladin", "paladin-import")
+
+# Windows launchers are .cmd files; ownership is decided by this marker line
+# (written by this installer), not by a path substring that could coincidentally
+# appear in an unrelated pre-existing launcher.
+_WIN_MANAGED_MARKER = "custodian-managed"
 
 
 def default_runtime_root() -> Path:
@@ -82,7 +88,7 @@ def _expose(
                 owned = destination.resolve(strict=False).is_relative_to(runtime_root)
             elif os.name == "nt":
                 try:
-                    owned = str(runtime_root) in destination.read_text(encoding="utf-8")
+                    owned = _WIN_MANAGED_MARKER in destination.read_text(encoding="utf-8")
                 except OSError:
                     owned = False
         if owned:
@@ -103,12 +109,61 @@ def _expose(
                     i += 1
             destination.replace(backup)
     if os.name == "nt":
-        destination.write_text(f'@echo off\r\n"{target}" %*\r\n', encoding="utf-8")
+        destination.write_text(
+            f"@echo off\r\nrem {_WIN_MANAGED_MARKER}: {runtime_root}\r\n"
+            f'"{target}" %*\r\n',
+            encoding="utf-8",
+        )
     else:
         destination.symlink_to(target)
 
 
+def _acquire_install_lock(runtime_root: Path) -> Path:
+    """Serialize installs on the same runtime root (cross-platform, no fcntl).
+
+    Two concurrent installs against one runtime root would race on the same
+    slot (both rmtree + rebuild it, then both flip the marker). O_EXCL
+    creation; a lock older than 10 minutes is treated as stale and stolen.
+    The caller removes the lock in a finally block.
+    """
+    lock = runtime_root / "install.lock"
+    deadline = 600
+    for _ in range(2):
+        try:
+            fd = os.open(lock, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+            break
+        except FileExistsError:
+            try:
+                stale = time.time() - lock.stat().st_mtime > deadline
+            except OSError:
+                stale = True
+            if not stale:
+                raise RuntimeError(
+                    f"another installer is already running for {runtime_root} "
+                    f"(remove {lock} if it is stale)"
+                )
+            lock.unlink()
+    else:
+        raise RuntimeError(f"could not acquire install lock {lock}")
+    os.write(fd, str(os.getpid()).encode("ascii"))
+    os.close(fd)
+    return lock
+
+
 def install(spec: str, runtime_root: Path, bin_dir: Path) -> Path:
+    runtime_root, bin_dir = _validate_managed_paths(runtime_root, bin_dir)
+    runtime_root.mkdir(parents=True, exist_ok=True)
+    lock = _acquire_install_lock(runtime_root)
+    try:
+        return _install_locked(spec, runtime_root, bin_dir)
+    finally:
+        try:
+            lock.unlink()
+        except OSError:
+            pass
+
+
+def _install_locked(spec: str, runtime_root: Path, bin_dir: Path) -> Path:
     runtime_root, bin_dir = _validate_managed_paths(runtime_root, bin_dir)
     runtime_root.mkdir(parents=True, exist_ok=True)
     active_file = runtime_root / "active-slot"
@@ -211,7 +266,7 @@ def uninstall(runtime_root: Path, bin_dir: Path) -> None:
                 owned = False
         elif os.name == "nt":
             try:
-                owned = str(runtime_root) in destination.read_text(encoding="utf-8")
+                owned = _WIN_MANAGED_MARKER in destination.read_text(encoding="utf-8")
             except OSError:
                 owned = False
         if owned:

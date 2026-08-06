@@ -116,6 +116,31 @@ def test_dry_run_is_side_effect_free(tmp_path):
     assert "user data: preserved" in result.stdout
 
 
+def test_install_lock_serializes_and_recovers_from_stale(tmp_path):
+    """Two installs against one runtime root must not race (regression)."""
+    import time as _t
+
+    module = _module()
+    runtime = tmp_path / "runtime"
+    runtime.mkdir()
+    lock = module._acquire_install_lock(runtime)
+    try:
+        with pytest.raises(RuntimeError):
+            module._acquire_install_lock(runtime)
+    finally:
+        lock.unlink()
+    # A lock older than the 600s deadline is stale and gets stolen.
+    stale = module._acquire_install_lock(runtime)
+    old = _t.time() - 3600
+    os.utime(stale, (old, old))
+    try:
+        stolen = module._acquire_install_lock(runtime)
+        stolen.unlink()
+    finally:
+        if stale.exists():
+            stale.unlink()
+
+
 def test_existing_launcher_is_backed_up(tmp_path, monkeypatch):
     module = _module()
     monkeypatch.setattr(module.os, "name", "posix")

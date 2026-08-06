@@ -323,8 +323,22 @@ def test_only_prepare_command_exists():
 
 def test_dirty_repo_refused(tmp_path):
     repo = _make_temp_repo(tmp_path)
-    (repo / "dirty.txt").write_text("uncommitted")
+    tracked = repo / "file.txt"
+    tracked.write_text("modified")
     assert _git_is_dirty(repo) is True
+
+
+def test_prepare_rejects_path_traversal_version():
+    """A version that escapes release-manifests/ must be refused (regression)."""
+    with patch.object(_mod, "_resolve_public_repo_path", return_value=None):
+        rc = _cmd_prepare("kernel", "../../../../tmp/pwned")
+    assert rc != 0
+
+
+def test_untracked_junk_does_not_block_prepare(tmp_path):
+    repo = _make_temp_repo(tmp_path)
+    (repo / "dirty.txt").write_text("uncommitted")
+    assert _git_is_dirty(repo) is False
 
 
 def test_clean_repo_accepted(tmp_path):
@@ -371,10 +385,10 @@ def test_record_artifacts_skips_non_artifact_files(tmp_path):
 
 def test_prepared_kernel_wheel_is_hash_verified(tmp_path, monkeypatch):
     base = tmp_path / "manifests"
-    component = base / "kernel-0.4.1"
+    component = base / "kernel-0.5.0"
     artifacts = component / "artifacts"
     artifacts.mkdir(parents=True)
-    wheel = artifacts / "custodian_kernel-0.4.1-py3-none-any.whl"
+    wheel = artifacts / "custodian_kernel-0.5.0-py3-none-any.whl"
     wheel.write_bytes(b"candidate")
     manifest = {
         "artifacts": [{
@@ -382,7 +396,7 @@ def test_prepared_kernel_wheel_is_hash_verified(tmp_path, monkeypatch):
             "sha256": _sha256(wheel),
         }]
     }
-    (component / "kernel-0.4.1.manifest.json").write_text(json.dumps(manifest))
+    (component / "kernel-0.5.0.manifest.json").write_text(json.dumps(manifest))
     monkeypatch.setattr(_mod, "_RELEASE_MANIFESTS", base)
     assert _mod._prepared_kernel_wheel() == wheel
     wheel.write_bytes(b"changed")

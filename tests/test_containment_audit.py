@@ -47,6 +47,39 @@ def test_socket_exposed_without_mask(tmp_path, monkeypatch):
     assert str(sock) in findings[0].exposed
 
 
+def test_audit_stops_at_child_command_boundary(tmp_path, monkeypatch):
+    """Trailing child argv must never erase a leak finding (regression).
+
+    A fake ``--tmpfs`` token appended AFTER the child executable is inert
+    text as far as bwrap is concerned; the audit must not parse it as a
+    mount, or an operator/attacker could selectively blind the pre-flight
+    gate while the real sandbox still exposes the path.
+    """
+    sock = tmp_path / "docker.sock"
+    sock.touch()
+    monkeypatch.setattr(ca, "deny_paths", lambda: [sock])
+    argv = ["bwrap", "--ro-bind", "/", "/",
+            "hermes", "--profile", "dev",
+            "--tmpfs", str(sock), "--ro-bind", str(sock), "/home/x/.ssh"]
+    findings = ca.audit_mount_spec(argv)
+    assert any(f.exposed == str(sock) for f in findings), (
+        "trailing child args must not mask the exposure"
+    )
+
+
+def test_nested_mask_does_not_cover_parent(tmp_path, monkeypatch):
+    """A mask nested inside a sensitive dir must not hide the dir itself."""
+    sock = tmp_path / "docker.sock"
+    sock.touch()
+    nested = sock.parent / "nested"
+    monkeypatch.setattr(ca, "deny_paths", lambda: [sock])
+    argv = ["bwrap", "--ro-bind", "/", "/", "--tmpfs", str(nested), "true"]
+    findings = ca.audit_mount_spec(argv)
+    assert any(f.exposed == str(sock) for f in findings), (
+        "nested mask must not count as covering the parent path"
+    )
+
+
 @pytest.fixture
 def state(tmp_path, monkeypatch):
     """A fake Custodian state dir with policy files + planted secrets."""
