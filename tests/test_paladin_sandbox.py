@@ -140,6 +140,21 @@ def test_default_mask_dirs_cover_credential_dirs():
         assert d in DEFAULT_MASK_DIRS, f"{d} missing from DEFAULT_MASK_DIRS"
 
 
+def test_socket_mask_argv_covers_existing_sockets(tmp_path):
+    """Container-runtime sockets that exist get a /dev/null null-mask."""
+    from paladin.sandbox import DEFAULT_MASK_SOCKETS, _socket_mask_argv
+
+    assert len(DEFAULT_MASK_SOCKETS) >= 3  # docker + podman paths
+    existing = tmp_path / "docker.sock"
+    existing.touch()
+    missing = tmp_path / "absent.sock"
+    argv = _socket_mask_argv([str(existing), str(missing)])
+    assert ["--ro-bind", "/dev/null", str(existing)] in [
+        argv[i:i + 3] for i in range(0, len(argv), 3)
+    ]
+    assert str(missing) not in argv
+
+
 def test_child_cannot_read_vault_files(broker):
     # The vault + keyfile dir are masked; the child sees them empty.
     vault_dir = str(broker.vault.path.parent)

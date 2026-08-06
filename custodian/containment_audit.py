@@ -212,6 +212,10 @@ def analyze_mounts(entries: Sequence[MountEntry]) -> list[Finding]:
         final[e.dest] = e
 
     masks = [e.dest for e in final.values() if e.masked]
+    # /dev/null binds are recognized null-masks: the destination path is
+    # covered (the sandboxed child sees a char device, not the real object).
+    masks += [e.dest for e in final.values()
+              if not e.masked and e.src == "/dev/null"]
     findings: list[Finding] = []
     for e in final.values():
         if e.masked:

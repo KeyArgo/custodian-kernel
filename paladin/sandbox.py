@@ -58,6 +58,17 @@ DEFAULT_MASK_DIRS = ("~/.ssh", "~/.aws", "~/.gnupg", "~/.config/gcloud",
                      "~/.kube", "~/.docker",
                      "~/.custodian", "~/.talaria")
 
+# Container-runtime sockets that must never be visible to the egress child:
+# a reachable docker/podman socket would let it drive the host container
+# runtime. These are FILES, so they are masked by binding /dev/null over the
+# path (connect() then fails with ENOTSOCK). The containment watchdog
+# recognizes /dev/null-over-deny-path binds as masks.
+DEFAULT_MASK_SOCKETS = (
+    "/var/run/docker.sock",
+    "/run/docker.sock",
+    "/run/podman/podman.sock",
+)
+
 # ---------------------------------------------------------------------------
 # Deprecation of unsandboxed execution paths
 # ---------------------------------------------------------------------------
@@ -156,10 +167,20 @@ def build_bwrap_argv(sock_dir: Path, cmd: Sequence[str],
     ]
     for d in _mask_dirs(vault_home):
         argv += ["--tmpfs", d]    # ...with the crown jewels masked to empty
+    argv += _socket_mask_argv(DEFAULT_MASK_SOCKETS)
     # The one hole: the UDS. A read-only bind is enough to connect() (verified);
     # the child cannot drop files in the dir or unlink the socket.
     argv += ["--ro-bind", str(sock_dir), str(sock_dir)]
     argv += list(cmd)
+    return argv
+
+
+def _socket_mask_argv(sockets: Sequence[str]) -> list[str]:
+    """Bind /dev/null over container-runtime sockets that exist on the host."""
+    argv: list[str] = []
+    for s in sockets:
+        if os.path.exists(s):
+            argv += ["--ro-bind", "/dev/null", s]
     return argv
 
 

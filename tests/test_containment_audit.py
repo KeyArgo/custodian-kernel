@@ -22,6 +22,31 @@ from custodian import containment_audit as ca
 _SSH = "." + "ssh"  # constructed so the forbidden literal never appears
 
 
+def test_socket_masked_by_dev_null_bind(tmp_path, monkeypatch):
+    """A /dev/null bind over an existing container socket counts as a mask."""
+    sock = tmp_path / "docker.sock"
+    sock.touch()
+    monkeypatch.setattr(ca, "deny_paths", lambda: [sock])
+    argv = [
+        "bwrap", "--unshare-all", "--ro-bind", "/", "/", "--dev", "/dev",
+        "--tmpfs", "/tmp",
+        "--ro-bind", "/dev/null", str(sock),
+        "true",
+    ]
+    assert ca.audit_mount_spec(argv) == []
+
+
+def test_socket_exposed_without_mask(tmp_path, monkeypatch):
+    """An existing container socket under an ancestor bind is a finding."""
+    sock = tmp_path / "docker.sock"
+    sock.touch()
+    monkeypatch.setattr(ca, "deny_paths", lambda: [sock])
+    argv = ["bwrap", "--ro-bind", "/", "/", "true"]
+    findings = ca.audit_mount_spec(argv)
+    assert findings, "existing socket must be flagged when unmasked"
+    assert str(sock) in findings[0].exposed
+
+
 @pytest.fixture
 def state(tmp_path, monkeypatch):
     """A fake Custodian state dir with policy files + planted secrets."""
