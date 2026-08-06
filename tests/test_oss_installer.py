@@ -5,7 +5,15 @@ import os
 import subprocess
 from pathlib import Path
 
-INSTALLER = Path(__file__).resolve().parents[1] / "scripts/install-custodian.py"
+import pytest
+
+# The installer lives at scripts/install-custodian.py in the dev monorepo and
+# at the repo root in the published release tree — accept both layouts.
+_INSTALLER_CANDIDATES = (
+    Path(__file__).resolve().parents[1] / "scripts/install-custodian.py",
+    Path(__file__).resolve().parents[1] / "install-custodian.py",
+)
+INSTALLER = next(p for p in _INSTALLER_CANDIDATES if p.exists())
 
 
 def _module():
@@ -69,6 +77,7 @@ def test_python_version_preflight_rejected(monkeypatch, capsys):
     assert "Python 3.11" in capsys.readouterr().err
 
 
+@pytest.mark.skipif(os.name == "nt", reason="XDG data home is a POSIX concept; Windows uses LOCALAPPDATA")
 def test_empty_xdg_data_home_falls_back_to_home(monkeypatch):
     """An empty (set-but-blank) XDG_DATA_HOME must fall back, not resolve to cwd."""
     m = _module()
@@ -171,6 +180,7 @@ def test_install_uses_fixed_slots_because_venvs_cannot_be_renamed():
     assert "staging.replace" not in source
 
 
+@pytest.mark.skipif(os.name == "nt", reason="launchers are .cmd files on Windows; symlink flow is POSIX (e2e covers Windows)")
 def test_managed_uninstall_removes_only_owned_runtime_and_restores_launcher(
     tmp_path, monkeypatch
 ):
@@ -199,6 +209,7 @@ def test_managed_uninstall_removes_only_owned_runtime_and_restores_launcher(
     assert unrelated.read_text() == "keep"
 
 
+@pytest.mark.skipif(os.name == "nt", reason="launchers are .cmd files on Windows; symlink flow is POSIX (e2e covers Windows)")
 def test_managed_uninstall_does_not_remove_unowned_launcher(tmp_path, monkeypatch):
     module = _module()
     monkeypatch.setattr(module.os, "name", "posix")
@@ -218,11 +229,15 @@ def test_managed_uninstall_does_not_remove_unowned_launcher(tmp_path, monkeypatc
 
 def test_managed_paths_reject_home_root_and_nested_command_dir(tmp_path):
     module = _module()
-    for runtime, commands in (
+    pairs = [
         (Path("/"), tmp_path / "bin"),
         (Path.home(), tmp_path / "bin"),
-        (tmp_path / "managed", tmp_path / "managed/bin"),
-    ):
+    ]
+    # runtime/bin is the legitimate default layout on Windows only; a deeper
+    # (or any other) nesting must still be rejected on every platform.
+    nested = tmp_path / "managed" / ("bin" if os.name != "nt" else "bin/sub")
+    pairs.append((tmp_path / "managed", nested))
+    for runtime, commands in pairs:
         try:
             module._validate_managed_paths(runtime, commands)
         except ValueError:
@@ -231,6 +246,7 @@ def test_managed_paths_reject_home_root_and_nested_command_dir(tmp_path):
             raise AssertionError(f"unsafe paths accepted: {runtime}, {commands}")
 
 
+@pytest.mark.skipif(os.name == "nt", reason="symlink creation needs privileges on Windows")
 def test_managed_paths_reject_symlinked_runtime_root(tmp_path):
     module = _module()
     target = tmp_path / "target"
