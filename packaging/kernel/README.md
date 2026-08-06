@@ -71,6 +71,39 @@ python install-custodian.py --uninstall --dry-run
 python install-custodian.py --uninstall
 ```
 
+## Test the install yourself
+
+You can prove the full lifecycle in a scratch directory without touching your
+system. This is exactly what the release CI runs on Linux, macOS, and Windows
+for every release:
+
+```bash
+# 1. Scratch area, start clean
+mkdir -p /tmp/custodian-e2e && cd /tmp/custodian-e2e
+
+# 2. Point at a wheel (or the PyPI version: --package custodian-kernel==0.5.0)
+WHEEL=/path/to/custodian_kernel-0.5.0-py3-none-any.whl
+
+# 3. Fresh install into a throwaway runtime root
+python install-custodian.py --package "$WHEEL" \
+    --runtime-root "$PWD/runtime" --bin-dir "$PWD/bin"
+cat runtime/active-slot          # expect: slot-b
+
+# 4. The launcher works
+./bin/custodian --version        # expect: custodian 0.5.0
+
+# 5. Reinstall: exercises the two-slot swap
+python install-custodian.py --package "$WHEEL" \
+    --runtime-root "$PWD/runtime" --bin-dir "$PWD/bin"
+
+# 6. Uninstall: removes launchers, preserves runtime data
+python install-custodian.py --uninstall \
+    --runtime-root "$PWD/runtime" --bin-dir "$PWD/bin"
+```
+
+Every step failing here is a bug worth reporting; the installer should never
+touch anything outside the `runtime-root`/`bin-dir` you gave it.
+
 - Documentation: https://getcustodian.xyz/docs
 - Source: https://github.com/KeyArgo/custodian-kernel
 - Package: https://pypi.org/project/custodian-kernel/
