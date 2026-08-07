@@ -199,7 +199,8 @@ def run(args) -> int:
         print("\u2713 Confined execution: Bubblewrap no-network profile is ready")
     else:
         message = "Confined execution is unavailable (Bubblewrap or unprivileged namespaces)"
-        print(f"{'\u2717' if confined_requested else '\u2022'} {message}")
+        mark = "\u2717" if confined_requested else "\u2022"
+        print(f"{mark} {message}")
         if confined_requested:
             failures.append(message)
 
@@ -207,7 +208,8 @@ def run(args) -> int:
     talaria_version = _distribution_version("custodian-talaria")
     if talaria_spec is None:
         message = "Talaria is not installed"
-        print(f"{'\u2717' if require_hermes else '\u2022'} {message}")
+        mark = "\u2717" if require_hermes else "\u2022"
+        print(f"{mark} {message}")
         if require_hermes:
             failures.append(message)
     else:
