@@ -29,7 +29,7 @@ class TestMcpCommand:
     def test_uses_absolute_interpreter(self):
         cmd = _mcp_command()
         assert cmd[0] == sys.executable
-        assert cmd[1:] == ["-m", "custodian.codex_guard.mcp_server"]
+        assert cmd[1:] == ["-m", "custodian.guards.codex.mcp_server"]
 
     def test_survives_path_differences(self):
         cmd = _mcp_command()
@@ -82,7 +82,7 @@ class TestDiagnoseStaleRegistration:
             "mcpServers": {
                 "custodian-codex-guard": {
                     "command": sys.executable,
-                    "args": ["-m", "custodian.codex_guard.mcp_server"],
+                    "args": ["-m", "custodian.guards.codex.mcp_server"],
                 }
             }
         }
@@ -96,7 +96,7 @@ class TestDiagnoseStaleRegistration:
             "mcpServers": {
                 "custodian-codex-guard": {
                     "command": "python3",
-                    "args": ["-m", "custodian.codex_guard.mcp_server"],
+                    "args": ["-m", "custodian.guards.codex.mcp_server"],
                 }
             }
         }
@@ -111,7 +111,7 @@ class TestDiagnoseStaleRegistration:
             "mcpServers": {
                 "custodian-codex-guard": {
                     "command": sys.executable,
-                    "args": ["-m", "custodian.codex_guard.mcp_server", "--extra"],
+                    "args": ["-m", "custodian.guards.codex.mcp_server", "--extra"],
                 }
             }
         }
@@ -148,7 +148,7 @@ class TestEnsureMcpJson:
         data = json.loads(mcp.read_text())
         server = data["mcpServers"]["custodian-codex-guard"]
         assert server["command"] == sys.executable
-        assert server["args"] == ["-m", "custodian.codex_guard.mcp_server"]
+        assert server["args"] == ["-m", "custodian.guards.codex.mcp_server"]
         assert result is True
 
     def test_creates_parent_directory(self, tmp_path):
@@ -319,7 +319,7 @@ def test_ensure_mcp_json_preserves_other_servers(tmp_path):
         assert rc == 0
         out = capsys.readouterr().out
         assert sys.executable in out
-        assert "custodian.codex_guard.mcp_server" in out
+        assert "custodian.guards.codex.mcp_server" in out
 
 
 # ------------------------------------------------------------------
@@ -346,7 +346,7 @@ class TestCliDoctor:
             "mcpServers": {
                 "custodian-codex-guard": {
                     "command": sys.executable,
-                    "args": ["-m", "custodian.codex_guard.mcp_server"],
+                    "args": ["-m", "custodian.guards.codex.mcp_server"],
                 }
             }
         }
@@ -402,7 +402,7 @@ class TestCliDoctor:
             "mcpServers": {
                 "custodian-codex-guard": {
                     "command": sys.executable,
-                    "args": ["-m", "custodian.codex_guard.mcp_server"],
+                    "args": ["-m", "custodian.guards.codex.mcp_server"],
                 }
             }
         }

@@ -32,9 +32,9 @@ Issues = "https://github.com/KeyArgo/custodian-codex-guard/issues"
 Security = "https://github.com/KeyArgo/custodian-codex-guard/blob/main/SECURITY.md"
 
 [project.scripts]
-custodian-codex = "custodian.codex_guard.cli:main"
-custodian-codex-guard-mcp = "custodian.codex_guard.mcp_server:main"
-custodian-codex-guard-hook = "custodian.codex_guard.hook:main"
+custodian-codex = "custodian.guards.codex.cli:main"
+custodian-codex-guard-mcp = "custodian.guards.codex.mcp_server:main"
+custodian-codex-guard-hook = "custodian.guards.codex.hook:main"
 
 [build-system]
 requires = ["setuptools>=64"]

@@ -65,7 +65,7 @@ def _mcp_command() -> list[str]:
     registration always points at the running interpreter rather than a
     possibly-stale bare shell script.
     """
-    return [sys.executable, "-m", "custodian.codex_guard.mcp_server"]
+    return [sys.executable, "-m", "custodian.guards.codex.mcp_server"]
 
 
 def _verify_mcp_handshake(command: list[str]) -> bool:
@@ -413,7 +413,7 @@ def _diagnose_stale_registration(mcp_json_path: Path) -> tuple[bool, str]:
         return False, "mcp.json parse error"
 
     current_cmd = sys.executable
-    current_args = ["-m", "custodian.codex_guard.mcp_server"]
+    current_args = ["-m", "custodian.guards.codex.mcp_server"]
 
     detail = f"registered: {cmd_entry} {' '.join(args_entry)}  live: {current_cmd} {' '.join(current_args)}"
 
