@@ -48,9 +48,12 @@ custodian-verify
 paladin --help
 ```
 
-Optional integrations such as Custodian Codex Guard and Talaria are separate
-packages. Removing `custodian-kernel` does not remove `~/.custodian`,
-`~/.paladin`, or other user data.
+Optional integrations are included: the Claude, Codex, and Hermes harness
+guards ship in the same wheel, so one install covers the kernel, Paladin, and
+every harness guard. The per-integration packages (custodian-codex-guard,
+custodian-claude-guard, custodian-hermes-guard, custodian-stripe, talaria)
+remain available as standalone legacy surfaces. Removing `custodian-kernel`
+does not remove `~/.custodian`, `~/.paladin`, or other user data.
 
 Custodian is pre-1.0 software. It is defense in depth, not an operating-system
 sandbox. Review the threat-model boundaries in
