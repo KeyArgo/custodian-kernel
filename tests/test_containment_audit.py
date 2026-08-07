@@ -6,6 +6,12 @@ Covers the three check modes:
 - runtime ``scan_live_sandboxes`` (finds a deliberately leaky live bwrap);
 - empirical ``probe_containment`` (detects a marker visible through a leaky
   sandbox).
+
+bwrap is a Linux-only tool and the audit's path semantics are POSIX
+(root binds, /private symlinks, unix sockets). macOS/Windows CI runners
+have different path roots (C:\\, /private/var/...) and tmp layouts that
+produce spurious findings or missed ones; the audit itself only ever
+runs where bwrap exists. The tests are gated to Linux.
 """
 from __future__ import annotations
 
@@ -18,6 +24,11 @@ from pathlib import Path
 import pytest
 
 from custodian import containment_audit as ca
+
+pytestmark = pytest.mark.skipif(
+    sys.platform != "linux",
+    reason="bwrap containment audit is Linux-specific (POSIX path semantics)",
+)
 
 _SSH = "." + "ssh"  # constructed so the forbidden literal never appears
 

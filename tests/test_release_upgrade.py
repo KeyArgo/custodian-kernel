@@ -113,5 +113,8 @@ def test_real_pypi_040_upgrades_to_filtered_041_and_preserves_data(tmp_path):
     )
     # Compare raw bytes: read_text() default newline handling would translate
     # the Windows CRLF launcher to LF on read and the assert could never pass
-    # on Windows even when the backup is byte-identical.
-    assert original_launcher.read_text(encoding="utf-8", newline="") == original_text
+    # on Windows even when the backup is byte-identical. (open() with
+    # newline="" is used because Path.read_text() does not accept newline=.)
+    with original_launcher.open(encoding="utf-8", newline="") as fh:
+        launcher_now = fh.read()
+    assert launcher_now == original_text
