@@ -41,6 +41,12 @@ Sole freeze exception under discussion: console K persistent-deny warning (else 
 
 ## 0.5.1+ — Anti-drift patch pack
 
+PATCH-LANE FLEXIBILITY (2026-08-07): 0.5.1 ships URGENT BUGFIXES ONLY if launch
+reveals them (hours after 0.5.0). Feature items below slide to 0.5.2 (and so on) —
+identity-write protection, Terrarium low-hanging fruit, and the visibility banner are
+the priority order; the patch lane never holds a feature hostage to a fix, nor a fix to
+a feature.
+
 - IDENTITY-WRITE PROTECTION (public complaint: harnesses rewriting their own
    instructions): WRITE-ONLY denials (reads stay allowed — a harness must read its
    instructions) enforced via the filesystem_write gate (the read/write distinction
