@@ -46,6 +46,16 @@ custodian = "custodian.cli.main:main"
 custodian-verify = "custodian.verify_kit:main"
 paladin = "paladin.cli:main"
 paladin-import = "paladin.cli:main_import"
+# Harness guards ship in the same wheel: one install = kernel + all guards.
+custodian-codex = "custodian.codex_guard.cli:main"
+custodian-codex-guard-mcp = "custodian.codex_guard.mcp_server:main"
+custodian-claude = "custodian.claude_guard.cli:main"
+custodian-claude-guard = "custodian.claude_guard.cli:main"
+custodian-hermes = "custodian.hermes_guard.cli:main"
+custodian-hermes-guard = "custodian.hermes_guard.cli:main"
+
+[project.entry-points."hermes_agent.plugins"]
+custodian-hermes-guard = "custodian.hermes_guard.plugin"
 
 [build-system]
 requires = ["setuptools>=64"]
@@ -62,4 +72,6 @@ include = ["custodian*", "paladin*"]
     "packs/**/*.yaml",
     "packs/**/*.json",
     "policy/presets/*.yaml",
+    "hermes_guard/plugin/*.yaml",
+    "claude_guard/corpus/*.json",
 ]

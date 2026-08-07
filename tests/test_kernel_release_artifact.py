@@ -34,8 +34,12 @@ def test_release_tree_has_kernel_metadata_and_no_integrations(tmp_path):
     metadata = (tree / "pyproject.toml").read_text()
     assert f'version = "{ver}"' in metadata
     assert "KeyArgo/custodian-kernel" in metadata
-    for package in ("codex_guard", "claude_guard", "opencode_guard"):
-        assert not (tree / "custodian" / package).exists()
+    # One-install-everything contract (0.5.0 fold): the public harness guards
+    # ship in the kernel wheel; only the private in-progress opencode guard
+    # (no public mirror, other lane's WIP) stays out.
+    for package in ("codex_guard", "claude_guard", "hermes_guard"):
+        assert (tree / "custodian" / package).is_dir(), f"{package} must ship"
+    assert not (tree / "custodian" / "opencode_guard").exists()
     assert (tree / "custodian/policy/presets/default.yaml").is_file()
     assert (tree / "install-custodian.py").is_file()
     assert (tree / "CHANGELOG.md").is_file()
