@@ -52,7 +52,7 @@ Optional integrations such as Custodian Codex Guard and Talaria are separate
 packages. Removing `custodian-kernel` does not remove `~/.custodian`,
 `~/.paladin`, or other user data.
 
-Custodian is alpha software. It is defense in depth, not an operating-system
+Custodian is pre-1.0 software. It is defense in depth, not an operating-system
 sandbox. Review the threat-model boundaries in
 [SECURITY.md](SECURITY.md) before relying on it for consequential actions.
 
