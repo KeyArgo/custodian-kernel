@@ -9,7 +9,7 @@ explicit denial or output suppression -- never to silence.
 
 The runtime never decides policy itself. Every pre-action decision comes
 from the shared decision engine
-(:func:`custodian.codex_guard.mcp_server.evaluate_guard_action`) with the
+(:func:`custodian.guards.codex.mcp_server.evaluate_guard_action`) with the
 trusted harness identity ``hermes``; receipts and approvals live in the
 same operator-owned state directory the other harness adapters use.
 
@@ -33,9 +33,9 @@ from typing import Any, Callable, Optional
 
 from custodian.adapters import ActionContext, AdapterPipeline
 from custodian.adapters.builtin import PiiRedactor, PromptInjectionGuard, SecretLeakGuard
-from custodian.codex_guard.approvals import ApprovalError, ApprovalStore
-from custodian.codex_guard.mcp_server import _state_dir
-from custodian.codex_guard.receipts import ReceiptChain
+from custodian.guards.codex.approvals import ApprovalError, ApprovalStore
+from custodian.guards.codex.mcp_server import _state_dir
+from custodian.guards.codex.receipts import ReceiptChain
 
 from .bridge import evaluate_tool
 from .contract import (

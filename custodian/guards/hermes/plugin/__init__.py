@@ -1,7 +1,7 @@
 """custodian-hermes-guard — the repository-owned Hermes Agent plugin.
 
 Wires Hermes' tool-call loop to the Custodian guard pipeline through the
-OSS :mod:`custodian.hermes_guard` runtime. Two hooks (the same contract
+OSS :mod:`custodian.guards.hermes` runtime. Two hooks (the same contract
 Nous' own security-guidance plugin uses):
 
 * ``pre_tool_call`` — runs the guard's pre-action on every proposed tool
@@ -32,10 +32,10 @@ import os
 import sys
 from typing import Any, Dict, Optional
 
-from custodian.hermes_guard.contract import HERMES_GUARD_CONTRACT_VERSION, approval_wait_seconds
+from custodian.guards.hermes.contract import HERMES_GUARD_CONTRACT_VERSION, approval_wait_seconds
 
 try:
-    from custodian.hermes_guard.runtime import HermesGuardRuntime
+    from custodian.guards.hermes.runtime import HermesGuardRuntime
     _IMPORT_ERROR: Optional[Exception] = None
 except Exception as e:  # pragma: no cover - exercised only without the dep
     _IMPORT_ERROR = e
@@ -69,7 +69,7 @@ def _wait_seconds() -> float:
 
     Operator policy (from the loaded ``policy.yaml``) wins over the
     environment. The environment fallback is delegated to
-    :func:`custodian.hermes_guard.contract.approval_wait_seconds`, which
+    :func:`custodian.guards.hermes.contract.approval_wait_seconds`, which
     honors the brand-neutral ``CUSTODIAN_APPROVAL_WAIT_SECONDS`` and
     keeps the legacy ``TALARIA_APPROVAL_WAIT_SECONDS`` as a compat shim.
     """

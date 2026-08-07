@@ -12,10 +12,10 @@ import sys
 # clone before installation; Python otherwise places only scripts/ on sys.path.
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from custodian.codex_guard import evaluate_action
-from custodian.codex_guard.approvals import ApprovalStore
-from custodian.codex_guard.mcp_server import handle
-from custodian.codex_guard.receipts import ReceiptChain
+from custodian.guards.codex import evaluate_action
+from custodian.guards.codex.approvals import ApprovalStore
+from custodian.guards.codex.mcp_server import handle
+from custodian.guards.codex.receipts import ReceiptChain
 
 
 def main() -> int:

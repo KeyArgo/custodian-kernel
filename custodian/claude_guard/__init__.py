@@ -1,13 +1,12 @@
-"""Fail-closed Claude Code integration for Custodian's shared control plane.
+"""Shim for the pre-0.5.0 module path ``custodian.claude_guard``.
 
-Unlike the Codex integration -- where the model must *choose* to call the
-``guard_action`` MCP tool before acting -- this guard runs inside Claude Code's
-``PreToolUse`` hook. The harness invokes it deterministically before every tool
-call, so enforcement does not depend on model cooperation, a loaded skill, or a
-prompt surviving injection. A denied decision blocks the tool even in
-``bypassPermissions`` mode.
+The Claude guard now lives at :mod:`custodian.guards.claude`; this package
+aliases it so existing imports, ``python -m custodian.claude_guard.hook``
+hook wiring, and console-script references keep working. New code should
+import :mod:`custodian.guards.claude` directly.
 """
+import sys as _sys
 
-from .bridge import classify_tool, evaluate_tool
+from custodian.guards import claude as _guard
 
-__all__ = ["classify_tool", "evaluate_tool"]
+_sys.modules[__name__] = _guard

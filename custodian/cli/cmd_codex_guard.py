@@ -17,9 +17,9 @@ def _color(verdict: str, is_tty: bool) -> str:
 
 def run(args) -> int:
     try:
-        from custodian.codex_guard.receipts import ReceiptChain
+        from custodian.guards.codex.receipts import ReceiptChain
     except ModuleNotFoundError as exc:
-        if exc.name != "custodian.codex_guard":
+        if exc.name != "custodian.guards.codex":
             raise
         print(
             "Codex Guard is not installed. Install it with:\n"

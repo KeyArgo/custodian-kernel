@@ -184,7 +184,7 @@ class TestDoctor:
         (tmp_path / "hermes" / "plugins" / "talaria-guard" / "plugin.yaml").write_text("name: guard\n")
         (tmp_path / "hermes" / "plugins" / "custodian-hermes-guard").mkdir(parents=True)
         (tmp_path / "hermes" / "plugins" / "custodian-hermes-guard" / "plugin.yaml").write_text(
-            (Path(__file__).resolve().parent.parent / "custodian" / "hermes_guard" / "plugin" / "plugin.yaml").read_text()
+            (Path(__file__).resolve().parent.parent / "custodian" / "guards" / "hermes" / "plugin" / "plugin.yaml").read_text()
         )
         (tmp_path / "talaria").mkdir()
         (tmp_path / "talaria" / "policy.yaml").write_text("{}\n")
@@ -214,7 +214,7 @@ class TestDoctor:
         (profile_dir / "plugins" / "talaria-guard" / "plugin.yaml").write_text("name: guard\n")
         (profile_dir / "plugins" / "custodian-hermes-guard").mkdir(parents=True)
         (profile_dir / "plugins" / "custodian-hermes-guard" / "plugin.yaml").write_text(
-            (Path(__file__).resolve().parent.parent / "custodian" / "hermes_guard" / "plugin" / "plugin.yaml").read_text()
+            (Path(__file__).resolve().parent.parent / "custodian" / "guards" / "hermes" / "plugin" / "plugin.yaml").read_text()
         )
         monkeypatch.setenv("HERMES_HOME", "")
         monkeypatch.delenv("HERMES_HOME", raising=False)
@@ -252,7 +252,7 @@ class TestDoctor:
         (tmp_path / "hermes" / "plugins" / "talaria-guard" / "plugin.yaml").write_text("name: guard\n")
         (tmp_path / "hermes" / "plugins" / "custodian-hermes-guard").mkdir(parents=True)
         (tmp_path / "hermes" / "plugins" / "custodian-hermes-guard" / "plugin.yaml").write_text(
-            (Path(__file__).resolve().parent.parent / "custodian" / "hermes_guard" / "plugin" / "plugin.yaml").read_text()
+            (Path(__file__).resolve().parent.parent / "custodian" / "guards" / "hermes" / "plugin" / "plugin.yaml").read_text()
         )
         (tmp_path / "talaria").mkdir()
         (tmp_path / "talaria" / "policy.yaml").write_text("{}\n")
@@ -285,7 +285,7 @@ class TestDoctor:
         (tmp_path / "hermes" / "plugins" / "talaria-guard" / "plugin.yaml").write_text("name: guard\n")
         (tmp_path / "hermes" / "plugins" / "custodian-hermes-guard").mkdir(parents=True)
         (tmp_path / "hermes" / "plugins" / "custodian-hermes-guard" / "plugin.yaml").write_text(
-            (Path(__file__).resolve().parent.parent / "custodian" / "hermes_guard" / "plugin" / "plugin.yaml").read_text()
+            (Path(__file__).resolve().parent.parent / "custodian" / "guards" / "hermes" / "plugin" / "plugin.yaml").read_text()
         )
         (tmp_path / "talaria").mkdir()
         (tmp_path / "talaria" / "policy.yaml").write_text("{}\n")

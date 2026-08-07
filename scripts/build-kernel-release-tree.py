@@ -7,7 +7,7 @@ import shutil
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-EXCLUDED = {"opencode_guard", "opencode-prompts"}
+EXCLUDED = {"opencode", "opencode_guard", "opencode-prompts"}
 
 
 def _ignore(_directory: str, names: list[str]) -> set[str]:

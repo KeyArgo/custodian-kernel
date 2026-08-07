@@ -17,7 +17,7 @@ from custodian.cli.main import main
 
 _SHIPPED_YAML = (
     Path(__file__).resolve().parent.parent
-    / "custodian" / "hermes_guard" / "plugin" / "plugin.yaml"
+    / "custodian" / "guards" / "hermes" / "plugin" / "plugin.yaml"
 ).read_text()
 
 

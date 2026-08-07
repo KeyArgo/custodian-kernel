@@ -2,7 +2,7 @@
 
 The heavy lifting -- path fencing, secret/prompt-injection scanning, operator
 policy, expiring single-use approvals, and value-free HMAC-chained receipts --
-lives in :func:`custodian.codex_guard.mcp_server.evaluate_guard_action`,
+lives in :func:`custodian.guards.codex.mcp_server.evaluate_guard_action`,
 exactly the same core the Codex, Claude, and OpenCode guards call. This
 module only translates Hermes' tool vocabulary into an action kind and shapes
 the request; it never decides policy on its own.
@@ -12,7 +12,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from custodian.codex_guard.mcp_server import evaluate_guard_action
+from custodian.guards.codex.mcp_server import evaluate_guard_action
 
 from .contract import HERMES_GUARD_CONTRACT_VERSION, classify_tool
 

@@ -38,7 +38,7 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO))
 
-from custodian.codex_guard.corpus import (  # noqa: E402
+from custodian.guards.codex.corpus import (  # noqa: E402
     check_entry, entry_signature, load_corpus,
 )
 

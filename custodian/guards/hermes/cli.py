@@ -19,7 +19,7 @@ import json
 import sys
 from importlib import resources
 
-from custodian.codex_guard.mcp_server import _state_dir
+from custodian.guards.codex.mcp_server import _state_dir
 
 from .bridge import evaluate_tool
 from .contract import HERMES_GUARD_CONTRACT_VERSION
@@ -41,11 +41,11 @@ def cmd_evaluate(_: argparse.Namespace) -> int:
 def cmd_doctor(_: argparse.Namespace) -> int:
     problems: list[str] = []
     try:
-        from custodian.hermes_guard import HermesGuardRuntime  # noqa: F401
+        from custodian.guards.hermes import HermesGuardRuntime  # noqa: F401
     except Exception as exc:
         problems.append(f"hermes_guard import failed: {exc}")
     try:
-        plugin_dir = resources.files("custodian.hermes_guard.plugin")
+        plugin_dir = resources.files("custodian.guards.hermes.plugin")
         if not (plugin_dir / "plugin.yaml").is_file():
             problems.append("plugin manifest missing from installed package")
     except Exception as exc:

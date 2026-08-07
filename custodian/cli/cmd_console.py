@@ -23,9 +23,9 @@ _GREEN, _YELLOW, _RED, _DIM, _RESET = "\x1b[32m", "\x1b[33m", "\x1b[31m", "\x1b[
 
 def _guard_approval_store(state_dir: Path):
     try:
-        from custodian.codex_guard.approvals import ApprovalStore
+        from custodian.guards.codex.approvals import ApprovalStore
     except ModuleNotFoundError as exc:
-        if exc.name == "custodian.codex_guard":
+        if exc.name == "custodian.guards.codex":
             return None
         raise
     return ApprovalStore(state_dir)
@@ -106,9 +106,9 @@ def _recent_blocks(state_dir: Path, limit: int = 3) -> list[dict]:
     silently didn't cover that whole path.
     """
     try:
-        from custodian.codex_guard.receipts import ReceiptChain
+        from custodian.guards.codex.receipts import ReceiptChain
     except ModuleNotFoundError as exc:
-        if exc.name != "custodian.codex_guard":
+        if exc.name != "custodian.guards.codex":
             raise
         denied = []
     else:

@@ -1,0 +1,11 @@
+READ-ONLY code review of the installer scripts/install-custodian.py in this repo (plus tests/test_oss_installer.py and packaging/kernel/pyproject.toml for context). This installer ships in the first public release of the package tomorrow.
+
+Its contract: create a managed venv in fixed two-slot locations (runtime-a / runtime-b with an active-slot marker), install the custodian-kernel wheel (pip install --upgrade <spec>), expose launcher commands via symlink wrappers in ~/.local/bin, support upgrade/reinstall/uninstall, respect PEP 668 (externally-managed-environment), back up and restore an existing launcher, and NEVER delete user data directories.
+
+HUNT FOR:
+1. Bugs that would break a real install on a fresh machine or an upgrade from PyPI
+2. Edge cases: existing launcher at the target path, symlinked paths, failed staging install, interrupted install, non-root execution, no network, read-only filesystem
+3. Windows-specific breakage (the code has os.name == nt branches — check the default bin-dir layout against _validate_managed_paths)
+4. Anything embarrassing for a public release (wrong messages, wrong exit codes, leftover temp dirs, incorrect PATH entries)
+
+Give findings as: severity + file:line + one-line fix. Do NOT modify any files — report only.

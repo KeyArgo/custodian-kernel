@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from custodian.codex_guard.mcp_server import evaluate_guard_action
+from custodian.guards.codex.mcp_server import evaluate_guard_action
 
 
 _READ_TOOLS = frozenset({"read", "glob", "grep", "list", "lsp", "skill"})

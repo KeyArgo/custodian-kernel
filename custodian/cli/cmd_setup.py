@@ -17,6 +17,7 @@ project.
 from __future__ import annotations
 
 import json
+import importlib.resources
 import os
 import shutil
 import subprocess
@@ -233,8 +234,9 @@ def _install_hermes_guard_plugin(args) -> None:
     aborting the whole setup.
     """
     try:
-        from importlib.resources import files
-        plugin_src = files("custodian").joinpath("hermes_guard", "plugin")
+        plugin_src = importlib.resources.files("custodian").joinpath(
+            "guards", "hermes", "plugin"
+        )
         if not (plugin_src / "plugin.yaml").is_file():
             print("warning: bundled Hermes guard plugin not found in installed package")
             return

@@ -74,7 +74,7 @@ def _verify_guard_enforcement(hermes_home: Path) -> tuple[bool, str]:
     both hooks, the enforcement wiring is intact.
     """
     try:
-        from custodian.hermes_guard import plugin as guard_plugin
+        from custodian.guards.hermes import plugin as guard_plugin
     except Exception as exc:
         return False, f"guard plugin module failed to import: {exc}"
 
@@ -96,7 +96,7 @@ def _verify_guard_enforcement(hermes_home: Path) -> tuple[bool, str]:
     deployed_yaml = hermes_home / "plugins" / "custodian-hermes-guard" / "plugin.yaml"
     try:
         from importlib.resources import files
-        shipped_yaml = files("custodian").joinpath("hermes_guard", "plugin", "plugin.yaml")
+        shipped_yaml = files("custodian").joinpath("guards", "hermes", "plugin", "plugin.yaml")
         if deployed_yaml.read_text() != shipped_yaml.read_text():
             return False, (
                 "deployed plugin.yaml differs from the shipped version — "

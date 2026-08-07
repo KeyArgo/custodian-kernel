@@ -125,6 +125,7 @@ from custodian.cli import cmd_executor
 from custodian.cli import cmd_console
 from custodian.cli import cmd_codex_guard
 from custodian.cli import cmd_gates
+from custodian.cli import cmd_guards
 from custodian.cli import cmd_uninstall
 from custodian.cli import cmd_health
 from custodian.cli._version import LazyVersionAction
@@ -291,6 +292,30 @@ def build_parser(env_defaults: CustodianConfig | None = None) -> argparse.Argume
         help="Require every component for this integration profile",
     )
     p.set_defaults(func=cmd_doctor.run)
+
+    # ── guards ──────────────────────────────────────────────────────────────
+    p = sub.add_parser(
+        "guards",
+        help="Enable, disable, or check the harness guards (codex, claude, hermes)",
+        description=(
+            "Guards are dormant by default — installing custodian-kernel "
+            "activates nothing. This command is the single gate every surface "
+            "reads and writes: the terminal, install-custodian.py, and Hermes."
+        ),
+    )
+    p.add_argument(
+        "--state-dir", default=None,
+        help="Kernel state directory (default: $CUSTODIAN_STATE_DIR or ~/.custodian)",
+    )
+    gsub = p.add_subparsers(dest="guard_action", required=True)
+    gp = gsub.add_parser("enable", help="Activate a guard (codex|claude|hermes)")
+    gp.add_argument("name", choices=("codex", "claude", "hermes"))
+    gp.set_defaults(func=cmd_guards.run_enable)
+    gp = gsub.add_parser("disable", help="Deactivate a guard (codex|claude|hermes)")
+    gp.add_argument("name", choices=("codex", "claude", "hermes"))
+    gp.set_defaults(func=cmd_guards.run_disable)
+    gp = gsub.add_parser("status", help="Show which guards are active")
+    gp.set_defaults(func=cmd_guards.run_status)
 
     # ── init ──────────────────────────────────────────────────────────────────
     p = sub.add_parser(

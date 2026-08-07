@@ -41,7 +41,7 @@ def no_subprocess(monkeypatch):
 @pytest.fixture
 def hermes_guard_src(tmp_path):
     """Create a minimal bundled plugin dir so importlib.resources resolves."""
-    src = tmp_path / "bundled" / "hermes_guard" / "plugin"
+    src = tmp_path / "bundled" / "guards" / "hermes" / "plugin"
     src.mkdir(parents=True)
     (src / "plugin.yaml").write_text("name: custodian-hermes-guard\n")
     return src
@@ -49,12 +49,23 @@ def hermes_guard_src(tmp_path):
 
 @pytest.fixture
 def mock_plugin_src(monkeypatch, hermes_guard_src):
-    """Make importlib.resources.files('custodian') return the fixture dir."""
+    """Make importlib.resources.files('custodian') return the fixture dir.
+
+    The production code imports ``files`` inside the function, so the mock
+    has to land at the actual call site (``custodian.cli.cmd_setup.files``)
+    in addition to the module-level symbol. The mock returns the directory
+    so that ``files("custodian").joinpath("guards", "hermes", "plugin")``
+    resolves to the fixture's plugin path.
+    """
     import importlib.resources
 
     def _fake_files(package):
         if package == "custodian":
-            return hermes_guard_src.parent.parent  # .../bundled/
+            # Production code calls .joinpath("guards", "hermes", "plugin")
+            # on this value, so the mock must point at the directory that
+            # *contains* the bundled "guards/" tree (i.e. one level above
+            # the fixture's "bundled/guards/hermes/plugin").
+            return hermes_guard_src.parent.parent.parent  # .../tmp/
         return importlib.resources.files(package)
 
     monkeypatch.setattr("importlib.resources.files", _fake_files)

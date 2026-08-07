@@ -312,6 +312,18 @@ def main() -> int:
         "--uninstall", action="store_true",
         help="Remove the managed runtime and its launchers; preserve all user data",
     )
+    parser.add_argument(
+        "--with-codex", action="store_true",
+        help="Also enable the Codex guard after install (dormant by default)",
+    )
+    parser.add_argument(
+        "--with-claude", action="store_true",
+        help="Also enable the Claude Code guard after install (dormant by default)",
+    )
+    parser.add_argument(
+        "--with-hermes", action="store_true",
+        help="Also enable the Hermes guard after install (dormant by default)",
+    )
     args = parser.parse_args()
     if sys.version_info < (3, 11):
         print(
@@ -333,6 +345,18 @@ def main() -> int:
     except (OSError, ValueError, RuntimeError, subprocess.CalledProcessError) as e:
         print(f"custodian installer: {e}", file=sys.stderr)
         return 1
+    for flag, name in (
+        (args.with_codex, "codex"),
+        (args.with_claude, "claude"),
+        (args.with_hermes, "hermes"),
+    ):
+        if flag:
+            subprocess.run(
+                [str(_runtime_python(runtime)), "-m", "custodian.cli.main",
+                 "guards", "enable", name],
+                check=False, timeout=120,
+            )
+            print(f"Enabled {name} guard.")
     print(f"Custodian installed: {runtime}")
     print(f"Commands available in: {args.bin_dir}")
     print("User data was preserved.")
