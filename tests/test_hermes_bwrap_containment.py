@@ -200,3 +200,20 @@ def test_policy_bind_is_per_file_not_whole_dir(tmp_path: Path) -> None:
     # Non-policy state (receipts, keys) must not appear as bind sources.
     for secret in ("codex-guard-receipts.jsonl", "codex-approval.key"):
         assert str(policy / secret) not in mounts
+
+
+def test_hermes_agent_root_root_is_refused(tmp_path: Path) -> None:
+    """HERMES_AGENT_ROOT=/ must abort the launch, never --ro-bind / /.
+
+    Regression for the final Codex finding: the env-provided root
+    bypassed the root-path refusal (which only ran in the fallback walk).
+    """
+    ws = tmp_path / "ws"
+    ws.mkdir()
+    r = subprocess.run(
+        [sys.executable, str(_SCRIPT), "--workspace", str(ws)],
+        env={**os.environ, "HERMES_AGENT_ROOT": "/"},
+        capture_output=True, text=True, timeout=30,
+    )
+    assert r.returncode != 0, "must refuse to bind the filesystem root"
+    assert "refusing" in (r.stderr + r.stdout).lower(), (r.stderr, r.stdout)

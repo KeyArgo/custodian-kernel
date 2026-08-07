@@ -294,3 +294,20 @@ def monkeypatch_home(tmp_path, monkeypatch):
     home = tmp_path / "home"
     home.mkdir(exist_ok=True)
     monkeypatch.setenv("HOME", str(home))
+
+
+def test_symlink_source_to_sensitive_path_is_flagged(tmp_path, monkeypatch):
+    """A mount SOURCE that is a symlink to a sensitive path must be flagged.
+
+    Regression for the final Codex finding: _norm() used absolute() so a
+    symlinked source passed the audit while bwrap followed it to ~/.ssh.
+    """
+    home = tmp_path / "home"
+    ssh = home / _SSH
+    ssh.mkdir(parents=True)
+    monkeypatch_home(tmp_path, monkeypatch)
+    link = tmp_path / "apparent-ssh"
+    link.symlink_to(ssh, target_is_directory=True)
+    findings = ca.audit_mount_spec(["--bind", str(link), str(link)])
+    assert any(f.severity == "critical" for f in findings), findings
+    assert any("ssh" in f.exposed for f in findings), findings

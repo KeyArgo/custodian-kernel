@@ -47,12 +47,63 @@ def test_unknown_guard_rejected(tmp_path):
         gate.disable(_state(tmp_path), "nope")
 
 
-def test_corrupt_state_falls_back_dormant(tmp_path):
+def test_corrupt_state_without_bak_fails_closed(tmp_path):
+    """Corrupt state with no valid backup must FAIL CLOSED, not go dormant.
+
+    Regression for the final Codex finding: corruption used to disarm
+    enabled guards (fail open). With no backup the gate must deny
+    everything until the operator repairs the file.
+    """
     s = _state(tmp_path)
     p = tmp_path / "state" / "guards.json"
     p.parent.mkdir(parents=True)
     p.write_text("{not json")
+    assert gate.is_fail_closed(s) is True
     assert gate.is_enabled(s, "codex") is False
+
+
+def test_corrupt_state_restores_last_known_good_from_bak(tmp_path):
+    """Corruption after a valid enable restores the .bak (last-known-good)."""
+    s = _state(tmp_path)
+    gate.enable(s, "codex")
+    p = tmp_path / "state" / "guards.json"
+    assert (tmp_path / "state" / "guards.json.bak").is_file(), "write must keep a .bak"
+    p.write_text("{not json")
+    assert gate.is_fail_closed(s) is False
+    assert gate.is_enabled(s, "codex") is True, "last-known-good state must survive"
+    # A subsequent successful write refreshes the .bak with the new state.
+    gate.enable(s, "hermes")
+    assert gate.is_enabled(s, "hermes") is True
+
+
+def test_gate_rejects_ancestor_symlinked_state_dir(tmp_path):
+    """A symlink ABOVE the state dir must be refused on read.
+
+    Regression for the final Codex finding: only the final component was
+    checked; an ancestor symlink redirected the state dir unnoticed.
+    """
+    real = tmp_path / "real-dir"
+    real.mkdir()
+    (real / "guards.json").write_text(
+        '{"version": 1, "guards": {"claude": {"enabled": true}}}'
+    )
+    link = tmp_path / "link"
+    link.symlink_to(real, target_is_directory=True)
+    s = str(link / "state")  # ancestor of 'state' is a symlink
+    assert gate.is_enabled(s, "claude") is False
+
+
+def test_gate_rejects_group_or_world_writable_state_dir(tmp_path):
+    """A group/world-writable state dir must not be trusted for enforcement."""
+    s = _state(tmp_path)
+    gate.enable(s, "codex")
+    d = tmp_path / "state"
+    d.chmod(0o777)  # world-writable: another local user could swap the file
+    try:
+        assert gate.is_enabled(s, "codex") is False
+        assert gate.is_fail_closed(s) is False  # dormant, not deny-all
+    finally:
+        d.chmod(0o700)
 
 
 def test_wrong_shape_state_falls_back_dormant(tmp_path):
