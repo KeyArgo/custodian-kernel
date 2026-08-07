@@ -7,7 +7,12 @@ import shutil
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-EXCLUDED = {"opencode", "opencode_guard", "opencode-prompts"}
+# The public kernel wheel ships the consolidated custodian/guards/* packages
+# only. The legacy fold shim packages (custodian/{codex,claude,hermes}_guard
+# and their guards/ mirrors) must NOT leak into the artifact; consumers use
+# the canonical custodian.guards.* paths.
+EXCLUDED = {"opencode", "opencode_guard", "opencode-prompts",
+            "codex_guard", "claude_guard", "hermes_guard"}
 
 
 def _ignore(_directory: str, names: list[str]) -> set[str]:

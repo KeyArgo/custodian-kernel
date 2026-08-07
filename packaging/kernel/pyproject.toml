@@ -47,8 +47,10 @@ custodian-verify = "custodian.verify_kit:main"
 paladin = "paladin.cli:main"
 paladin-import = "paladin.cli:main_import"
 # Harness guards ship in the same wheel: one install = kernel + all guards.
-custodian-codex = "custodian.guards.codex.cli:main"
-custodian-codex-guard-mcp = "custodian.guards.codex.mcp_server:main"
+# The codex console scripts are deliberately absent: the hackathon-active
+# custodian-codex-guard mirror repo owns `custodian-codex`/`custodian-codex-guard-mcp`,
+# and two packages providing the same script would conflict on install. The
+# kernel's codex surface is `custodian guards enable codex` + the hook.
 custodian-claude = "custodian.guards.claude.cli:main"
 custodian-claude-guard = "custodian.guards.claude.cli:main"
 custodian-hermes = "custodian.guards.hermes.cli:main"
