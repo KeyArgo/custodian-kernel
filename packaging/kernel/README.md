@@ -64,6 +64,9 @@ this release — no public mirror, no `--with-opencode` installer flag, and no
 `custodian guards enable opencode` target. It is tracked for a later release;
 the three shipped guards (claude, codex, hermes) are at parity.
 
+Test coverage note: 86 tests are marked `network` and deselected by default
+(they require real network access); run `pytest -m network` to include them.
+
 Preview or perform a data-preserving package uninstall:
 
 ```bash
