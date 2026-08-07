@@ -2,17 +2,17 @@ Custodian Release Preparation Report
 ====================================
 Component: kernel
 Version:   0.5.0
-Time:      2026-08-07T09:26:52Z
+Time:      2026-08-07T09:45:21Z
 
 Artifacts:
   custodian_kernel-0.5.0-py3-none-any.whl
     path: custodian_kernel-0.5.0-py3-none-any.whl
     size: 679464
-    SHA-256: 6033b5987f0182e58c2e01a56e22589d2860288e795cfab563ca0c386470c383
+    SHA-256: 6299def6ecddd2cacdcdcabdc3eb9054776ef2c28cced117deceb86acb7ef22b
   custodian_kernel-0.5.0.tar.gz
     path: custodian_kernel-0.5.0.tar.gz
-    size: 488234
-    SHA-256: c8c222e0040a8f0f8d2f67ece757ef27d32233f9fa8bd0b0fc8820b9d7cc2e4b
+    size: 488305
+    SHA-256: 80cb071db6234398084b513f3bdcfabd32922cbc4573d8bf88216802fa41e6ba
 
 Test Results:
   [PASS] fresh-install
