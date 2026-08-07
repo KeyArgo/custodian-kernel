@@ -73,6 +73,15 @@ that isn't a fix.
   safe|strict|dev — shared preset model sets ALL gates + policy mode; preset-aware
   visibility strings replace the 0.5.1 on/off banner), optional-component adapters for
   iron-proxy (marker-gated tests, tested-version manifest, fail-closed status).
+- PER-HARNESS PROFILES (adopted from operator design, 2026-08-07): global baseline +
+  per-harness override (codex/claude/hermes/talaria) — locked-down (Terrarium resident),
+  builder, reviewer, operator profiles; per-harness permissions for fs read/write,
+  network, shell, credentials, package install, git mutation, production, governance,
+  outside-workspace paths; deny-always-wins; grant narrows never widens (existing model);
+  effective decisions show source rule + receipt; `custodian gates` gains per-harness
+  protect/open/set + a TUI profile editor. (NOTE: the other-session commands `gates set`,
+  `gates capabilities`, `gates protect --harness` do NOT exist in 0.5.0 — this is the
+  build item, not a backfill.)
 - Hermes-as-gateway UX: from one Hermes session, install custodian + enable the guard for
   every harness the user owns (claude/codex/hermes) — "install once, govern everything."
 
