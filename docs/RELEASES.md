@@ -41,6 +41,25 @@ iron-proxy/OpenShell integration; approval-presentation UX; audit cross-process 
 **Theme:** beta-feedback fixes and hardening between stages.
 
 **Scope (candidates, driven by beta feedback):**
+- COMMAND-CONTRACT VERIFICATION (the anti-vaporware sidecar, Codex design 2026-08-07):
+  every console script in pyproject.toml has `--help`; every argparse command/subcommand
+  has nonempty help + a `doc_ref`; every leaf command has exactly one smoke recipe; every
+  recipe runs in an isolated temp state dir. Default smoke = `--help`; one real safe path
+  per command where possible. Markers: `stateful`, `network`, `interactive`, `destructive`
+  (fixture-backed dry-run/negative path + existing integration test ref). CI/release gate
+  FAILS on unmarked exceptions, undocumented commands, or unverified commands. Read-only
+  `custodian-verify --cli-contract` exposed only after CI owns it. Help text derives from
+  argparse (single source) so help/man cannot drift.
+- GATES PER-HARNESS STATUS: `custodian gates status --harness <id>` — read-only visibility
+  over the existing per-harness model (gate-policy.json). NO fictitious
+  set/capabilities/protect --harness commands.
+- IDENTITY-WRITE PROTECTION: write-only denials for home-root MEMORY.md + workspace
+  basenames CLAUDE.md, AGENTS.md, .cursorrules, soul.md, MEMORY.md, USER.md (read stays
+  allowed — a harness must read its instructions; operator-only exemption; traversal and
+  symlink bypass impossible; normal workspace writes unaffected). Tests for each.
+- CONSOLE K WARNING: K creates a PERSISTENT global deny (not temporary like kill/resume) —
+  warn before confirmation + name the removal path. (Pre-launch freeze exception if
+  operator opts in; otherwise day-zero 0.5.1.)
 - GUARD-STATE VISIBILITY (Claude+Codex design, adopted 2026-08-07): activation banner
   once per session + immediate CLI transition notices on enable/disable; levels
   baseline / verbose (session-start state) / debug (verdict class, receipt IDs — never
@@ -82,6 +101,13 @@ that isn't a fix.
   protect/open/set + a TUI profile editor. (NOTE: the other-session commands `gates set`,
   `gates capabilities`, `gates protect --harness` do NOT exist in 0.5.0 — this is the
   build item, not a backfill.)
+- CAPABILITY PLANE (handoff docs/HANDOFF-CAPABILITY-PLANE-2026-08-07.md, ADOPTED as the
+  0.6.0+ platform track, re-sequenced): Phase 0 = read-only gap report FIRST (expected to
+  shrink estimates — much exists: gate-policy harness model, console, receipts, guards);
+  then capability manifest + identity status (supported/installed/enabled/active), profile
+  compiler with effective-policy provenance, per-harness mutating gate commands. Mission
+  Control TUI + plugin signing/rollback/quarantine = LATER slices (genuinely new). Launch
+  is NOT gated by this track.
 - Hermes-as-gateway UX: from one Hermes session, install custodian + enable the guard for
   every harness the user owns (claude/codex/hermes) — "install once, govern everything."
 
