@@ -584,7 +584,9 @@ def build_parser() -> argparse.ArgumentParser:
     sub = p.add_subparsers(dest="command", required=False)
 
     sp = sub.add_parser("init", help="create a new vault")
-    sp.add_argument("--keyfile", help="use a random 32-byte keyfile instead of a passphrase")
+    sp.add_argument("--keyfile", metavar="PATH",
+                    help="generate and use a random 32-byte keyfile at PATH "
+                         "(instead of a passphrase; mode 0600)")
     sp.set_defaults(fn=cmd_init)
 
     sp = sub.add_parser("add", help="store a secret (value prompted, never echoed)")
