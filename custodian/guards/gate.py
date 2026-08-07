@@ -124,20 +124,20 @@ def load_state(state_dir: str | Path) -> dict:
     # dormant fallback — never silently trust a symlink's content.
     if _has_symlink_ancestor(p) or p.is_symlink():
         print(
-            f"custodian: WARNING — gate state path {p} is (or is under) a symlink; "
-            f"refusing to trust it and treating all guards as dormant. "
+            f"custodian: FATAL — gate state path {p} is (or is under) a symlink; "
+            f"FAILING CLOSED — all guards deny until the symlink is removed. "
             f"Remove the symlink and re-run 'custodian guards enable <name>'.",
             file=sys.stderr,
         )
-        return _dormant()
+        return _fail_closed()
     if _unsafe_state_dir_mode(state_dir):
         print(
-            f"custodian: WARNING — gate state dir {state_dir} is group/world "
-            f"writable; refusing to trust it and treating all guards as dormant. "
-            f"Fix the mode (chmod 700) and re-run 'custodian guards enable <name>'.",
+            f"custodian: FATAL — gate state dir {state_dir} is group/world "
+            f"writable; FAILING CLOSED — all guards deny until the mode is "
+            f"fixed. chmod 700 and re-run 'custodian guards enable <name>'.",
             file=sys.stderr,
         )
-        return _dormant()
+        return _fail_closed()
     if not p.is_file():
         return _dormant()
     try:
@@ -172,12 +172,12 @@ def load_state(state_dir: str | Path) -> dict:
         return _fail_closed()
     if not _validate_shape(data):
         print(
-            f"custodian: WARNING — gate state file {p} has an invalid shape; "
-            f"treating all guards as dormant. Re-run "
-            f"'custodian guards enable <name>' to restore state.",
+            f"custodian: FATAL — gate state file {p} has an invalid shape; "
+            f"FAILING CLOSED — all guards deny until the file is repaired. "
+            f"Re-run 'custodian guards enable <name>' to rebuild.",
             file=sys.stderr,
         )
-        return _dormant()
+        return _fail_closed()
     return data
 
 
@@ -244,10 +244,10 @@ def _write_state(state_dir: str | Path, data: dict) -> None:
     """
     p = state_path(state_dir)
     p.parent.mkdir(parents=True, exist_ok=True)
-    if p.parent.is_symlink():
-        # The user's state directory itself is a symlink. We refuse to
-        # write through it (the launcher's policy is that ~/.custodian
-        # is created by us, not linked by the user).
+    if _has_symlink_ancestor(p) or p.parent.is_symlink():
+        # The user's state directory (or an ancestor of it) is a symlink.
+        # We refuse to write through it (the launcher's policy is that
+        # ~/.custodian is created by us, not linked by the user).
         raise OSError(f"refusing to write gate state through symlinked dir: {p.parent}")
     if p.is_symlink():
         raise OSError(f"refusing to write gate state through existing symlink: {p}")
@@ -269,12 +269,16 @@ def _write_state(state_dir: str | Path, data: dict) -> None:
         finally:
             os.close(dir_fd)
         os.replace(tmp_name, p)
-        # Preserve the last-known-good state: before the next write
-        # overwrites the file, keep a copy so a torn/corrupt write can be
-        # recovered by load_state instead of failing open.
+        # Preserve the last-known-good state: keep a copy so a torn/corrupt
+        # write can be recovered by load_state instead of failing open.
+        # Symlink-safe: a preexisting or raced .bak symlink is unlinked
+        # (unlink removes the link, never follows it) before the copy.
         try:
             import shutil
-            shutil.copyfile(p, Path(str(p) + ".bak"))
+            bak = Path(str(p) + ".bak")
+            if bak.is_symlink() or bak.exists():
+                bak.unlink()
+            shutil.copyfile(p, bak)
         except OSError:
             pass
     except BaseException:

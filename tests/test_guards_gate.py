@@ -91,33 +91,46 @@ def test_gate_rejects_ancestor_symlinked_state_dir(tmp_path):
     link.symlink_to(real, target_is_directory=True)
     s = str(link / "state")  # ancestor of 'state' is a symlink
     assert gate.is_enabled(s, "claude") is False
+    assert gate.is_fail_closed(s) is True
 
 
 def test_gate_rejects_group_or_world_writable_state_dir(tmp_path):
-    """A group/world-writable state dir must not be trusted for enforcement."""
+    """A group/world-writable state dir must FAIL CLOSED, not defer.
+
+    A writable dir lets another local user swap the state file and disarm
+    the guards — the same attack class as the symlink case.
+    """
     s = _state(tmp_path)
     gate.enable(s, "codex")
     d = tmp_path / "state"
     d.chmod(0o777)  # world-writable: another local user could swap the file
     try:
         assert gate.is_enabled(s, "codex") is False
-        assert gate.is_fail_closed(s) is False  # dormant, not deny-all
+        assert gate.is_fail_closed(s) is True, "untrusted state dir must deny"
     finally:
         d.chmod(0o700)
 
 
-def test_wrong_shape_state_falls_back_dormant(tmp_path):
-    """Valid JSON but the wrong shape (e.g. someone hand-edits or a buggy
-    prior version wrote a list) must not crash is_enabled — it must fall
-    back to the dormant baseline. Regression for the post-Codex sign-off
-    finding on the gate's corrupt-file fall-back."""
+def test_wrong_shape_state_fails_closed(tmp_path):
+    """Valid JSON but the wrong shape must FAIL CLOSED, not fall back dormant.
+
+    An attacker (or a buggy writer) can hand-craft a parseable file that
+    claims 'dormant' — that must DENY, not disarm.
+    """
     s = _state(tmp_path)
     p = tmp_path / "state" / "guards.json"
     p.parent.mkdir(parents=True)
     for bad in ("[]", '{"guards": null}', '{"guards": []}', '{"version": "0"}',
                 '{"version": 1, "guards": {"codex": "yes"}}'):
         p.write_text(bad)
-        assert gate.is_enabled(s, "codex") is False, f"shape {bad!r} should be dormant"
+        assert gate.is_fail_closed(s) is True, f"shape {bad!r} must fail closed"
+
+
+def test_state_file_missing_is_dormant_not_fail_closed(tmp_path):
+    """A MISSING state file is the never-enabled baseline: dormant, not deny."""
+    s = _state(tmp_path)
+    assert gate.is_enabled(s, "codex") is False
+    assert gate.is_fail_closed(s) is False
 
 
 def test_symlinked_state_file_not_trusted(tmp_path):
@@ -137,6 +150,7 @@ def test_symlinked_state_file_not_trusted(tmp_path):
     (link / "guards.json").symlink_to(real / "guards.json")
     # The symlinked file claims codex is enabled; the gate must refuse it.
     assert gate.is_enabled(s, "codex") is False
+    assert gate.is_fail_closed(s) is True
 
 
 def test_symlinked_state_dir_not_trusted(tmp_path):
@@ -149,6 +163,7 @@ def test_symlinked_state_dir_not_trusted(tmp_path):
     link = tmp_path / "state"
     link.symlink_to(real, target_is_directory=True)
     assert gate.is_enabled(str(link), "hermes") is False
+    assert gate.is_fail_closed(str(link)) is True
 
 
 def test_concurrent_enables_are_lossless(tmp_path):
