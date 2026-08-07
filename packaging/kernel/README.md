@@ -67,6 +67,18 @@ the three shipped guards (claude, codex, hermes) are at parity.
 Test coverage note: 86 tests are marked `network` and deselected by default
 (they require real network access); run `pytest -m network` to include them.
 
+Residual risks (accepted for 0.5.0, tracked for hardening):
+- The gate's symlink checks are path-based (check-then-use). A same-user
+  attacker able to swap path components between the check and the read
+  could race the check; the threat model assumes the state directory is
+  user-owned and protected.
+- Only the immediate state directory and state file are checked for
+  symlinks; symlinked ancestor components of a custom nested
+  `CUSTODIAN_STATE_DIR` are not detected.
+- One cycle of production/telemetry watch on the gate fallback path
+  (the dormant-fallback behavior on both read and write sides) is
+  recommended before treating it as fully proven under real load.
+
 Preview or perform a data-preserving package uninstall:
 
 ```bash
