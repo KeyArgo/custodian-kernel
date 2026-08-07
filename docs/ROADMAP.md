@@ -42,9 +42,18 @@ Sole freeze exception under discussion: console K persistent-deny warning (else 
 ## 0.5.1+ — Anti-drift patch pack
 
 - IDENTITY-WRITE PROTECTION (public complaint: harnesses rewriting their own
-   instructions): write-only denials for home-root MEMORY.md and workspace basenames
-   CLAUDE.md / AGENTS.md / .cursorrules / soul.md / MEMORY.md / USER.md. Reads stay
-   allowed; operator-only exemption; traversal/symlink bypass impossible; tests.
+   instructions): WRITE-ONLY denials (reads stay allowed — a harness must read its
+   instructions) enforced via the filesystem_write gate (the read/write distinction
+   already exists in the gates model). Configurable scope: OWN (a harness can't write
+   its own identity files) / ALL (no harness can write ANY harness's dotfiles:
+   ~/.claude/*, ~/.codex/*, ~/.hermes/*, ~/.config/opencode/*, ~/.cursor/*, home-root
+   ~/MEMORY.md ~/CLAUDE.md ~/AGENTS.md ~/soul.md ~/.cursorrules) / PROJECT (+ workspace
+   basenames CLAUDE.md AGENTS.md .cursorrules soul.md MEMORY.md USER.md). Default ALL.
+   The shared inherited_deny already lists the harness dirs for every harness
+   (cross-harness by construction). Operator-only exemption: agent proposals are fenced;
+   operator edits (own editor/CLI, explicit direction) are not proposals. Traversal and
+   symlink bypass impossible; normal workspace writes unaffected. Enforcement covers
+   guarded-adapter actions only (application-governed mode; host/VM modes stronger).
 - TERRARIUM LOW-HANGING FRUIT (from CUSTODIAN-TERRARIUM-REQUIREMENTS-HANDOFF-2026-08-07):
    action-envelope optional fields (world_id, episode_id, resident_id, capability,
    capability_version) + Terrarium action-kind registration (resident_turn,
