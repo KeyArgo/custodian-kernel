@@ -41,11 +41,19 @@ Sole freeze exception under discussion: console K persistent-deny warning (else 
 
 ## 0.5.1+ — Anti-drift patch pack
 
-1. IDENTITY-WRITE PROTECTION (public complaint: harnesses rewriting their own
+- IDENTITY-WRITE PROTECTION (public complaint: harnesses rewriting their own
    instructions): write-only denials for home-root MEMORY.md and workspace basenames
    CLAUDE.md / AGENTS.md / .cursorrules / soul.md / MEMORY.md / USER.md. Reads stay
    allowed; operator-only exemption; traversal/symlink bypass impossible; tests.
-2. COMMAND-CONTRACT VERIFICATION (anti-vaporware sidecar, Codex design): every console
+- TERRARIUM LOW-HANGING FRUIT (from CUSTODIAN-TERRARIUM-REQUIREMENTS-HANDOFF-2026-08-07):
+   action-envelope optional fields (world_id, episode_id, resident_id, capability,
+   capability_version) + Terrarium action-kind registration (resident_turn,
+   resident_tool_request, world_state_change, knowledge_supply_request,
+   snapshot_create/restore, airlock_transfer/export/burn, harness_patch_proposal,
+   capability_install/promote/rollback, model_change, world_clone/destroy) as
+   classification entries + receipt metadata. Kernel stays Terrarium-agnostic; no
+   world/resident/replay logic.
+- COMMAND-CONTRACT VERIFICATION (anti-vaporware sidecar, Codex design): every console
    script has --help; every subcommand nonempty help + doc_ref + one smoke recipe in an
    isolated temp state dir; markers stateful/network/interactive/destructive; CI fails
    on unverified; help derives from argparse (single source). Read-only
@@ -82,8 +90,18 @@ Sole freeze exception under discussion: console K persistent-deny warning (else 
    report FIRST (expected to shrink the 3-5d/2-3w estimates — gate-policy harness model,
    console, receipts, guards already exist); Phase 1 capability manifest + identity
    status (supported/installed/enabled/active); Phase 2 profile compiler with
-   effective-policy provenance.
-6. ONE-CLI STACK SURFACE: custodian stack install/status/doctor; optional-component
+   effective-policy provenance. The Phase 0 gap report ALSO classifies every
+   Terrarium-handoff requirement (already-implemented/kernel/talaria/terrarium/host) —
+   one report, two consumers.
+6. TERRARIUM P0/P1 (from CUSTODIAN-TERRARIUM-REQUIREMENTS-HANDOFF-2026-08-07): stable
+   action envelope with world/episode/resident correlation; capability/profile metadata
+   in receipts; supported vs installed vs enabled vs active status; effective-policy
+   inspection; Terrarium profiles (terrarium-alpha-resident, beta-resident, airlock-a/b,
+   observer, export-reviewer) via the per-harness profiles; per-resident/world/episode
+   stop controls; receipt query filters; generic one-time airlock export authorization
+   primitive (Terrarium owns the airlock workflow). Fail-closed: malformed envelopes,
+   identity mismatch, scope overrun, recorder/governance outage all block.
+7. ONE-CLI STACK SURFACE: custodian stack install/status/doctor; optional-component
    adapters (iron-proxy binary component; marker-gated tests; tested-version manifest).
 
 ## 0.7.0 — Stage 3 + verifier
