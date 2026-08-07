@@ -108,7 +108,13 @@ def _unsafe_state_dir_mode(state_dir: str | Path) -> bool:
     A group/world-writable state dir means another local user could swap
     the state file (enable/disable guards at will). The launcher creates
     the dir with 0700; anything looser is refused like a symlink.
+
+    Windows-only: POSIX mode bits are not enforced there (the DACL is the
+    real protection) and stat() fabricates permissive modes for ordinary
+    directories, so the check would false-fail every read on Windows.
     """
+    if os.name == "nt":
+        return False
     try:
         mode = stat.S_IMODE(Path(state_dir).stat().st_mode)
     except OSError:
