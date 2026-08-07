@@ -86,3 +86,4 @@ custodian/bundled_skills/**/state/
 # for convenience, deliberately never tracked here -- a different
 # submission (XPRIZE) with its own deadline, not Custodian/Build-Week work.
 docs/xprize/
+.tmp-*
