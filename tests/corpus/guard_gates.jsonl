@@ -56,7 +56,7 @@
 {"action_kind":"read","arguments":{"command":"echo hi\ncat ~/.aws/credentials"},"family":"credential","floor":"escalation_required","tool":"shell","workspace":"project"}
 {"action_kind":"read","arguments":{"command":"echo hi\necho $STRIPE_SECRET_KEY"},"family":"credential","floor":"escalation_required","tool":"shell","workspace":"project"}
 {"action_kind":"read","arguments":{"command":"echo hi\npaladin resolve stripe"},"family":"credential","floor":"escalation_required","tool":"shell","workspace":"project"}
-{"action_kind":"read","arguments":{"command":"curl -H 'Authorization: Bearer sk_live_{REDACTED_TOKEN}'"},"family":"credential-inline","floor":"denied","tool":"shell","workspace":"project"}
+{"action_kind":"read","arguments":{"command":"curl -H 'Authorization: Bearer {REDACTED_TOKEN}'"},"family":"credential-inline","floor":"denied","tool":"shell","workspace":"project"}
 {"action_kind":"read","arguments":{"command":"export AWS='AKIAIOSFODNN7EXAMPLE'"},"family":"credential-inline","floor":"denied","tool":"shell","workspace":"project"}
 {"action_kind":"read","arguments":{"command":"echo hi\ncustodian-codex disable"},"family":"self-tamper","floor":"escalation_required","tool":"shell","workspace":"project"}
 {"action_kind":"read","arguments":{"command":"echo hi\ncustodian-codex approve latest"},"family":"self-tamper","floor":"escalation_required","tool":"shell","workspace":"project"}

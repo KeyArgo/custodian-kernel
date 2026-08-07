@@ -86,6 +86,12 @@ a feature.
    cross-checked against install receipts; `custodian check-updates` compares to the
    latest PyPI release of each package; `custodian doctor` gains version rows. New
    commands get contract tests (help + smoke) per the command-contract pack.
+- PRE-PUSH SECRET SCAN (from the 2026-08-07 push-protection block: GitHub's scanner
+   caught test-fixture credential shapes our value-pattern scan missed): wire the
+   secrets-scan skill into a git pre-push hook (`custodian scan --pre-push` or an
+   installer-managed hook) so pushes are scanned BEFORE reaching GitHub; widen the
+   tracked-pattern set to cover env-var NAMES + header forms (STRIPE_SECRET_KEY,
+   Bearer <token>), keeping the no-credentials-tracked test green.
 5. CONSOLE K WARNING: K creates a PERSISTENT global deny (not temporary like
    kill/resume) — warn before confirm, name the removal path. (Day-zero unless the
    freeze exception is approved.)
