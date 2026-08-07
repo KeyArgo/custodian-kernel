@@ -118,7 +118,15 @@ def _host_is_blocked(host: str) -> bool:
 
 
 def _ip_is_blocked(ip: "ipaddress.IPv4Address | ipaddress.IPv6Address") -> bool:
-    """True when *ip* falls inside any never-egress network block."""
+    """True when *ip* falls inside any never-egress network block.
+
+    IPv4-mapped IPv6 addresses (``::ffff:a.b.c.d``) are unwrapped to the
+    embedded IPv4 first — otherwise ``::ffff:127.0.0.1`` would pass the
+    version-6 check and reach IPv4 loopback via create_connection
+    (review finding on the dial-time pin).
+    """
+    if ip.version == 6 and ip.ipv4_mapped is not None:
+        ip = ip.ipv4_mapped
     for net in _BLOCKED_NETWORKS:
         if ip.version == net.version and ip in net:
             return True

@@ -358,3 +358,18 @@ def test_resolve_pinned_pins_public_ip(monkeypatch):
     ip, port = _resolve_pinned("api.example.com", 443)
     assert ip == "93.184.216.34"
     assert port == 443
+
+
+def test_resolve_pinned_rejects_ipv4_mapped_ipv6_loopback(monkeypatch):
+    """IPv4-mapped IPv6 (::ffff:127.0.0.1) must be treated as its embedded
+    IPv4 address — otherwise the pin accepts it and create_connection
+    reaches IPv4 loopback (Codex review finding on the dial-time pin)."""
+    import socket as _socket
+    from paladin.broker import _resolve_pinned
+
+    def _mapped_getaddrinfo(host, port, family=0, type=0, proto=0, flags=0):
+        return [(10, 1, 6, "", ("::ffff:127.0.0.1", port))]
+
+    monkeypatch.setattr(_socket, "getaddrinfo", _mapped_getaddrinfo)
+    with pytest.raises(EgressDeniedError, match="blocked"):
+        _resolve_pinned("api.example.com", 443)
