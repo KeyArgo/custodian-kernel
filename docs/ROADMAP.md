@@ -79,6 +79,13 @@ a feature.
    the existing gate-policy.json harness model). NO fictitious commands (gates set /
    capabilities / protect --harness do not exist and must not be added without the
    contract tests).
+- VERSION/UPDATE VERIFICATION (operator request 2026-08-07 — proven necessary: launcher
+   ran 0.5.0 while system-python hooks resolved 0.4.0 + claude-guard 0.1.0): `custodian
+   versions` enumerates kernel + every adapter/guard from the RUNNING environment
+   (launcher env vs system env vs hook env — the split-brain IS the finding),
+   cross-checked against install receipts; `custodian check-updates` compares to the
+   latest PyPI release of each package; `custodian doctor` gains version rows. New
+   commands get contract tests (help + smoke) per the command-contract pack.
 5. CONSOLE K WARNING: K creates a PERSISTENT global deny (not temporary like
    kill/resume) — warn before confirm, name the removal path. (Day-zero unless the
    freeze exception is approved.)
