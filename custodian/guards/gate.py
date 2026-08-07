@@ -73,9 +73,25 @@ def load_state(state_dir: str | Path) -> dict:
         return _dormant()
     try:
         data = json.loads(p.read_text(encoding="utf-8"))
-    except (ValueError, OSError):
+    except (ValueError, OSError) as exc:
+        # Loud, not silent: a corrupt state file means we cannot know the
+        # operator's intent, so we treat it as dormant (fail open) but we
+        # WARN — silently disarming guards an operator enabled would be a
+        # security surprise. The status command and doctor surface this.
+        print(
+            f"custodian: WARNING — gate state file {p} is corrupt "
+            f"({type(exc).__name__}); treating all guards as dormant. "
+            f"Re-run 'custodian guards enable <name>' to restore state.",
+            file=sys.stderr,
+        )
         return _dormant()
     if not _validate_shape(data):
+        print(
+            f"custodian: WARNING — gate state file {p} has an invalid shape; "
+            f"treating all guards as dormant. Re-run "
+            f"'custodian guards enable <name>' to restore state.",
+            file=sys.stderr,
+        )
         return _dormant()
     return data
 

@@ -59,6 +59,11 @@ Custodian is pre-1.0 software. It is defense in depth, not an operating-system
 sandbox. Review the threat-model boundaries in
 [SECURITY.md](SECURITY.md) before relying on it for consequential actions.
 
+Known gap: an OpenCode guard adapter exists internally but is not shipped in
+this release — no public mirror, no `--with-opencode` installer flag, and no
+`custodian guards enable opencode` target. It is tracked for a later release;
+the three shipped guards (claude, codex, hermes) are at parity.
+
 Preview or perform a data-preserving package uninstall:
 
 ```bash

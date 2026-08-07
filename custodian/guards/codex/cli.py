@@ -61,7 +61,7 @@ def _materialize_plugin_runtime(source: Path) -> Path:
 def _mcp_command() -> list[str]:
     """Return the canonical command for launching the MCP guard server.
 
-    Uses ``sys.executable -m custodian.codex_guard.mcp_server`` so the
+    Uses ``sys.executable -m custodian.guards.codex.mcp_server`` so the
     registration always points at the running interpreter rather than a
     possibly-stale bare shell script.
     """
@@ -104,7 +104,7 @@ def _verify_mcp_handshake(command: list[str]) -> bool:
 def _ensure_mcp_json(mcp_json_path: Path) -> bool:
     """Idempotently write/repair the MCP server registration.
 
-    Always uses the absolute ``sys.executable -m custodian.codex_guard.mcp_server``
+    Always uses the absolute ``sys.executable -m custodian.guards.codex.mcp_server``
     form so stale bare-command registrations are replaced on every run.
     Verifies with a real JSON-RPC ``initialize`` handshake.
     """
