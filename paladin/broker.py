@@ -72,9 +72,11 @@ _BLOCKED_NETWORKS = (
     ipaddress.IPv4Network("192.168.0.0/16"),
     ipaddress.IPv4Network("100.64.0.0/10"),     # RFC 6598 CGN
     ipaddress.IPv4Network("0.0.0.0/8"),          # "this network"
+    ipaddress.IPv4Network("224.0.0.0/4"),        # multicast
     ipaddress.IPv6Network("::1/128"),
     ipaddress.IPv6Network("fc00::/7"),
     ipaddress.IPv6Network("fe80::/10"),
+    ipaddress.IPv6Network("ff00::/8"),           # multicast
 )
 
 
@@ -120,17 +122,31 @@ def _host_is_blocked(host: str) -> bool:
 def _ip_is_blocked(ip: "ipaddress.IPv4Address | ipaddress.IPv6Address") -> bool:
     """True when *ip* falls inside any never-egress network block.
 
-    IPv4-mapped IPv6 addresses (``::ffff:a.b.c.d``) are unwrapped to the
-    embedded IPv4 first — otherwise ``::ffff:127.0.0.1`` would pass the
-    version-6 check and reach IPv4 loopback via create_connection
-    (review finding on the dial-time pin).
+    IPv6 addresses that EMBED an IPv4 address are unwrapped to the
+    embedded IPv4 first — otherwise a 6to4 (``2002:VVWW:XXYY::``),
+    NAT64 (``64:ff9b::a.b.c.d``), Teredo (``2001:0000::`` client), or
+    IPv4-mapped (``::ffff:a.b.c.d``) form of a blocked IPv4 would pass
+    the version-6 check and reach the IPv4 target via create_connection
+    (Codex + Claude review findings on the dial-time pin).
     """
-    if ip.version == 6 and ip.ipv4_mapped is not None:
-        ip = ip.ipv4_mapped
+    if ip.version == 6:
+        if ip.ipv4_mapped is not None:
+            ip = ip.ipv4_mapped
+        elif ip.sixtofour is not None:
+            ip = ip.sixtofour
+        elif ip.teredo is not None:
+            ip = ip.teredo[1]  # (server, client) — stdlib returns a plain tuple
+        elif _ip_in_prefix(ip, "64:ff9b::/96"):  # RFC 6052 well-known prefix
+            ip = ipaddress.IPv4Address(ip.packed[-4:])
     for net in _BLOCKED_NETWORKS:
         if ip.version == net.version and ip in net:
             return True
     return False
+
+
+def _ip_in_prefix(ip: "ipaddress.IPv6Address", prefix: str) -> bool:
+    """True when *ip* lies inside the given IPv6 CIDR prefix."""
+    return ip in ipaddress.IPv6Network(prefix)
 
 
 def _resolve_pinned(host: str, port: int, allow_private: bool = False) -> tuple[str, int]:

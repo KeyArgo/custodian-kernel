@@ -373,3 +373,41 @@ def test_resolve_pinned_rejects_ipv4_mapped_ipv6_loopback(monkeypatch):
     monkeypatch.setattr(_socket, "getaddrinfo", _mapped_getaddrinfo)
     with pytest.raises(EgressDeniedError, match="blocked"):
         _resolve_pinned("api.example.com", 443)
+
+
+def test_ip_is_blocked_unwraps_embedded_ipv4_forms():
+    """6to4 / NAT64 / Teredo / mapped forms of a blocked IPv4 must ALL be
+    blocked — not just ::ffff: (Claude review finding: the classic
+    RFC1918-pin bypass is 6to4/NAT64 embedding). Values verified live
+    against the stdlib ipaddress module."""
+    from paladin.broker import _ip_is_blocked
+    import ipaddress as _ip
+
+    # 6to4: 2002:VVWW:XXYY:: embeds VV.WW.XX.YY
+    assert _ip_is_blocked(_ip.IPv6Address("2002:0a00:0001::"))       # 10.0.0.1
+    assert _ip_is_blocked(_ip.IPv6Address("2002:7f00:0001::"))       # 127.0.0.1
+    assert not _ip_is_blocked(_ip.IPv6Address("2002:5db8:d822::"))   # 93.184.216.34 (public)
+
+    # NAT64 well-known prefix 64:ff9b::/96
+    assert _ip_is_blocked(_ip.IPv6Address("64:ff9b::7f00:0001"))     # 127.0.0.1
+    assert _ip_is_blocked(_ip.IPv6Address("64:ff9b::0a00:0001"))     # 10.0.0.1
+
+    # Teredo 2001:0000::/32 client (obfuscation handled by stdlib)
+    assert _ip_is_blocked(_ip.IPv6Address("2001:0000:0000:0000:0000:0000:f5ff:fffe"))  # client 10.0.0.1
+
+    # IPv4-mapped (the original Codex finding)
+    assert _ip_is_blocked(_ip.IPv6Address("::ffff:127.0.0.1"))
+
+    # plain IPv6 must stay version-6 checked, not mis-unwrapped
+    assert not _ip_is_blocked(_ip.IPv6Address("2001:db8::1"))
+
+
+def test_multicast_ranges_are_blocked():
+    """IPv4 + IPv6 multicast are never-egress (Claude review finding)."""
+    from paladin.broker import _ip_is_blocked
+    import ipaddress as _ip
+
+    assert _ip_is_blocked(_ip.IPv4Address("224.0.0.5"))
+    assert _ip_is_blocked(_ip.IPv4Address("239.255.255.250"))
+    assert _ip_is_blocked(_ip.IPv6Address("ff02::1"))
+    assert _ip_is_blocked(_ip.IPv6Address("ff0e::1"))
