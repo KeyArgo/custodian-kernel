@@ -351,11 +351,20 @@ def main() -> int:
         (args.with_hermes, "hermes"),
     ):
         if flag:
-            subprocess.run(
+            result = subprocess.run(
                 [str(_runtime_python(runtime)), "-m", "custodian.cli.main",
                  "guards", "enable", name],
                 check=False, timeout=120,
             )
+            if result.returncode != 0:
+                print(
+                    f"error: failed to enable {name} guard (exit "
+                    f"{result.returncode}); install succeeded but the guard "
+                    f"is dormant. Re-run 'custodian guards enable {name}' "
+                    f"to activate.",
+                    file=sys.stderr,
+                )
+                return 1
             print(f"Enabled {name} guard.")
     print(f"Custodian installed: {runtime}")
     print(f"Commands available in: {args.bin_dir}")

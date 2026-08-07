@@ -35,27 +35,35 @@ from typing import Any, Dict, Optional
 from custodian.guards.hermes.contract import HERMES_GUARD_CONTRACT_VERSION, approval_wait_seconds
 
 try:
-    from custodian.guards.hermes.runtime import HermesGuardRuntime
+    from custodian.guards.hermes.runtime import HermesGuardRuntime, _DisabledGuardError
     _IMPORT_ERROR: Optional[Exception] = None
 except Exception as e:  # pragma: no cover - exercised only without the dep
     _IMPORT_ERROR = e
     HermesGuardRuntime = None  # type: ignore
+    _DisabledGuardError = RuntimeError  # type: ignore
 
 _RUNTIME = None
+_DISABLED = False
 
 
 def _runtime():
-    global _RUNTIME
+    global _RUNTIME, _DISABLED
+    if _DISABLED:
+        return None
     if _RUNTIME is None:
-        _RUNTIME = HermesGuardRuntime(
-            # vault=None: this OSS plugin must not import Paladin (the
-            # kernel stays brand-neutral; Paladin is reached only from the
-            # deployment layer via the `paladin` CLI). The runtime never
-            # reads vault material; egress/credential metadata is a
-            # deployment-shim concern.
-            vault=None,
-            notifier=lambda message: print(f"[hermes-guard] {message}", file=sys.stderr),
-        )
+        try:
+            _RUNTIME = HermesGuardRuntime(
+                # vault=None: this OSS plugin must not import Paladin (the
+                # kernel stays brand-neutral; Paladin is reached only from the
+                # deployment layer via the `paladin` CLI). The runtime never
+                # reads vault material; egress/credential metadata is a
+                # deployment-shim concern.
+                vault=None,
+                notifier=lambda message: print(f"[hermes-guard] {message}", file=sys.stderr),
+            )
+        except _DisabledGuardError:
+            _DISABLED = True
+            return None
     return _RUNTIME
 
 
@@ -90,6 +98,10 @@ def _on_pre_tool_call(tool_name: str = "", args: Any = None, **_: Any) -> Option
             "action": "block",
             "message": "[hermes-guard] unavailable; tool call blocked (kernel import failed)",
         }
+    if _runtime() is None:
+        # Guard is dormant (operator did not `custodian guards enable hermes`).
+        # Pass through unchanged so a disabled guard costs nothing.
+        return None
     try:
         _pipeline()  # compatibility probe; initialization remains fail-closed
         decision = _runtime().evaluate_pre(
@@ -133,6 +145,9 @@ def _on_transform_tool_result(tool_name: str = "", args: Any = None,
         return None
     if _IMPORT_ERROR is not None:
         return "[hermes-guard] output suppressed: guard unavailable"
+    if _runtime() is None:
+        # Guard dormant — no post-action scanning either.
+        return None
     try:
         _pipeline()  # compatibility probe; initialization remains fail-closed
         return _runtime().inspect_result(

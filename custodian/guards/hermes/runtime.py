@@ -57,6 +57,12 @@ _MAX_WAIT_SECONDS = 3600.0
 _POLL_INTERVAL_SECONDS = 1.0
 
 
+class _DisabledGuardError(RuntimeError):
+    """Raised when a guard refuses to construct because the operator has
+    not enabled it. The plugin catches this and passes the tool call
+    through unchanged, so a disabled guard is invisible to the harness."""
+
+
 class HermesGuardRuntime:
     """Fail-closed Hermes tool-call guard backed by the shared Custodian core."""
 
@@ -75,6 +81,16 @@ class HermesGuardRuntime:
         self.vault = vault
         self.notifier: Callable[[str], None] = notifier or (lambda _message: None)
         self._state_dir: Path = Path(state_dir) if state_dir is not None else _state_dir()
+        # Gate: if the hermes guard is disabled in this profile, the
+        # runtime refuses to construct. The plugin's _on_pre_tool_call
+        # catches DisabledGuardError and passes the tool call through
+        # unchanged, so a disabled guard costs nothing to the operator.
+        from custodian.guards.gate import is_enabled as _gate_is_enabled
+        if not _gate_is_enabled(
+            os.environ.get("CUSTODIAN_STATE_DIR", str(Path.home() / ".custodian")),
+            "hermes",
+        ):
+            raise _DisabledGuardError("hermes guard is disabled in this profile")
         self._policy: dict[str, Any] = {
             "harness": "hermes",
             "contract_version": HERMES_GUARD_CONTRACT_VERSION,

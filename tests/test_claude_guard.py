@@ -42,7 +42,15 @@ def event(tmp_path, **overrides):
 
 
 def _state(monkeypatch, tmp_path):
-    monkeypatch.setenv("CUSTODIAN_CODEX_GUARD_STATE_DIR", str(tmp_path / "state"))
+    state = tmp_path / "state"
+    state.mkdir(exist_ok=True)
+    monkeypatch.setenv("CUSTODIAN_CODEX_GUARD_STATE_DIR", str(state))
+    monkeypatch.setenv("CUSTODIAN_STATE_DIR", str(state))
+    # The claude guard's hook refuses to act when the gate is off; every
+    # test in this file that exercises the hook (decide is fine without
+    # it) must have the guard active.
+    from custodian.guards.gate import enable as _gate_enable
+    _gate_enable(str(state), "claude")
 
 
 def test_read_allows(tmp_path, monkeypatch):

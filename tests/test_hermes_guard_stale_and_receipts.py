@@ -30,12 +30,21 @@ def no_real_hermes(monkeypatch, tmp_path):
 
 
 def _hermes_env(monkeypatch, tmp_path, talaria_policy: bool = True) -> Path:
-    """Build the standard mocked Hermes environment; return plugin dir."""
+    """Build the standard mocked Hermes environment; return plugin dir.
+
+    Also activates the hermes guard in the gate (the runtime refuses to
+    construct when the gate is off), and points the gate at the test's
+    tmp_path state dir so the test can mutate it freely."""
     real_find_spec = __import__("importlib").util.find_spec
     monkeypatch.setattr(
         "custodian.cli.cmd_doctor.importlib.util.find_spec",
         lambda name: object() if name == "talaria" else real_find_spec(name),
     )
+    state_dir = tmp_path / "state"
+    state_dir.mkdir(parents=True, exist_ok=True)
+    monkeypatch.setenv("CUSTODIAN_STATE_DIR", str(state_dir))
+    from custodian.guards.gate import enable as _gate_enable
+    _gate_enable(str(state_dir), "hermes")
     monkeypatch.setenv("TALARIA_HOME", str(tmp_path / "talaria"))
     hermes = tmp_path / "hermes"
     (hermes / "plugins" / "talaria-guard").mkdir(parents=True)
@@ -98,10 +107,23 @@ def test_doctor_ready_with_both_plugins_enabled(monkeypatch, tmp_path, capsys):
     assert "Ready" in out
 
 
+def _enable_hermes_in_tmp(monkeypatch, tmp_path):
+    """Enable the hermes guard in tmp_path and point CUSTODIAN_STATE_DIR at it.
+
+    The hermes runtime refuses to construct when the gate is off, so any
+    test that builds a HermesGuardRuntime() needs this helper."""
+    state_dir = tmp_path / "gate-state"
+    state_dir.mkdir(parents=True, exist_ok=True)
+    monkeypatch.setenv("CUSTODIAN_STATE_DIR", str(state_dir))
+    from custodian.guards.gate import enable as _gate_enable
+    _gate_enable(str(state_dir), "hermes")
+
+
 def test_consume_failure_fails_closed(monkeypatch, tmp_path):
     """If consume() cannot write its claim marker (e.g. read-only approval
     store), wait_for_approval must resolve to a denied decision, never an
     approval that silently leaked through."""
+    _enable_hermes_in_tmp(monkeypatch, tmp_path)
     from custodian.hermes_guard.runtime import HermesGuardRuntime
     from custodian.codex_guard.approvals import ApprovalStore
 
@@ -225,6 +247,7 @@ def test_consumed_approval_replay_fast_denies(monkeypatch, tmp_path):
     branch; without the explicit consumed-status check it would silently
     poll until the timeout.
     """
+    _enable_hermes_in_tmp(monkeypatch, tmp_path)
     from custodian.hermes_guard.runtime import HermesGuardRuntime
     from custodian.codex_guard.approvals import ApprovalStore
 
@@ -269,6 +292,7 @@ def test_changed_action_after_approval_fails_closed(monkeypatch, tmp_path):
     previously-approved id but changes the args/workspace/requester must
     be denied, not silently authorized.
     """
+    _enable_hermes_in_tmp(monkeypatch, tmp_path)
     from custodian.hermes_guard.runtime import HermesGuardRuntime
     from custodian.codex_guard.approvals import ApprovalStore
 

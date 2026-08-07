@@ -47,7 +47,14 @@ WORKSPACE_SUBDIR = "project"
 
 
 def _state(monkeypatch, tmp_path):
-    monkeypatch.setenv("CUSTODIAN_CODEX_GUARD_STATE_DIR", str(tmp_path / "state"))
+    state = tmp_path / "state"
+    state.mkdir(exist_ok=True)
+    monkeypatch.setenv("CUSTODIAN_CODEX_GUARD_STATE_DIR", str(state))
+    monkeypatch.setenv("CUSTODIAN_STATE_DIR", str(state))
+    # The hermes runtime refuses to construct when the gate is off; every
+    # test in this file exercises the runtime as ACTIVE.
+    from custodian.guards.gate import enable as _gate_enable
+    _gate_enable(str(state), "hermes")
 
 
 def _workspace(tmp_path):

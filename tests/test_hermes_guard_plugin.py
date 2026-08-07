@@ -27,6 +27,16 @@ def _state_dir(tmp_path):
     return state
 
 
+@pytest.fixture(autouse=True)
+def _enable_hermes_guard(monkeypatch, tmp_path):
+    """Every test in this file exercises the hermes guard as ACTIVE; the
+    gate must be turned on for the runtime to construct."""
+    state = _state_dir(tmp_path)
+    monkeypatch.setenv("CUSTODIAN_STATE_DIR", str(state))
+    from custodian.guards.gate import enable as _gate_enable
+    _gate_enable(str(state), "hermes")
+
+
 def _patch_env(monkeypatch, state):
     monkeypatch.setenv("CUSTODIAN_CODEX_GUARD_STATE_DIR", str(state))
     # Short approval window so escalation tests don't block the suite.

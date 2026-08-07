@@ -55,6 +55,65 @@ def test_corrupt_state_falls_back_dormant(tmp_path):
     assert gate.is_enabled(s, "codex") is False
 
 
+def test_wrong_shape_state_falls_back_dormant(tmp_path):
+    """Valid JSON but the wrong shape (e.g. someone hand-edits or a buggy
+    prior version wrote a list) must not crash is_enabled — it must fall
+    back to the dormant baseline. Regression for the post-Codex sign-off
+    finding on the gate's corrupt-file fall-back."""
+    s = _state(tmp_path)
+    p = tmp_path / "state" / "guards.json"
+    p.parent.mkdir(parents=True)
+    for bad in ("[]", '{"guards": null}', '{"guards": []}', '{"version": "0"}',
+                '{"version": 1, "guards": {"codex": "yes"}}'):
+        p.write_text(bad)
+        assert gate.is_enabled(s, "codex") is False, f"shape {bad!r} should be dormant"
+
+
+def test_concurrent_enables_are_lossless(tmp_path):
+    """Two threads calling enable() concurrently must not lose updates.
+
+    Regression for the post-Codex sign-off finding on the read-modify-write
+    race. The lock + per-write unique temp + atomic replace must serialize
+    them so the final state reflects both enables."""
+    s = _state(tmp_path)
+    import threading
+    results: list[bool] = []
+    def _enable(name):
+        results.append(gate.enable(s, name))
+    t1 = threading.Thread(target=_enable, args=("codex",))
+    t2 = threading.Thread(target=_enable, args=("claude",))
+    t1.start(); t2.start()
+    t1.join(); t2.join()
+    assert gate.is_enabled(s, "codex") is True
+    assert gate.is_enabled(s, "claude") is True
+    # At most one of the threads should report "I made the change"; the
+    # other may also report True if both ran the enable before either
+    # had refreshed state, but the final state is the same either way.
+    assert gate.is_enabled(s, "hermes") is False
+
+
+def test_writes_are_atomic_via_unique_temp(tmp_path):
+    """A write failure mid-temp must not corrupt the existing state file.
+
+    Regression for the Codex finding on the predictable temp path."""
+    s = _state(tmp_path)
+    gate.enable(s, "codex")
+    before = (tmp_path / "state" / "guards.json").read_text()
+    # Force _write_state to fail by patching os.replace to raise.
+    import os as _os
+    real_replace = _os.replace
+    def _boom(src, dst):
+        raise OSError("simulated replace failure")
+    _os.replace = _boom
+    try:
+        with pytest.raises(OSError):
+            gate.enable(s, "claude")
+    finally:
+        _os.replace = real_replace
+    after = (tmp_path / "state" / "guards.json").read_text()
+    assert before == after, "existing state must be untouched after a failed write"
+
+
 def test_cli_enable_and_status(tmp_path, capsys):
     s = _state(tmp_path)
     rc = main(["guards", "--state-dir", s, "enable", "claude"])

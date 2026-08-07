@@ -111,7 +111,21 @@ def decide(event: dict[str, Any]) -> tuple[str, str]:
     return "deny", "Custodian: unrecognized guard verdict; failing closed"
 
 
+def _dormant_defer() -> bool:
+    """If the claude guard is disabled in the gate, emit defer and return True."""
+    import os
+    from pathlib import Path
+    from custodian.guards.gate import is_enabled
+    state_dir = os.environ.get("CUSTODIAN_STATE_DIR", str(Path.home() / ".custodian"))
+    if not is_enabled(state_dir, "claude"):
+        _emit("defer", "Custodian claude guard is disabled in this profile")
+        return True
+    return False
+
+
 def main(argv: list[str] | None = None) -> int:
+    if _dormant_defer():
+        return 0
     try:
         raw = sys.stdin.read()
         event = json.loads(raw) if raw.strip() else {}
