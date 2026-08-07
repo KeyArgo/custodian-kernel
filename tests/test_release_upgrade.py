@@ -111,4 +111,7 @@ def test_real_pypi_040_upgrades_to_filtered_041_and_preserves_data(tmp_path):
     assert any(p.name.startswith("managed.removed") for p in managed.parent.iterdir()), (
         "uninstall must quarantine the runtime root (unique name: managed.removed-<pid>)"
     )
-    assert original_launcher.read_text(encoding="utf-8") == original_text
+    # Compare raw bytes: read_text() default newline handling would translate
+    # the Windows CRLF launcher to LF on read and the assert could never pass
+    # on Windows even when the backup is byte-identical.
+    assert original_launcher.read_text(encoding="utf-8", newline="") == original_text
