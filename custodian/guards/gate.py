@@ -148,9 +148,20 @@ def load_state(state_dir: str | Path) -> dict:
         # .bak if one exists; otherwise FAIL CLOSED (deny) instead of
         # silently disarming guards the operator enabled.
         bak = Path(str(p) + ".bak")
-        if bak.is_file() and not bak.is_symlink():
+        # Descriptor-based no-follow read: O_NOFOLLOW refuses a symlink at
+        # the final component AT OPEN TIME, closing the check-then-read
+        # TOCTOU (a symlink placed after is_symlink() but before read_text
+        # would previously be followed). On Windows O_NOFOLLOW is absent;
+        # the state dir is user-owned 0700 so the local-user threat model
+        # is unchanged there (best-effort, documented).
+        try:
+            fd = os.open(bak, os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0))
+        except OSError:
+            fd = None
+        if fd is not None:
             try:
-                data = json.loads(bak.read_text(encoding="utf-8"))
+                with os.fdopen(fd, "r", encoding="utf-8") as f:
+                    data = json.load(f)
                 if _validate_shape(data):
                     print(
                         f"custodian: WARNING — gate state file {p} is corrupt "
