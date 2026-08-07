@@ -116,15 +116,49 @@ Switchboard, Workshop, Airlock, Courier, Skillsmith, Council, Observatory).
 Anti-hell rules: thin adapters; tested-version manifest; marker-gated tests; one config
 surface; fail-closed degradation; no implied endorsement of NVIDIA/ironsh.
 
+## Resolved decisions (2026-08-07, Claude + Codex + operator consensus)
+
+1. K warning: DAY-ZERO 0.5.1 — 0.5.0 stays code-frozen; the warning folds into the
+   visibility banner where it belongs. Persistent-deny semantics must be unmistakable.
+2. Plugin surface: CUSTODIAN-HERMES-GUARD (first-party, matches the shipped wheel entry
+   point); talaria remains the product/suite framing. Hermes-as-gateway (0.6.0)
+   consolidates around it — no second integration path.
+3. 0.6.0 order: IRON-PROXY SEAM IS THE CRITICAL PATH — approval Phase 1 and
+   presets/profiles depend on it. Capability-plane Phase 0 (read-only gap report) may
+   run in parallel but never gates the seam.
+4. 0.5.1 priority order: IDENTITY-WRITE PROTECTION first (standalone trust gate, public
+   harm), then command-contract sidecar, then visibility banner (+K warning), then
+   `gates status --harness`, then hardening. Contracts and banner are parallelizable
+   (protocol vs UX surfaces).
+5. Capability estimates: RE-SCOPE AFTER PHASE 0 — Phase 0 completion is a HARD CHECKPOINT
+   before committing 0.7.0 capability scope. 0.7.0 Stage-3 scope stays provisional until
+   real sizing data lands.
+
+## What to do when (consolidated sequence)
+
+- THIS WEEK: run the 5 launch gates (mirror push -> CI -> license sync -> README sentence
+  -> scratch-proof -> PyPI). Build the authoritative console-command inventory. Patch-lane
+  discipline: fixes/hardening only until launch.
+- LAUNCH DAY: PyPI publish, NO tag, NO GitHub release. Beta recruitment opens; Tek pitch
+  carries the scratch-proof artifact.
+- FIRST WEEK POST-LAUNCH (0.5.1): identity-write protection (standalone, no dependents),
+  command-contract sidecar in parallel, then visibility banner (+K warning),
+  gates status --harness, hardening. CI owns the contract gate before the read-only
+  verifier is public.
+- 0.6.0: iron-proxy seam FIRST (tokens, egress forcing, receipt correlation stable
+  before proxy UX); capability Phase 0 gap report in parallel (never gating); then
+  approval Phase 1, presets/per-harness profiles, manifest/identity status, profile
+  compiler, one-CLI surface, Hermes-as-gateway.
+- 0.7.0+: PROVE containment before claiming it (OpenShell/NemoClaw hard-requirement +
+  forced-egress verification, fail-closed swappable driver, test matrix); cyberware
+  source-review in parallel (adopt only interoperable pieces); capability Phase 3+
+  only after Phase 0 checkpoint. Defer fleet/packs/signing/rollback until local
+  workflows validated.
+
 ## Open decisions
 
-1. K warning: pre-launch freeze exception vs day-zero 0.5.1 (vote: day-zero).
-2. Plugin surface: custodian-hermes-guard vs custodian-talaria (README sentence either way).
-3. 0.6.0 order: iron-proxy seam vs capability-plane Phase 0 first (vote: gap report
-   starts at launch; seam design in parallel).
-4. 0.5.1 priority: identity-write protection vs command contracts first (vote: identity
-   first — public complaint; contracts second — quality gate).
-5. Capability-plane estimates: re-scope after Phase 0 (vote: yes).
+None — all five decisions resolved 2026-08-07 (see Resolved decisions above). New
+decisions get added here and move to Resolved once consensus lands.
 
 ## Changelog (how this document evolves)
 
@@ -134,3 +168,8 @@ surface; fail-closed degradation; no implied endorsement of NVIDIA/ironsh.
   drift-fix plan (Claude+Codex), visibility design (Claude+Codex), stack handover
   (iron-proxy/OpenShell/NemoClaw/cyberware), strategy consensus (launch first).
   Per-version specs: docs/RELEASES.md.
+- 2026-08-07 (update): open decisions RESOLVED by Claude+Codex+operator consensus
+  (K warning day-zero; plugin surface = custodian-hermes-guard; iron-proxy seam is the
+  0.6.0 critical path with Phase 0 parallel; 0.5.1 order identity -> contracts -> banner
+  -> gates status -> hardening; capability estimates re-scoped after Phase 0 = hard
+  checkpoint). Consolidated what-to-do-when sequence added.
