@@ -1,11 +1,8 @@
-"""Network regression for the real broken 0.4.0 -> current release upgrade.
-
-Every subprocess is checked directly. This deliberately avoids shell pipelines
-whose final command can hide an earlier install or CLI failure.
-"""
+"""Network regression for the real broken 0.4.0 -> current release upgrade."""
 from __future__ import annotations
 
 import os
+import re
 import subprocess
 import sys
 import venv
@@ -14,6 +11,13 @@ from pathlib import Path
 import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
+KERNEL_PYPROJECT = ROOT / "packaging/kernel/pyproject.toml"
+
+
+def _kernel_version() -> str:
+    m = re.search(r'^version\s*=\s*"([^"]+)"', KERNEL_PYPROJECT.read_text(), re.MULTILINE)
+    assert m, f"cannot read version from {KERNEL_PYPROJECT}"
+    return m.group(1)
 
 
 def _checked(command: list[str], **kwargs) -> subprocess.CompletedProcess[str]:
@@ -40,7 +44,7 @@ def test_real_pypi_040_upgrades_to_filtered_041_and_preserves_data(tmp_path):
         sys.executable, "-m", "build", "--wheel", "-o", str(dist),
         str(release_tree),
     ], timeout=300)
-    wheels = list(dist.glob("custodian_kernel-0.4.1-*.whl"))
+    wheels = list(dist.glob(f"custodian_kernel-{_kernel_version()}-*.whl"))
     assert len(wheels) == 1
 
     environment = tmp_path / "venv"
@@ -64,7 +68,7 @@ def test_real_pypi_040_upgrades_to_filtered_041_and_preserves_data(tmp_path):
     _checked([str(pip), "install", "custodian-kernel==0.4.0"], env=env, timeout=300)
     _checked([str(pip), "install", "--upgrade", str(wheels[0])], env=env, timeout=300)
     version = _checked([str(custodian), "--version"], env=env, timeout=30)
-    assert "0.4.1" in version.stdout
+    assert _kernel_version() in version.stdout
     _checked([str(custodian), "console", "--once"], env=env, timeout=30)
     for marker in markers:
         assert marker.read_text(encoding="utf-8") == "preserve"
@@ -91,7 +95,7 @@ def test_real_pypi_040_upgrades_to_filtered_041_and_preserves_data(tmp_path):
         "custodian.cmd" if os.name == "nt" else "custodian"
     )
     managed_version = _checked([str(managed_custodian), "--version"], env=env, timeout=30)
-    assert "0.4.1" in managed_version.stdout
+    assert _kernel_version() in managed_version.stdout
     # Upgrade in place: the inactive slot becomes active, commands still run,
     # and the pre-Custodian launcher backup must not be overwritten.
     _checked([
@@ -99,10 +103,12 @@ def test_real_pypi_040_upgrades_to_filtered_041_and_preserves_data(tmp_path):
         "--runtime-root", str(managed), "--bin-dir", str(commands),
     ], env=env, timeout=300)
     managed_version = _checked([str(managed_custodian), "--version"], env=env, timeout=30)
-    assert "0.4.1" in managed_version.stdout
+    assert _kernel_version() in managed_version.stdout
     _checked([
         sys.executable, str(installer), "--runtime-root", str(managed),
         "--bin-dir", str(commands), "--uninstall",
     ], env=env, timeout=30)
-    assert managed.with_name("managed.removed").is_dir()
+    assert any(p.name.startswith("managed.removed") for p in managed.parent.iterdir()), (
+        "uninstall must quarantine the runtime root (unique name: managed.removed-<pid>)"
+    )
     assert original_launcher.read_text(encoding="utf-8") == original_text
