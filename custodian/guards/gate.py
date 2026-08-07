@@ -69,6 +69,18 @@ def _validate_shape(data: dict) -> bool:
 
 def load_state(state_dir: str | Path) -> dict:
     p = state_path(state_dir)
+    # Read-side symlink integrity, mirroring _write_state: a symlinked
+    # state directory or state file means the file we read is not the
+    # one the kernel wrote. Treat it like corruption — loud warning,
+    # dormant fallback — never silently trust a symlink's content.
+    if p.parent.is_symlink() or p.is_symlink():
+        print(
+            f"custodian: WARNING — gate state path {p} is a symlink; "
+            f"refusing to trust it and treating all guards as dormant. "
+            f"Remove the symlink and re-run 'custodian guards enable <name>'.",
+            file=sys.stderr,
+        )
+        return _dormant()
     if not p.is_file():
         return _dormant()
     try:

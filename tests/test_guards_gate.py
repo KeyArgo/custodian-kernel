@@ -69,6 +69,37 @@ def test_wrong_shape_state_falls_back_dormant(tmp_path):
         assert gate.is_enabled(s, "codex") is False, f"shape {bad!r} should be dormant"
 
 
+def test_symlinked_state_file_not_trusted(tmp_path):
+    """A symlinked guards.json must not be read for enforcement state.
+
+    Regression for the final Codex sign-off finding: write-side refused
+    symlinks but read-side followed them, so an attacker able to place a
+    symlink could supply a 'dormant' file and disarm the guards."""
+    s = _state(tmp_path)
+    real = tmp_path / "real-state"
+    real.mkdir()
+    (real / "guards.json").write_text(
+        '{"version": 1, "guards": {"codex": {"enabled": true}}}'
+    )
+    link = tmp_path / "state"
+    link.mkdir(parents=True)
+    (link / "guards.json").symlink_to(real / "guards.json")
+    # The symlinked file claims codex is enabled; the gate must refuse it.
+    assert gate.is_enabled(s, "codex") is False
+
+
+def test_symlinked_state_dir_not_trusted(tmp_path):
+    """A symlinked state directory must not be read for enforcement state."""
+    real = tmp_path / "real-dir"
+    real.mkdir()
+    (real / "guards.json").write_text(
+        '{"version": 1, "guards": {"hermes": {"enabled": true}}}'
+    )
+    link = tmp_path / "state"
+    link.symlink_to(real, target_is_directory=True)
+    assert gate.is_enabled(str(link), "hermes") is False
+
+
 def test_concurrent_enables_are_lossless(tmp_path):
     """Two threads calling enable() concurrently must not lose updates.
 
