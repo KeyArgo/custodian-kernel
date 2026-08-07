@@ -181,8 +181,10 @@ def run(args) -> int:
     hermes_command = shutil.which("hermes")
     hermes_home = _hermes_home()
     hermes_detected = bool(hermes_command or hermes_home.exists())
-    print(f"{'\u2713' if hermes_detected else '\u2022'} Hermes Agent detected: "
-          f"{'yes' if hermes_detected else 'no'}")
+    # Escapes inside f-string expressions are a 3.11 SyntaxError; hoist them.
+    check_mark = "\u2713" if hermes_detected else "\u2022"
+    yes_no = "yes" if hermes_detected else "no"
+    print(f"{check_mark} Hermes Agent detected: {yes_no}")
 
     # Confined execution is deliberately opt-in: its absence must not make a
     # normal installation unhealthy, but someone selecting the mode needs an

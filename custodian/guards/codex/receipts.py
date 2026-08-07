@@ -7,6 +7,7 @@ import json
 import os
 import re
 import time
+from collections.abc import Iterable
 from contextlib import contextmanager
 from pathlib import Path
 import stat
@@ -16,16 +17,35 @@ from typing import Any
 GENESIS = "0" * 64
 
 # Adapter denial reasons (e.g. custodian/adapters/builtin/path_fence.py's
-# f"path {resolved!r} is inside a forbidden location") embed the resolved,
+# f"path {resolved} is inside a forbidden location") embed the resolved,
 # real filesystem path verbatim -- confirmed to leak filenames/usernames/
 # directory layout into this receipt chain, contradicting this module's own
-# "deliberately value-free" design. Redact any single-quoted, path-shaped
-# segment before persisting.
+# "deliberately value-free" design. Redact (1) every sensitive path the
+# decision itself carried in its arguments, and (2) any single-quoted,
+# path-shaped segment (covers repr'd forms from other adapters).
 _PATH_LIKE = re.compile(r"'[^']*[/\\][^']*'")
 
 
-def _redact_reason(reason: str) -> str:
+def _redact_reason(reason: str, sensitive: Iterable[str] = ()) -> str:
+    for p in sensitive:
+        if p and p in reason:
+            reason = reason.replace(p, "[REDACTED-PATH]")
     return _PATH_LIKE.sub("'[REDACTED-PATH]'", reason)
+
+
+def _argument_paths(args) -> list[str]:
+    """Flatten path-shaped string values from a decision's tool arguments."""
+    out: list[str] = []
+    stack: list = [args] if isinstance(args, (dict, list)) else []
+    while stack:
+        item = stack.pop()
+        if isinstance(item, dict):
+            stack.extend(item.values())
+        elif isinstance(item, list):
+            stack.extend(item)
+        elif isinstance(item, str) and ("/" in item or "\\" in item):
+            out.append(item)
+    return out
 
 
 def _private_dir(path: Path) -> None:
@@ -103,6 +123,7 @@ class ReceiptChain:
         return [json.loads(line) for line in self.path.read_text().splitlines() if line.strip()]
 
     def append(self, decision: dict[str, Any], *, tool: str, session_id: str,
+               sensitive: Iterable[str] = (),
                harness: str = "unknown") -> dict[str, Any]:
         # Deliberately value-free: arguments and model text never enter receipts.
         # `harness` is stamped by the caller from a server-pinned identity
@@ -123,7 +144,7 @@ class ReceiptChain:
                 "verdict": decision["verdict"],
                 "action_kind": decision["action_kind"],
                 "band": decision["band"],
-                "reason": _redact_reason(decision["reason"])[:512],
+                "reason": _redact_reason(decision["reason"], sensitive)[:512],
             }
             mac = hmac.new(self._key(), prev.encode() + self._canonical(body), hashlib.sha256).hexdigest()
             record = {**body, "prev": prev, "mac": mac}

@@ -15,13 +15,25 @@ with no directory restriction, so restricting --workdir specifically would
 not close a distinct capability, only break intended, already-tested usage.)
 
 No test coverage existed for this script before this fix.
+
+The tests exercise the allowlist with a hardcoded POSIX PATH
+(``/usr/bin:/bin``); Windows has no such directory layout, so the tests
+are gated to POSIX platforms.
 """
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 import sys
 from pathlib import Path
+
+import pytest
+
+pytestmark = pytest.mark.skipif(
+    os.name == "nt",
+    reason="tests hardcode a POSIX PATH (/usr/bin:/bin)",
+)
 
 SCRIPT = (
     Path(__file__).resolve().parent.parent

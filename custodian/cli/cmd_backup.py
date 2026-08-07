@@ -172,7 +172,7 @@ def run_restore(args) -> int:
         for n in members:
             norm = Path(n)
             if norm.is_absolute() or ".." in norm.parts:
-                print(f"error: refusing to restore — unsafe path in archive: {n!r}")
+                print(f"error: refusing to restore — unsafe path in archive: {n}")
                 return 1
             if not (n == "policy.yaml" or n.startswith("state/")):
                 print(f"error: refusing to restore — unexpected member: {n!r}")

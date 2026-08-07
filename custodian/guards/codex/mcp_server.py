@@ -10,7 +10,7 @@ from typing import Any
 
 from .approvals import ApprovalError, ApprovalStore, action_digest
 from .guard import ActionKind, evaluate_action
-from .receipts import ReceiptChain
+from .receipts import ReceiptChain, _argument_paths
 from custodian.control.policy import ApprovalPolicy, Proposal
 from custodian.control.filesystem_policy import FilesystemPolicy
 from custodian.control.ledger_access_policy import LedgerAccessPolicy
@@ -205,7 +205,9 @@ def evaluate_guard_action(args: dict[str, Any], *, harness: str = "codex") -> di
                                f"custodian-codex approve {pending.approval_id} --digest {digest}"),
                 )
         receipt = chain.append(decision, tool=args.get("tool", ""),
-                               session_id=args.get("session_id", "default"), harness=harness)
+                               session_id=args.get("session_id", "default"),
+                               sensitive=_argument_paths(args.get("arguments")),
+                               harness=harness)
         decision["receipt"] = {"number": receipt.get("receipt_number"),
                                "timestamp": receipt["ts"], "chain_mac": receipt["mac"]}
         return decision
@@ -214,7 +216,9 @@ def evaluate_guard_action(args: dict[str, Any], *, harness: str = "codex") -> di
                   "action_kind": str(args.get("action_kind", "unknown")),
                   "band": "L4", "enforcement_required": True}
         receipt = chain.append(denied, tool=args.get("tool", ""),
-                               session_id=args.get("session_id", "default"), harness=harness)
+                               session_id=args.get("session_id", "default"),
+                               sensitive=_argument_paths(args.get("arguments")),
+                               harness=harness)
         denied["receipt"] = {"number": receipt.get("receipt_number"),
                               "timestamp": receipt["ts"], "chain_mac": receipt["mac"]}
         return denied

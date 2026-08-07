@@ -113,10 +113,10 @@ class PathFence(Adapter):
     def _forbidden(self, resolved: str) -> str | None:
         """Return a human reason if `resolved` is off-limits, else None."""
         if under_prefix(resolved, self.forbidden_paths):
-            return f"path {resolved!r} is inside a forbidden location"
+            return f"path {resolved} is inside a forbidden location"
         for g in self.forbidden_globs:
             if fnmatch.fnmatchcase(resolved, g) or fnmatch.fnmatchcase(os.path.basename(resolved), g):
-                return f"path {resolved!r} matches forbidden pattern {g!r}"
+                return f"path {resolved} matches forbidden pattern {g!r}"
         if self.allow_paths and not under_prefix(resolved, self.allow_paths):
             return f"path {resolved!r} is outside the allowed workspace {self.allow_paths}"
         return None

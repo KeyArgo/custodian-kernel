@@ -167,7 +167,7 @@ class KernelSelfProtection(Adapter):
                 " Ask the operator to make this change if it is genuinely needed.")
         return Verdict.deny(
             self.name,
-            f"{path!r} is part of the enforcement layer (policy, vault, kill "
+            f"{path} is part of the enforcement layer (policy, vault, kill "
             f"switch, skills tree, or adapters) — agents cannot modify what "
             f"governs them, at any band.{hint}",
         )

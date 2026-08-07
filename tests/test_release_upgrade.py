@@ -84,7 +84,10 @@ def test_real_pypi_040_upgrades_to_filtered_041_and_preserves_data(tmp_path):
         "custodian.cmd" if os.name == "nt" else "custodian"
     )
     original_text = "@echo off\r\necho original\r\n" if os.name == "nt" else "#!/bin/sh\necho original\n"
-    original_launcher.write_text(original_text, encoding="utf-8")
+    # write with newline="" too: write_text() would translate the literal \n
+    # to \r\n on Windows, doubling the CR in the CRLF launcher content.
+    with original_launcher.open("w", encoding="utf-8", newline="") as fh:
+        fh.write(original_text)
     if os.name != "nt":
         original_launcher.chmod(0o755)
     _checked([

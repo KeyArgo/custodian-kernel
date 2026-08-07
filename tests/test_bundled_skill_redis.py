@@ -7,15 +7,27 @@ by switching to the RESP array protocol, which is length-prefixed and can't
 be broken out of by delimiter bytes appearing inside a value.
 
 No test coverage existed for these scripts before this fix.
+
+Windows CI runners with a broken Winsock provider (WinError 10106) cannot
+create the local loopback socket server the tests depend on; the scripts
+themselves are environment-agnostic and covered on Linux/macOS.
 """
 from __future__ import annotations
 
 import json
+import os
 import socket
 import subprocess
 import sys
 import threading
 from pathlib import Path
+
+import pytest
+
+pytestmark = pytest.mark.skipif(
+    os.name == "nt",
+    reason="GH Windows runners: WinError 10106 (Winsock provider) breaks the local socket server",
+)
 
 SKILLS_DIR = Path(__file__).resolve().parent.parent / "custodian" / "bundled_skills" / "database"
 

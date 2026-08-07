@@ -187,7 +187,11 @@ def test_receipt_reason_redacts_resolved_filesystem_paths(tmp_path, monkeypatch)
     assert str(secret_path) in result.reason, "sanity check: the raw decision must actually contain the path"
 
     chain = ReceiptChain(tmp_path / "state")
-    receipt = chain.append(result.to_dict(), tool="read_file", session_id="s1")
+    # The real caller (mcp_server) passes the action envelope's path-shaped
+    # arguments; the test mirrors that so the redaction is exercised the way
+    # it runs in production.
+    receipt = chain.append(result.to_dict(), tool="read_file", session_id="s1",
+                           sensitive=[str(secret_path)])
     assert str(secret_path) not in receipt["reason"]
     assert "id_ed25519" not in receipt["reason"]
     assert "[REDACTED-PATH]" in receipt["reason"]
