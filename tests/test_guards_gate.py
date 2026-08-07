@@ -229,3 +229,38 @@ def test_cli_disable(tmp_path, capsys):
     gate.enable(s, "codex")
     main(["guards", "--state-dir", s, "disable", "codex"])
     assert not gate.is_enabled(s, "codex")
+
+
+def test_bak_symlink_not_followed_on_write(tmp_path):
+    """A preexisting .bak symlink must be REPLACED, never written through.
+
+    Regression for the Codex round-3 finding: the unlink-then-copyfile
+    pattern left a TOCTOU window; os.replace swaps the link itself.
+    """
+    s = _state(tmp_path)
+    gate.enable(s, "codex")
+    canary = tmp_path / "canary.txt"
+    canary.write_text("attacker-content")
+    bak = tmp_path / "state" / "guards.json.bak"
+    bak.unlink()  # .bak exists from the first enable; replace it with the symlink
+    bak.symlink_to(canary)
+    gate.enable(s, "claude")  # second write refreshes the .bak
+    assert canary.read_text() == "attacker-content", "symlink must not be followed"
+    assert not bak.is_symlink(), ".bak must be a regular file after the write"
+
+
+def test_bak_symlink_not_trusted_on_read(tmp_path):
+    """A symlinked .bak must not be trusted as last-known-good on restore."""
+    s = _state(tmp_path)
+    gate.enable(s, "codex")
+    p = tmp_path / "state" / "guards.json"
+    p.write_text("{not json")
+    canary = tmp_path / "canary.json"
+    canary.write_text('{"version": 1, "guards": {"hermes": {"enabled": true}}}')
+    bak = tmp_path / "state" / "guards.json.bak"
+    bak.unlink()  # .bak exists from the enable; replace it with the symlink
+    bak.symlink_to(canary)
+    # The symlinked backup claims hermes enabled; the gate must refuse it
+    # and fail closed instead of trusting the link's target.
+    assert gate.is_fail_closed(s) is True
+    assert gate.is_enabled(s, "hermes") is False

@@ -148,7 +148,7 @@ def load_state(state_dir: str | Path) -> dict:
         # .bak if one exists; otherwise FAIL CLOSED (deny) instead of
         # silently disarming guards the operator enabled.
         bak = Path(str(p) + ".bak")
-        if bak.is_file():
+        if bak.is_file() and not bak.is_symlink():
             try:
                 data = json.loads(bak.read_text(encoding="utf-8"))
                 if _validate_shape(data):
@@ -271,16 +271,27 @@ def _write_state(state_dir: str | Path, data: dict) -> None:
         os.replace(tmp_name, p)
         # Preserve the last-known-good state: keep a copy so a torn/corrupt
         # write can be recovered by load_state instead of failing open.
-        # Symlink-safe: a preexisting or raced .bak symlink is unlinked
-        # (unlink removes the link, never follows it) before the copy.
+        # Written with the SAME atomic pattern as the main file (mkstemp +
+        # os.replace): os.replace never follows a destination symlink — it
+        # swaps the link itself — so a raced or preexisting .bak symlink
+        # cannot be written through (closes the TOCTOU window).
+        bak_tmp: str | None = None
         try:
-            import shutil
             bak = Path(str(p) + ".bak")
-            if bak.is_symlink() or bak.exists():
-                bak.unlink()
-            shutil.copyfile(p, bak)
+            bak_fd, bak_tmp = tempfile.mkstemp(
+                prefix=".guards.bak.", suffix=".tmp", dir=str(p.parent)
+            )
+            with os.fdopen(bak_fd, "w", encoding="utf-8") as f:
+                f.write(p.read_text(encoding="utf-8"))
+                f.flush()
+                os.fsync(f.fileno())
+            os.replace(bak_tmp, bak)
         except OSError:
-            pass
+            if bak_tmp:
+                try:
+                    os.unlink(bak_tmp)
+                except OSError:
+                    pass
     except BaseException:
         try:
             os.unlink(tmp_name)
