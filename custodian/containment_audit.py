@@ -98,7 +98,10 @@ def deny_paths() -> list[Path]:
 
 
 def _norm(p: Path) -> str:
-    return str(p.expanduser().absolute())
+    # resolve() (not absolute()) so a symlinked mount source compares as
+    # its real target: a source symlink pointing at ~/.ssh must be
+    # flagged, not silently audited as the symlink's own path.
+    return str(p.expanduser().resolve(strict=False))
 
 
 def _is_under(path: str, ancestor: str) -> bool:

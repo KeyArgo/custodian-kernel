@@ -61,6 +61,21 @@ Custodian is pre-1.0 software. It is defense in depth, not an operating-system
 sandbox. Review the threat-model boundaries in
 [SECURITY.md](SECURITY.md) before relying on it for consequential actions.
 
+Known limits (stated plainly):
+- The Bubblewrap sandbox (`hermes-bwrap`) is OPT-IN and refuses to bind the
+  filesystem root: `HERMES_AGENT_ROOT=/` (or an unresolvable agent root) aborts
+  the launch instead of producing `--ro-bind / /`. It confines spawned tools;
+  it is not a VM.
+- `--allow-unsandboxed` bypasses the sandbox entirely and prints a loud
+  deprecation warning. Do not use it for anything you care about; it will be
+  removed in a future release.
+- Audit and receipt evidence is stored locally on the governed machine. It is
+  tamper-evident (HMAC-chained) but not cross-process serialized or anchored
+  to an external store; a process with local root can erase its own trail.
+- Application-governed enforcement covers actions routed through the guarded
+  adapters. A process that never passes through an adapter is not governed;
+  host-enforced and VM containment modes are on the roadmap.
+
 Known gap: an OpenCode guard adapter exists internally but is not shipped in
 this release — no public mirror, no `--with-opencode` installer flag, and no
 `custodian guards enable opencode` target. It is tracked for a later release;

@@ -24,6 +24,7 @@ from __future__ import annotations
 
 import json
 import os
+import stat
 import sys
 import tempfile
 import time
@@ -44,6 +45,25 @@ def state_path(state_dir: str | Path) -> Path:
 
 def _dormant() -> dict:
     return {"version": _STATE_VERSION, "guards": {}}
+
+
+def _fail_closed() -> dict:
+    """Sentinel state: corrupt/unreadable state with no valid backup.
+
+    Hooks check :func:`is_fail_closed` before anything else and DENY every
+    action — the opposite of ``_dormant()`` (which defers). A guard that
+    cannot read its own state must not silently disarm itself.
+    """
+    return {"version": _STATE_VERSION, "_fail_closed": True, "guards": {}}
+
+
+def is_fail_closed(state_dir: str | Path) -> bool:
+    """True when the gate state is corrupt with no valid backup.
+
+    The guard layer treats this as a hard deny-all (like the kill switch)
+    until the operator repairs the state file. Hooks check this FIRST.
+    """
+    return bool(load_state(state_dir).get("_fail_closed"))
 
 
 def _validate_shape(data: dict) -> bool:
@@ -67,17 +87,54 @@ def _validate_shape(data: dict) -> bool:
     return True
 
 
+def _has_symlink_ancestor(p: Path) -> bool:
+    """True when any ancestor of ``p`` (including its parent) is a symlink.
+
+    The final component is checked separately by callers; this walks the
+    directory chain so an attacker cannot redirect the state dir by
+    symlinking an ancestor (e.g. ``~`` or ``~/.custodian``'s parent).
+    """
+    cur = p.parent
+    while cur != cur.parent:
+        if cur.is_symlink():
+            return True
+        cur = cur.parent
+    return False
+
+
+def _unsafe_state_dir_mode(state_dir: str | Path) -> bool:
+    """True when the state directory is group/world-writable.
+
+    A group/world-writable state dir means another local user could swap
+    the state file (enable/disable guards at will). The launcher creates
+    the dir with 0700; anything looser is refused like a symlink.
+    """
+    try:
+        mode = stat.S_IMODE(Path(state_dir).stat().st_mode)
+    except OSError:
+        return False
+    return bool(mode & 0o022)
+
+
 def load_state(state_dir: str | Path) -> dict:
     p = state_path(state_dir)
     # Read-side symlink integrity, mirroring _write_state: a symlinked
     # state directory or state file means the file we read is not the
     # one the kernel wrote. Treat it like corruption — loud warning,
     # dormant fallback — never silently trust a symlink's content.
-    if p.parent.is_symlink() or p.is_symlink():
+    if _has_symlink_ancestor(p) or p.is_symlink():
         print(
-            f"custodian: WARNING — gate state path {p} is a symlink; "
+            f"custodian: WARNING — gate state path {p} is (or is under) a symlink; "
             f"refusing to trust it and treating all guards as dormant. "
             f"Remove the symlink and re-run 'custodian guards enable <name>'.",
+            file=sys.stderr,
+        )
+        return _dormant()
+    if _unsafe_state_dir_mode(state_dir):
+        print(
+            f"custodian: WARNING — gate state dir {state_dir} is group/world "
+            f"writable; refusing to trust it and treating all guards as dormant. "
+            f"Fix the mode (chmod 700) and re-run 'custodian guards enable <name>'.",
             file=sys.stderr,
         )
         return _dormant()
@@ -87,16 +144,32 @@ def load_state(state_dir: str | Path) -> dict:
         data = json.loads(p.read_text(encoding="utf-8"))
     except (ValueError, OSError) as exc:
         # Loud, not silent: a corrupt state file means we cannot know the
-        # operator's intent, so we treat it as dormant (fail open) but we
-        # WARN — silently disarming guards an operator enabled would be a
-        # security surprise. The status command and doctor surface this.
+        # operator's intent. Preserve the LAST-KNOWN-GOOD state from the
+        # .bak if one exists; otherwise FAIL CLOSED (deny) instead of
+        # silently disarming guards the operator enabled.
+        bak = Path(str(p) + ".bak")
+        if bak.is_file():
+            try:
+                data = json.loads(bak.read_text(encoding="utf-8"))
+                if _validate_shape(data):
+                    print(
+                        f"custodian: WARNING — gate state file {p} is corrupt "
+                        f"({type(exc).__name__}); restored the last-known-good "
+                        f"state from {bak.name}. Re-run 'custodian guards "
+                        f"status' to confirm.",
+                        file=sys.stderr,
+                    )
+                    return data
+            except (ValueError, OSError):
+                pass
         print(
-            f"custodian: WARNING — gate state file {p} is corrupt "
-            f"({type(exc).__name__}); treating all guards as dormant. "
-            f"Re-run 'custodian guards enable <name>' to restore state.",
+            f"custodian: FATAL — gate state file {p} is corrupt "
+            f"({type(exc).__name__}) and no valid backup exists; FAILING "
+            f"CLOSED — all guards deny until the file is repaired or "
+            f"removed. Re-run 'custodian guards enable <name>' to rebuild.",
             file=sys.stderr,
         )
-        return _dormant()
+        return _fail_closed()
     if not _validate_shape(data):
         print(
             f"custodian: WARNING — gate state file {p} has an invalid shape; "
@@ -196,6 +269,14 @@ def _write_state(state_dir: str | Path, data: dict) -> None:
         finally:
             os.close(dir_fd)
         os.replace(tmp_name, p)
+        # Preserve the last-known-good state: before the next write
+        # overwrites the file, keep a copy so a torn/corrupt write can be
+        # recovered by load_state instead of failing open.
+        try:
+            import shutil
+            shutil.copyfile(p, Path(str(p) + ".bak"))
+        except OSError:
+            pass
     except BaseException:
         try:
             os.unlink(tmp_name)

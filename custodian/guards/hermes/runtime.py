@@ -63,6 +63,10 @@ class _DisabledGuardError(RuntimeError):
     through unchanged, so a disabled guard is invisible to the harness."""
 
 
+class _FailClosedError(RuntimeError):
+    """Gate state is corrupt with no valid backup — the plugin must BLOCK."""
+
+
 class HermesGuardRuntime:
     """Fail-closed Hermes tool-call guard backed by the shared Custodian core."""
 
@@ -86,6 +90,14 @@ class HermesGuardRuntime:
         # catches DisabledGuardError and passes the tool call through
         # unchanged, so a disabled guard costs nothing to the operator.
         from custodian.guards.gate import is_enabled as _gate_is_enabled
+        from custodian.guards.gate import is_fail_closed as _gate_fail_closed
+        if _gate_fail_closed(
+            os.environ.get("CUSTODIAN_STATE_DIR", str(Path.home() / ".custodian")),
+        ):
+            # Corrupt gate state with no valid backup: the plugin BLOCKS
+            # every tool call until the operator repairs the state. Never
+            # silently disarm a guard the operator enabled.
+            raise _FailClosedError("gate state is unreadable — failing closed")
         if not _gate_is_enabled(
             os.environ.get("CUSTODIAN_STATE_DIR", str(Path.home() / ".custodian")),
             "hermes",

@@ -115,8 +115,13 @@ def _dormant_defer() -> bool:
     """If the claude guard is disabled in the gate, emit defer and return True."""
     import os
     from pathlib import Path
-    from custodian.guards.gate import is_enabled
+    from custodian.guards.gate import is_enabled, is_fail_closed
     state_dir = os.environ.get("CUSTODIAN_STATE_DIR", str(Path.home() / ".custodian"))
+    if is_fail_closed(state_dir):
+        # Corrupt state with no valid backup: deny everything until the
+        # operator repairs the gate state. Never silently disarm.
+        _emit("deny", "Custodian gate state is unreadable — failing closed")
+        return True
     if not is_enabled(state_dir, "claude"):
         _emit("defer", "Custodian claude guard is disabled in this profile")
         return True

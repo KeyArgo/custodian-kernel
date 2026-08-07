@@ -141,6 +141,16 @@ a feature.
 
 ## Later / deferred
 
+ONE-REPO ENDGAME (operator direction, 2026-08-07): the kernel wheel is the single
+distribution — kernel + Paladin + all guards already live under custodian/guards/
+(0.5.0 fold; old paths are shims). Endgame: deprecate the standalone adapter mirrors
+(custodian-codex-guard, custodian-claude-guard, custodian-hermes-guard,
+custodian-stripe, talaria) as independent sources after a deprecation window — point
+them at the kernel, then archive. talaria's product surface folds into the kernel's
+one-CLI (Hermes-as-gateway, 0.6.0). EXCEPTIONS (operator rules): repos stay where they
+are for now (no restructuring); custodian-codex-guard stays actively maintained until
+the hackathon resolves; nothing is archived before the deprecation window + user sign-off.
+
 Fleet plane (after local workflow validated by users); audit external anchor; OpenCode
 guard public shipping (hackathon line); capability packs (Chronicle, Navigator,
 Switchboard, Workshop, Airlock, Courier, Skillsmith, Council, Observatory).

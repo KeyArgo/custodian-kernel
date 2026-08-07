@@ -35,15 +35,17 @@ from typing import Any, Dict, Optional
 from custodian.guards.hermes.contract import HERMES_GUARD_CONTRACT_VERSION, approval_wait_seconds
 
 try:
-    from custodian.guards.hermes.runtime import HermesGuardRuntime, _DisabledGuardError
+    from custodian.guards.hermes.runtime import HermesGuardRuntime, _DisabledGuardError, _FailClosedError
     _IMPORT_ERROR: Optional[Exception] = None
 except Exception as e:  # pragma: no cover - exercised only without the dep
     _IMPORT_ERROR = e
     HermesGuardRuntime = None  # type: ignore
     _DisabledGuardError = RuntimeError  # type: ignore
+    _FailClosedError = RuntimeError  # type: ignore
 
 _RUNTIME = None
 _DISABLED = False
+_FAIL_CLOSED = False
 
 
 def _runtime():
@@ -63,6 +65,10 @@ def _runtime():
             )
         except _DisabledGuardError:
             _DISABLED = True
+            return None
+        except _FailClosedError as exc:
+            print(f"[hermes-guard] BLOCKED — {exc}", file=sys.stderr)
+            _FAIL_CLOSED = True
             return None
     return _RUNTIME
 
@@ -91,6 +97,11 @@ def _wait_seconds() -> float:
 
 
 def _on_pre_tool_call(tool_name: str = "", args: Any = None, **_: Any) -> Optional[Dict[str, str]]:
+    if _FAIL_CLOSED:
+        return {
+            "action": "block",
+            "message": "[hermes-guard] unavailable; tool call blocked (gate state unreadable — failing closed)",
+        }
     if _IMPORT_ERROR is not None:
         print(f"[hermes-guard] BLOCKED — custodian import failed: {_IMPORT_ERROR}",
               file=sys.stderr)

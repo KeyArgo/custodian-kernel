@@ -241,6 +241,16 @@ def main(argv: list[str] | None = None) -> int:
         str(_home() / ".hermes" / "hermes-agent"),
     )
     hermes_root_path = Path(hermes_root)
+    if str(hermes_root_path) == "/":
+        # HERMES_AGENT_ROOT=/ (or a default that resolved to /) would
+        # collapse the default-deny model into --ro-bind / / — the whole
+        # host filesystem visible inside the sandbox. Refuse loudly for
+        # BOTH the env-provided and the walk-derived root.
+        raise SystemExit(
+            f"{_LAUNCHER_NAME}: HERMES_AGENT_ROOT resolves to '/' — refusing "
+            "to bind the filesystem root (would expose the host FS via "
+            "--ro-bind / /)"
+        )
     if not hermes_root_path.is_dir():
         # Fall back: resolve the hermes binary and walk up to the venv.
         hermes_root_path = Path(hermes_bin).resolve()
