@@ -99,9 +99,9 @@ def _host_is_blocked(host: str) -> bool:
     critical SSRF primitive.
 
     For DNS names this does a single gethostbyname check, which is
-    NOT safe against DNS rebinding.  A rebinding-safe implementation
-    would resolve to an IP at connect time and set the Host header
-    independently (see KRA-14 in the threat model).
+    NOT safe against DNS rebinding.  The dial-time half of the fix is
+    :func:`_resolve_pinned`, which re-resolves at connect time and
+    refuses addresses inside the blocked networks (KRA-14).
     """
     try:
         addr = ipaddress.ip_address(host)
@@ -115,6 +115,49 @@ def _host_is_blocked(host: str) -> bool:
         if addr.version == net.version and addr in net:
             return True
     return False
+
+
+def _ip_is_blocked(ip: "ipaddress.IPv4Address | ipaddress.IPv6Address") -> bool:
+    """True when *ip* falls inside any never-egress network block."""
+    for net in _BLOCKED_NETWORKS:
+        if ip.version == net.version and ip in net:
+            return True
+    return False
+
+
+def _resolve_pinned(host: str, port: int, allow_private: bool = False) -> tuple[str, int]:
+    """Resolve *host* to the FIRST address outside the blocked networks.
+
+    Dial-time half of the DNS-rebinding fix (KRA-14): the name was
+    validated earlier, but the connection must be pinned to an address
+    that is STILL acceptable at connect time. A rebinding DNS answer
+    pointing at a private/loopback address is denied here even though
+    the earlier validation saw a public IP. Returns (ip, port) to dial.
+
+    ``allow_private`` is True ONLY when the caller is an explicit IP
+    literal that the operator listed in allowed_hosts (the documented
+    loopback-development escape). A HOSTNAME in allowed_hosts never
+    gets private addresses — that is exactly the rebinding vector.
+    """
+    import socket
+    try:
+        infos = socket.getaddrinfo(host, port, socket.AF_UNSPEC, socket.SOCK_STREAM)
+    except socket.gaierror as exc:
+        raise EgressDeniedError(f"cannot resolve {host!r} for egress: {exc}")
+    for family, _stype, _proto, _canon, sockaddr in infos:
+        raw = sockaddr[0]
+        try:
+            ip = ipaddress.ip_address(raw)
+        except ValueError:
+            continue
+        if not _ip_is_blocked(ip):
+            return ip.compressed, int(sockaddr[1])
+        if allow_private:
+            return ip.compressed, int(sockaddr[1])
+    raise EgressDeniedError(
+        f"host {host!r} resolves only to blocked (private/loopback) "
+        f"addresses — egress denied"
+    )
 
 
 def _validate_egress_host(host: str, allowed_hosts: list) -> None:
@@ -346,20 +389,22 @@ class Broker:
         except UnknownRefError:
             self.audit.append("deny", ref.name, requester, band, "unknown ref")
             raise
-        # External refs are strict: unlike legacy local entries, empty is not
-        # an unrestricted compatibility mode.
-        if external and not allowed_hosts:
+        # Fail-closed: a ref with NO host scope denies egress. The legacy
+        # behavior treated empty allowed_hosts as unrestricted — a broad
+        # credential-egress default (three-way review HIGH). Empty now means
+        # "no egress" until the operator declares a host scope.
+        if not allowed_hosts:
             self.audit.append("deny", ref.name, requester, band,
-                              "external ref has no allowed_hosts")
+                              "ref has no allowed_hosts scope")
             raise EgressDeniedError(
-                f"external ref {ref.name!r} must declare allowed_hosts"
+                f"ref {ref.name!r} must declare allowed_hosts "
+                f"(fail-closed: no host scope means no egress)"
             )
-        if allowed_hosts:
-            try:
-                _validate_egress_host(host, allowed_hosts)
-            except EgressDeniedError as e:
-                self.audit.append("deny", ref.name, requester, band, str(e))
-                raise
+        try:
+            _validate_egress_host(host, allowed_hosts)
+        except EgressDeniedError as e:
+            self.audit.append("deny", ref.name, requester, band, str(e))
+            raise
         if not grant.scope_allows(host, method, path):
             self.audit.append("deny", ref.name, requester, band,
                               f"grant scope forbids {method} {host}{path}")
@@ -380,7 +425,10 @@ class Broker:
             headers, final_url = self._apply_injection(
                 headers, parts, descriptor.get("inject"), value)
             body = descriptor.get("body")
-            result = self._perform(method, final_url, headers, body, timeout)
+            result = self._perform(
+                method, final_url, headers, body, timeout,
+                allowed_hosts=allowed_hosts,
+            )
             result = self._redact_response(result, value)
         finally:
             value = None  # drop the plaintext reference promptly
@@ -480,7 +528,7 @@ class Broker:
         return cleaned
 
     def _perform(self, method: str, url: str, headers: dict, body,
-                 timeout: float) -> dict:
+                 timeout: float, allowed_hosts: list) -> dict:
         """Make the outbound call with stdlib http.client (no new dep) and
         return a bounded {status, headers, body}.
 
@@ -493,13 +541,31 @@ class Broker:
         if parts.query:
             path_q += "?" + parts.query
         body_bytes = body.encode("utf-8") if isinstance(body, str) else body
+        hostname = parts.hostname
+        port = parts.port or (443 if parts.scheme == "https" else 80)
+        # Dial-time pin (KRA-14): resolve NOW, refuse blocked addresses, and
+        # connect to the pinned IP while keeping the original hostname for
+        # the Host header and TLS SNI. http.client is given the hostname and
+        # a pre-connected socket, so it never dials the name itself.
+        import socket as _socket
+        allow_private = bool(
+            hostname is not None
+            and _host_is_ip_address(hostname)
+            and hostname in allowed_hosts
+        )
+        pinned_ip, _ = _resolve_pinned(hostname, port, allow_private=allow_private)
+        raw = _socket.create_connection((pinned_ip, port), timeout=timeout)
         if parts.scheme == "https":
-            conn = http.client.HTTPSConnection(
-                parts.hostname, parts.port, timeout=timeout,
-                context=ssl.create_default_context())
+            context = ssl.create_default_context()
+            conn = http.client.HTTPSConnection(hostname, port, timeout=timeout)
+            try:
+                conn.sock = context.wrap_socket(raw, server_hostname=hostname)
+            except Exception:
+                raw.close()
+                raise
         else:
-            conn = http.client.HTTPConnection(
-                parts.hostname, parts.port, timeout=timeout)
+            conn = http.client.HTTPConnection(hostname, port, timeout=timeout)
+            conn.sock = raw
         try:
             conn.request(method, path_q, body=body_bytes, headers=headers)
             resp = conn.getresponse()

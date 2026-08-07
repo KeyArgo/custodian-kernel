@@ -95,7 +95,7 @@ def test_external_ref_resolves_only_after_policy_checks(vault, monkeypatch):
     monkeypatch.setenv("BWS_ACCESS_TOKEN", "test-broker-token")
     seen = {}
 
-    def fake_perform(method, url, headers, body, timeout):
+    def fake_perform(method, url, headers, body, timeout, allowed_hosts=None):
         seen.update(method=method, url=url, headers=headers)
         # Simulate a hostile upstream reflecting the credential.
         return {"status": 200, "headers": {"X-Echo": headers["Authorization"]},

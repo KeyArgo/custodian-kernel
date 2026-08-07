@@ -4,7 +4,7 @@ version = "0.5.0"
 description = "Custodian — one install for the whole governance suite (kernel + guards + talaria)"
 requires-python = ">=3.11"
 readme = "README.md"
-license = "MIT"
+license = "Apache-2.0"
 license-files = ["LICENSE"]
 authors = [{name = "InovinLabs"}]
 keywords = ["ai", "agent", "authority", "spend", "governance", "guard", "suite"]

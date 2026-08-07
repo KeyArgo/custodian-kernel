@@ -290,3 +290,71 @@ def test_userinfo_and_fragments_are_rejected_before_vault_access(broker, url):
             "url": url, "ref": "does-not-exist",
             "inject": {"header": "Authorization"},
         }, requester="sandbox:t")
+
+
+# ---------------------------------------------------------------------------
+# Post-review hardening regressions (0.5.0 pre-launch)
+# ---------------------------------------------------------------------------
+
+def test_empty_allowed_hosts_denies_egress_fail_closed(broker, vault):
+    """A vault entry with NO host scope denies egress.
+
+    Regression for the three-way review HIGH finding: legacy behavior
+    treated empty allowed_hosts as unrestricted, making broad credential
+    egress the default. Fail-closed: no host scope means no egress.
+    """
+    vault.add("loose_key", SECRET)  # no allowed_hosts
+    broker.grant("loose_key", "sandbox:t", max_band="L2")
+    with pytest.raises(EgressDeniedError, match="must declare allowed_hosts"):
+        broker.egress_request({
+            "url": "https://example.com/x", "ref": "loose_key",
+            "inject": {"header": "Authorization"},
+        }, requester="sandbox:t")
+
+
+def test_resolve_pinned_rejects_rebinding_to_private(monkeypatch):
+    """A hostname whose DNS answer rebinds to a private address is denied
+    at dial time even though the name passed earlier validation.
+
+    Regression for the three-way review HIGH finding (KRA-14): the
+    connection is pinned to a still-acceptable address at connect time.
+    """
+    import socket as _socket
+    from paladin.broker import _resolve_pinned
+
+    def _rebinding_getaddrinfo(host, port, family=0, type=0, proto=0, flags=0):
+        return [(2, 1, 6, "", ("127.0.0.1", port))]
+
+    monkeypatch.setattr(_socket, "getaddrinfo", _rebinding_getaddrinfo)
+    with pytest.raises(EgressDeniedError, match="blocked"):
+        _resolve_pinned("api.example.com", 443)
+
+
+def test_resolve_pinned_allows_explicit_ip_literal(monkeypatch):
+    """An explicitly allowed loopback IP literal still works (documented
+    loopback-development escape); the rebinding rule only binds hostnames."""
+    import socket as _socket
+    from paladin.broker import _resolve_pinned
+
+    def _loopback_getaddrinfo(host, port, family=0, type=0, proto=0, flags=0):
+        return [(2, 1, 6, "", ("127.0.0.1", port))]
+
+    monkeypatch.setattr(_socket, "getaddrinfo", _loopback_getaddrinfo)
+    ip, port = _resolve_pinned("127.0.0.1", 8080, allow_private=True)
+    assert ip == "127.0.0.1"
+    assert port == 8080
+
+
+def test_resolve_pinned_pins_public_ip(monkeypatch):
+    """A hostname resolving to a public address gets pinned to it (the
+    connection is made to the pinned IP, not a fresh name lookup)."""
+    import socket as _socket
+    from paladin.broker import _resolve_pinned
+
+    def _public_getaddrinfo(host, port, family=0, type=0, proto=0, flags=0):
+        return [(2, 1, 6, "", ("93.184.216.34", port))]
+
+    monkeypatch.setattr(_socket, "getaddrinfo", _public_getaddrinfo)
+    ip, port = _resolve_pinned("api.example.com", 443)
+    assert ip == "93.184.216.34"
+    assert port == 443

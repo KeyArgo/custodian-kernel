@@ -4,7 +4,7 @@ version = "0.4.0"
 description = "Kernel-enforced authority and spend platform for AI agents"
 requires-python = ">=3.11"
 readme = "README.md"
-license = "MIT"
+license = "Apache-2.0"
 license-files = ["LICENSE"]
 authors = [
     {name = "InovinLabs", email = "hello@inovinlabs.com"},

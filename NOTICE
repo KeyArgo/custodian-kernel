@@ -1,0 +1,9 @@
+Custodian
+Copyright (c) 2026 InovinLabs
+
+This product includes software developed by InovinLabs.
+
+Third-party components are installed from their own official channels under
+their own licenses: iron-proxy (Apache-2.0, ironsh), NVIDIA OpenShell
+(Apache-2.0), NVIDIA NemoClaw (Apache-2.0), cyberware (MIT, Rui He). See the
+THIRD-PARTY-NOTICES section in the README for sources.

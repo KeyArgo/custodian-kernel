@@ -4,24 +4,24 @@
     {
       "name": "custodian_kernel-0.5.0-py3-none-any.whl",
       "path": "custodian_kernel-0.5.0-py3-none-any.whl",
-      "sha256": "5011549686353a6de2c2f44376f86b30f54253d66beb0814a3e513c878cfaacc",
-      "size": 675287
+      "sha256": "85d2438f60daf8a6414d7c2071045ceee070618f43fbd6cd50fa7f1e2d58ca2b",
+      "size": 679293
     },
     {
       "name": "custodian_kernel-0.5.0.tar.gz",
       "path": "custodian_kernel-0.5.0.tar.gz",
-      "sha256": "90b899fb9c306de7612eb127f073b8c644ee0b97b43cb87e38b9c1b9aca8be34",
-      "size": 484129
+      "sha256": "135b943150d87357772ede13d90ca3ca4bc23395bda45632d9342a81e5053470",
+      "size": 488106
     }
   ],
   "component": "kernel",
-  "content_digest": "01c86b1ed74192273c9146ff8c7c40287832b848aa8eff17b2d7686e869dbabf",
+  "content_digest": "77ebfbef71f43eba2a2f9960aea20d8c63e3486d4c2957f17950cf9a83bac414",
   "intended_tag": "v0.5.0",
   "note": "PREPARATION ONLY. This manifest describes a candidate that has NOT been published.",
   "package": "custodian-kernel",
-  "prepared_at": 1786086917.684655,
-  "prepared_at_iso": "2026-08-07T07:15:17Z",
-  "private_source_commit": "30204c052d53f8e3e331c2f509f64894fd0662fa",
+  "prepared_at": 1786091254.3693829,
+  "prepared_at_iso": "2026-08-07T08:27:34Z",
+  "private_source_commit": "9b6f07cb497af12da36037c90a7e18550921f247",
   "public_repo": "KeyArgo/custodian-kernel",
   "test_results": [
     {
@@ -61,7 +61,7 @@
       "uninstall-done": true,
       "version": "custodian 0.5.0",
       "version-after-reinstall": "custodian 0.5.0",
-      "wheel-hash-stored": "5011549686353a6de2c2f44376f86b30f54253d66beb0814a3e513c878cfaacc",
+      "wheel-hash-stored": "85d2438f60daf8a6414d7c2071045ceee070618f43fbd6cd50fa7f1e2d58ca2b",
       "wheel-hash-verified": true
     },
     {
