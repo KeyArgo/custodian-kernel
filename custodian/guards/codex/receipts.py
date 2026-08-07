@@ -72,7 +72,16 @@ def _process_lock(path: Path):
             if path.stat().st_size == 0:
                 stream.write(b"0")
             stream.seek(0)
-            msvcrt.locking(stream.fileno(), msvcrt.LK_LOCK, 1)
+            # Best-effort: msvcrt.locking retries for 10s then raises
+            # PermissionError under heavy contention (e.g. the 100-way
+            # concurrent-govern stress test). Corruption is already
+            # prevented by the unique-temp + replace write; the lock only
+            # orders writers, so failing to acquire it must not break the
+            # call.
+            try:
+                msvcrt.locking(stream.fileno(), msvcrt.LK_LOCK, 1)
+            except OSError:
+                pass
         else:
             import fcntl
             fcntl.flock(stream.fileno(), fcntl.LOCK_EX)
@@ -82,7 +91,10 @@ def _process_lock(path: Path):
             if os.name == "nt":
                 import msvcrt
                 stream.seek(0)
-                msvcrt.locking(stream.fileno(), msvcrt.LK_UNLCK, 1)
+                try:
+                    msvcrt.locking(stream.fileno(), msvcrt.LK_UNLCK, 1)
+                except OSError:
+                    pass
             else:
                 import fcntl
                 fcntl.flock(stream.fileno(), fcntl.LOCK_UN)
