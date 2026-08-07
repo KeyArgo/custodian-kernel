@@ -88,6 +88,20 @@ class ApprovalRecord:
     harness: str = "unknown"
 
 
+def _replace_retry(src: str | os.PathLike[str], dst: str | os.PathLike[str],
+                   attempts: int = 8) -> None:
+    """os.replace with retries: Windows fails with PermissionError while an
+    AV scanner or another process holds the destination open; POSIX never
+    does. First attempt is instant on POSIX."""
+    for i in range(attempts - 1):
+        try:
+            os.replace(src, dst)
+            return
+        except PermissionError:
+            time.sleep(0.02 * (i + 1))
+    os.replace(src, dst)
+
+
 class ApprovalStore:
     """Filesystem-backed approval store with atomic single-use consumption."""
 
@@ -146,7 +160,7 @@ class ApprovalStore:
                 json.dump(self._seal(record), stream, sort_keys=True, separators=(",", ":"))
                 stream.flush()
                 os.fsync(stream.fileno())
-            os.replace(tmp, path)
+            _replace_retry(tmp, path)
         finally:
             if tmp.exists():
                 tmp.unlink()

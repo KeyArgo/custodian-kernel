@@ -194,6 +194,24 @@ def load_state(state_dir: str | Path) -> dict:
 
 # -- file locking -----------------------------------------------------------
 
+def _replace_retry(src: str | os.PathLike[str], dst: str | os.PathLike[str],
+                   attempts: int = 8) -> None:
+    """Atomic replace with retries for Windows.
+
+    On Windows, os.replace of a file another process has open (or that an
+    AV scanner is still holding after a fresh write) fails with
+    PermissionError; POSIX unlinks-and-renames and never sees this. The
+    first attempt is instant on POSIX, so the retry loop is free there.
+    """
+    for i in range(attempts - 1):
+        try:
+            os.replace(src, dst)
+            return
+        except PermissionError:
+            time.sleep(0.02 * (i + 1))
+    os.replace(src, dst)
+
+
 class _FileLock:
     """Context manager that takes an advisory exclusive lock on a file.
 
@@ -284,7 +302,7 @@ def _write_state(state_dir: str | Path, data: dict) -> None:
                 os.close(dir_fd)
         except OSError:
             pass
-        os.replace(tmp_name, p)
+        _replace_retry(tmp_name, p)
         # Preserve the last-known-good state: keep a copy so a torn/corrupt
         # write can be recovered by load_state instead of failing open.
         # Written with the SAME atomic pattern as the main file (mkstemp +
@@ -301,7 +319,7 @@ def _write_state(state_dir: str | Path, data: dict) -> None:
                 f.write(p.read_text(encoding="utf-8"))
                 f.flush()
                 os.fsync(f.fileno())
-            os.replace(bak_tmp, bak)
+            _replace_retry(bak_tmp, bak)
         except OSError:
             if bak_tmp:
                 try:
