@@ -41,6 +41,12 @@ iron-proxy/OpenShell integration; approval-presentation UX; audit cross-process 
 **Theme:** beta-feedback fixes and hardening between stages.
 
 **Scope (candidates, driven by beta feedback):**
+- GUARD-STATE VISIBILITY (Claude+Codex design, adopted 2026-08-07): activation banner
+  once per session + immediate CLI transition notices on enable/disable; levels
+  baseline / verbose (session-start state) / debug (verdict class, receipt IDs — never
+  raw args/secrets/digests); switch `CUSTODIAN_VISIBILITY=verbose|debug` + per-invocation
+  flags. Banner: "custodian: guards active — unknown tools require approval;
+  secret/PII/injection checks always on". Preset-aware strings land with 0.6.0 presets.
 - allow_unsandboxed hardening: loud runtime warning now, removal path across 0.5.x.
 - Audit cross-process serialization + anti-truncation anchoring (external anchor design).
 - UX polish from real users; bugfixes; dependency bumps (tested-version manifest).
@@ -63,9 +69,10 @@ that isn't a fix.
 - Approval-presentation Phase 1 (branch `feat/approval-presentation-phase1`, 4 files):
   structured ApprovalPresentation store + `custodian-codex present <id>` CLI — the
   foundation for user-friendly approvals.
-- One-CLI stack surface: `custodian stack install/status/doctor`, presets (GitHub API,
-  Slack, custom HTTPS), optional-component adapters for iron-proxy (marker-gated tests,
-  tested-version manifest, fail-closed status).
+- One-CLI stack surface: `custodian stack install/status/doctor`, presets (guard postures
+  safe|strict|dev — shared preset model sets ALL gates + policy mode; preset-aware
+  visibility strings replace the 0.5.1 on/off banner), optional-component adapters for
+  iron-proxy (marker-gated tests, tested-version manifest, fail-closed status).
 - Hermes-as-gateway UX: from one Hermes session, install custodian + enable the guard for
   every harness the user owns (claude/codex/hermes) — "install once, govern everything."
 
