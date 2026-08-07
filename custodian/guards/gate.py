@@ -272,13 +272,18 @@ def _write_state(state_dir: str | Path, data: dict) -> None:
             f.flush()
             os.fsync(f.fileno())
         # fsync the directory so the temp file's existence is durable too.
-        dir_fd = os.open(str(p.parent), os.O_RDONLY)
+        # (Windows cannot os.open() a directory — PermissionError — and NTFS
+        # does not need the dir fsync, so treat the whole step as best-effort.)
         try:
-            os.fsync(dir_fd)
+            dir_fd = os.open(str(p.parent), os.O_RDONLY)
+            try:
+                os.fsync(dir_fd)
+            except OSError:
+                pass
+            finally:
+                os.close(dir_fd)
         except OSError:
             pass
-        finally:
-            os.close(dir_fd)
         os.replace(tmp_name, p)
         # Preserve the last-known-good state: keep a copy so a torn/corrupt
         # write can be recovered by load_state instead of failing open.
