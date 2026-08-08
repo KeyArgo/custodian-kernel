@@ -243,6 +243,12 @@ def status(config_path: Path | None = None, *, python: str | None = None) -> dic
         stripped = line.strip()
         if stripped.startswith("command =") and HOOK_MARKER in stripped:
             result["command"] = stripped.split("=", 1)[1].strip().strip('"')
+            # TOML basic strings escape backslashes as \\, so a Windows
+            # command stored in the config reads back with doubled
+            # separators (C:\\hostedtoolcache vs C:\hostedtoolcache).
+            # Undo that one escape -- the only one an interpreter path
+            # can contain -- before comparing or displaying.
+            result["command"] = result["command"].replace("\\\\", "\\")
             # Compare the interpreter path case-insensitively on Windows
             # (C:\\hostedtoolcache vs c:\\hostedtoolcache is the same
             # interpreter; a raw == would report a false stale and doctor

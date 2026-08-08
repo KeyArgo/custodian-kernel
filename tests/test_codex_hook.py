@@ -219,6 +219,20 @@ def test_status_detects_stale_interpreter(tmp_path):
     assert hook_install.status(cfg, python="/old/python")["interpreter_current"] is True
 
 
+def test_status_unescapes_toml_backslashes_for_windows_python(tmp_path):
+    """Regression: TOML basic strings escape backslashes as \\\\, so a
+    Windows interpreter path stored in the config reads back doubled
+    (C:\\\\hostedtoolcache vs C:\\hostedtoolcache) and the raw comparison
+    reported a false 'stale interpreter' FAIL on Windows CI. The read-back
+    must undo the TOML escape before the normcase comparison."""
+    cfg = _seed_config(tmp_path / "config.toml")
+    python = r"C:\hostedtoolcache\windows\Python\3.11.9\x64\python.exe"
+    hook_install.install(cfg, python=python)
+    st = hook_install.status(cfg, python=python)
+    assert st["interpreter_current"] is True
+    assert "\\\\hostedtoolcache" not in st["command"]
+
+
 def test_uninstall_removes_only_our_block(tmp_path):
     cfg = _seed_config(tmp_path / "config.toml")
     hook_install.install(cfg)
