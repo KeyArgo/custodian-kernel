@@ -31,11 +31,16 @@ from .bridge import evaluate_tool
 _HANDLED = {"autonomous", "approved", "escalation_required", "denied"}
 
 
-def _emit(decision: str, reason: str = "") -> None:
-    """Write one PreToolUse decision and flush. Never raises to the caller."""
+def _emit(decision: str, reason: str = "", event_name: str = "PreToolUse") -> None:
+    """Write one hook decision and flush. Never raises to the caller.
+
+    Claude Code validates that the response's ``hookEventName`` matches the
+    incoming event's ``hook_event_name``; echoing it is required for the
+    SessionStart hook (which shares this entrypoint with PreToolUse).
+    """
     output: dict[str, Any] = {
         "hookSpecificOutput": {
-            "hookEventName": "PreToolUse",
+            "hookEventName": event_name,
             "permissionDecision": decision,
         }
     }
@@ -111,7 +116,7 @@ def decide(event: dict[str, Any]) -> tuple[str, str]:
     return "deny", "Custodian: unrecognized guard verdict; failing closed"
 
 
-def _dormant_defer() -> bool:
+def _dormant_defer(event_name: str = "PreToolUse") -> bool:
     """If the claude guard is disabled in the gate, emit defer and return True."""
     import os
     from pathlib import Path
@@ -120,31 +125,44 @@ def _dormant_defer() -> bool:
     if is_fail_closed(state_dir):
         # Corrupt state with no valid backup: deny everything until the
         # operator repairs the gate state. Never silently disarm.
-        _emit("deny", "Custodian gate state is unreadable — failing closed")
+        _emit("deny", "Custodian gate state is unreadable — failing closed", event_name)
         return True
     if not is_enabled(state_dir, "claude"):
-        _emit("defer", "Custodian claude guard is disabled in this profile")
+        _emit("defer", "Custodian claude guard is disabled in this profile", event_name)
         return True
     return False
 
 
 def main(argv: list[str] | None = None) -> int:
-    if _dormant_defer():
-        return 0
     try:
         raw = sys.stdin.read()
         event = json.loads(raw) if raw.strip() else {}
+    except Exception:
+        event = {}
+    event_name = event.get("hook_event_name")
+    if not isinstance(event_name, str) or not event_name:
+        event_name = "PreToolUse"
+    if event_name == "SessionStart":
+        # The SessionStart hook shares this entrypoint with PreToolUse but
+        # has no tool decision to make: acknowledge with the matching event
+        # name (no permissionDecision) so Claude Code accepts the hook.
+        sys.stdout.write(json.dumps({"hookSpecificOutput": {"hookEventName": "SessionStart"}}))
+        sys.stdout.flush()
+        return 0
+    if _dormant_defer(event_name):
+        return 0
+    try:
         decision, reason = decide(event)
     except Exception as exc:  # fail closed on anything at all
         try:
-            _emit("deny", f"Custodian hook failed closed ({type(exc).__name__})")
+            _emit("deny", f"Custodian hook failed closed ({type(exc).__name__})", event_name)
             return 0
         except Exception:
             # Could not even print a decision -- use the exit-2 hard block so
             # Claude Code still refuses the tool call instead of proceeding.
             sys.stderr.write("Custodian guard error; tool call blocked\n")
             return 2
-    _emit(decision, reason)
+    _emit(decision, reason, event_name)
     return 0
 
 

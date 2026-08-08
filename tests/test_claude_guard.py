@@ -144,6 +144,35 @@ def test_hook_main_emits_deny_on_garbage_stdin(tmp_path, monkeypatch, capsys):
     assert out["hookSpecificOutput"]["permissionDecision"] == "deny"
 
 
+def test_hook_main_echoes_session_start_event(tmp_path, monkeypatch, capsys):
+    """Regression: the SessionStart hook shares this entrypoint with
+    PreToolUse but Claude Code validates that the response's hookEventName
+    matches the incoming event — the old hardcoded PreToolUse echo made
+    Claude fail to start with 'expected SessionStart but got PreToolUse'."""
+    _state(monkeypatch, tmp_path)
+    monkeypatch.setattr("sys.stdin", _FakeStdin(
+        '{"hook_event_name": "SessionStart", "cwd": "/tmp"}'
+    ))
+    rc = hook.main()
+    out = json.loads(capsys.readouterr().out)
+    assert rc == 0
+    assert out["hookSpecificOutput"]["hookEventName"] == "SessionStart"
+    assert "permissionDecision" not in out["hookSpecificOutput"]
+
+
+def test_hook_main_echoes_input_event_name(tmp_path, monkeypatch, capsys):
+    """The response event name must follow the input for PreToolUse too."""
+    _state(monkeypatch, tmp_path)
+    monkeypatch.setattr("sys.stdin", _FakeStdin(
+        '{"hook_event_name": "PreToolUse", "tool_name": "Read", '
+        '"tool_input": {"file_path": "/tmp/x"}, "session_id": "s1", "cwd": "/tmp"}'
+    ))
+    rc = hook.main()
+    out = json.loads(capsys.readouterr().out)
+    assert rc == 0
+    assert out["hookSpecificOutput"]["hookEventName"] == "PreToolUse"
+
+
 def test_bridge_rejects_incomplete_payload():
     assert evaluate_tool({"tool": "Read"})["verdict"] == "denied"
     assert evaluate_tool("nope")["verdict"] == "denied"
