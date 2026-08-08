@@ -404,6 +404,12 @@ class TestKVStore:
 
 # ── File tools ────────────────────────────────────────────────────────────────
 
+@pytest.mark.skipif(
+    os.name == "nt",
+    reason="The file/shell skill scripts assume a POSIX shell and /tmp; "
+    "Windows has neither (sh is absent, /tmp resolves as a drive-relative "
+    "path that fails the allowlist)",
+)
 class TestFileTools:
     def test_file_list_tmp(self):
         r = run_tool("skills/files/file-list/scripts/execute.py", "--path", "/tmp")
@@ -425,6 +431,11 @@ class TestFileTools:
 
 # ── Shell exec ────────────────────────────────────────────────────────────────
 
+@pytest.mark.skipif(
+    os.name == "nt",
+    reason="shell-exec runs POSIX commands via sh; the allowlist and /tmp "
+    "workdir are POSIX-shaped (see test_bundled_skill_shell_exec gate)",
+)
 class TestShellExec:
     def test_allowed_command(self):
         r = run_tool("skills/files/shell-exec/scripts/execute.py", "--cmd", "echo hello")

@@ -161,7 +161,14 @@ def load_state(state_dir: str | Path) -> dict:
         # the state dir is user-owned 0700 so the local-user threat model
         # is unchanged there (best-effort, documented).
         try:
-            fd = os.open(bak, os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0))
+            if bak.is_symlink():
+                # A symlinked .bak is untrusted on every platform: Windows
+                # lacks O_NOFOLLOW, so the descriptor read alone would
+                # follow it there. Check explicitly (POSIX keeps the
+                # descriptor read's TOCTOU protection as well).
+                fd = None
+            else:
+                fd = os.open(bak, os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0))
         except OSError:
             fd = None
         if fd is not None:
