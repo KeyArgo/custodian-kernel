@@ -239,10 +239,17 @@ def status(config_path: Path | None = None, *, python: str | None = None) -> dic
     if BEGIN not in text:
         return result
     result["installed"] = True
-    expected = hook_command(python)
     for line in text.splitlines():
         stripped = line.strip()
         if stripped.startswith("command =") and HOOK_MARKER in stripped:
             result["command"] = stripped.split("=", 1)[1].strip().strip('"')
-            result["interpreter_current"] = (result["command"] == expected)
+            # Compare the interpreter path case-insensitively on Windows
+            # (C:\\hostedtoolcache vs c:\\hostedtoolcache is the same
+            # interpreter; a raw == would report a false stale and doctor
+            # would flip WARN -> FAIL).
+            stored_python = result["command"].split(" -m ", 1)[0].strip()
+            expected_python = hook_command(python).split(" -m ", 1)[0].strip()
+            result["interpreter_current"] = (
+                os.path.normcase(stored_python) == os.path.normcase(expected_python)
+            )
     return result

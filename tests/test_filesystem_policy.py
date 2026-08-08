@@ -40,7 +40,7 @@ def test_deny_roots_extend_invariant_harness_denies(tmp_path: Path):
                               allow_roots=("/",), deny_roots=("/mnt/xyz",)))
     config = policy.fence_config(harness="hermes", model="qwen", access="write",
                                  inherited_allow=["/work"], inherited_deny=["~/.ssh"])
-    assert config["allow_paths"] == ["/"]
+    assert config["allow_paths"] == [canonicalize("/")]
     assert config["forbidden_paths"] == [canonicalize("~/.ssh"), "/mnt/xyz"]
 
 

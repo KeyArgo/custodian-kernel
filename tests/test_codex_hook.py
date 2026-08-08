@@ -8,6 +8,7 @@ that narrower vocabulary, and the single most important property is the same:
 every abnormal path resolves to an explicit deny, never to a silent allow.
 """
 import json
+import os
 
 import pytest
 
@@ -293,6 +294,11 @@ def test_managed_uninstall_preserves_other_managed_config(tmp_path, monkeypatch)
     assert "telemetry" in remaining and hook_install.BEGIN not in remaining
 
 
+@pytest.mark.skipif(
+    os.name == "nt",
+    reason="POSIX default managed dirs cannot be represented with Windows "
+    "os.path (leading-slash absolute paths collapse to backslash forms)",
+)
 @pytest.mark.parametrize(("platform", "expected_tail"), [
     ("linux", "/etc/codex"),
     ("darwin", "/etc/codex"),

@@ -383,10 +383,11 @@ def test_opencode_guard_wiring_is_self_protected(tmp_path, monkeypatch):
     is fenced for Codex, so it must be denied the same way."""
     monkeypatch.setenv("CUSTODIAN_CODEX_GUARD_STATE_DIR", str(tmp_path / "state"))
     home = tmp_path / "home"
+    monkeypatch.setenv("HOME", str(home))
+    monkeypatch.setenv("USERPROFILE", str(home))  # Windows Path.home() reads USERPROFILE, not HOME
     workspace = tmp_path / "workspace"
     home.mkdir()
     workspace.mkdir()
-    monkeypatch.setenv("HOME", str(home))
 
     result = evaluate_guard_action(
         _guard_args(

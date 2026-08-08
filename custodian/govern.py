@@ -152,7 +152,17 @@ def _tamper_check(
             tmp_path = f"{bk_path}.{uuid.uuid4().hex}.tmp"
             with open(tmp_path, "w") as f:
                 f.write(source_sha)
-            os.replace(tmp_path, bk_path)
+            # Windows: os.replace of a file a concurrent reader has open
+            # raises PermissionError; retry briefly (first attempt is
+            # instant on POSIX, where rename is atomic).
+            for attempt in range(8):
+                try:
+                    os.replace(tmp_path, bk_path)
+                    break
+                except PermissionError:
+                    time.sleep(0.02 * (attempt + 1))
+            else:
+                os.replace(tmp_path, bk_path)
         except OSError:
             # Do NOT report "ok" here. A snapshot that was never written means
             # every later run also takes this branch, so the check silently

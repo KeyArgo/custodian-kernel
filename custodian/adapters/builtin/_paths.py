@@ -85,6 +85,12 @@ def resolve(value: str, base: str = "/") -> str:
         portable = value
     else:
         portable = value.replace("\\", "/")
+    # Embedded NUL bytes must fail closed on every platform, not only where
+    # the OS happens to raise on them (POSIX realpath raises ValueError;
+    # Windows realpath does not). The fence_config malformed-policy branch
+    # turns a ValueError here into the documented deny-all fence.
+    if "\x00" in portable:
+        raise ValueError(f"path contains a NUL byte: {portable!r}")
     expanded = os.path.expanduser(portable)
     if not os.path.isabs(expanded):
         expanded = os.path.join(base, expanded)

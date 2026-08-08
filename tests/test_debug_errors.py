@@ -6,6 +6,7 @@ review found two real bugs in it: a symlink-following file clobber
 fields enabling a disk-exhaustion DoS from a single unauthenticated POST.
 """
 import json
+import os
 import sys
 from pathlib import Path
 
@@ -66,6 +67,11 @@ def test_oversized_line_and_col_are_bounded(client):
     assert len(entries[0]["col"]) <= 20
 
 
+@pytest.mark.skipif(
+    os.name == "nt",
+    reason="The symlink refusal relies on O_NOFOLLOW, which does not exist "
+    "on Windows (open() there cannot refuse a final-component symlink)",
+)
 def test_symlinked_log_path_is_refused_not_followed(client, tmp_path):
     """LOG_PATH is a fixed, predictable path in world-writable /tmp shared
     with every other process on the host. A plain read-then-rewrite
