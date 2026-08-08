@@ -28,8 +28,20 @@ _PATH_LIKE = re.compile(r"'[^']*[/\\][^']*'")
 
 def _redact_reason(reason: str, sensitive: Iterable[str] = ()) -> str:
     for p in sensitive:
-        if p and p in reason:
+        if not p:
+            continue
+        if p in reason:
             reason = reason.replace(p, "[REDACTED-PATH]")
+        # The denial reason embeds the RESOLVED form (path_fence uses
+        # os.path.realpath), so a raw argument like "~/secret" or a
+        # relative path appears in the reason expanded
+        # ("/home/user/secret") and the raw replace would miss it.
+        try:
+            resolved = os.path.realpath(os.path.expanduser(p))
+        except (OSError, ValueError):
+            resolved = p
+        if resolved != p and resolved in reason:
+            reason = reason.replace(resolved, "[REDACTED-PATH]")
     return _PATH_LIKE.sub("'[REDACTED-PATH]'", reason)
 
 
@@ -72,16 +84,22 @@ def _process_lock(path: Path):
             if path.stat().st_size == 0:
                 stream.write(b"0")
             stream.seek(0)
-            # Best-effort: msvcrt.locking retries for 10s then raises
-            # PermissionError under heavy contention (e.g. the 100-way
-            # concurrent-govern stress test). Corruption is already
-            # prevented by the unique-temp + replace write; the lock only
-            # orders writers, so failing to acquire it must not break the
-            # call.
-            try:
-                msvcrt.locking(stream.fileno(), msvcrt.LK_LOCK, 1)
-            except OSError:
-                pass
+            # Serialize writers with a bounded non-blocking retry: a raw
+            # LK_LOCK blocks up to 10s then raises PermissionError under
+            # contention, and falling through unlocked lets two writers
+            # fork the HMAC chain (both read the same tail MAC and append
+            # independently). Retry LK_NBLCK for a short window so the
+            # chain stays serialized in every realistic case; only a
+            # genuine long stall proceeds unlocked.
+            deadline = time.monotonic() + 2.0
+            while True:
+                try:
+                    msvcrt.locking(stream.fileno(), msvcrt.LK_NBLCK, 1)
+                    break
+                except OSError:
+                    if time.monotonic() >= deadline:
+                        break
+                    time.sleep(0.01)
         else:
             import fcntl
             fcntl.flock(stream.fileno(), fcntl.LOCK_EX)

@@ -115,7 +115,21 @@ def _tamper_check(
     bk_path = os.path.join(state_dir, f"{_tamper_key(func)}.bk.sha")
 
     try:
-        stored = open(bk_path, "r").read().strip()
+        # Read with retries: a concurrent first-run replace on Windows
+        # raises PermissionError transiently (the file is briefly held
+        # open). Retrying prevents treating a present-but-locked snapshot
+        # as "absent" -- which would re-snapshot the current (possibly
+        # tampered) source hash over the trusted one.
+        for attempt in range(8):
+            try:
+                stored = open(bk_path, "r").read().strip()
+                break
+            except PermissionError:
+                time.sleep(0.02 * (attempt + 1))
+        else:
+            # Snapshot stayed locked the whole time; treat as absent so the
+            # atomic write below re-creates it.
+            raise FileNotFoundError
         # An empty (zero-byte or whitespace-only) snapshot is corrupt or
         # truncated, not "no snapshot yet" -- `if stored and ...` treated it
         # as falsy and fell through to "matches", silently accepting any
@@ -124,12 +138,7 @@ def _tamper_check(
         if stored != source_sha:
             return source_sha, "drift"  # tamper detected (includes truncation)
         return source_sha, "ok"
-        # On Windows a concurrent first-run replace can make the read raise
-        # PermissionError (the file is briefly held open by the other
-        # thread's os.replace). That is the same transient state as "not
-        # written yet" -- fall through to the atomic first-run write, which
-        # re-creates the snapshot safely.
-    except (FileNotFoundError, PermissionError):
+    except FileNotFoundError:
         # First run: write the snapshot.
         #
         # Written to a per-writer temp file and moved into place with
