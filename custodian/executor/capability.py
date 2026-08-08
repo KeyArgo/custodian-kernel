@@ -129,6 +129,9 @@ class CapabilityRecord:
         return (now if now is not None else time.time()) > self.expires_at
 
 
+_BIN = getattr(os, "O_BINARY", 0)  # Windows text-mode would CRLF-translate 0x0A in the urandom key
+
+
 class CapabilityStore:
     """Filesystem-backed capability store with atomic single-use consumption.
 
@@ -153,7 +156,7 @@ class CapabilityStore:
             raise CapabilityError("executor capability key path compromised")
         if not self.key_path.exists():
             try:
-                fd = os.open(self.key_path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+                fd = os.open(self.key_path, os.O_WRONLY | os.O_CREAT | os.O_EXCL | _BIN, 0o600)
             except FileExistsError:
                 pass
             else:
@@ -163,7 +166,7 @@ class CapabilityStore:
         try:
             fd = os.open(
                 self.key_path,
-                os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0),
+                os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0) | _BIN,
             )
         except OSError as exc:
             raise CapabilityError("executor capability key is unreadable") from exc
@@ -206,7 +209,7 @@ class CapabilityStore:
         self.capabilities_dir.mkdir(parents=True, exist_ok=True)
         _ensure_private_permissions(self.capabilities_dir, path)
         tmp = path.with_suffix(f".{uuid4().hex}.tmp")
-        fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+        fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_EXCL | _BIN, 0o600)
         try:
             with os.fdopen(fd, "w", encoding="utf-8") as stream:
                 json.dump(self._seal(record), stream, sort_keys=True, separators=(",", ":"))
@@ -222,7 +225,7 @@ class CapabilityStore:
         try:
             fd = os.open(
                 path,
-                os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0),
+                os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0) | _BIN,
             )
         except OSError as exc:
             raise CapabilityError("capability record is unreadable") from exc
@@ -343,7 +346,7 @@ class CapabilityStore:
         claim = path.with_suffix(".claim")
         self.capabilities_dir.mkdir(parents=True, exist_ok=True)
         try:
-            claim_fd = os.open(claim, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+            claim_fd = os.open(claim, os.O_WRONLY | os.O_CREAT | os.O_EXCL | _BIN, 0o600)
         except FileExistsError as exc:
             raise CapabilityError("capability is already being consumed or was used") from exc
         os.close(claim_fd)

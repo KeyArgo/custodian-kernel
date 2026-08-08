@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import os
 
 import pytest
 
@@ -94,6 +95,11 @@ def test_gate_rejects_ancestor_symlinked_state_dir(tmp_path):
     assert gate.is_fail_closed(s) is True
 
 
+@pytest.mark.skipif(
+    os.name == "nt",
+    reason="Windows does not enforce POSIX mode bits; the gate's mode check "
+    "is POSIX-only (stat() fabricates permissive modes there)",
+)
 def test_gate_rejects_group_or_world_writable_state_dir(tmp_path):
     """A group/world-writable state dir must FAIL CLOSED, not defer.
 
