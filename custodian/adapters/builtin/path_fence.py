@@ -118,7 +118,7 @@ class PathFence(Adapter):
             if fnmatch.fnmatchcase(resolved, g) or fnmatch.fnmatchcase(os.path.basename(resolved), g):
                 return f"path {resolved} matches forbidden pattern {g!r}"
         if self.allow_paths and not under_prefix(resolved, self.allow_paths):
-            return f"path {resolved!r} is outside the allowed workspace {self.allow_paths}"
+            return f"path {resolved} is outside the allowed workspace {self.allow_paths}"
         return None
 
     def _shell_text_hits_forbidden(self, command: str) -> str | None:
@@ -137,9 +137,9 @@ class PathFence(Adapter):
             return None
         for raw_prefix, resolved_prefix in zip(self._forbidden_paths_raw, self.forbidden_paths):
             if raw_prefix and re.search(re.escape(raw_prefix) + r'(?:[/"\'\s]|$)', command):
-                return f"command references forbidden path {raw_prefix!r}"
+                return f"command references forbidden path {raw_prefix}"
             if re.search(re.escape(resolved_prefix) + r'(?:[/"\'\s]|$)', command):
-                return f"command references forbidden path {resolved_prefix!r}"
+                return f"command references forbidden path {resolved_prefix}"
         return None
 
     def _shell_component_hits_forbidden(self, command: str) -> str | None:
@@ -168,7 +168,7 @@ class PathFence(Adapter):
             seen.add(component)
             pattern = re.compile(r'(?:^|[/"\'])' + re.escape(component) + r'(?:[/"\']|$)')
             if pattern.search(command):
-                return (f"command references forbidden path component {component!r} "
+                return (f"command references forbidden path component {component} "
                         f"— possibly reached via a shell variable, command "
                         f"substitution, or a literal split across separate "
                         f"string arguments")

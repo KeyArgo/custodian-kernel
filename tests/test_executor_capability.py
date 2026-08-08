@@ -251,6 +251,11 @@ def test_store_rejects_symlink_capabilities_dir(tmp_path):
         store.list_records()
 
 
+@pytest.mark.skipif(
+    os.name == "nt",
+    reason="Windows does not enforce POSIX mode bits (stat() reports "
+    "fabricated permissive modes); the 0600/0700 assertions are POSIX-only",
+)
 def test_permissions_are_set_on_key_and_capability_dir(tmp_path):
     store = CapabilityStore(tmp_path)
     digest = action_digest(tool="t", args={}, workspace="/ws", requester="r")

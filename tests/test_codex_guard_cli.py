@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -33,7 +34,9 @@ class TestMcpCommand:
 
     def test_survives_path_differences(self):
         cmd = _mcp_command()
-        assert "/" in cmd[0]
+        # Absolute executable path on every platform — Windows uses
+        # backslashes (C:\\hostedtoolcache\\...), POSIX forward slashes.
+        assert os.path.isabs(cmd[0])
         assert cmd[0] != "python3"
 
 

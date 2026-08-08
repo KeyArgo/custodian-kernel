@@ -9,6 +9,7 @@ this file.
 """
 import json
 import os
+import tempfile
 import time
 from pathlib import Path
 
@@ -16,7 +17,7 @@ from flask import Blueprint, jsonify, request
 
 bp = Blueprint('debug', __name__)
 
-LOG_PATH = Path('/tmp/dashboard-client-errors.jsonl')
+LOG_PATH = Path(tempfile.gettempdir()) / 'dashboard-client-errors.jsonl'
 MAX_ENTRIES = 500
 # Generous but bounded: line/col are normally small integers, but nothing
 # upstream constrains what the client sends. Uncapped, they were the one
@@ -45,7 +46,10 @@ def _safe_write_lines(path: Path, lines: list) -> None:
     component is a symlink, instead of following it. Found in review.
     """
     data = ('\n'.join(lines) + '\n').encode('utf-8')
-    fd = os.open(str(path), os.O_WRONLY | os.O_CREAT | os.O_TRUNC | os.O_NOFOLLOW, 0o600)
+    # O_NOFOLLOW is POSIX-only; Windows has no symlink-follow at open for
+    # this shape and no O_NOFOLLOW constant -- fall back to 0 there.
+    fd = os.open(str(path), os.O_WRONLY | os.O_CREAT | os.O_TRUNC
+                 | getattr(os, "O_NOFOLLOW", 0), 0o600)
     with os.fdopen(fd, 'wb') as f:
         f.write(data)
 
@@ -55,7 +59,7 @@ def _safe_read_lines(path: Path) -> list:
     as _safe_write_lines (reading through an attacker-planted symlink can
     leak an arbitrary file's content into the /errors response)."""
     try:
-        fd = os.open(str(path), os.O_RDONLY | os.O_NOFOLLOW)
+        fd = os.open(str(path), os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0))
     except FileNotFoundError:
         return []
     with os.fdopen(fd, 'r', encoding='utf-8') as f:

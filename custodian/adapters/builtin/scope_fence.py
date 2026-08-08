@@ -116,7 +116,7 @@ class ScopeFence(Adapter):
                 if self.path_prefixes and not under_prefix(resolved, self.path_prefixes):
                     return Verdict.deny(
                         self.name,
-                        f"path {value!r} (resolves to {resolved!r}) is outside the "
+                        f"path {value} (resolves to {resolved}) is outside the "
                         f"task workspace. Task scope: {self._scope_line()}",
                     )
                 if self.path_globs and not any(

@@ -151,13 +151,13 @@ class NemoClawExecutor:
             return subprocess.run(cmd, **kwargs)
         except FileNotFoundError as e:
             raise SandboxGatewayDownError(
-                f"sandbox CLI {self.binary_path!r} not found on this host — "
+                f"sandbox CLI {self.binary_path} not found on this host — "
                 f"the NemoClaw sandbox is unreachable from here. Install "
                 f"nemohermes or point at a host that has it."
             ) from e
         except OSError as e:
             raise SandboxGatewayDownError(
-                f"sandbox CLI {self.binary_path!r} could not be executed "
+                f"sandbox CLI {self.binary_path} could not be executed "
                 f"({type(e).__name__}: {e}) — treating the sandbox as unreachable."
             ) from e
 

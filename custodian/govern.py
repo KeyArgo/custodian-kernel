@@ -124,7 +124,12 @@ def _tamper_check(
         if stored != source_sha:
             return source_sha, "drift"  # tamper detected (includes truncation)
         return source_sha, "ok"
-    except FileNotFoundError:
+        # On Windows a concurrent first-run replace can make the read raise
+        # PermissionError (the file is briefly held open by the other
+        # thread's os.replace). That is the same transient state as "not
+        # written yet" -- fall through to the atomic first-run write, which
+        # re-creates the snapshot safely.
+    except (FileNotFoundError, PermissionError):
         # First run: write the snapshot.
         #
         # Written to a per-writer temp file and moved into place with

@@ -40,6 +40,15 @@ class ExecutorClient:
             "workspace": workspace, "credential_refs": credential_refs or [],
         }
         try:
+            if not hasattr(socket, "AF_UNIX"):
+                # Windows has no AF_UNIX sockets; delegated mode is a POSIX
+                # transport. Keep the structured-error contract so callers
+                # get ExecutorUnavailableError, not an AttributeError.
+                raise ExecutorUnavailableError(
+                    f"executor at {self.socket_path} is not reachable: "
+                    "delegated mode uses AF_UNIX sockets, which are not "
+                    "available on Windows"
+                )
             with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as sock:
                 sock.settimeout(self.timeout)
                 sock.connect(str(self.socket_path))
@@ -51,6 +60,8 @@ class ExecutorClient:
                     if not chunk:
                         break
                     chunks.append(chunk)
+        except ExecutorUnavailableError:
+            raise
         except (OSError, socket.timeout) as e:
             raise ExecutorUnavailableError(
                 f"executor at {self.socket_path} is not reachable: {e}"
